@@ -171,6 +171,13 @@ export function buildTunnel(mats) {
       [[0, 0], [dep / bu, 0], [dep / bu, 3 / bv], [0, 3 / bv]], [gray(.5), gray(.5), gray(.5), gray(.5)], [0, ny, 0]);
   // muro sopra l'apertura oltre il piedritto (H0..volta) è gestito dalla volta: l'arco chiude sopra.
 
+  // pavimento della stanza buia oltre il portone (si vede solo con la torcia)
+  {
+    const [fu, fv] = TILES.floorB, c = gray(0.35), x = 1.0;
+    B.quad('floorB', [[-x, 0, Z_END], [x, 0, Z_END], [x, 0, Z_END - 6], [-x, 0, Z_END - 6]],
+      [[-x / fu, -Z_END / fv], [x / fu, -Z_END / fv], [x / fu, (-Z_END + 6) / fv], [-x / fu, (-Z_END + 6) / fv]], [c, c, c, c], [0, 1, 0]);
+  }
+
   // Pareti di testa: strisce verticali che seguono la volta; in fondo c'è il vano del portone (vuoto nero dietro)
   const topAt = (x) => H0 + Math.sqrt(Math.max(0, R * R - x * x));
   const N = 28;

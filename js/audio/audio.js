@@ -150,6 +150,32 @@ export function createAudio() {
         stop() { alive = false; out.gain.setTargetAtTime(0, ctx.currentTime, 0.3); },
       };
     },
+    // JUMP SCARE: colpo sub + crash + stridio dissonante, tutto in ~1 s (livelli compressi dal master)
+    scare() {
+      if (!ok) return; const t = ctx.currentTime;
+      master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(0.95, t);
+      const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine';
+      o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(26, t + 0.9);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1.0, t + 0.004); g.gain.exponentialRampToValueAtTime(0.001, t + 1.1);
+      o.connect(g); g.connect(master); o.start(t); o.stop(t + 1.2);
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf; const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 350;
+      const g2 = ctx.createGain(); g2.gain.setValueAtTime(0, t); g2.gain.linearRampToValueAtTime(0.85, t + 0.003); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+      s.connect(hp); hp.connect(g2); g2.connect(master); g2.connect(verbSend); s.start(t, 0.2, 0.7);
+      // stridio: due dente di sega leggermente stonate con vibrato, distorte
+      const sh = ctx.createWaveShaper(), curve = new Float32Array(256);
+      for (let i = 0; i < 256; i++) { const x = i / 128 - 1; curve[i] = Math.tanh(x * 5); } sh.curve = curve;
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2100; bp.Q.value = 0.8;
+      const gs = ctx.createGain(); gs.gain.setValueAtTime(0, t); gs.gain.linearRampToValueAtTime(0.32, t + 0.012); gs.gain.exponentialRampToValueAtTime(0.001, t + 0.85);
+      const lf = ctx.createOscillator(), lg = ctx.createGain(); lf.frequency.value = 11; lg.gain.value = 90; lf.connect(lg);
+      for (const f of [1660, 1985, 2490]) {
+        const so = ctx.createOscillator(); so.type = 'sawtooth'; so.frequency.setValueAtTime(f, t); so.frequency.exponentialRampToValueAtTime(f * 0.78, t + 0.8);
+        lg.connect(so.frequency); so.connect(sh); so.start(t); so.stop(t + 0.9);
+      }
+      lf.start(t); lf.stop(t + 0.9); sh.connect(bp); bp.connect(gs); gs.connect(master); gs.connect(verbSend);
+    },
+    // taglio netto: tutto muto
+    cut(time = 0.04) { if (!ok) return; master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0, ctx.currentTime, time); },
+    unmute() { if (!ok) return; master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0.9, ctx.currentTime, 0.2); },
     // gocce
     _drip(pan = 0) {
       if (!ok) return; const t = ctx.currentTime;

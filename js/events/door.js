@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { Z_END, DOOR } from '../world/tunnel.js';
 
-export function createDoorEvent({ scene, player, audio, lights, instab, say, camera }) {
+export function createDoorEvent({ scene, player, audio, lights, instab, say, camera, scare }) {
   const E = { state: 'idle', t: 0, ended: false, loaded: false };
   const grp = new THREE.Group(); grp.position.set(0, 0, Z_END + 0.06); scene.add(grp);
   let left = null, right = null;
@@ -39,7 +39,7 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
       case 'hush':
         // l'ambiente si spegne mano a mano che ci si avvicina
         if (pz < -49.5) { audio.duck(0.04, 1.2); }
-        if (pz < -50.8 && E.t > 2) { E.state = 'burst'; E.t = 0; openT = 0; audio.doorBang(doorPos, 1); audio.duck(0.12, 0.2); player.addShake(1.1); lights.lamp(3, 'flicker', 1.4); lights.torchStutter(0.5); instab.set(0.85, 10); }
+        if (pz < -50.8 && E.t > 2) { E.state = 'burst'; E.t = 0; openT = 0; audio.doorBang(doorPos, 1); audio.duck(0.12, 0.2); player.addShake(1.1); player.zMin = Z_END - 5; lights.lamp(3, 'flicker', 1.4); lights.torchStutter(0.5); instab.set(0.85, 10); }
         break;
       case 'burst':
         openT += dt; const a = angle(openT);
@@ -60,7 +60,19 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
         }
         if (E.t > 5.5 && !E.torch) { E.torch = true; lights.torchKill(1.4, 0.1); instab.push(0.9, 5); }
         if (E.t > 11 && !E.said) { E.said = true; say('non guardare dietro.', 6000); instab.push(1, 8); }
-        if (E.t > 26 || (E.said && pz < Z_END + 1.1)) { E.state = 'end'; E.t = 0; }
+        // SCELTA: voltarsi (guardare alle spalle) o andare avanti nel buio
+        if (E.t > 3 && E.said) {
+          const back = player.forward.z > 0.3;
+          E.turnT = back ? (E.turnT || 0) + dt : 0;
+          if (E.turnT > 0.35) { E.state = 'over'; breath?.stop(); breath = null; scare.trigger('behind'); }
+        }
+        if (E.said && pz < Z_END + 1.2) { E.state = 'dark'; E.t = 0; breath?.stop(); breath = null; audio.duck(0, 0.3); lights.torchKill(4.2, 0.12); instab.set(0.2, 12); }
+        if (E.t > 30) { E.state = 'over'; breath?.stop(); breath = null; scare.trigger('ahead'); }
+        break;
+      case 'dark':
+        // sei entrato: torcia morta, silenzio. Un attimo di sollievo... poi qualche passo avanti.
+        if (E.t > 4.4) { audio.duck(0.25, 2); }
+        if ((E.t > 6 && pz < Z_END - 1.6) || E.t > 22) { E.state = 'over'; scare.trigger('ahead'); }
         break;
       case 'end':
         E.ended = true; breath?.stop(); breath = null; E.state = 'over';

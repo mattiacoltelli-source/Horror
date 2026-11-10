@@ -22,7 +22,8 @@ export function createLights(scene, camera) {
   const dummy = new THREE.Vector3();
   let flashlightOn = true, torchLevel = 1, battery = 1, killT = 0, stutterT = 0, nextStutter = 25 + Math.random() * 25;
 
-  return {
+  const api = {
+    override: null,
     torch,
     lamps,
     setTorch(v) { flashlightOn = v; },
@@ -42,7 +43,7 @@ export function createLights(scene, camera) {
       torchLevel += (live - torchLevel) * Math.min(1, dt * (live < torchLevel ? 22 : 9));
       // lieve instabilità della torcia
       const jit = 1 + Math.sin(t * 37) * 0.012 + (Math.random() - 0.5) * 0.015;
-      torch.intensity = 34 * torchLevel * jit;
+      torch.intensity = api.override != null ? api.override : 34 * torchLevel * jit;
 
       for (const L of lamps) {
         L.t += dt;
@@ -69,4 +70,5 @@ export function createLights(scene, camera) {
       for (const L of lamps) if (L.mesh) { L.mesh.userData.setGlow?.(L.level); }
     },
   };
+  return api;
 }

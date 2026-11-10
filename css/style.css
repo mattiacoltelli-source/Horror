@@ -21,3 +21,4 @@ button:disabled{opacity:.35}
 .small{margin:26px 0 0;font-size:11px;letter-spacing:.2em;color:#4b4f4a}
 #rotate{z-index:30;font-size:15px;letter-spacing:.2em}
 @media (orientation:landscape) and (max-height:520px){#rotate.hidden{opacity:1;visibility:visible;pointer-events:auto}}
+#endtext{white-space:pre-line;line-height:1.8}

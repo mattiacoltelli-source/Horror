@@ -8,7 +8,7 @@ export function createPlayer(camera, controls, audio) {
   const p = {
     pos: new THREE.Vector3(0.1, EYE, 1.2), yaw: 0, pitch: 0,
     shake: 0, frozen: false, bobT: 0, speedNow: 0, lastStep: 0,
-    forward: new THREE.Vector3(0, 0, -1), lookMul: 1, speedMul: 1,
+    forward: new THREE.Vector3(0, 0, -1), lookMul: 1, speedMul: 1, zMin: Z_END + 0.5,
     addShake(a) { p.shake = Math.min(1.5, p.shake + a); },
   };
   const f = new THREE.Vector3(), r = new THREE.Vector3(), tmp = new THREE.Vector3();
@@ -29,8 +29,9 @@ export function createPlayer(camera, controls, audio) {
     p.speedNow += (target - p.speedNow) * Math.min(1, dt * 8);
     if (mag > 0.01) {
       tmp.normalize().multiplyScalar(p.speedNow * dt);
-      p.pos.x = THREE.MathUtils.clamp(p.pos.x + tmp.x, -W + RADIUS, W - RADIUS);
-      p.pos.z = THREE.MathUtils.clamp(p.pos.z + tmp.z, Z_END + 0.5, Z_START - 0.4);
+      const xl = p.pos.z < Z_END + 0.3 ? 0.62 : W - RADIUS;   // oltre il portone il vano è più stretto
+      p.pos.x = THREE.MathUtils.clamp(p.pos.x + tmp.x, -xl, xl);
+      p.pos.z = THREE.MathUtils.clamp(p.pos.z + tmp.z, p.zMin, Z_START - 0.4);
     }
     // head-bob + passi
     const moving = p.speedNow > 0.15;
