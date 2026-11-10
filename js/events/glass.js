@@ -23,7 +23,7 @@ void main(){
   float b = uBlur;
   for(int i=-2;i<=2;i++) for(int j=-2;j<=2;j++) r += texture2D(tRoom, sc+vec2(float(i),float(j))*uTexel*b).rgb;
   r /= 25.;
-  r *= uLight*.7;
+  r *= uLight*.5;
   vec3 tint = vec3(.30,.36,.34);
   vec3 col = r*.82 + tint*(.07+.13*n)*(.35+uLight*.65);
   col = max(col, tint*0.05);           // anche a stanza spenta il vetro non è nero
@@ -85,7 +85,7 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
   const room = new THREE.Group(); scene.add(room);
   const setLayer = (o) => o.traverse((c) => c.layers.set(ROOM_LAYER));
   const bgTex = new THREE.TextureLoader().load('assets/tex/bath_bg.jpg'); bgTex.mapping = THREE.EquirectangularReflectionMapping; bgTex.colorSpace = THREE.SRGBColorSpace;
-  const sphere = new THREE.Mesh(new THREE.SphereGeometry(9, 24, 16), new THREE.MeshBasicMaterial({ map: bgTex, side: THREE.BackSide, color: new THREE.Color(4.5, 4.6, 4.5), toneMapped: false }));
+  const sphere = new THREE.Mesh(new THREE.SphereGeometry(9, 24, 16), new THREE.MeshBasicMaterial({ map: bgTex, side: THREE.BackSide, color: new THREE.Color(2.2, 2.3, 2.2), toneMapped: false }));
   sphere.position.set(CX + 5.5, 1.6, CZ); sphere.rotation.y = -1.9;
   room.add(sphere);
   // pavimento della stanza (continua col corridoio, riflette il bagliore)
@@ -94,7 +94,7 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
   const gc = document.createElement('canvas'); gc.width = 256; gc.height = 256; const gg = gc.getContext('2d');
   const grd = gg.createRadialGradient(128, 118, 8, 128, 128, 150); grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(.5, 'rgba(255,255,255,.9)'); grd.addColorStop(.8, 'rgba(255,255,255,.4)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
   gg.fillStyle = grd; gg.fillRect(0, 0, 256, 256);
-  const wall = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gc), color: new THREE.Color(1.5, 1.7, 1.6), transparent: true, toneMapped: false }));
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gc), color: new THREE.Color(0.95, 1.05, 1.0), transparent: true, toneMapped: false }));
   wall.position.set(CX + 6.6, 1.5, CZ); wall.rotation.y = -Math.PI / 2; room.add(wall); E.wall = wall;
   setLayer(room);
 
@@ -142,7 +142,7 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
 
   const glassPos = new THREE.Vector3(GLASS.x, 1.3, CZ);
   let light = 0, targetLight = 0, hand = 0, handDecay = 0, shake = 0, lunge = 0, sway = 0;
-  let walkW = 0, ex = 7, ez = CZ, entScale = 1, blur = 1.8, waitT = 0, silenceFired = false;
+  let walkZ = CZ, walkW = 0, ex = 7, ez = CZ, entScale = 1, blur = 1.8, waitT = 0, silenceFired = false;
 
   const dir = new THREE.Vector3();
   E.update = (dt, time) => {
@@ -155,28 +155,34 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
     E.t += dt;
     switch (E.state) {
       case 'idle':
-        if (pz < -9.5 && E.ready) { E.state = 'tease'; E.t = 0; lights.lamp(1, 'flicker', 2.2); audio.swell(5, 0.6); targetLight = 1; ex = 7.2; ez = CZ - 0.2; ent.visible = true; }
+        if (pz < -9.5 && E.ready) { E.state = 'tease'; E.t = 0; lights.lamp(1, 'flicker', 2.2); audio.swell(5, 0.6); targetLight = 1; ex = 5.9; ez = CZ - 0.3; ent.visible = true; }
         break;
       case 'tease':
-        if (E.t > 1.6 && E.t < 2.4) {} // lampada sfarfalla, la stanza si illumina
-        if (E.t > 4.5 && pz < -14.5 || E.t > 11) { E.state = 'walk'; E.t = 0; instab.set(0.55, 12); }
+        // la stanza si illumina, la sagoma è già lì, ferma e lontana
+        if (E.t > 4.5 && pz < -14.5 || E.t > 11) { E.state = 'stare'; E.t = 0; waitT = 0; instab.set(0.5, 14); }
         break;
+      case 'stare': {
+        // resta in lontananza, immobile, a fissarti. Cambia solo se la guardi a lungo o se ti avvicini al vetro.
+        ex = 5.9; ez = CZ - 0.3; blur = 1.5; sway = Math.sin(E.t * 0.8) * 0.006;
+        const toG = new THREE.Vector3(GLASS.x - player.pos.x, 0, CZ - player.pos.z).normalize();
+        const facing = new THREE.Vector3(player.forward.x, 0, player.forward.z).normalize().dot(toG) > 0.75;
+        if (dxG < 7 && facing) waitT += dt; else waitT = Math.max(0, waitT - dt * 0.4);
+        if (waitT > 4.5 || E.t > 28 || dxG < 2.6) { E.state = 'walk'; E.t = 0; walkZ = THREE.MathUtils.clamp(pz, GLASS.z1 + 0.6, GLASS.z0 - 0.6); instab.set(0.65, 12); }
+        break;
+      }
       case 'walk': {
-        // si avvicina lentamente, seguendo il giocatore lungo il vetro
-        const k = Math.min(1, E.t / 16);
-        ex = THREE.MathUtils.lerp(7.2, GLASS.x + 0.95, k * k * (3 - 2 * k));
-        const zt = THREE.MathUtils.clamp(pz, GLASS.z1 + 0.5, GLASS.z0 - 0.5);
-        ez += (zt - ez) * Math.min(1, dt * 0.5);
-        blur = THREE.MathUtils.lerp(1.8, 0.9, k);
-        sway = Math.sin(E.t * 2.1) * 0.025;
+        // si avvicina lentamente verso un punto FISSO del vetro (non segue più lo sguardo/spostamenti)
+        const k = Math.min(1, E.t / 16), e = k * k * (3 - 2 * k);
+        ex = THREE.MathUtils.lerp(5.9, GLASS.x + 1.0, e);
+        ez = THREE.MathUtils.lerp(CZ - 0.3, walkZ, Math.min(1, e * 1.6));
+        blur = THREE.MathUtils.lerp(1.5, 0.9, k);
+        sway = Math.sin(E.t * 2.1) * 0.02;
         if (k >= 1) { E.state = 'stand'; E.t = 0; waitT = 0; }
         break;
       }
       case 'stand': {
-        // si ferma di fronte al giocatore e aspetta che sia vicino e guardi il vetro
-        const zt = THREE.MathUtils.clamp(pz, GLASS.z1 + 0.5, GLASS.z0 - 0.5);
-        ez += (zt - ez) * Math.min(1, dt * 0.8);
-        sway = Math.sin(E.t * 1.3) * 0.012;
+        // fermo davanti al vetro, aspetta che tu sia vicino e lo guardi
+        sway = Math.sin(E.t * 1.3) * 0.008;
         const toG = new THREE.Vector3(GLASS.x - player.pos.x, 0, CZ - player.pos.z).normalize();
         const facing = new THREE.Vector3(player.forward.x, 0, player.forward.z).normalize().dot(toG) > 0.7;
         const near = dxG < 3.4;
