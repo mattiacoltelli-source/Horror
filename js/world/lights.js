@@ -20,16 +20,26 @@ export function createLights(scene, camera) {
 
   const lamps = LAMPS.map((z, i) => ({ z, i, base: 1, flick: 0, kill: false, level: 1, t: Math.random() * 10 }));
   const dummy = new THREE.Vector3();
-  let flashlightOn = true, torchLevel = 1;
+  let flashlightOn = true, torchLevel = 1, battery = 1, killT = 0, stutterT = 0, nextStutter = 25 + Math.random() * 25;
 
   return {
     torch,
     lamps,
     setTorch(v) { flashlightOn = v; },
+    // la torcia si spegne per `dur` secondi (poi torna, un po' più debole)
+    torchKill(dur, drain = 0.12) { killT = dur; battery = Math.max(0.45, battery - drain); },
+    torchStutter(dur = 0.4) { stutterT = dur; },
     // sfarfallio/spegnimento di una lampada: mode 'off' | 'flicker' | 'on'
     lamp(i, mode, dur = 1) { const L = lamps[i]; L.mode = mode; L.modeT = dur; L.modeT0 = dur; },
     update(dt, t, playerZ, glassGlow = 0) {
-      torchLevel += ((flashlightOn ? 1 : 0) - torchLevel) * Math.min(1, dt * 12);
+      // batteria: cala lentamente (mai sotto 0.45: non si resta al buio per sempre) e dà rari singhiozzi
+      battery = Math.max(0.45, battery - dt * 0.0011);
+      nextStutter -= dt * (1.6 - battery);
+      if (nextStutter <= 0) { stutterT = 0.15 + Math.random() * 0.35; nextStutter = 30 + Math.random() * 40; }
+      let live = flashlightOn ? battery : 0;
+      if (killT > 0) { killT -= dt; live = 0; }
+      if (stutterT > 0) { stutterT -= dt; live *= Math.random() > 0.55 ? 0.15 : 0.9; }
+      torchLevel += (live - torchLevel) * Math.min(1, dt * (live < torchLevel ? 22 : 9));
       // lieve instabilità della torcia
       const jit = 1 + Math.sin(t * 37) * 0.012 + (Math.random() - 0.5) * 0.015;
       torch.intensity = 34 * torchLevel * jit;

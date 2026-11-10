@@ -8,6 +8,7 @@ import { createPlayer } from './player/player.js';
 import { createAudio } from './audio/audio.js';
 import { createInstability } from './ui/instability.js';
 import { createGlassEvent } from './events/glass.js';
+import { createDoorEvent } from './events/door.js';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -88,6 +89,7 @@ place('assets/models/cam.glb', 0.3, -W + 0.12, 2.0, -12, Math.PI / 2 + 0.25);
 const glassEvent = createGlassEvent({ scene, renderer, camera, player, audio, lights, instab });
 
 // ---------- flusso ----------
+let doorEvent = null;
 let state = 'loading', last = 0, time = 0, paused = false, fpsAcc = 0, fpsN = 0, ended = false;
 let started = false;
 const hint = $('subtitle');
@@ -97,6 +99,7 @@ function say(txt, ms = 4000) {
 }
 
 async function enter() {
+  doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera });
   $('enter').disabled = true;
   try { await audio.start(); } catch (_) {}
   try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el, { navigationUI: 'hide' })?.catch?.(() => {}); } catch (_) {}
@@ -130,13 +133,14 @@ function finish() {
 $('again').addEventListener('click', () => location.reload());
 
 function tick(dt) {
+  doorEvent?.update(dt);
   time += dt;
   player.update(dt, time);
   audio.setListener(camera);
   lights.update(dt, time, player.pos.z);
   glassEvent.update(dt, time);
   instab.update(dt);
-  if (player.pos.z < Z_END + 1.2 && glassEvent.done) finish();
+  if (doorEvent?.ended) finish();
 }
 
 function frame(now) {
@@ -158,7 +162,7 @@ requestAnimationFrame((n) => { last = n; frame(n); });
 
 // debug/test: ?debug=1 espone il gioco e permette di saltare avanti
 if (q.has('debug')) {
-  window.__g = { THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
+  window.__g = { get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
     sim(sec, dt = 0.05) { for (let t = 0; t < sec; t += dt) tick(dt); },
     tp(z, yaw = 0) { player.pos.set(0.1, 1.62, z); player.yaw = yaw; player.pitch = 0; } };
 }

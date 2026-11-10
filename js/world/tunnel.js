@@ -7,6 +7,7 @@ export const H0 = 2.1;         // altezza dei piedritti
 export const Z_START = 3;
 export const Z_END = -56;
 export const GLASS = { z0: -21, z1: -24, y0: 0.15, y1: 2.05, x: 1.62 };
+export const DOOR = { w: 2.0, h: 2.93 };
 export const RIBS = [-2, -8, -14, -19.5, -25.5, -31.5, -38, -44, -50];
 export const LAMPS = [-6, -17.5, -33, -47];
 
@@ -170,18 +171,29 @@ export function buildTunnel(mats) {
       [[0, 0], [dep / bu, 0], [dep / bu, 3 / bv], [0, 3 / bv]], [gray(.5), gray(.5), gray(.5), gray(.5)], [0, ny, 0]);
   // muro sopra l'apertura oltre il piedritto (H0..volta) è gestito dalla volta: l'arco chiude sopra.
 
-  // Parete di fondo e parete d'ingresso
+  // Pareti di testa: strisce verticali che seguono la volta; in fondo c'è il vano del portone (vuoto nero dietro)
+  const topAt = (x) => H0 + Math.sqrt(Math.max(0, R * R - x * x));
+  const N = 28;
   for (const [zz, nz] of [[Z_END, 1], [Z_START, -1]]) {
-    const k = 0.4;
-    B.quad(zz === Z_END ? 'rust' : 'brick', [[-W, 0, zz], [W, 0, zz], [W, H0, zz], [-W, H0, zz]],
-      [[0, 0], [2 * W / 1.2, 0], [2 * W / 1.2, H0 / 1.2], [0, H0 / 1.2]], [gray(k), gray(k), gray(k), gray(k)], [0, 0, nz]);
-    // timpano sopra
-    const a = (t) => [R * Math.cos(t), H0 + R * Math.sin(t)];
-    for (let i = 0; i < SEG; i++) {
-      const [x0, y0] = a(Math.PI - (i / SEG) * Math.PI), [x1, y1] = a(Math.PI - ((i + 1) / SEG) * Math.PI);
-      B.quad('brick', [[0, H0, zz], [x0, y0, zz], [x1, y1, zz], [0, H0, zz]].slice(0, 4),
-        [[0, 0], [1, 0], [1, 1], [0, 1]], [gray(.3), gray(.3), gray(.3), gray(.3)], [0, 0, nz]);
+    for (let i = 0; i < N; i++) {
+      const x0 = -W + (2 * W * i) / N, x1 = -W + (2 * W * (i + 1)) / N;
+      const inDoor = zz === Z_END && Math.abs((x0 + x1) / 2) < DOOR.w / 2;
+      // il vano segue la curva ad arco del portone (sopra restano mattoni)
+      const dt = (x) => (inDoor ? DOOR.h - 0.38 + 0.38 * Math.sqrt(Math.max(0, 1 - (x / (DOOR.w / 2)) ** 2)) : 0);
+      const yb0 = dt(x0), yb1 = dt(x1), yb = Math.min(yb0, yb1);
+      const t0 = Math.max(yb0, topAt(x0)), t1 = Math.max(yb1, topAt(x1));
+      if (t0 - yb0 < 0.001 && t1 - yb1 < 0.001) continue;
+      const k = 0.4 + 0.1 * (i % 3);
+      B.quad('brick', [[x0, yb0, zz], [x1, yb1, zz], [x1, t1, zz], [x0, t0, zz]],
+        [[x0 / bu + 0.3, yb0 / bv], [x1 / bu + 0.3, yb1 / bv], [x1 / bu + 0.3, t1 / bv], [x0 / bu + 0.3, t0 / bv]],
+        [gray(k), gray(k), gray(k * 1.1), gray(k * 1.1)], [0, 0, nz]);
     }
+  }
+  // spalle del vano (profondità 0.35)
+  for (const s2 of [-1, 1]) {
+    const x = s2 * DOOR.w / 2;
+    B.quad('brick', [[x, 0, Z_END], [x, 0, Z_END - 0.35], [x, DOOR.h, Z_END - 0.35], [x, DOOR.h, Z_END]],
+      [[0, 0], [0.35 / bu, 0], [0.35 / bu, DOOR.h / bv], [0, DOOR.h / bv]], [gray(.2), gray(.2), gray(.2), gray(.2)], [-s2, 0, 0]);
   }
 
   // Tubature lungo il muro sinistro (cilindri uniti)

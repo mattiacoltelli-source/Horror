@@ -98,6 +98,58 @@ export function createAudio() {
       };
       hit(t, power); hit(t + 0.11, power * 0.85);
     },
+    // portone di ferro che sbatte contro i muri
+    doorBang(pos, power = 1) {
+      if (!ok) return; const t = ctx.currentTime;
+      const pan = ctx.createPanner(); pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 3; pan.rolloffFactor = 0.7;
+      pan.positionX.value = pos.x; pan.positionY.value = pos.y; pan.positionZ.value = pos.z;
+      const out = ctx.createGain(); out.connect(pan); pan.connect(master);
+      const rv = ctx.createGain(); rv.gain.value = 1.6; pan.connect(rv); rv.connect(verbSend);
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(30, t + 0.5);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1.0 * power, t + 0.005); g.gain.exponentialRampToValueAtTime(0.001, t + 1.1);
+      o.connect(g); g.connect(out); o.start(t); o.stop(t + 1.2);
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf; const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 650; f.Q.value = 0.6;
+      const g2 = ctx.createGain(); g2.gain.setValueAtTime(0, t); g2.gain.linearRampToValueAtTime(0.9 * power, t + 0.003); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      s.connect(f); f.connect(g2); g2.connect(out); s.start(t, Math.random(), 0.4);
+      for (const [fr, d] of [[143, 1.9], [231, 1.6], [389, 1.3], [611, 1.0], [947, 0.7]]) {
+        const oo = ctx.createOscillator(), gg = ctx.createGain(); oo.type = 'triangle'; oo.frequency.value = fr * (0.985 + Math.random() * 0.03);
+        gg.gain.setValueAtTime(0, t); gg.gain.linearRampToValueAtTime(0.075 * power, t + 0.004); gg.gain.exponentialRampToValueAtTime(0.0004, t + d);
+        oo.connect(gg); gg.connect(out); oo.start(t); oo.stop(t + d + 0.1);
+      }
+      // secondo impatto più morbido (rimbalzo dei battenti)
+      const t2 = t + 0.34, o2 = ctx.createOscillator(), g3 = ctx.createGain(); o2.type = 'sine'; o2.frequency.setValueAtTime(70, t2); o2.frequency.exponentialRampToValueAtTime(32, t2 + 0.3);
+      g3.gain.setValueAtTime(0, t2); g3.gain.linearRampToValueAtTime(0.5 * power, t2 + 0.005); g3.gain.exponentialRampToValueAtTime(0.001, t2 + 0.6);
+      o2.connect(g3); g3.connect(out); o2.start(t2); o2.stop(t2 + 0.7);
+    },
+    // respiro spaziale: ritorna un controller {setPos, setLevel, stop}
+    breath() {
+      if (!ok) return null;
+      const pan = ctx.createPanner(); pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 1.2; pan.rolloffFactor = 1;
+      const out = ctx.createGain(); out.gain.value = 0; out.connect(pan); pan.connect(master);
+      const rv = ctx.createGain(); rv.gain.value = 0.5; pan.connect(rv); rv.connect(verbSend);
+      let alive = true;
+      const once = () => {
+        if (!alive) return; const t = ctx.currentTime, inh = 1.0 + Math.random() * 0.25, exh = 1.5 + Math.random() * 0.4;
+        const mk = (t0, dur, f0, f1, peak) => {
+          const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.playbackRate.value = 0.9 + Math.random() * 0.2;
+          const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.1; bp.frequency.setValueAtTime(f0, t0); bp.frequency.linearRampToValueAtTime(f1, t0 + dur);
+          const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2600;
+          const g = ctx.createGain(); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(peak, t0 + dur * 0.55); g.gain.linearRampToValueAtTime(0, t0 + dur);
+          // leggero tremolio rauco
+          const lf = ctx.createOscillator(), lg = ctx.createGain(); lf.frequency.value = 18 + Math.random() * 8; lg.gain.value = peak * 0.35; lf.connect(lg); lg.connect(g.gain); lf.start(t0); lf.stop(t0 + dur);
+          s.connect(bp); bp.connect(lp); lp.connect(g); g.connect(out); s.start(t0, Math.random() * 1.2, dur + 0.1);
+        };
+        mk(t, inh, 900, 1400, 0.55); mk(t + inh + 0.12, exh, 800, 500, 0.8);
+        setTimeout(once, (inh + exh + 0.9 + Math.random() * 0.8) * 1000);
+      };
+      once();
+      return {
+        setPos(x, y, z) { pan.positionX.value = x; pan.positionY.value = y; pan.positionZ.value = z; },
+        setLevel(v, tc = 0.5) { out.gain.setTargetAtTime(v, ctx.currentTime, tc); },
+        stop() { alive = false; out.gain.setTargetAtTime(0, ctx.currentTime, 0.3); },
+      };
+    },
     // gocce
     _drip(pan = 0) {
       if (!ok) return; const t = ctx.currentTime;
