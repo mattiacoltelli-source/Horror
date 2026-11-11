@@ -65,7 +65,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     muzzle.material.opacity = 1; gunMats.forEach((m) => m.color.setRGB(0.55, 0.5, 0.45)); muzzle.rotation.z = Math.random() * 6; K.flashT = 0.07; flash.intensity = 160; flash.position.copy(camera.position).add(fwd.set(0, 0, -0.4).applyQuaternion(camera.quaternion));
     try { navigator.vibrate?.(30); } catch (_) {}
     // il colpo non la prende mai: nel lampo lei non c'è già più, e riappare più vicina in un altro punto
-    K.hide = HIDE; K.moved = false; instab.push(0.9, 3); lights.torchStutter(HIDE); lights.lamp(0, 'flicker', HIDE); lights.lamp(1, 'flicker', HIDE); audio.lightOn?.();
+    K.hide = HIDE; K.moved = false; K.idle = 0; instab.push(0.9, 3); lights.torchStutter(HIDE); lights.lamp(0, 'flicker', HIDE); lights.lamp(1, 'flicker', HIDE); audio.lightOn?.();
   };
   K.setAim = (on) => { K.aiming = on; };
   K.hideAll = () => { gun.visible = false; K.active = false; K.armed = false; mon.visible = false; muzzle.material.opacity = 0; ui.show(false); ui.aimAll?.(false); };
@@ -100,7 +100,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
         // poi riappare a tratti nel nuovo posto. Non si vede mai il salto: si vede solo che, tra un guizzo e l'altro, è più vicino.
         K.hide -= dt; const el = HIDE - K.hide;
         if (el >= 0.26 && !K.moved) {
-          K.moved = true; K.D = Math.min(K.D, SHOT_D[Math.min(3, K.shots - 1)]); K.lat = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 1.1) * Math.min(1, K.D / 6); K.stepT = 1.6 + Math.random() * 0.5; audio.heavyStep(mon.position, 0.9);
+          K.moved = true; K.D = Math.min(K.D, SHOT_D[Math.min(3, K.shots - 1)]); K.Dt = K.D; K.idle = 0; K.lat = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 1.1) * Math.min(1, K.D / 6); K.stepT = 1.6 + Math.random() * 0.5; audio.heavyStep(mon.position, 0.9);
         }
         monPlace();
         const dark = el > 0.2 && el < 0.34, strobe = Math.sin(el * 83) + Math.sin(el * 47 + 1) > -0.6;
@@ -108,9 +108,18 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
         lights.override = dark ? 0 : (strobe ? null : 0.12 * 34);     // la torcia segue il guizzo; fuori dal farfallio torna normale
         if (K.hide <= 0) { mon.visible = true; lights.override = null; K.moved = false; monPlace(); }
       } else {
-        // fra un colpo e l'altro avanza lentamente a scatti (passi pesanti dietro di te) e si ferma
-        K.stepT -= dt;
-        if (K.stepT <= 0) { K.D -= 0.5; K.lat *= 0.8; K.stepT = 1.9 + Math.random() * 0.6; monPlace(); audio.heavyStep(mon.position, 1); }
+        // NON ASPETTA: tra un colpo e l'altro si muove. Avanza a passi pesanti, ogni tanto finta (arretra un poco), si sposta di lato;
+        // più tempo passa senza che tu spari, più si fa sotto. Il tetto è la distanza dell'ultimo colpo: non si allontana mai più di così.
+        K.idle = (K.idle || 0) + dt; K.stepT -= dt;
+        const cap = K.shots > 0 ? SHOT_D[Math.min(3, K.shots - 1)] : 13;
+        if (K.stepT <= 0) {
+          const pr = Math.min(1, K.idle / 7), roll = Math.random();
+          if (roll < 0.2 - 0.12 * pr && K.D < cap - 0.2 && K.D > 4.5) { K.Dt = Math.min(cap, K.D + 0.6 + Math.random() * 0.6); K.stepT = 0.85 + Math.random() * 0.4; }          // finta: arretra
+          else if (roll < 0.34) { K.latT = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 1.4) * Math.min(1, K.D / 5); K.stepT = 0.8 + Math.random() * 0.5; }         // si sposta di lato
+          else { K.Dt = Math.max(1.4, (K.Dt ?? K.D) - (0.6 + 0.5 * pr + Math.random() * 0.3)); K.stepT = 1.05 - 0.3 * pr + Math.random() * 0.35; audio.heavyStep(mon.position, 1); }   // si avvicina
+        }
+        if (K.Dt == null) K.Dt = K.D; K.Dt = Math.min(K.Dt, cap);
+        K.D += (K.Dt - K.D) * Math.min(1, dt * 3.2); K.lat = K.lat ?? 0; K.lat += ((K.latT ?? 0) - K.lat) * Math.min(1, dt * 1.6);
         monPlace(); mon.position.x += Math.sin(time * 2.2) * 0.02; mon.visible = K.D < 16;
       }
       // se non ti sei ancora girato
