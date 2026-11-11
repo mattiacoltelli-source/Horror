@@ -65,3 +65,14 @@ h1.tglitch{animation:tglitch .22s steps(1,end)}
 @keyframes btnbreath{0%,100%{border-color:#3d423c;box-shadow:0 0 0 rgba(150,180,160,0)}50%{border-color:#6a7468;box-shadow:0 0 14px rgba(120,150,130,.12)}}
 #enter:active:not(:disabled){animation:none;border-color:#9fb4a2;box-shadow:0 0 26px rgba(130,170,140,.35);background:#0f130f}
 @media (prefers-reduced-motion:reduce){#intro::before,#intro::after,h1.tglitch,#enter:not(:disabled){animation:none}}
+
+/* testo iniziale: tre righe corte, una alla volta */
+#intro .tag{margin:0 0 52px;line-height:2.1}
+#intro .tag span{display:block;opacity:0;animation:tagin 1.4s ease forwards}
+#intro .tag span:nth-child(1){animation-delay:.5s}
+#intro .tag span:nth-child(2){animation-delay:1.5s}
+#intro .tag span:nth-child(3){animation-delay:2.6s;color:#8a9088}
+@keyframes tagin{0%{opacity:0;transform:translateY(4px)}100%{opacity:1;transform:none}}
+#intro h1{margin-bottom:26px}
+#intro .intro-inner{transform:translateY(-3vh)}
+@media (prefers-reduced-motion:reduce){#intro .tag span{animation:none;opacity:1}}
