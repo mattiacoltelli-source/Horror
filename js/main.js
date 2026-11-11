@@ -10,6 +10,7 @@ import { createInstability } from './ui/instability.js';
 import { createGlassEvent } from './events/glass.js';
 import { createDoorEvent } from './events/door.js';
 import { createScare } from './events/scare.js';
+import { createHall } from './events/hall.js';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -90,7 +91,7 @@ place('assets/models/cam.glb', 0.3, -W + 0.12, 2.0, -12, Math.PI / 2 + 0.25);
 const glassEvent = createGlassEvent({ scene, renderer, camera, player, audio, lights, instab });
 
 // ---------- flusso ----------
-let doorEvent = null, scare = null;
+let doorEvent = null, scare = null, hall = null;
 let state = 'loading', last = 0, time = 0, paused = false, fpsAcc = 0, fpsN = 0, ended = false;
 let started = false;
 const hint = $('subtitle');
@@ -101,7 +102,8 @@ function say(txt, ms = 4000) {
 
 async function enter() {
   scare ??= createScare({ scene, camera, player, audio, lights, instab, finish });
-  doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, scare });
+  hall ??= createHall({ scene, mats });
+  doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, scare, hall });
   $('enter').disabled = true;
   try { await audio.start(); } catch (_) {}
   try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el, { navigationUI: 'hide' })?.catch?.(() => {}); } catch (_) {}
@@ -140,6 +142,7 @@ $('again').addEventListener('click', () => location.reload());
 function tick(dt) {
   doorEvent?.update(dt);
   scare?.update(dt);
+  hall?.update(dt);
   time += dt;
   player.update(dt, time);
   audio.setListener(camera);
@@ -168,7 +171,7 @@ requestAnimationFrame((n) => { last = n; frame(n); });
 
 // debug/test: ?debug=1 espone il gioco e permette di saltare avanti
 if (q.has('debug')) {
-  window.__g = { get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
+  window.__g = { get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
     sim(sec, dt = 0.05) { for (let t = 0; t < sec; t += dt) tick(dt); },
     tp(z, yaw = 0) { player.pos.set(0.1, 1.62, z); player.yaw = yaw; player.pitch = 0; } };
 }

@@ -168,28 +168,51 @@ export function createAudio() {
         stop() { alive = false; out.gain.setTargetAtTime(0, ctx.currentTime, 0.3); },
       };
     },
-    // JUMP SCARE: colpo sub + crash + stridio dissonante, tutto in ~1 s (livelli compressi dal master)
+    // JUMP SCARE (organico, niente toni elettrici): colpo del corpo + ruggito di rumore formantico + respiro a scatto
     scare() {
       if (!ok) return; const t = ctx.currentTime;
       master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(0.95, t);
+      // colpo sub
       const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine';
-      o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(26, t + 0.9);
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1.0, t + 0.004); g.gain.exponentialRampToValueAtTime(0.001, t + 1.1);
-      o.connect(g); g.connect(master); o.start(t); o.stop(t + 1.2);
-      const s = ctx.createBufferSource(); s.buffer = noiseBuf; const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 350;
-      const g2 = ctx.createGain(); g2.gain.setValueAtTime(0, t); g2.gain.linearRampToValueAtTime(0.85, t + 0.003); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
-      s.connect(hp); hp.connect(g2); g2.connect(master); g2.connect(verbSend); s.start(t, 0.2, 0.7);
-      // stridio: due dente di sega leggermente stonate con vibrato, distorte
-      const sh = ctx.createWaveShaper(), curve = new Float32Array(256);
-      for (let i = 0; i < 256; i++) { const x = i / 128 - 1; curve[i] = Math.tanh(x * 5); } sh.curve = curve;
-      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2100; bp.Q.value = 0.8;
-      const gs = ctx.createGain(); gs.gain.setValueAtTime(0, t); gs.gain.linearRampToValueAtTime(0.32, t + 0.012); gs.gain.exponentialRampToValueAtTime(0.001, t + 0.85);
-      const lf = ctx.createOscillator(), lg = ctx.createGain(); lf.frequency.value = 11; lg.gain.value = 90; lf.connect(lg);
-      for (const f of [1660, 1985, 2490]) {
-        const so = ctx.createOscillator(); so.type = 'sawtooth'; so.frequency.setValueAtTime(f, t); so.frequency.exponentialRampToValueAtTime(f * 0.78, t + 0.8);
-        lg.connect(so.frequency); so.connect(sh); so.start(t); so.stop(t + 0.9);
+      o.frequency.setValueAtTime(62, t); o.frequency.exponentialRampToValueAtTime(24, t + 0.9);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.95, t + 0.005); g.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
+      o.connect(g); g.connect(master); o.start(t); o.stop(t + 1.1);
+      // impatto del corpo: rumore filtrato in basso (niente sibilo)
+      const s1 = ctx.createBufferSource(); s1.buffer = noiseBuf; const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1500; lp.Q.value = 0.4;
+      const g1 = ctx.createGain(); g1.gain.setValueAtTime(0, t); g1.gain.linearRampToValueAtTime(0.9, t + 0.004); g1.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+      s1.connect(lp); lp.connect(g1); g1.connect(master); g1.connect(verbSend); s1.start(t, 0.3, 0.5);
+      // ruggito: rumore → due formanti che scendono, modulato in ampiezza (raucedine ~26 Hz)
+      const s2 = ctx.createBufferSource(); s2.buffer = noiseBuf; s2.loop = true;
+      const mix = ctx.createGain(); mix.gain.value = 1;
+      for (const [f0, f1, q, v] of [[820, 430, 7, 1], [1550, 980, 8, 0.7], [2600, 1700, 6, 0.3]]) {
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = q; bp.frequency.setValueAtTime(f0, t); bp.frequency.exponentialRampToValueAtTime(f1, t + 0.95);
+        const gv = ctx.createGain(); gv.gain.value = v; s2.connect(bp); bp.connect(gv); gv.connect(mix);
       }
-      lf.start(t); lf.stop(t + 0.9); sh.connect(bp); bp.connect(gs); gs.connect(master); gs.connect(verbSend);
+      const am = ctx.createGain(); am.gain.value = 0.55; const lf = ctx.createOscillator(), lg = ctx.createGain(); lf.frequency.value = 26; lg.gain.value = 0.45; lf.connect(lg); lg.connect(am.gain);
+      const env = ctx.createGain(); env.gain.setValueAtTime(0, t + 0.02); env.gain.linearRampToValueAtTime(1.15, t + 0.08); env.gain.setValueAtTime(1.0, t + 0.45); env.gain.exponentialRampToValueAtTime(0.001, t + 1.15);
+      const sh = ctx.createWaveShaper(), cv = new Float32Array(256); for (let i = 0; i < 256; i++) cv[i] = Math.tanh((i / 128 - 1) * 2.2); sh.curve = cv;
+      mix.connect(am); am.connect(sh); sh.connect(env); env.connect(master); env.connect(verbSend);
+      s2.start(t, 0.5); lf.start(t); s2.stop(t + 1.2); lf.stop(t + 1.2);
+    },
+    // luce della sala: clack + ronzio breve
+    lightOn() {
+      if (!ok) return; const t = ctx.currentTime;
+      const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(55, t + 0.18);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.35, t + 0.004); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      o.connect(g); g.connect(master); g.connect(verbSend); o.start(t); o.stop(t + 0.35);
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf; const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 0.8;
+      const g2 = ctx.createGain(); g2.gain.setValueAtTime(0, t); g2.gain.linearRampToValueAtTime(0.28, t + 0.002); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+      s.connect(f); f.connect(g2); g2.connect(master); s.start(t, 0.4, 0.2);
+    },
+    // passi di una folla nel buio: tanti passi lontani, morbidi, sparsi nel tempo
+    shuffle(dur = 3, level = 0.4) {
+      if (!ok || !steps.length) return; const t = ctx.currentTime, n = Math.round(dur * 7);
+      for (let i = 0; i < n; i++) {
+        const t0 = t + Math.random() * dur, src = ctx.createBufferSource(); src.buffer = steps[Math.floor(Math.random() * steps.length)]; src.playbackRate.value = 0.7 + Math.random() * 0.25;
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 800 + Math.random() * 500;
+        const g = ctx.createGain(); g.gain.value = level * (0.25 + Math.random() * 0.5); const pn = ctx.createStereoPanner(); pn.pan.value = (Math.random() - 0.5) * 1.6;
+        src.connect(lp); lp.connect(g); g.connect(pn); pn.connect(master); const rs = ctx.createGain(); rs.gain.value = 0.8; g.connect(rs); rs.connect(verbSend); src.start(t0);
+      }
     },
     // taglio netto: tutto muto
     cut(time = 0.04) { if (!ok) return; master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0, ctx.currentTime, time); },
