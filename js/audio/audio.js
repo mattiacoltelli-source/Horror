@@ -270,6 +270,16 @@ export function createAudio() {
         for (const fr of [820, 1730, 2900]) { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'triangle'; o.frequency.value = fr * (0.97 + Math.random() * 0.06); og.gain.setValueAtTime(0, t + dt); og.gain.linearRampToValueAtTime(0.06 * v, t + dt + 0.002); og.gain.exponentialRampToValueAtTime(0.0004, t + dt + 0.5); o.connect(og); og.connect(master); o.start(t + dt); o.stop(t + dt + 0.55); }
       }
     },
+    // oggetto piccolo di metallo che cade su piastrelle: 3 tintinnii acuti, sempre piu' brevi e deboli
+    tinkle() {
+      if (!ok) return; const t = ctx.currentTime;
+      [[0, 1, 4300], [0.13, 0.55, 3700], [0.22, 0.3, 4600], [0.27, 0.16, 3900]].forEach(([dt, v, f]) => {
+        const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'triangle'; o.frequency.value = f * (0.97 + Math.random() * 0.06);
+        og.gain.setValueAtTime(0, t + dt); og.gain.linearRampToValueAtTime(0.16 * v, t + dt + 0.002); og.gain.exponentialRampToValueAtTime(0.0008, t + dt + 0.22); o.connect(og); og.connect(master); o.start(t + dt); o.stop(t + dt + 0.25);
+        const s = ctx.createBufferSource(); s.buffer = noiseBuf; const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3000; const g = ctx.createGain();
+        g.gain.setValueAtTime(0, t + dt); g.gain.linearRampToValueAtTime(0.22 * v, t + dt + 0.001); g.gain.exponentialRampToValueAtTime(0.0008, t + dt + 0.05); s.connect(hp); hp.connect(g); g.connect(master); s.start(t + dt);
+      });
+    },
     // passo pesante e lento (il mostro): tonfo + sfregamento, con posizione 3D
     heavyStep(pos, power = 1) {
       if (!ok) return; const t = ctx.currentTime;
