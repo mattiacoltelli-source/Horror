@@ -28,6 +28,7 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   const door = new THREE.Group(); door.position.set(0, 0, zFar + 0.15); T.group.add(door);
   let L = null, R = null;
   loader.load('assets/models/door.glb', (g) => { const m = g.scene; L = m.getObjectByName('large_castle_door_left'); R = m.getObjectByName('large_castle_door_right'); L?.rotation.set(0, 0, 0); R?.rotation.set(0, 0, 0); m.rotation.y = Math.PI; door.add(m); });
+  loader.load('assets/models/gate.glb', (g) => { const o = g.scene; o.scale.setScalar(2.2); o.position.set(-0.08, 1.02, 0.13); o.rotation.y = Math.PI; door.add(o); });
   const lc = document.createElement('canvas'); lc.width = 256; lc.height = 128; const lg = lc.getContext('2d'); const gr = lg.createRadialGradient(128, 128, 4, 128, 128, 126); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.5, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); lg.fillStyle = gr; lg.fillRect(0, 0, 256, 128);
   const leak = new THREE.Mesh(new THREE.PlaneGeometry(3.8, 2.6), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(lc), color: new THREE.Color(0.7, 0.8, 0.75), transparent: true, opacity: 0.55, fog: false, depthWrite: false }));
   leak.rotation.x = -Math.PI / 2; leak.position.set(0, 0.03, zFar + 1.4); T.group.add(leak);

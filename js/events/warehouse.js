@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { buildRoom } from '../world/rooms.js';
+import { kitMesh, kitObject } from '../world/props.js';
 import { decorWarehouse } from '../world/decor.js';
 
 export const WH = { z0: -400, w: 12, l: 36, h: 6.5 };
@@ -31,11 +32,24 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   // porta d'uscita
   const door = new THREE.Group(); door.position.set(0, 0, zFar + 0.15); W.group.add(door); let L = null, R = null;
   loader.load('assets/models/door.glb', (g) => { const m = g.scene; L = m.getObjectByName('large_castle_door_left'); R = m.getObjectByName('large_castle_door_right'); L?.rotation.set(0, 0, 0); R?.rotation.set(0, 0, 0); m.rotation.y = Math.PI; door.add(m); });
+  // cancello a rete con chiavistello: sbarra la sala prima della porta; si sblocca quando hai preso la pistola
+  const gz = zFar + 6.5, gate = new THREE.Group(); gate.position.set(0, 0, gz); W.group.add(gate); let leaf = null;
+  W.box = [W.bounds[0], W.bounds[1], gz + 0.5, W.bounds[3]];
+  (async () => {
+    const frame = await kitObject('fence', 'Cylinder184'); if (frame) { frame.position.set(0, 1.26, 0); gate.add(frame); }
+    const lf = await kitObject('fence', 'Cylinder140');
+    if (lf) { leaf = new THREE.Group(); leaf.position.set(-0.45, 0, 0); lf.position.set(0.47, 0.93, 0); leaf.add(lf); gate.add(leaf);
+      const parts = await Promise.all(['gate_latch_01_frame', 'gate_latch_01_latch', 'gate_latch_01_hook'].map(() => null)); }
+    new GLTFLoader().load('assets/models/gate.glb', (g) => { const o = g.scene; o.scale.setScalar(1.7); o.position.set(0.9, 0.95, 0.05); (leaf || gate).add(o); });
+    const side = []; for (const sx of [-1, 1]) for (let x = 1.9 + 0.955; x < 6; x += 1.91) side.push({ n: 'Plane020', p: [sx * x, 1.19, 0], r: [0, 0, 0] }, { n: 'post', p: [sx * (x - 0.955), 1.26, 0], r: [0, 0, 0] });
+    const m = await kitMesh('fence', side); if (m) { m.position.z = gz; m.traverse((o) => { o.userData.decor = true; }); W.group.add(m); }
+  })();
+  let gateT = 0;
   const shade = hall.silhouette(5); shade.visible = false; W.group.add(shade);
 
   W.enter = () => {
-    W.group.visible = true; W.taken = false; W.state = 'walk'; W.t = 0; W.beat = false;
-    player.box = W.bounds; player.pos.set(0.3, 1.62, WH.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
+    W.group.visible = true; W.taken = false; W.state = 'walk'; W.t = 0; W.beat = false; gateT = 0; if (leaf) leaf.rotation.y = 0;
+    player.box = W.box; player.pos.set(0.3, 1.62, WH.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     lights.setLamps(lampPos.slice(0, 2).concat([lampPos[2]]), 2.2); scene.fog.density = 0.032; audio.duck(1, 1.5); instab.set(0.08, 6);
   };
   W.leave = () => { W.group.visible = false; };
@@ -55,7 +69,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
       if (stepT <= 0 && steps < 7.4) { stepT = 1.15; const k = steps / 7.4; fw.set(player.forward.x, 0, player.forward.z); const back = tmp.set(P.x, 0, P.z).addScaledVector(fw, -(15 - 10 * k)); audio.heavyStep(back, 0.6 + 0.5 * k); player.addShake(0.08 * k); }
       if (steps > 7.6 && W.state === 'taken') { W.state = 'open'; doorT = 0; lights.lamp(2, 'on'); lights.lamp(0, 'off'); lights.lamp(1, 'off'); }
     }
-    if (W.state === 'open') { doorT += dt; const a = Math.min(1.5, doorT * 0.5); if (L) L.rotation.y = a; if (R) R.rotation.y = -a; }
+    if (W.state === 'open') { if (gateT === 0) { audio.clatter(); player.box = W.bounds; } gateT += dt; if (leaf) leaf.rotation.y = -Math.min(1.7, gateT * 1.1); doorT += dt; const a = Math.min(1.5, doorT * 0.5); if (L) L.rotation.y = a; if (R) R.rotation.y = -a; }
     if (W.taken && W.state === 'open' && P.z < zFar + 2.4 && !W.leaving) { W.leaving = true; story.goto('tower'); }
   };
 

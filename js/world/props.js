@@ -42,3 +42,10 @@ export const lenOf = async (kit, n) => { const pc = (await loadKit(kit))[n]; ret
 // serie di pezzi uguali allineati lungo z (rotX=π/2 porta l'asse Y del pezzo su z)
 export const runZ = (n, len, x, y, z0, z1, extra = {}) => { const out = []; for (let z = z0 - len / 2; z > z1 - 0.01; z -= len) out.push({ n, p: [x, y, z], r: [Math.PI / 2, 0, 0], ...extra }); return out; };
 export const runX = (n, len, z, y, x0, x1, extra = {}) => { const out = []; for (let x = x0 + len / 2; x < x1 + 0.01; x += len) out.push({ n, p: [x, y, z], r: [0, 0, Math.PI / 2], ...extra }); return out; };
+
+// pezzo singolo come oggetto animabile (non fuso): { mesh... } centrato sul proprio ingombro
+export async function kitObject(kit, name) {
+  const pc = (await loadKit(kit))[name]; if (!pc) return null; const g = new THREE.Group();
+  for (const p of pc.parts) { if (p.mat.transparent) { p.mat.side = THREE.DoubleSide; p.mat.depthWrite = false; } g.add(new THREE.Mesh(p.geo, p.mat)); }
+  g.userData.size = pc.size; return g;
+}
