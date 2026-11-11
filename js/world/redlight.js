@@ -37,6 +37,6 @@ export function doorGlow(group, { x, z, w = 2.3, h = 2.7 }) {
   const wall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); wall.position.set(x, h / 2, z); wall.renderOrder = 6;
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.3, 1.6), mat); floor.rotation.x = -Math.PI / 2; floor.position.set(x, 0.03, z + 0.7); floor.renderOrder = 6; group.add(wall, floor);
   const D = { t: Math.random() * 9, drop: 0 };
-  D.update = (dt) => { D.t += dt; let k = 0.7 + 0.2 * Math.sin(D.t * 1.1) + 0.05 * Math.sin(D.t * 6.7); if (D.drop > 0) { D.drop -= dt; k *= 0.15; } else if (Math.random() < dt * 0.1) D.drop = 0.12 + Math.random() * 0.4; mat.opacity = 0.42 * k; };
+  D.update = (dt) => { D.t += dt; let k = 0.7 + 0.2 * Math.sin(D.t * 1.1) + 0.05 * Math.sin(D.t * 6.7); if (D.drop > 0) { D.drop -= dt; k *= 0.15; } else if (Math.random() < dt * 0.06) D.drop = 0.12 + Math.random() * 0.4; mat.opacity = 0.78 * k; };
   return D;
 }

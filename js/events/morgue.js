@@ -6,6 +6,7 @@ import { buildRoom } from '../world/rooms.js';
 import { entryDoor } from '../world/decor.js';
 import { unseenMover } from './ambient.js';
 import { doorGlow } from '../world/redlight.js';
+import { kitObject } from '../world/props.js';
 
 export const MORGUE = { z0: -500, w: 9, l: 15, h: 3.0 };
 
@@ -46,14 +47,21 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
   load('assets/models/hlamp.glb').then((o) => { if (!o) return; for (const [x, , z] of lampPos) { const c = o.clone(true); c.position.set(x, h, z); M.group.add(c); } });
   // DUE PORTE in fondo: a sinistra filtra una luce rossa, a destra si sente un respiro. Quella che scegli cambia il magazzino (flags.door).
   const doors = [];
-  load('assets/models/door.glb').then((m) => { if (!m) return;
-    for (const sx of [-1, 1]) {
-      const g = new THREE.Group(); g.position.set(sx * 2.2, 0, zFar + 0.42); const c = m.clone(true); c.rotation.y = Math.PI;
-      const L = c.getObjectByName('large_castle_door_left'), R = c.getObjectByName('large_castle_door_right'); L?.rotation.set(0, 0, 0); R?.rotation.set(0, 0, 0); g.add(c); M.group.add(g);
-      const cap = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 2.95), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); cap.position.set(sx * 2.2, 1.5, zFar + 0.36); cap.rotation.y = 0; M.group.add(cap);
-      doors.push({ sx, L, R, open: 0, g });
-    } });
-  const glowRed = doorGlow(M.group, { x: -2.2, z: zFar + 0.5 });
+  for (const sx of [-1, 1]) { const cap = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 2.95), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); cap.position.set(sx * 2.2, 1.5, zFar + 0.36); M.group.add(cap); }
+  // destra: porta di legno chiusa (non vedi niente, senti il respiro)
+  load('assets/models/door.glb').then((m) => { if (!m) return; const g = new THREE.Group(); g.position.set(2.2, 0, zFar + 0.42); const c = m.clone(true); c.rotation.y = Math.PI;
+    const L = c.getObjectByName('large_castle_door_left'), R = c.getObjectByName('large_castle_door_right'); L?.rotation.set(0, 0, 0); R?.rotation.set(0, 0, 0); g.add(c); M.group.add(g);
+    doors.push({ sx: 1, set: (o) => { if (L) L.rotation.y = o; if (R) R.rotation.y = -o; }, open: 0 }); });
+  // sinistra: cancello a rete con chiavistello (si vede attraverso: dietro c'è la luce rossa)
+  (async () => {
+    const gate = new THREE.Group(); gate.position.set(-2.2, 0, zFar + 0.45); M.group.add(gate);
+    const frame = await kitObject('fence', 'Cylinder184'); if (frame) { frame.position.set(0, 1.26, 0); gate.add(frame); }
+    const lf = await kitObject('fence', 'Cylinder140'); let leaf = null;
+    if (lf) { leaf = new THREE.Group(); leaf.position.set(-0.45, 0, 0); lf.position.set(0.47, 0.93, 0); leaf.add(lf); gate.add(leaf); }
+    new GLTFLoader().load('assets/models/gate.glb', (g) => { const o = g.scene; o.scale.setScalar(1.7); o.position.set(0.9, 0.95, 0.05); (leaf || gate).add(o); });
+    doors.push({ sx: -1, set: (o) => { if (leaf) leaf.rotation.y = -Math.min(1.7, o * 1.13); }, open: 0 });
+  })();
+  const glowRed = doorGlow(M.group, { x: -2.2, z: zFar + 0.40, w: 2.6, h: 2.9 });   // dietro il cancello: si vede attraverso la rete
   // impronte di piedi nudi, rosso scuro e bagnate: dalla sedia alla porta in fondo; compaiono solo dopo lo sfarfallio
   const tl = new THREE.TextureLoader(), fL = tl.load('assets/tex/foot_l.png'), fR = tl.load('assets/tex/foot_r.png'); fL.colorSpace = fR.colorSpace = THREE.SRGBColorSpace; const prints = new THREE.Group(); prints.visible = false; M.group.add(prints);
   for (let i = 0, zz = chairZ - 1.2; zz > zFar + 1.6; i++, zz -= 0.62) {
@@ -68,7 +76,7 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
 
   M.enter = () => {
     M.trig = chairZ + 3.5 + Math.random() * 2; M.variant = flags.turned ? 'near' : (Math.random() < 0.5 ? 'far' : 'breath');   // l'evento cambia a ogni partita e in base a cosa hai scelto
-    M.group.visible = true; M.state = 'walk'; M.t = 0; M.leaving = false; prints.visible = false; M.fall = null; M.dropped = false; M.pick = null; M.br = 0; doors.forEach((d) => { d.open = 0; if (d.L) d.L.rotation.y = 0; if (d.R) d.R.rotation.y = 0; });
+    M.group.visible = true; M.state = 'walk'; M.t = 0; M.leaving = false; prints.visible = false; M.fall = null; M.dropped = false; M.pick = null; M.br = 0; doors.forEach((d) => { d.open = 0; d.set(0); });
     player.box = M.bounds; player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false;
     lights.setLamps(lampPos, 1.9, 0xc4d4cc); scene.fog.density = 0.042; audio.duck(1, 1.5); instab.set(0.1, 6);
   };
@@ -93,7 +101,7 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
     glowRed.update(dt);
     // porta scelta: ti avvicini a una delle due; il battente si apre sul buio e il magazzino cambia di conseguenza
     if (!M.leaving && P.z < zFar + 2.7) { for (const d of doors) if (Math.abs(P.x - d.sx * 2.2) < 1.05) { M.leaving = true; flags.door = d.sx < 0 ? 'red' : 'breath'; M.pick = d; setTimeout(() => story.goto('warehouse'), 900); } }
-    if (M.pick) { const d = M.pick; d.open = Math.min(1.5, d.open + dt * 1.6); if (d.L) d.L.rotation.y = d.open; if (d.R) d.R.rotation.y = -d.open; }
+    if (M.pick) { const d = M.pick; d.open = Math.min(1.5, d.open + dt * 1.6); d.set(d.open); }
     // il respiro dietro la porta di destra, quando ti avvicini
     if (!M.leaving && M.state === 'after' && Math.hypot(P.x - 2.2, P.z - (zFar + 0.4)) < 5.5) { M.br = (M.br ?? 0) - dt; if (M.br <= 0) { M.br = 5 + Math.random() * 2; audio.breath?.(); } }
   };
