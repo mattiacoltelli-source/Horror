@@ -47,15 +47,10 @@ export function createMorgue({ scene, mats, player, audio, lights, instab, say, 
   load('assets/models/door.glb').then((m) => { if (!m) return; const L = m.getObjectByName('large_castle_door_left'), R = m.getObjectByName('large_castle_door_right'); L?.rotation.set(0, 1.5, 0); R?.rotation.set(0, -1.5, 0); m.rotation.y = Math.PI; door.add(m); });
   const cap = new THREE.Mesh(new THREE.PlaneGeometry(2.1, h), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); cap.position.set(0, h / 2, zFar + 0.05); M.group.add(cap);
   // impronte di piedi nudi, rosso scuro e bagnate: dalla sedia alla porta in fondo; compaiono solo dopo lo sfarfallio
-  const ft = document.createElement('canvas'); ft.width = 64; ft.height = 128; { const g = ft.getContext('2d'); g.fillStyle = '#fff'; g.shadowColor = '#fff'; g.shadowBlur = 7;   // contorno sfumato: poco definito, come sangue vecchio
-    g.beginPath(); g.ellipse(32, 98, 11, 20, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(33, 52, 14, 22, 0.08, 0, 7); g.fill();
-    [[18, 24, 5], [27, 16, 5.5], [37, 14, 5], [46, 19, 4.5], [52, 28, 3.8]].forEach(([x, y, r]) => { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); });
-    g.shadowBlur = 0; g.globalCompositeOperation = 'destination-out'; g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(32, 76, 14, 6, 0, 0, 7); g.fill();   // arco del piede quasi vuoto
-    for (let i = 0; i < 90; i++) { g.fillStyle = `rgba(0,0,0,${0.15 + Math.random() * 0.4})`; g.beginPath(); g.arc(Math.random() * 64, Math.random() * 128, 1 + Math.random() * 3, 0, 7); g.fill(); } }   // chiazze mancanti, sangue secco
-  const ftex = new THREE.CanvasTexture(ft); ftex.colorSpace = THREE.SRGBColorSpace; const prints = new THREE.Group(); prints.visible = false; M.group.add(prints);
+  const tl = new THREE.TextureLoader(), fL = tl.load('assets/tex/foot_l.png'), fR = tl.load('assets/tex/foot_r.png'); fL.colorSpace = fR.colorSpace = THREE.SRGBColorSpace; const prints = new THREE.Group(); prints.visible = false; M.group.add(prints);
   for (let i = 0, zz = chairZ - 1.2; zz > zFar + 1.6; i++, zz -= 0.62) {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.13, 0.26), new THREE.MeshLambertMaterial({ map: ftex, color: new THREE.Color(0.055, 0.006, 0.004), transparent: true, opacity: 0.8 - Math.min(0.4, i * 0.03), depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
-    m.rotation.set(-Math.PI / 2, 0, (i % 2 ? 0.06 : -0.06) + Math.sin(i) * 0.1); if (i % 2) m.scale.x = -1; m.position.set(0.2 + Math.sin(i * 0.5) * 0.35 + (i % 2 ? 0.1 : -0.1), 0.012, zz); prints.add(m);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.13, 0.27), new THREE.MeshLambertMaterial({ map: i % 2 ? fR : fL, color: new THREE.Color(0.055, 0.006, 0.004), transparent: true, opacity: 0.8 - Math.min(0.4, i * 0.03), depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    m.rotation.set(-Math.PI / 2, 0, Math.sin(i * 1.7) * 0.18); m.position.set(0.2 + Math.sin(i * 0.5) * 0.35 + (i % 2 ? 0.1 : -0.1), 0.012, zz); prints.add(m);
   }
   entryDoor(M.group, z0);   // la porta si è chiusa alle tue spalle
   const back = new THREE.Mesh(new THREE.PlaneGeometry(2.1, h), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); back.position.set(0, h / 2, z0 + 0.06); back.rotation.y = Math.PI; M.group.add(back);
