@@ -158,7 +158,7 @@ async function enter() {
   // scorciatoie di prova: ?start=cantina | torre  (&turned=1 / &mirror=1 per simulare le scelte)
   { const st = q.get('start'); flags.turned = q.get('turned') === '1'; flags.mirror = q.get('mirror') === '1'; flags.noGun = q.get('nogun') === '1'; flags.weapon = q.get('weapon') === 'axe' ? 'axe' : null; flags.door = q.get('door') === 'red' ? 'red' : q.get('door') === 'breath' ? 'breath' : null;
     if (st === 'epilogo') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; dawn.start(q.get('turned') === '1' ? 'ti sei girato.\nlei non se n\'è mai andata.\nl\'incendio l\'hai acceso tu.' : 'non ti sei girato.\nera già davanti a te.\nnon volevi ricordare.'); }
-    if (st === 'cantina' || st === 'torre' || st === 'magazzino' || st === 'obitorio') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; story.goto(st === 'cantina' ? 'cellar' : st === 'obitorio' ? 'morgue' : st === 'magazzino' ? 'warehouse' : 'tower'); } }
+    if (st === 'cantina' || st === 'torre' || st === 'magazzino' || st === 'obitorio') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; if (st === 'torre' && flags.weapon === 'axe') combat.giveAxe(); story.goto(st === 'cantina' ? 'cellar' : st === 'obitorio' ? 'morgue' : st === 'magazzino' ? 'warehouse' : 'tower'); } }
   controls.enabled = true; started = true; state = 'play';
   $('fade').style.opacity = 0;
   setTimeout(() => instab.show(), 4000);
