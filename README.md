@@ -30,3 +30,8 @@ Apri `http://localhost:8123` (su desktop: WASD + trascinamento a destra; `?debug
 Passi: Kenney «Impact Sounds» (CC0, kenney.nl), assets/audio.
 Modelli dei personaggi (base low-poly) forniti dall'autore (licenza da confermare); posa "cotta" con Blender.
 Texture e modelli forniti dall'autore del progetto, provenienti da Poly Haven e ambientCG (CC0): Bricks097, Ground110, Ground112, stone_wall_02, rusty_metal_04, caged_hanging_light, can_rusted, small_lpg_tank, rusted_wheel_rim_02, security_camera_01, creepy_bathroom (HDRI). Modello «whisperer» fornito dall'autore (licenza da confermare). Three.js: MIT.
+
+## App installabile e aggiornamenti
+Il gioco è una PWA: icona sulla home, schermo intero, funziona offline dopo il primo avvio. Quando esce una nuova versione compare il banner **«Aggiornamento disponibile · AGGIORNA»** (il controllo avviene a ogni apertura e ogni 30 minuti).
+
+Prima di ogni commit che cambia il gioco si lancia `tools/bump.sh`: calcola l'hash dei file e lo scrive in `sw.js` (se nulla cambia, nessun banner). Gli asset pesanti hanno una cache separata, quindi un aggiornamento del solo codice non li riscarica.
