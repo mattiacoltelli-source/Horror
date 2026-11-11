@@ -58,7 +58,7 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
       }
       case 'void':
         // buio e silenzio: ti aspetti qualcosa
-        if (E.t > 3.2) { ph = 0; go('lit'); lightOn(); }
+        if (E.t > 3.2) { ph = 0; go('lit'); lightOn(); say('erano qui tutti, quella notte.', 4800); }
         break;
       case 'lit': {
         // la sala è illuminata: in fondo, file di sagome ferme che ti fissano

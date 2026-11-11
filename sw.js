@@ -2,7 +2,7 @@
  * - Shell (html/css/js/vendor/icone): precache, cache-first. Nuova versione => nuovo SW "in attesa" => banner nell'app.
  * - Asset pesanti (modelli, texture, audio): cache separata; scaricati in background dopo l'installazione.
  * Le due versioni qui sotto le aggiorna tools/bump.sh a ogni modifica (hash del contenuto): non toccarle a mano. */
-const SHELL_VERSION = '789180144e';   // @shell
+const SHELL_VERSION = '4590cfb9c3';   // @shell
 const ASSET_VERSION = '376fa75c09';   // @assets
 const SHELL = 'ng-shell-' + SHELL_VERSION, ASSETS = 'ng-assets-' + ASSET_VERSION;
 const SHELL_FILES = ['./','./css/style.css','./icons/icon-180.png','./icons/icon-192.png','./icons/icon-32.png','./icons/icon-512.png','./icons/maskable-512.png','./index.html','./js/audio/audio.js','./js/events/ambient.js','./js/events/cellar.js','./js/events/combat.js','./js/events/dawn.js','./js/events/door.js','./js/events/glass.js','./js/events/hall.js','./js/events/morgue.js','./js/events/scare.js','./js/events/tower.js','./js/events/warehouse.js','./js/main.js','./js/player/controls.js','./js/player/player.js','./js/pwa.js','./js/story.js','./js/ui/instability.js','./js/world/blood.js','./js/world/decor.js','./js/world/dust.js','./js/world/lights.js','./js/world/materials.js','./js/world/props.js','./js/world/redlight.js','./js/world/rooms.js','./js/world/tunnel.js','./manifest.webmanifest','./vendor/three/LICENSE','./vendor/three/Reflector.js','./vendor/three/loaders/GLTFLoader.js','./vendor/three/three.module.min.js','./vendor/three/utils/BufferGeometryUtils.js']; // @shellfiles

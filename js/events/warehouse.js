@@ -6,6 +6,7 @@ import { buildRoom } from '../world/rooms.js';
 import { kitMesh, kitObject } from '../world/props.js';
 import { decorWarehouse } from '../world/decor.js';
 import { unseenMover } from './ambient.js';
+import { redLight } from '../world/redlight.js';
 
 export const WH = { z0: -400, w: 12, l: 36, h: 6.5 };
 
@@ -59,13 +60,15 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
     const side = []; for (const sx of [-1, 1]) { for (let x = 0.955 + 0.955; x < 6.4; x += 1.91) side.push({ n: 'Plane020', p: [sx * x, 1.19, 0], r: [0, 0, 0] }); for (let x = 0.955; x < 6.1; x += 1.91) side.push({ n: 'post', p: [sx * x, 1.26, 0], r: [0, 0, 0] }); }
     const m = await kitMesh('fence', side); if (m) { m.position.z = gz; m.traverse((o) => { o.userData.decor = true; }); W.group.add(m); }
   })();
+  // porta ROSSA (scelta nell'obitorio): luce d'emergenza rossa, due lampade rosse alle pareti; porta del RESPIRO: luce fredda normale, ma ogni tanto un respiro dietro di te
+  const reds = [redLight(W.group, { x: WH.w / 2 - 0.1, y: 2.9, z: WH.z0 - 11, dir: 1 }), redLight(W.group, { x: -WH.w / 2 + 0.1, y: 2.9, z: WH.z0 - 27, dir: -1 })]; reds.forEach((r) => (r.root.visible = false));
   let gateT = 0;
   const shade = hall.silhouette(5); shade.visible = false; W.group.add(shade);
 
   W.enter = () => {
     W.group.visible = true; W.taken = false; W.state = 'walk'; W.t = 0; W.beat = false; gateT = 0; if (leaf) leaf.rotation.y = 0;
     player.box = W.box; player.pos.set(0.3, 1.62, WH.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
-    lights.setLamps(lampPos, 2.2); lights.lamp(3, 'off'); W.sec = 0; scene.fog.density = 0.032; audio.duck(1, 1.5); instab.set(0.08, 6);
+    const red = flags.door === 'red'; lights.setLamps(lampPos, red ? 1.7 : 2.2, red ? 0xff5a44 : 0xaec8ff); reds.forEach((r) => (r.root.visible = red)); W.red = red; W.br = 6 + Math.random() * 4; W.brN = 0; lights.lamp(3, 'off'); W.sec = 0; scene.fog.density = 0.032; audio.duck(1, 1.5); instab.set(0.08, 6);
   };
   W.leave = () => { W.group.visible = false; };
 
@@ -78,6 +81,8 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
       if (W.secT > 0.55 && W.secT < 0.6) lights.lamp(3, 'on');
       if ((W.secT > 4.2 || P.z < WH.z0 - 19) && W.secT > 1.2) { W.sec = 2; shade.visible = false; lights.lamp(3, 'off'); audio.lightOn(); secMats.forEach((m) => (m.emissiveIntensity = 0)); } }
     stoolMove(dt, W.state === 'walk');
+    if (W.red) reds.forEach((r) => r.update(dt));
+    else if (W.state === 'walk' && W.brN < 4) { W.br -= dt; if (W.br <= 0) { W.br = 11 + Math.random() * 6; W.brN++; audio.breath?.(); } }   // il respiro dietro la porta scelta ti ha seguito
     // pulsante PRENDI vicino al carrello
     dv.set(0 - P.x, 0, cartZ - P.z); const dd = dv.length(); dv.normalize(); fw.set(player.forward.x, 0, player.forward.z).normalize();
     const near = !W.taken && dd < 2.1 && fw.dot(dv) > 0.5; if (near !== W.near) { W.near = near; actBtn.textContent = 'PRENDI'; actBtn.classList.toggle('hidden', !near); }

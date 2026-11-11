@@ -6,7 +6,7 @@ import { buildRoom } from '../world/rooms.js';
 import { decorTower } from '../world/decor.js';
 
 export const TOWER = { z0: -300, w: 14, l: 18, h: 8.5 };
-const TEXT = { A: 'non ti sei girato.\nera già davanti a te.', B: 'ti sei girato.\nlei non se n\'è mai andata.', C: 'sei uscito.\nlo specchio no.' };
+const TEXT = { A: 'non ti sei girato.\nera già davanti a te.\nnon volevi ricordare.', B: 'ti sei girato.\nlei non se n\'è mai andata.\nl\'incendio l\'hai acceso tu.', C: 'sei uscito.\nlo specchio no.\nuna parte di te è rimasta qui.' };
 
 export function createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn, combat }) {
   const T = { group: new THREE.Group(), opened: false, near: false };

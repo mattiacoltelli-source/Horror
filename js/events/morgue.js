@@ -5,6 +5,7 @@ import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { buildRoom } from '../world/rooms.js';
 import { entryDoor } from '../world/decor.js';
 import { unseenMover } from './ambient.js';
+import { doorGlow } from '../world/redlight.js';
 
 export const MORGUE = { z0: -500, w: 9, l: 15, h: 3.0 };
 
@@ -25,7 +26,7 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
     const put = (x, z, ry) => { const o = src.clone(true), g = new THREE.Group(); o.position.set(-c0.x, -b0.min.y, -c0.z); g.add(o); g.position.set(x, 0, z); g.rotation.y = ry; M.group.add(g); };
     const t = sz.z / 2 - 0.02;
     for (let i = 0; i < 5; i++) { const z = z0 - 1.5 - i * 3; put(-w / 2 + t, z, Math.PI / 2); put(w / 2 - t, z, -Math.PI / 2); }
-    for (const sx of [-1, 1]) { put(sx * 2.45, zFar + t, 0); put(sx * 4.35, zFar + t - 0.02, 0); }   // parete di testa con il varco della porta (1.9 m)
+    for (let i = -1; i <= 1; i++) put(i * 3, zFar + t, 0);   // parete di testa piena: le due porte sono montate sopra
     for (const sx of [-1, 1]) { put(sx * 2.45, z0 - t, Math.PI); put(sx * 4.35, z0 - t + 0.02, Math.PI); }   // parete d'ingresso con il varco della porta da cui sei arrivato
   })();
 
@@ -43,10 +44,16 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
   // lampada sospesa sopra la sedia
   const lampPos = [[0, 2.8, chairZ]];   // una sola lampada, sopra la sedia: gli angoli restano bui
   load('assets/models/hlamp.glb').then((o) => { if (!o) return; for (const [x, , z] of lampPos) { const c = o.clone(true); c.position.set(x, h, z); M.group.add(c); } });
-  // porta d'uscita in fondo, aperta sul buio
-  const door = new THREE.Group(); door.position.set(0, 0, zFar + 0.15); M.group.add(door);
-  load('assets/models/door.glb').then((m) => { if (!m) return; const L = m.getObjectByName('large_castle_door_left'), R = m.getObjectByName('large_castle_door_right'); L?.rotation.set(0, 1.5, 0); R?.rotation.set(0, -1.5, 0); m.rotation.y = Math.PI; door.add(m); });
-  const cap = new THREE.Mesh(new THREE.PlaneGeometry(2.1, h), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); cap.position.set(0, h / 2, zFar + 0.05); M.group.add(cap);
+  // DUE PORTE in fondo: a sinistra filtra una luce rossa, a destra si sente un respiro. Quella che scegli cambia il magazzino (flags.door).
+  const doors = [];
+  load('assets/models/door.glb').then((m) => { if (!m) return;
+    for (const sx of [-1, 1]) {
+      const g = new THREE.Group(); g.position.set(sx * 2.2, 0, zFar + 0.42); const c = m.clone(true); c.rotation.y = Math.PI;
+      const L = c.getObjectByName('large_castle_door_left'), R = c.getObjectByName('large_castle_door_right'); L?.rotation.set(0, 0, 0); R?.rotation.set(0, 0, 0); g.add(c); M.group.add(g);
+      const cap = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 2.95), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); cap.position.set(sx * 2.2, 1.5, zFar + 0.36); cap.rotation.y = 0; M.group.add(cap);
+      doors.push({ sx, L, R, open: 0, g });
+    } });
+  const glowRed = doorGlow(M.group, { x: -2.2, z: zFar + 0.5 });
   // impronte di piedi nudi, rosso scuro e bagnate: dalla sedia alla porta in fondo; compaiono solo dopo lo sfarfallio
   const tl = new THREE.TextureLoader(), fL = tl.load('assets/tex/foot_l.png'), fR = tl.load('assets/tex/foot_r.png'); fL.colorSpace = fR.colorSpace = THREE.SRGBColorSpace; const prints = new THREE.Group(); prints.visible = false; M.group.add(prints);
   for (let i = 0, zz = chairZ - 1.2; zz > zFar + 1.6; i++, zz -= 0.62) {
@@ -61,7 +68,7 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
 
   M.enter = () => {
     M.trig = chairZ + 3.5 + Math.random() * 2; M.variant = flags.turned ? 'near' : (Math.random() < 0.5 ? 'far' : 'breath');   // l'evento cambia a ogni partita e in base a cosa hai scelto
-    M.group.visible = true; M.state = 'walk'; M.t = 0; M.leaving = false; prints.visible = false; M.fall = null; M.dropped = false;
+    M.group.visible = true; M.state = 'walk'; M.t = 0; M.leaving = false; prints.visible = false; M.fall = null; M.dropped = false; M.pick = null; M.br = 0; doors.forEach((d) => { d.open = 0; if (d.L) d.L.rotation.y = 0; if (d.R) d.R.rotation.y = 0; });
     player.box = M.bounds; player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false;
     lights.setLamps(lampPos, 1.9, 0xc4d4cc); scene.fog.density = 0.042; audio.duck(1, 1.5); instab.set(0.1, 6);
   };
@@ -83,7 +90,12 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
     if (M.state === 'beat') { M.bt += dt; shade.visible = M.variant !== 'breath' && M.bt < (M.variant === 'near' ? 1.25 : 0.95) && Math.sin(M.bt * 40) > -0.3; if (M.bt > 0.5) prints.visible = true;   // nel buio tra un guizzo e l'altro ci sono le impronte
       if (M.bt > 1.3) { M.state = 'after'; shade.visible = false; } }
     chairMove(dt, M.state === 'after');
-    if (!M.leaving && P.z < zFar + 2.4) { M.leaving = true; story.goto('warehouse'); }
+    glowRed.update(dt);
+    // porta scelta: ti avvicini a una delle due; il battente si apre sul buio e il magazzino cambia di conseguenza
+    if (!M.leaving && P.z < zFar + 2.7) { for (const d of doors) if (Math.abs(P.x - d.sx * 2.2) < 1.05) { M.leaving = true; flags.door = d.sx < 0 ? 'red' : 'breath'; M.pick = d; setTimeout(() => story.goto('warehouse'), 900); } }
+    if (M.pick) { const d = M.pick; d.open = Math.min(1.5, d.open + dt * 1.6); if (d.L) d.L.rotation.y = d.open; if (d.R) d.R.rotation.y = -d.open; }
+    // il respiro dietro la porta di destra, quando ti avvicini
+    if (!M.leaving && M.state === 'after' && Math.hypot(P.x - 2.2, P.z - (zFar + 0.4)) < 5.5) { M.br = (M.br ?? 0) - dt; if (M.br <= 0) { M.br = 5 + Math.random() * 2; audio.breath?.(); } }
   };
   return M;
 }
