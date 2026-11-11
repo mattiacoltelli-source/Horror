@@ -41,6 +41,20 @@
   </div>
 </section>
 
+<script>
+// Messaggi di caricamento criptici (cambiano a ogni apertura). Nessun ritardo finto: spariscono appena il gioco e' pronto.
+(function () {
+  var el = document.getElementById('loadmsg'); if (!el) return;
+  var M = ['paziente n. 17, in attesa.', 'ti stavano aspettando.', 'non voltarti ancora.', 'la luce regge. ancora per poco.', 'qualcuno ha già aperto la porta.', 'conta i passi. sono sempre uno in più.', 'lo specchio non c\'era, prima.', 'respira piano.', 'il corridoio è più lungo di come lo ricordi.', 'ricordi la tua faccia?', 'non sei il primo a entrare.', 'nessuno ti ha sentito arrivare.', 'tieni accesa la torcia.', 'non guardare dietro, qualunque cosa senta.'];
+  for (var i = M.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = M[i]; M[i] = M[j]; M[j] = t; }
+  var n = 0, timer = null, still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function show(txt) { el.textContent = txt; if (still) return; el.classList.add('glitch'); setTimeout(function () { el.classList.remove('glitch'); }, 260); }
+  show(M[0]); el.classList.add('flick');
+  timer = setInterval(function () { n = (n + 1) % M.length; show(M[n]); }, 2600);
+  window.__loadMsgStop = function () { clearInterval(timer); el.classList.remove('flick', 'glitch'); };
+})();
+</script>
+
 <section id="rotate" class="screen hidden"><p>Ruota il telefono<br>in verticale</p></section>
 
 <section id="pause" class="screen hidden">

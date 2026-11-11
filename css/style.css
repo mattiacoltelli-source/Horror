@@ -38,3 +38,11 @@ button:disabled{opacity:.35}
 #dot{position:fixed;left:50%;top:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;background:rgba(255,235,225,.85);box-shadow:0 0 4px rgba(255,255,255,.55),0 0 0 1px rgba(0,0,0,.45);pointer-events:none;z-index:4;transition:opacity .4s}
 #dot.hidden{opacity:0}
 #fire.cool{opacity:.35}
+
+/* messaggi di caricamento: sfarfallio lento come una luce che cede; breve scatto quando il testo cambia */
+#loadmsg.flick{animation:lmflick 3.1s steps(1,end) infinite}
+#loadmsg.glitch{animation:lmglitch .26s steps(1,end);text-shadow:2px 0 rgba(160,30,30,.55),-2px 0 rgba(40,120,150,.45)}
+@keyframes lmflick{0%{opacity:1}12%{opacity:.35}14%{opacity:1}47%{opacity:.8}49%{opacity:.2}51%{opacity:1}83%{opacity:.55}85%{opacity:1}100%{opacity:1}}
+@keyframes lmglitch{0%{opacity:.1;transform:translateX(-3px)}33%{opacity:.9;transform:translateX(2px)}66%{opacity:.3;transform:translateX(-1px)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#loadmsg.flick,#loadmsg.glitch{animation:none}}
+#loadmsg{min-height:2.8em;color:#8f948f;letter-spacing:.08em}

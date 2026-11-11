@@ -168,9 +168,9 @@ async function enter() {
 }
 $('enter').addEventListener('click', enter);
 
-THREE.DefaultLoadingManager.onLoad = () => { $('loadmsg').textContent = ''; $('enter').disabled = false; };
+THREE.DefaultLoadingManager.onLoad = () => { window.__loadMsgStop?.(); $('loadmsg').textContent = ''; $('enter').disabled = false; };
 $('enter').disabled = true;
-setTimeout(() => { $('enter').disabled = false; $('loadmsg').textContent = ''; }, 9000);
+setTimeout(() => { window.__loadMsgStop?.(); $('enter').disabled = false; $('loadmsg').textContent = ''; }, 9000);
 
 function setPaused(p) {
   if (!started || ended) return;
