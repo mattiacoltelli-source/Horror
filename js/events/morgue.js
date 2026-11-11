@@ -10,7 +10,7 @@ export function createMorgue({ scene, mats, player, audio, lights, instab, say, 
   const M = { group: new THREE.Group(), state: 'idle', t: 0 };
   M.group.visible = false; scene.add(M.group);
   const { z0, w, l, h } = MORGUE, zFar = z0 - l;
-  const room = buildRoom(mats, { z0, w, l, h, wall: 'stone', floor: 'mfloor', ceil: 'stone', dark: 0.9, seed: 57 });
+  const room = buildRoom(mats, { z0, w, l, h, wall: 'stone', floor: 'mfloor', ceil: 'stone', dark: 0.5, seed: 57 });
   M.group.add(room.group); M.bounds = [room.bounds[0], room.bounds[1], zFar + 1.4, z0 - 0.6];
   const loader = new GLTFLoader();
   const load = (u) => new Promise((res) => loader.load(u, (g) => res(g.scene), undefined, () => res(null)));
@@ -19,6 +19,7 @@ export function createMorgue({ scene, mats, player, audio, lights, instab, say, 
   (async () => {
     const src = await load('assets/models/mg_wall.glb'); if (!src) return;
     const b0 = new THREE.Box3().setFromObject(src), sz = b0.getSize(new THREE.Vector3()), c0 = b0.getCenter(new THREE.Vector3());
+    src.traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); m.material.color.setScalar(0.5); } });   // piu' cupo
     const put = (x, z, ry) => { const o = src.clone(true), g = new THREE.Group(); o.position.set(-c0.x, -b0.min.y, -c0.z); g.add(o); g.position.set(x, 0, z); g.rotation.y = ry; M.group.add(g); };
     const t = sz.z / 2 - 0.02;
     for (let i = 0; i < 5; i++) { const z = z0 - 1.5 - i * 3; put(-w / 2 + t, z, Math.PI / 2); put(w / 2 - t, z, -Math.PI / 2); }
@@ -49,7 +50,7 @@ export function createMorgue({ scene, mats, player, audio, lights, instab, say, 
   M.enter = () => {
     M.group.visible = true; M.state = 'walk'; M.t = 0; M.leaving = false;
     player.box = M.bounds; player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false;
-    lights.setLamps(lampPos, 2.4, 0xd8e8e0); scene.fog.density = 0.03; audio.duck(1, 1.5); instab.set(0.1, 6);
+    lights.setLamps(lampPos, 1.5, 0xc4d4cc); scene.fog.density = 0.042; audio.duck(1, 1.5); instab.set(0.1, 6);
   };
   M.leave = () => { M.group.visible = false; };
   M.update = (dt) => {

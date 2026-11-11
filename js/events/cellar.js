@@ -7,6 +7,7 @@ import { Reflector } from '../../vendor/three/Reflector.js';
 import { buildRoom } from '../world/rooms.js';
 import { bloodDecals } from '../world/blood.js';
 import { decorCellar } from '../world/decor.js';
+import { redLight } from '../world/redlight.js';
 
 export const CELLAR = { z0: -200, w: 8, l: 24, h: 4.4 };
 const MIRROR = new THREE.Vector3(-3.98, 1.45, -210);
@@ -18,6 +19,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23 });
   C.group.add(room.group); decorCellar(C.group, CELLAR.z0); C.bounds = [room.bounds[0], room.bounds[1], CELLAR.z0 - CELLAR.l + 1.4, CELLAR.z0 - 0.6];
 
+  const red = redLight(C.group, { x: CELLAR.w / 2 - 0.1, y: 2.5, z: CELLAR.z0 - 19.5, dir: 1 });   // luce rossa d'emergenza vicino all'uscita
   // specchio
   const mw = 1.7, mh = 2.4;
   const mirror = new Reflector(new THREE.PlaneGeometry(mw, mh), { textureWidth: 256, textureHeight: 384, color: new THREE.Color(0xffffff), clipBias: 0.003 });
@@ -137,6 +139,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
 
   const mc = new THREE.Vector3(), fw = new THREE.Vector3(), tmp = new THREE.Vector3(), d = new THREE.Vector3();
   C.update = (dt) => {
+    if (C.group.visible) red.update(dt);
     if (!C.group.visible) return;
     const P = player.pos;
     // --- specchio ---
