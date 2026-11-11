@@ -144,19 +144,16 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
         if (K.hide <= 0) { mon.visible = true; lights.override = null; K.moved = false; monPlace(); }
       } else {
         if (K.fin) {
-          // FINALE: colpi finiti. Compare DAVANTI a te, ben visibile, ferma un attimo; poi avanza lenta, passo dopo passo, e ti raggiunge.
-          K.finT += dt; monPlace();
-          if (K.finT > 1.8) {
-            const sp = 0.4 + Math.min(0.45, (K.finT - 1.8) * 0.05), dx = player.pos.x - K.M.x, dz = player.pos.z - K.M.z, dd = Math.max(0.01, Math.hypot(dx, dz));
-            K.M.x += dx / dd * sp * dt; K.M.z += dz / dd * sp * dt; K.stp = (K.stp || 0) + dt; if (K.stp > 0.95) { K.stp = 0; audio.heavyStep(mon.position, 0.8); }
-          }
+          // JUMP SCARE: nel buio quasi totale scatta addosso a te, velocissima; si vede solo una massa chiara che ingrandisce. Mai ferma in vista.
+          K.finT += dt; lights.override = 3.5; const sp = 5 + 13 * Math.min(1, K.finT / 0.45), dx = player.pos.x - K.M.x, dz = player.pos.z - K.M.z, dd = Math.max(0.01, Math.hypot(dx, dz));
+          K.M.x += dx / dd * Math.min(dd, sp * dt); K.M.z += dz / dd * Math.min(dd, sp * dt); K.stp = (K.stp || 0) + dt; if (K.stp > 0.22) { K.stp = 0; audio.heavyStep(mon.position, 1.1); player.addShake(0.25); }
           monPlace(); mon.visible = true;
         } else {
-        if (K.ammo <= 0 && K.cool <= 0) {
+        if ((K.ammo <= 0 && K.cool <= 0) || K.t > 20) {   // colpi finiti, oppure sono passati 20 s di teletrasporti: jump scare
           K.fin = true; K.finT = 0; K.sched = 0; K.tx = null; const view = Math.atan2(player.forward.z, player.forward.x), [x0, x1, z0, z1] = bounds(); let pick = null;
-          for (const da of [0, 0.3, -0.3, 0.6, -0.6]) {   // davanti a te (o quasi) con più spazio possibile, almeno ~4 m se la stanza lo permette
-            let d = 5.2, x, z; do { x = player.pos.x + Math.cos(view + da) * d; z = player.pos.z + Math.sin(view + da) * d; d -= 0.3; } while ((x < x0 || x > x1 || z < z0 || z > z1) && d > 1.5);
-            const dd = Math.hypot(x - player.pos.x, z - player.pos.z); if (!pick || dd > pick.dd + 0.5) pick = { x, z, dd }; if (dd >= 4) break;
+          for (const da of [0, 0.3, -0.3, 0.6, -0.6]) {   // parte dalla direzione in cui guardi, con più spazio possibile (~5 m)
+            let d = 5.5, x, z; do { x = player.pos.x + Math.cos(view + da) * d; z = player.pos.z + Math.sin(view + da) * d; d -= 0.3; } while ((x < x0 || x > x1 || z < z0 || z > z1) && d > 1.5);
+            const dd = Math.hypot(x - player.pos.x, z - player.pos.z); if (!pick || dd > pick.dd + 0.5) pick = { x, z, dd }; if (dd >= 4.5) break;
           }
           K.startFlicker({ x: Math.min(x1, Math.max(x0, pick.x)), z: Math.min(z1, Math.max(z0, pick.z)) });
         }
@@ -176,11 +173,11 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
       fwd.set(player.forward.x, 0, player.forward.z); const facing = fwd.dot(K.axis ?? fwd) > 0.3;   // (K.axis = dal giocatore verso la creatura)
       K.turnedOnce ||= facing;
       if (!K.turnedOnce && K.t > 5 && !K.said) { K.said = true; say('girati.', 4500); }
-      if (K.D <= 1.5 && !(K.hide > 0) && (!K.fin || K.finT > 3.5)) { K.state = 'disarm'; K.t = 0; ui.cool?.(false); }
+      if (K.D <= 1.5 && !(K.hide > 0)) { K.state = 'disarm'; K.t = 0; ui.cool?.(false); }
     } else if (K.state === 'disarm') {
       // ti afferra la mano e ti strappa la pistola: l'arma vola via
       if (K.t < 0.02 && !K.knock) { K.knock = true; knocked = 0.0001; kv.set(0.5, 0.5, 0.3); audio.heavyStep(mon.position, 1.2); audio.clatter(); player.addShake(1.1); player.yaw += 0.35; player.pitch -= 0.25; pose = 'low'; lights.torchStutter(0.3); ui.show(false); try { navigator.vibrate?.([80, 30, 120]); } catch (_) {} }
-      if (K.t > 1.0) { K.state = 'over'; K.active = false; mon.visible = false; player.speedMul = 1; player.lookMul = 1; scare.trigger(K.kind, K.text); }
+      if (K.t > 1.0) { K.state = 'over'; K.active = false; mon.visible = false; player.speedMul = 1; player.lookMul = 1; lights.override = null; scare.trigger(K.kind, K.text); }
     }
   };
   return K;
