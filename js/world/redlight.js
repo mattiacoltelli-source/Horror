@@ -21,7 +21,6 @@ export function redLight(group, { x, y, z, dir = 1, size = 3.6 }) {
   const cage = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.17, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0x0b0807, wireframe: true })); cage.position.copy(bulb.position); cage.rotation.z = Math.PI / 2; group.add(cage);
   const add2 = new THREE.MeshBasicMaterial({ map: glow(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.5 });
   const wall = add(new THREE.PlaneGeometry(size, size), add2, x - dir * 0.03, y, z, -dir * Math.PI / 2);          // alone sul muro
-  const floor = add(new THREE.PlaneGeometry(size * 1.25, size * 1.25), add2, x - dir * 1.6, 0.03, z, 0, -Math.PI / 2);   // macchia rossa sul pavimento
   const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow(), blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.5 })); halo.scale.setScalar(0.7); halo.position.copy(bulb.position).addScaledVector(new THREE.Vector3(-dir, 0, 0), 0.1); group.add(halo);
   R.update = (dt) => {
     R.t += dt; let k = 0.62 + 0.18 * Math.sin(R.t * 0.8) + 0.05 * Math.sin(R.t * 5.3);
