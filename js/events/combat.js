@@ -44,7 +44,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
 
   K.mon = mon;
   K.begin = async (kind, text, from) => {
-    K.kind = kind; K.text = text; K.active = true; K.state = 'fight'; K.t = 0; K.hits = 0; K.shots = 0; K.cool = 0; K.hide = 0; K.lat = 0; K.ammo = 6; K.D = 13; K.stepT = 1.5; K.said = false; K.turnedOnce = false;
+    K.kind = kind; K.text = text; K.active = true; K.state = 'fight'; K.t = 0; K.hits = 0; K.shots = 0; K.cool = 0; K.hide = 0; K.lat = 0; K.ammo = 4; K.D = 13; K.stepT = 1.5; K.said = false; K.turnedOnce = false;
     if (!K.armed) K.give();
     await K.setMonster(kind); K.from = from.clone();           // punto da cui il mostro si avvicina (verso il giocatore)
     mon.visible = true; pose = 'ready'; player.speedMul = 0; player.lookMul = 0.8; ui.aimAll?.(true); ui.show(true); instab.set(0.9, 60);
@@ -52,7 +52,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
   };
   const monPlace = () => { const d = new THREE.Vector3(player.pos.x - K.from.x, 0, player.pos.z - K.from.z).normalize(); const lat = K.lat || 0; mon.position.set(player.pos.x - d.x * K.D - d.z * lat, 0, player.pos.z - d.z * K.D + d.x * lat); mon.rotation.y = Math.atan2(d.x + (d.z * lat) / Math.max(1, K.D) * 0.0, d.z); K.axis = d; };
   const HIDE = 0.6;   // durata del farfallio che copre il teletrasporto
-  const SHOT_D = [10.6, 8.4, 6.3, 4.5, 2.9, 1.3];   // distanza dopo ogni colpo: sempre più vicina, qualunque cosa tu faccia
+  const SHOT_D = [9.8, 6.6, 3.9, 1.3];   // distanza dopo ogni colpo: sempre più vicina, qualunque cosa tu faccia
 
   K.fire = () => {
     if (!K.active || K.state !== 'fight' || !K.armed || K.cool > 0 || K.hide > 0) return;     // almeno 1 s tra un colpo e l'altro: niente raffica
@@ -64,6 +64,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     K.hide = HIDE; K.moved = false; instab.push(0.9, 3); lights.torchStutter(HIDE); lights.lamp(0, 'flicker', HIDE); lights.lamp(1, 'flicker', HIDE); audio.lightOn?.();
   };
   K.setAim = (on) => { K.aiming = on; };
+  K.hideAll = () => { gun.visible = false; K.active = false; K.armed = false; mon.visible = false; muzzle.material.opacity = 0; ui.show(false); ui.aimAll?.(false); };
 
   K.update = (dt, time) => {
     // viewmodel (anche fuori dal combattimento: arma bassa)
@@ -94,7 +95,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
         // poi riappare a tratti nel nuovo posto. Non si vede mai il salto: si vede solo che, tra un guizzo e l'altro, è più vicino.
         K.hide -= dt; const el = HIDE - K.hide;
         if (el >= 0.26 && !K.moved) {
-          K.moved = true; K.D = Math.min(K.D, SHOT_D[Math.min(5, K.shots - 1)]); K.lat = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 1.1) * Math.min(1, K.D / 6); K.stepT = 1.6 + Math.random() * 0.5; audio.heavyStep(mon.position, 0.9);
+          K.moved = true; K.D = Math.min(K.D, SHOT_D[Math.min(3, K.shots - 1)]); K.lat = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 1.1) * Math.min(1, K.D / 6); K.stepT = 1.6 + Math.random() * 0.5; audio.heavyStep(mon.position, 0.9);
         }
         monPlace();
         const dark = el > 0.2 && el < 0.34, strobe = Math.sin(el * 83) + Math.sin(el * 47 + 1) > -0.6;

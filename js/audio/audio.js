@@ -292,6 +292,18 @@ export function createAudio() {
       const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const hp = ctx.createBiquadFilter(); hp.type = 'bandpass'; hp.frequency.value = 2600; hp.Q.value = 2; const g2 = ctx.createGain();
       g2.gain.setValueAtTime(0, t); g2.gain.linearRampToValueAtTime(0.03, t + 0.08); g2.gain.linearRampToValueAtTime(0, t + dur); s.connect(hp); hp.connect(g2); g2.connect(out); s.start(t); s.stop(t + dur + 0.05);
     },
+    // VENTO + silenzio dell'aperto: rumore filtrato con raffiche lente, molto basso; ritorna un controller {stop}
+    wind(level = 0.5) {
+      if (!ok) return null; const t = ctx.currentTime;
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; s.playbackRate.value = 0.6;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; lp.Q.value = 0.7;
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 260; bp.Q.value = 0.5;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.16 * level, t + 4);
+      const lf = ctx.createOscillator(), lg = ctx.createGain(); lf.frequency.value = 0.11; lg.gain.value = 0.07 * level; lf.connect(lg); lg.connect(g.gain);
+      const lf2 = ctx.createOscillator(), lg2 = ctx.createGain(); lf2.frequency.value = 0.07; lg2.gain.value = 140; lf2.connect(lg2); lg2.connect(lp.frequency);
+      s.connect(lp); lp.connect(bp); bp.connect(g); g.connect(master); g.connect(verbSend); s.start(t); lf.start(t); lf2.start(t);
+      return { stop() { const n = ctx.currentTime; g.gain.cancelScheduledValues(n); g.gain.setTargetAtTime(0, n, 1.2); setTimeout(() => { try { s.stop(); lf.stop(); lf2.stop(); } catch (_) {} }, 6000); } };
+    },
     // gocce
     _drip(pan = 0) {
       if (!ok) return; const t = ctx.currentTime;
