@@ -53,7 +53,7 @@ export function createNotes({ camera, player, audio, story, say, instab, flags, 
       n.mesh.getWorldPosition(p); d.copy(p).sub(camera.position); const dist = d.length(); d.normalize();
       { const ph = ((clock + n.ph) % 3.1) / 3.1, pulse = Math.exp(-(((ph - 0.2) / 0.09) ** 2)); n.sp.material.opacity = dist < 9 ? 0.42 * pulse * Math.min(1, (9 - dist) / 3) : 0; }
       if (dist < 5.5 && d.dot(fw) > 0.9) n.t += dt; else n.t = Math.max(0, n.t - dt * 2);
-      if (n.t > 0.35) { N.found.add(n.i); flags.notes = N.found.size; audio.rustle?.(); instab?.push?.(0.25, 3); say(NOTE_TEXT[n.i], 8500, 'note'); }
+      if (n.t > 0.35) { N.found.add(n.i); flags.notes = N.found.size; audio.rustle?.(); instab?.push?.(0.25, 3); say(NOTE_TEXT[n.i], 5000, 'note'); }
     }
   };
   return N;
