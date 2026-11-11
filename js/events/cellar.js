@@ -94,6 +94,9 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
         gl_FragColor = vec4(col, clamp(a * 0.34 + lip * m * uW * 0.16, 0.0, 0.5));
       }` });
   const fogM = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), fogMat); fogM.rotation.y = Math.PI / 2; fogM.position.set(MIRROR.x + 0.019, MIRROR.y, MIRROR.z); C.group.add(fogM);
+  // UOMO NELL'ANGOLO: dopo lo specchio, in fondo alla cantina, un uomo grosso di spalle fissa l'angolo. Lo vedi solo nel guizzo della luce;
+  // poi la luce si spegne e, quando torna, non c'è più. Nessun suono.
+  const corner = hall.silhouette(5); corner.visible = false; corner.position.set(CELLAR.w / 2 - 0.75, 0, CELLAR.z0 - 21.6); corner.rotation.y = Math.PI / 2; C.group.add(corner); let cornerT = -1, cornerDone = false;
   // SAGOMA CHE CORRE sul muro di fronte allo specchio (vera geometria: si vede nel riflesso, e a volte con la coda dell'occhio)
   const runM = hall.silhouette(1); runM.visible = false; C.group.add(runM); let runT = -1, runDone = false;
   // velo di luce pallida nello specchio durante l'occhiata: l'ombra deve stagliarsi su qualcosa di più chiaro del riflesso buio
@@ -124,7 +127,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   let ap = -1;
 
   C.enter = () => {
-    C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; runDone = false; runT = -1; runM.visible = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.uniforms.uA.value = 0; mist.material.opacity = 0; shNear.material.uniforms.uA.value = 0; fogMat.uniforms.uM.value = 0; fogMat.uniforms.uW.value = 0; C.b1 = C.b2 = C.sw = C.sw2 = false;
+    C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; cornerDone = false; cornerT = -1; corner.visible = false; runDone = false; runT = -1; runM.visible = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.uniforms.uA.value = 0; mist.material.opacity = 0; shNear.material.uniforms.uA.value = 0; fogMat.uniforms.uM.value = 0; fogMat.uniforms.uW.value = 0; C.b1 = C.b2 = C.sw = C.sw2 = false;
     player.box = C.bounds; player.pos.set(0.4, 1.62, CELLAR.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     lights.setLamps(lampPos, 2.1); scene.fog.density = 0.04; audio.duck(1, 1); instab.set(0.1, 6);
   };
@@ -204,6 +207,13 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     // (il vecchio modello 3D nel riflesso è disattivato: troppo definito)
     fig.visible = false;
     if (shadowOn && C.step === 4) { C.late = (C.late || 0) + dt; if (C.late > 4.6 && !flags.mirror) { flags.mirror = true; lights.lamp(0, 'flicker', 1.4); lights.lamp(1, 'flicker', 1.4); audio.whisper(2.6, 0.4); say('ci sei anche tu.', 4500); instab.set(1, 6); player.addShake(0.35); } } else if (!shadowOn) C.late = 0;
+    if (!cornerDone && C.started && P.z < CELLAR.z0 - 11.5 && P.z > CELLAR.z0 - 14) { cornerDone = true; cornerT = 0; lights.lamp(1, 'flicker', 1.6); instab.push(0.7, 6); }
+    if (cornerT >= 0) {
+      cornerT += dt;
+      if (cornerT > 0.3 && cornerT < 1.7) corner.visible = true;
+      if (cornerT >= 1.7 && corner.visible) { corner.visible = false; lights.lamp(1, 'off'); }
+      if (cornerT > 2.9) { lights.lamp(1, 'on'); cornerT = -1; }
+    }
     // --- apparizione (spavento) ---
     if (!C.apDone && P.z < CELLAR.z0 - 14.2) {
       C.apDone = true; ap = 0; shade.visible = true; audio.dash(0.5); player.addShake(0.7); lights.torchStutter(0.3); instab.set(1, 8); try { navigator.vibrate?.([60, 30, 90]); } catch (_) {}

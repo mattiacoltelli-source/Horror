@@ -11,7 +11,6 @@ import { createGlassEvent } from './events/glass.js';
 import { createDoorEvent } from './events/door.js';
 import { createScare } from './events/scare.js';
 import { createHall } from './events/hall.js';
-import { createRunner } from './events/runner.js';
 import { createCellar } from './events/cellar.js';
 import { createTower } from './events/tower.js';
 import { createStory } from './story.js';
@@ -105,7 +104,7 @@ try {
   nx.putImageData(im, 0, 0); $('grain').style.backgroundImage = `url(${nc.toDataURL('image/png')})`;
 } catch (_) {}
 // ---------- flusso ----------
-let runner = null, doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null, wh = null, combat = null;
+let doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null, wh = null, combat = null;
 const flags = { turned: false, mirror: false };
 const warm = new THREE.PointLight(0xff9a50, 0, 15, 1.7); scene.add(warm);
 const flash = new THREE.PointLight(0xffd9a0, 0, 28, 1.6); scene.add(flash);   // lampo dello sparo
@@ -120,7 +119,6 @@ function say(txt, ms = 4000) {
 async function enter() {
   scare ??= createScare({ scene, camera, player, audio, lights, instab, finish });
   hall ??= createHall({ scene, mats, lights });
-  runner ??= createRunner({ scene, player, audio, lights, instab, hall });
   story ??= createStory({ scene, camera, controls, player, audio, hall, getCellar: () => cellar, getTower: () => tower, getWh: () => wh, lights, instab });
   combat ??= createCombat({ scene, camera, player, audio, lights, instab, say, flash, scare, ui: { aimAll: (b) => { controls.aimAll = b; if (b) { controls.move.x = controls.move.y = 0; $('stick').style.opacity = 0; } }, cool: (b) => $('fire').classList.toggle('cool', b), show: (b) => { $('fire').classList.toggle('hidden', !b); $('dot').classList.toggle('hidden', !b); } } });
   wh ??= createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, actBtn: $('act') });
@@ -175,7 +173,6 @@ function tick(dt) {
   doorEvent?.update(dt);
   scare?.update(dt);
   hall?.update(dt, camera);
-  if (runner) { if (glassEvent.done && !runner.done && player.pos.z < -30.5 && player.pos.z > -36) runner.start(); runner.update(dt, time); }
   cellar?.update(dt);
   tower?.update(dt, time);
   wh?.update(dt);
@@ -209,7 +206,7 @@ requestAnimationFrame((n) => { last = n; frame(n); });
 
 // debug/test: ?debug=1 espone il gioco e permette di saltare avanti
 if (q.has('debug')) {
-  window.__g = { get runner() { return runner; }, flags, get combat() { return combat; }, get wh() { return wh; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
+  window.__g = { flags, get combat() { return combat; }, get wh() { return wh; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
     sim(sec, dt = 0.05) { for (let t = 0; t < sec; t += dt) tick(dt); },
     tp(z, yaw = 0) { player.pos.set(0.1, 1.62, z); player.yaw = yaw; player.pitch = 0; } };
 }
