@@ -42,13 +42,14 @@ export function decorCellar(group, z0) {
 }
 export function decorWarehouse(group, z0) {
   stainDecals(group, [{ p: [-5.99, 1.6, z0 - 6], wall: '+x', w: 3.0, h: 3.4 }, { p: [5.99, 1.6, z0 - 12], wall: '-x', w: 3.0, h: 3.4, flip: true }, { p: [5.99, 1.6, z0 - 30], wall: '-x', w: 3.2, h: 3.4, a: 0.8 }]);
-  entryDoor(group, z0);
+  const entry = entryDoor(group, z0);
   bloodDecals(group, [{ k: 'A', p: [-5.995, 1.5, z0 - 27], wall: '+x', h: 0.32, rot: 0.2 }, { k: 'C', p: [-5.995, 1.2, z0 - 28.2], wall: '+x', h: 0.3, rot: -0.1, a: 0.8 }]);
   add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -2.4, 6.2, z0 - 1, z0 - 34));
   add(group, 'fence', [...fenceZ(-4.05, z0 - 3, z0 - 8), ...fenceZ(4.05, z0 - 28.5, z0 - 34)]);
   add(group, 'gutter', runZ('modular_metal_gutter', 1.51, 5.55, 5.4, z0 - 1, z0 - 14).map((p) => ({ ...p, r: [0, P2, 0] })));
   add(group, 'manhole', manhole(0.2, z0 - 10, 0.5).concat(manhole(-1.0, z0 - 30.5, 0)));
   add(group, 'cables', [...cableRun(5.97, 3.1, z0 - 6, z0 - 9), ...cableRun(-5.97, 3.1, z0 - 20, z0 - 23)]);
+  return entry;
 }
 export function decorTower(group, z0) {
   entryDoor(group, z0);
@@ -60,9 +61,11 @@ export function decorTower(group, z0) {
 
 // porta chiusa alle spalle: la stanza da cui sei arrivato non si riapre (muro d'ingresso a z0, la stanza va verso -z)
 export function entryDoor(group, z0) {
+  const holder = new THREE.Group(); group.add(holder);   // si può nascondere (es. al suo posto un cancello)
   new GLTFLoader().load('assets/models/door.glb', (g) => {
     const m = g.scene; m.getObjectByName('large_castle_door_left')?.rotation.set(0, 0, 0); m.getObjectByName('large_castle_door_right')?.rotation.set(0, 0, 0);
-    const d = new THREE.Group(); d.position.set(0, 0, z0 - 0.14); d.rotation.y = Math.PI; d.add(m); group.add(d);
+    const d = new THREE.Group(); d.position.set(0, 0, z0 - 0.14); d.rotation.y = Math.PI; d.add(m); holder.add(d);
     const gt = new GLTFLoader().load('assets/models/gate.glb', (gg) => { const o = gg.scene; o.scale.setScalar(2.2); o.position.set(-0.08, 1.02, 0.13); d.add(o); });
   });
+  return holder;
 }

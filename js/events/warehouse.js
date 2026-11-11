@@ -6,7 +6,7 @@ import { buildRoom } from '../world/rooms.js';
 import { kitMesh, kitObject } from '../world/props.js';
 import { decorWarehouse } from '../world/decor.js';
 import { unseenMover } from './ambient.js';
-import { redLight } from '../world/redlight.js';
+import { redLight, doorGlow } from '../world/redlight.js';
 
 export const WH = { z0: -400, w: 12, l: 36, h: 6.5 };
 
@@ -14,7 +14,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   const W = { group: new THREE.Group(), taken: false, state: 'idle', t: 0, near: false };
   W.group.visible = false; scene.add(W.group);
   const room = buildRoom(mats, { z0: WH.z0, w: WH.w, l: WH.l, h: WH.h, wall: 'brick', floor: 'floorB', ceil: 'stone', pillarEvery: 6, dark: 0.8, seed: 41 });
-  W.group.add(room.group); decorWarehouse(W.group, WH.z0); W.bounds = [room.bounds[0], room.bounds[1], WH.z0 - WH.l + 1.5, WH.z0 - 0.6];
+  W.group.add(room.group); const entry = decorWarehouse(W.group, WH.z0); W.bounds = [room.bounds[0], room.bounds[1], WH.z0 - WH.l + 1.5, WH.z0 - 0.6];
   const zFar = WH.z0 - WH.l, loader = new GLTFLoader();
   const prop = (url, h, x, y, z, ry, cb) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y - y, c.z - z)); o.rotation.y = ry; W.group.add(o); cb?.(o); });
 
@@ -62,13 +62,22 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   })();
   // porta ROSSA (scelta nell'obitorio): luce d'emergenza rossa, due lampade rosse alle pareti; porta del RESPIRO: luce fredda normale, ma ogni tanto un respiro dietro di te
   const reds = [redLight(W.group, { x: WH.w / 2 - 0.1, y: 2.9, z: WH.z0 - 11, dir: 1 }), redLight(W.group, { x: -WH.w / 2 + 0.1, y: 2.9, z: WH.z0 - 27, dir: -1 })]; reds.forEach((r) => (r.root.visible = false));
+  // entrando dal CANCELLO ROSSO, alle spalle trovi il cancello (non la porta di legno): chiuso, con il chiavistello e un po' di rosso dietro
+  const gateIn = new THREE.Group(); gateIn.position.set(0, 0, WH.z0 - 0.22); gateIn.rotation.y = Math.PI; gateIn.visible = false; W.group.add(gateIn);
+  { const back = new THREE.Mesh(new THREE.PlaneGeometry(2.05, 2.95), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); back.position.set(0, 1.5, -0.09); back.rotation.y = Math.PI; gateIn.add(back); }
+  const inGlow = doorGlow(gateIn, { x: 0, z: -0.14, w: 2.3, h: 2.8 });
+  (async () => {
+    const fr = await kitObject('fence', 'Cylinder184'); if (fr) { fr.position.set(0, 1.26, 0); gateIn.add(fr); }
+    const lf2 = await kitObject('fence', 'Cylinder140'); let lf3 = null; if (lf2) { lf3 = new THREE.Group(); lf3.position.set(-0.45, 0, 0); lf2.position.set(0.47, 0.93, 0); lf3.add(lf2); gateIn.add(lf3); }
+    new GLTFLoader().load('assets/models/gate.glb', (g) => { const o = g.scene; o.scale.setScalar(1.7); o.position.set(0.9, 0.95, 0.05); (lf3 || gateIn).add(o); });
+  })();
   let gateT = 0;
   const shade = hall.silhouette(5); shade.visible = false; W.group.add(shade);
 
   W.enter = () => {
     W.group.visible = true; W.taken = false; W.state = 'walk'; W.t = 0; W.beat = false; gateT = 0; if (leaf) leaf.rotation.y = 0;
     player.box = W.box; player.pos.set(0.3, 1.62, WH.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
-    const red = flags.door === 'red'; lights.setLamps(lampPos, red ? 1.7 : 2.2, red ? 0xff5a44 : 0xaec8ff); reds.forEach((r) => (r.root.visible = red)); W.red = red; W.br = 6 + Math.random() * 4; W.brN = 0; lights.lamp(3, 'off'); W.sec = 0; scene.fog.density = 0.032; audio.duck(1, 1.5); instab.set(0.08, 6);
+    const red = flags.door === 'red'; lights.setLamps(lampPos, red ? 1.7 : 2.2, red ? 0xff5a44 : 0xaec8ff); reds.forEach((r) => (r.root.visible = red)); W.red = red; entry.visible = !red; gateIn.visible = red; W.br = 6 + Math.random() * 4; W.brN = 0; lights.lamp(3, 'off'); W.sec = 0; scene.fog.density = 0.032; audio.duck(1, 1.5); instab.set(0.08, 6);
   };
   W.leave = () => { W.group.visible = false; };
 
@@ -81,7 +90,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
       if (W.secT > 0.55 && W.secT < 0.6) lights.lamp(3, 'on');
       if ((W.secT > 4.2 || P.z < WH.z0 - 19) && W.secT > 1.2) { W.sec = 2; shade.visible = false; lights.lamp(3, 'off'); audio.lightOn(); secMats.forEach((m) => (m.emissiveIntensity = 0)); } }
     stoolMove(dt, W.state === 'walk');
-    if (W.red) reds.forEach((r) => r.update(dt));
+    if (W.red) { reds.forEach((r) => r.update(dt)); inGlow.update(dt); }
     else if (W.state === 'walk' && W.brN < 4) { W.br -= dt; if (W.br <= 0) { W.br = 11 + Math.random() * 6; W.brN++; audio.breath?.(); } }   // il respiro dietro la porta scelta ti ha seguito
     // pulsante PRENDI vicino al carrello
     dv.set(0 - P.x, 0, cartZ - P.z); const dd = dv.length(); dv.normalize(); fw.set(player.forward.x, 0, player.forward.z).normalize();
