@@ -36,8 +36,13 @@ void main(){
   float gl = pow(max(dot(d,uDir),0.),24.);
   col += vec3(.55,.6,.55)*gl*(.15+.25*n)*uAmb;
   // impronte delle mani (macchie scure, bordi morbidi)
-  vec4 h = texture2D(tHands, vec2(.5+(uHandZ-vW.z)/2.3, .5+(vW.y-1.5)/1.15));
-  col = mix(col, col*.05, h.a*uHand);
+  vec2 hu = vec2(.5+(uHandZ-vW.z)/2.3, .5+(vW.y-1.5)/1.15);
+  float h0 = texture2D(tHands, hu).a;
+  float hb = (h0*2. + texture2D(tHands, hu+vec2(.007,0.)).a + texture2D(tHands, hu-vec2(.007,0.)).a + texture2D(tHands, hu+vec2(0.,.007)).a + texture2D(tHands, hu-vec2(0.,.007)).a)/6.;
+  float halo = (texture2D(tHands, hu+vec2(.03,0.)).a + texture2D(tHands, hu-vec2(.03,0.)).a + texture2D(tHands, hu+vec2(0.,.03)).a + texture2D(tHands, hu-vec2(0.,.03)).a)*.25;
+  float grain = .78 + .22*texture2D(tFrost, vUv*vec2(9.,6.)).g;
+  col += vec3(.05,.06,.055)*halo*uHand*(1.-hb);               // condensa intorno al palmo
+  col = mix(col, col*.16, clamp(hb*grain*1.05,0.,1.)*uHand);   // il contatto: scuro ma non nero, con grana
   float dist = length(vW-uCam);
   col *= exp(-dist*.02);
   gl_FragColor = vec4(col,1.);
@@ -96,7 +101,14 @@ function handsTexture() {
     // pollici verso il centro: a sinistra la sagoma A specchiata, a destra la C com'è
     g.save(); g.translate(196, 0); g.scale(-1, 1); g.drawImage(A, -wA / 2, 128 - hA / 2 - 8, wA, hA); g.restore();
     g.drawImage(C, 330 - wC / 2, 128 - hC / 2, wC, hC);
-    g.filter = 'none'; tex.needsUpdate = true;
+    g.filter = 'none';
+    // sbavatura verso il basso (la mano è scivolata sul vetro) e grana sul contatto
+    const snap = document.createElement('canvas'); snap.width = 512; snap.height = 256; snap.getContext('2d').drawImage(c, 0, 0);
+    g.globalAlpha = 0.07; for (let i = 1; i <= 9; i++) g.drawImage(snap, 0, 0, 512, 256, (i % 2 ? 1 : -1) * i * 0.35, i * 3.2, 512, 256);
+    g.globalAlpha = 1; g.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 1400; i++) { g.fillStyle = `rgba(0,0,0,${Math.random() * 0.55})`; g.fillRect(Math.random() * 512, Math.random() * 256, 1 + Math.random() * 2.4, 1 + Math.random() * 2.4); }
+    g.globalCompositeOperation = 'source-over'; g.filter = 'blur(1.1px)'; g.drawImage(c, 0, 0); g.filter = 'none';
+    tex.needsUpdate = true;
   });
   return tex;
 }
@@ -207,7 +219,8 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
       }
       case 'stare': {
         // resta lontana, immobile, a fissarti. Se distogli lo sguardo (esce dall'inquadratura) si "teletrasporta" attaccata al vetro.
-        ex = PATH.b[0]; ez = PATH.b[1]; E.yaw = -Math.PI / 2; blur = 1.3; sway = Math.sin(E.t * 0.8) * 0.006;
+        ex = PATH.b[0]; ez = PATH.b[1]; E.yaw = -Math.PI / 2 + Math.sin(E.t * 0.4) * 0.12; blur = 1.3;
+        sway = Math.sin(E.t * 0.55) * 0.28 + Math.sin(E.t * 1.3) * 0.04;      // piccolo dondolio: sposta il peso, non è un'immagine incollata al vetro
         const seen = entSeen(ex, ez);                       // la sagoma NON si sposta per restare nell'inquadratura: resta dov'è
         if (seen && dxG < 12) { E.gaze += dt; E.away = 0; } else E.away += dt;
         if (E.blink > 0) { E.blink -= dt; if (E.blink <= 0) { targetLight = 1; teleport(); } break; }

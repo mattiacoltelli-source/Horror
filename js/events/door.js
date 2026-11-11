@@ -85,15 +85,17 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
         }
         if (E.t > 1.2 && !E.said) { E.said = true; say('non guardare dietro.', 5500); instab.push(1, 10); }
         if (E.t > 5 && !E.torch) { E.torch = true; lights.torchKill(1.2, 0.08); }
-        if (E.t > 2.5 && E.said && player.forward.z > 0.3) { E.turnT = (E.turnT || 0) + dt; if (E.turnT > 0.3) { go('turned'); breath?.stop(); breath = null; audio.duck(0, 0.05); lights.lamp(3, 'on'); showShade(); } } else E.turnT = 0;
+        if (E.t > 1.4 && E.said && player.forward.z > 0.1) { E.turnT = (E.turnT || 0) + dt; if (E.turnT > 0.12) { go('turned'); breath?.stop(); breath = null; audio.duck(0, 0.05); showShade(); } } else E.turnT = 0;
         if (E.t > 17) { go('ignored'); }
         break;
       }
       case 'turned':
-        // ti sei girato: in fondo al tunnel, nel controluce della lampada, qualcuno sta fermo. Nessun suono.
-        if (E.t > 0.9 && !E.fl) { E.fl = true; lights.lamp(3, 'flicker', 1.1); }
-        if (E.t > 2.2 && shade && shade.visible) shade.visible = false;      // sparita nel battito di luce
-        if (E.t > 3.4) { go('over'); audio.duck(0.2, 1); onHallDone?.(true); }
+        // ti sei girato: davanti al portone chiuso, a due passi, qualcuno è fermo e ti guarda (sagoma nera nel cono della torcia).
+        // La luce balbetta, poi si spegne un istante: quando torna non c'è più.
+        if (E.t < 0.05) { lights.torchStutter(1.0); audio.whisper(1.4, 0.3); player.addShake(0.35); instab.set(1, 8); }
+        if (E.t > 1.5 && !E.fl) { E.fl = true; lights.torchKill(0.9, 0); }
+        if (E.t > 1.6 && shade && shade.visible) shade.visible = false;
+        if (E.t > 3.6) { go('over'); audio.duck(0.2, 1); onHallDone?.(true); }
         break;
       case 'ignored':
         // hai tirato dritto: il respiro è sul collo, la torcia muore
@@ -105,7 +107,7 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
 
   function lightOn() { hall?.lightOn(); audio.lightOn(); instab.set(0.3 + ph * 0.25, 8); }
   let shade = null;
-  function showShade() { if (!shade) { shade = hall.silhouette(2); scene.add(shade); } shade.position.set(0, 0, Z_END + 3.2); shade.rotation.y = Math.PI; shade.visible = true; }
+  function showShade() { if (!shade) { shade = hall.silhouette(3); scene.add(shade); } const f = camera.position; shade.position.set(camera.position.x - 0.35, 0, Z_END - 0.45); shade.rotation.y = Math.PI - 0.15; shade.visible = true; }
   function startBreath() { E.torch = false; E.said = false; E.k = false; E.fl = false; E.turnT = 0; breath = audio.breath(); breath?.setPos(0, 1.3, Z_END - 3); breath?.setLevel(0.5, 1.2); }
   E.getPh = () => ph;
   return E;
