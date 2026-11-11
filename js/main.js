@@ -118,7 +118,11 @@ const flash = new THREE.PointLight(0xffd9a0, 0, 28, 1.6); scene.add(flash);   //
 let state = 'loading', last = 0, time = 0, paused = false, fpsAcc = 0, fpsN = 0, ended = false;
 let started = false;
 const hint = $('subtitle');
+// Le note hanno la precedenza: finché una nota è a schermo, gli altri messaggi aspettano (resta in coda solo l'ultimo) e compaiono subito dopo.
 function say(txt, ms = 4000, style = '') {
+  const now = performance.now();
+  if (style !== 'note' && now < (say.noteUntil || 0)) { clearTimeout(say.q); say.q = setTimeout(() => say(txt, ms, style), say.noteUntil - now + 400); return; }
+  if (style === 'note') { say.noteUntil = now + ms; clearTimeout(say.q); }
   hint.classList.toggle('note', style === 'note'); hint.textContent = txt; hint.style.opacity = 1;
   clearTimeout(say.t); say.t = setTimeout(() => (hint.style.opacity = 0), ms);
 }
@@ -229,7 +233,7 @@ requestAnimationFrame((n) => { last = n; frame(n); });
 
 // debug/test: ?debug=1 espone il gioco e permette di saltare avanti
 if (q.has('debug')) {
-  window.__g = { get notes() { return notes; }, get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
+  window.__g = { say, get notes() { return notes; }, get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
     sim(sec, dt = 0.05) { for (let t = 0; t < sec; t += dt) tick(dt); },
     tp(z, yaw = 0) { player.pos.set(0.1, 1.62, z); player.yaw = yaw; player.pitch = 0; } };
 }
