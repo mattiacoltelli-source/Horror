@@ -29,9 +29,9 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   prop('assets/models/cart.glb', 0.97, 0, 0, cartZ, Math.PI / 2);
   let pistol = null, ammo = null, axe = null;
   // l'ascia, appoggiata sul carrello dall'altra parte: pistola O ascia (ne prendi una)
-  loader.load('assets/models/axe.glb', (g) => { const o = g.scene, b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()); o.position.sub(c); const wg = new THREE.Group(); wg.add(o); wg.rotation.set(0, 0.25, Math.PI / 2); wg.position.set(-0.08, 0.99, cartZ - 0.27); W.group.add(wg); axe = wg; });
-  prop('assets/models/pistol.glb', 0.13, 0.12, 0.97, cartZ + 0.15, 0.6, (o) => { o.traverse((m) => { if (m.isMesh && /(_b$|magazine_empty|bullet)/.test(m.name)) m.visible = false; if (m.isMesh && m.visible) { m.material = m.material.clone(); m.material.color.multiplyScalar(0.18); m.material.metalnessMap = null; m.material.metalness = 0.2; m.material.roughnessMap = null; m.material.roughness = 0.7; } }); o.rotation.x = -Math.PI / 2 + 0.0; pistol = o; });
-  prop('assets/models/ammo.glb', 0.18, -0.2, 0.97, cartZ - 0.1, 0.3, (o) => { ammo = o; });
+  loader.load('assets/models/axe.glb', (g) => { const o = g.scene, b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()); o.position.sub(c); const wg = new THREE.Group(); wg.add(o); wg.rotation.set(Math.PI / 2, 0, 0.12); wg.position.set(-0.3, 0.99, cartZ - 0.02); W.group.add(wg); axe = wg; });
+  prop('assets/models/pistol.glb', 0.22, 0.28, 0.97, cartZ + 0.1, 0.6, (o) => { o.traverse((m) => { if (m.isMesh && /(_b$|magazine_empty|bullet)/.test(m.name)) m.visible = false; if (m.isMesh && m.visible) { m.material = m.material.clone(); m.material.color.multiplyScalar(0.85); m.material.metalnessMap = null; m.material.metalness = 0.2; m.material.roughnessMap = null; m.material.roughness = 0.7; } }); o.rotation.x = -Math.PI / 2 + 0.0; pistol = o; });
+  prop('assets/models/ammo.glb', 0.18, 0.3, 0.97, cartZ - 0.2, 0.3, (o) => { ammo = o; });
   // lampada sopra il carrello (è l'unica luce forte della sala)
   const lampPos = [[0, 5.0, WH.z0 - 6], [0, 5.0, WH.z0 - 16], [0, 5.0, cartZ], [5.5, 3.9, WH.z0 - 22]];   // l'ultima: faro con sensore di movimento
   loader.load('assets/models/hlamp.glb', (g) => { for (const [x, , z] of lampPos.slice(0, 3)) { const o = g.scene.clone(true); o.position.set(x, WH.h, z); W.group.add(o); } });
@@ -79,7 +79,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   W.enter = () => {
     W.group.visible = true; W.taken = false; W.state = 'walk'; W.t = 0; W.beat = false; gateT = 0; if (leaf) leaf.rotation.y = 0;
     player.box = W.box; player.pos.set(0.3, 1.62, WH.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
-    const red = flags.door === 'red'; lights.setLamps(lampPos, red ? 1.7 : 2.2, red ? 0xff5a44 : 0xaec8ff); reds.forEach((r) => (r.root.visible = red)); W.nearGate = false; flags.noGun = false; flags.weapon = null; W.red = red; entry.visible = !red; gateIn.visible = red; W.br = 6 + Math.random() * 4; W.brN = 0; lights.lamp(3, 'off'); W.sec = 0; scene.fog.density = 0.032; audio.duck(1, 1.5); instab.set(0.08, 6);
+    const red = flags.door === 'red'; lights.setLamps(lampPos, red ? 1.7 : 2.2, red ? 0xff5a44 : 0xaec8ff); reds.forEach((r) => (r.root.visible = red)); W.nearGate = false; W.hinted = false; flags.noGun = false; flags.weapon = null; W.red = red; entry.visible = !red; gateIn.visible = red; W.br = 6 + Math.random() * 4; W.brN = 0; lights.lamp(3, 'off'); W.sec = 0; scene.fog.density = 0.032; audio.duck(1, 1.5); instab.set(0.08, 6);
   };
   W.leave = () => { W.group.visible = false; };
 
@@ -96,7 +96,8 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
     else if (W.state === 'walk' && W.brN < 4) { W.br -= dt; if (W.br <= 0) { W.br = 11 + Math.random() * 6; W.brN++; audio.breath?.(); } }   // il respiro dietro la porta scelta ti ha seguito
     // pulsante PRENDI vicino al carrello
     dv.set(0 - P.x, 0, cartZ - P.z); const dd = dv.length(); dv.normalize(); fw.set(player.forward.x, 0, player.forward.z).normalize();
-    const near = !W.taken && W.state !== 'open' && dd < 2.1 && fw.dot(dv) > 0.5; if (near !== W.near) { W.near = near; actBtn.textContent = 'PRENDI'; actBtn.classList.toggle('hidden', !near); }
+    const near = !W.taken && W.state !== 'open' && dd < 2.1 && fw.dot(dv) > 0.5; if (near !== W.near) { W.near = near; actBtn.classList.toggle('hidden', !near); if (near && !W.hinted) { W.hinted = true; say('la pistola o l\'ascia. ne prendi una sola.', 5200); } }
+    if (near) actBtn.textContent = pickWeapon() === 'axe' ? 'PRENDI L\'ASCIA' : 'PRENDI LA PISTOLA';   // il pulsante dice quale stai per prendere
     if (W.state === 'taken') {
       // al buio: passi pesanti da dietro, sempre più vicini; poi la porta si apre
       steps += dt; stepT -= dt;
@@ -110,6 +111,8 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
     if (W.state === 'open' && P.z < zFar + 2.4 && !W.leaving) { W.leaving = true; story.goto('tower'); }
   };
 
+  const _fv = new THREE.Vector3(), _a = new THREE.Vector3(), _b2 = new THREE.Vector3();
+  const pickWeapon = () => { if (!(pistol && axe)) return 'pistol'; _fv.set(player.forward.x, 0, player.forward.z).normalize(); pistol.getWorldPosition(_a); axe.getWorldPosition(_b2); _a.sub(player.pos).setY(0).normalize(); _b2.sub(player.pos).setY(0).normalize(); return _fv.dot(_b2) > _fv.dot(_a) ? 'axe' : 'pistol'; };
   W.openGate = () => {
     if (W.state !== 'ready' && !(W.state === 'walk' && !W.taken)) return;
     if (!W.taken) { flags.noGun = true; lights.lamp(2, 'on'); lights.lamp(0, 'off'); lights.lamp(1, 'off'); audio.heavyStep?.(new THREE.Vector3(0, 0, WH.z0 - 6), 0.9); }   // senza pistola: vai oltre, e lei ti aspetta
@@ -117,8 +120,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   };
   W.take = () => {
     if (W.taken || W.state === 'open') return; W.taken = true; W.near = false; actBtn.classList.add('hidden'); W.leaving = false;
-    // quale hai preso: quella che stai guardando (pistola o ascia)
-    let pick = 'pistol'; if (pistol && axe) { const fv = new THREE.Vector3(player.forward.x, 0, player.forward.z).normalize(), a = new THREE.Vector3(), b2 = new THREE.Vector3(); pistol.getWorldPosition(a); axe.getWorldPosition(b2); a.sub(player.pos).setY(0).normalize(); b2.sub(player.pos).setY(0).normalize(); if (fv.dot(b2) > fv.dot(a)) pick = 'axe'; }
+    const pick = pickWeapon();   // quella che stai guardando (pistola o ascia)
     flags.weapon = pick; if (pistol) pistol.visible = false; if (ammo) ammo.visible = false; if (axe) axe.visible = false; if (pick === 'axe') combat.giveAxe(); else combat.give(); audio.clatter(); instab.set(0.9, 12);
     // la luce se ne va; ti accorgi che non sei solo
     lights.lamp(0, 'off'); lights.lamp(1, 'off'); lights.lamp(2, 'flicker', 2.5); audio.duck(0.05, 0.4); steps = 0; stepT = 2.0; W.state = 'taken';

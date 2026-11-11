@@ -26,7 +26,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
   const axeG = new THREE.Group(); camera.add(axeG); axeG.visible = false; let swing = -1; const axeBase = { p: [0.1, -0.72, -0.55], r: [-0.3, 0.3, -0.12] };
   new GLTFLoader().load('assets/models/axe.glb', (g) => {
     const m = g.scene; m.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.renderOrder = 10; const om = o.material; o.material = new THREE.MeshBasicMaterial({ map: om.map, color: new THREE.Color(0.3, 0.28, 0.26) }); } });
-    const b = new THREE.Box3().setFromObject(m); m.position.y -= b.min.y; axeG.add(m);   // origine = fondo del manico
+    const b = new THREE.Box3().setFromObject(m); m.position.y -= b.min.y; const holder2 = new THREE.Group(); holder2.rotation.y = Math.PI; holder2.add(m); axeG.add(holder2);   // origine = fondo del manico; la lama guarda verso il centro dello schermo
   }, undefined, (e) => console.warn('axe', e));
   K.giveAxe = () => { K.armed = true; K.weapon = 'axe'; axeG.visible = true; gun.visible = false; };
   // il mostro
