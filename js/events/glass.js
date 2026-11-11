@@ -165,7 +165,7 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
 
   const glassPos = new THREE.Vector3(GLASS.x, 1.3, CZ);
   let light = 0, targetLight = 0, hand = 0, handDecay = 0, shake = 0, lunge = 0, sway = 0;
-  const PATH = { a: [3.4, CZ - 2.7], b: [4.2, CZ + 0.5], dur: 7.5, contact: CZ + 0.2 };   // entra dall'estremità lontana del vetro e cammina verso la zona dove arrivi   // A→B: sempre lo stesso tragitto
+  const PATH = { a: [8.2, CZ - 3.5], b: [4.4, CZ - 0.1], dur: 7.5, contact: CZ + 0.2 };   // viene da lontano VERSO il vetro (non parallelo al corridoio)
   let walkZ = CZ, walkW = 0, ex = 7, ez = CZ, entScale = 1, blur = 1.8, waitT = 0, silenceFired = false;
 
   const dir = new THREE.Vector3(), ep = new THREE.Vector3();
@@ -194,7 +194,7 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
     E.t += dt;
     switch (E.state) {
       case 'idle':
-        if (pz < -15 && E.ready) { E.state = 'walk0'; E.t = 0; lights.lamp(1, 'flicker', 2.2); audio.swell(5, 0.6); targetLight = 1; ex = PATH.a[0]; ez = PATH.a[1]; ent.visible = true; E.gaze = 0; E.away = 0; E.blink = 0; E.unseenT = 0; }
+        if (pz < -17 && E.ready) { E.state = 'walk0'; E.t = 0; lights.lamp(1, 'flicker', 2.2); audio.swell(5, 0.6); targetLight = 1; ex = PATH.a[0]; ez = PATH.a[1]; ent.visible = true; E.gaze = 0; E.away = 0; E.blink = 0; E.unseenT = 0; }
         break;
       case 'walk0': {
         // PERCORSO FISSO, sempre uguale, indipendente da dove guardi o ti trovi: cammina dentro la stanza fino al suo punto
