@@ -18,7 +18,7 @@ export function createScare({ scene, camera, player, audio, lights, instab, fini
     const holder = new THREE.Group(); holder.add(m); holder.visible = false; ent.add(holder); figs[key] = holder; S.ready = true;
   }, undefined, (e) => console.warn(url, e));
   loadFig('behind', 'assets/models/c_nurse.glb', 2.0);
-  loadFig('ahead', 'assets/models/c_occ.glb', 2.2);
+  loadFig('ahead', 'assets/models/c_nurse.glb', 2.0);   // stessa suora anche se non ti sei girato
   let mixer = null;
 
   const baseFov = () => camera.userData.baseFov ?? 68;
