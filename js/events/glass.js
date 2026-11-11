@@ -64,19 +64,40 @@ function frostTexture() {
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
 }
 
+// Impronte di due mani aperte, premute sul vetro dall'altra parte. Se esiste assets/tex/hand.png (sagoma nera su fondo
+// chiaro, oppure con trasparenza) viene usata quella; altrimenti ne disegno una più verosimile a mano.
 function handsTexture() {
   const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d');
-  const hand = (cx, cy, s, flip) => {
-    g.save(); g.translate(cx, cy); g.scale(flip * s, s); g.filter = 'blur(2px)';
-    g.fillStyle = 'rgba(0,0,0,.9)';
-    g.beginPath(); g.ellipse(0, 18, 34, 44, 0, 0, 7); g.fill();                  // palmo
-    for (const [a, l, w] of [[-0.55, 62, 9], [-0.2, 78, 9.5], [0.12, 80, 9.5], [0.42, 68, 9], [1.2, 44, 10]]) { // dita
-      g.save(); g.rotate(a); g.beginPath(); g.roundRect(-w / 2, -l - 14, w, l + 18, w / 2); g.fill(); g.restore();
-    }
-    g.restore();
+  const tex = new THREE.CanvasTexture(c);
+  const procedural = () => {
+    g.clearRect(0, 0, 512, 256);
+    const hand = (cx, cy, flip) => {
+      g.save(); g.translate(cx, cy); g.scale(flip, 1); g.filter = 'blur(2.5px)'; g.fillStyle = g.strokeStyle = 'rgba(0,0,0,.92)'; g.lineCap = 'round';
+      // palmo: forma tozza, più larga alla base delle dita
+      g.beginPath(); g.moveTo(-26, 52); g.bezierCurveTo(-40, 30, -38, -8, -30, -24); g.lineTo(30, -26); g.bezierCurveTo(40, -6, 38, 30, 24, 52); g.closePath(); g.fill();
+      // dita (angolo, lunghezza, spessore): mignolo, anulare, medio, indice
+      for (const [a, l, w, ox] of [[-0.32, 50, 11, -24], [-0.1, 66, 12.5, -8], [0.06, 72, 13, 9], [0.26, 62, 12.5, 25]]) {
+        g.save(); g.translate(ox, -24); g.rotate(a); g.lineWidth = w; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -l); g.stroke(); g.restore();
+      }
+      g.save(); g.translate(-30, 14); g.rotate(-1.05); g.lineWidth = 15; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -44); g.stroke(); g.restore();   // pollice
+      // strisciate verso il basso sotto i polpastrelli: la mano è scivolata sul vetro
+      g.globalAlpha = 0.35; g.lineWidth = 6; for (const dx of [-24, -6, 12, 28]) { g.beginPath(); g.moveTo(dx, 52); g.lineTo(dx + (Math.random() - 0.5) * 6, 120 + Math.random() * 40); g.stroke(); }
+      g.restore();
+    };
+    hand(160, 112, 1); hand(352, 112, -1); tex.needsUpdate = true;
   };
-  hand(196, 135, 1.0, 1); hand(316, 135, 1.0, -1);
-  return new THREE.CanvasTexture(c);
+  procedural();
+  // mani vere (sagome ricavate da una foto di impronte, licenza Pixabay): A a sinistra, C specchiata a destra
+  const load = (u) => new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = u; });
+  Promise.all([load('assets/tex/handA.png'), load('assets/tex/handC.png')]).then(([A, C]) => {
+    if (!A || !C) return;
+    g.clearRect(0, 0, 512, 256); g.filter = 'blur(1.4px)';
+    const hA = 104, wA = hA * A.width / A.height, hC = 98, wC = hC * C.width / C.height;   // mani grandi (creatura alta), ma non gigantesche
+    g.drawImage(A, 196 - wA / 2, 128 - hA / 2 - 8, wA, hA);
+    g.save(); g.translate(330, 0); g.scale(-1, 1); g.drawImage(C, -wC / 2, 128 - hC / 2, wC, hC); g.restore();
+    g.filter = 'none'; tex.needsUpdate = true;
+  });
+  return tex;
 }
 
 export function createGlassEvent({ scene, renderer, camera, player, audio, lights, instab, ui, onAbsorb }) {

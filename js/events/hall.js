@@ -55,18 +55,22 @@ export function createHall({ scene, mats, lights }) {
   const pending = [];
   H.silhouette = (i) => { const m = new THREE.Mesh(H.geos ? H.geos[i] : new THREE.BufferGeometry(), black); if (!H.geos) pending.push([m, i]); return m; };
   H.group = grp;
-  // lampade a gabbia appese sopra la folla: una davanti (illumina da sopra), una dietro (controluce); si muovono con lei
-  const lampAnchors = [[-1.9, 3.7, 1.6], [2.9, 3.7, -5.2]], lampMeshes = [];   // lampioni vittoriani (testa a ~3.7 m)
+  // LAMPIONI vittoriani FISSI in fondo alla sala: uno a metà, due sul fondo. Restano dove sono: la folla avanza verso di te
+  // e a ogni passo ha la luce alle spalle. Corpo in ghisa scura, luce calda di lampione; la lampadina pulsa.
+  const HZ = Z_END - 0.35, lampAnchors = [[1.3, 3.55, HZ - 23], [-3.4, 3.55, HZ - 36], [3.6, 3.55, HZ - 36.5]], lampBulbs = [], lampGlows = [];
+  const gcv = document.createElement('canvas'); gcv.width = gcv.height = 128; const gg2 = gcv.getContext('2d'); const gr2 = gg2.createRadialGradient(64, 64, 2, 64, 64, 62);
+  gr2.addColorStop(0, 'rgba(255,240,200,1)'); gr2.addColorStop(.18, 'rgba(255,200,120,.75)'); gr2.addColorStop(.5, 'rgba(255,150,60,.18)'); gr2.addColorStop(1, 'rgba(255,120,40,0)'); gg2.fillStyle = gr2; gg2.fillRect(0, 0, 128, 128);
+  const glowTex = new THREE.CanvasTexture(gcv);
   new GLTFLoader().load('assets/models/slamp1.glb', (g) => lampAnchors.forEach(([x, y, z], i) => {
-    const o = g.scene.clone(true); o.position.set(x, 0, z); o.rotation.y = i ? 0.6 : -0.4; o.traverse((m) => { if (m.isMesh && m.material.emissive) { m.material = m.material.clone(); m.material.emissive.set(0xffd9a0); } });
-    const emis = []; o.traverse((m) => { if (m.isMesh && m.material.emissive) emis.push(m.material); });
-    o.userData.setGlow = (l) => emis.forEach((m) => (m.emissiveIntensity = 3 * l));
-    crowd.add(o); lampMeshes[i] = o; const L = lights?.lamps?.[i]; if (L) L.mesh = o;
+    const o = g.scene.clone(true); o.position.set(x, 0, z); o.rotation.y = i * 0.9 - 0.4; grp.add(o);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd9a0, fog: false })); bulb.position.set(x, y + 0.06, z); grp.add(bulb); lampBulbs[i] = bulb;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffb860, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true, opacity: 0 }));
+    sp.scale.setScalar(2.6); sp.position.set(x, y + 0.06, z); grp.add(sp); lampGlows[i] = sp;
   }));
   H.setDist = (d) => { H.dist = d; crowd.position.z = Z_END - d; };
-  H.enable = () => { H.active = true; grp.visible = true; H.setDist(H.dist); lights?.setLamps(lampAnchors.map(([x, y, z]) => [x, y - 0.3, Z_END - H.dist + z]), 3.6); lights?.lamps?.forEach((L, i) => { if (lampMeshes[i]) L.mesh = lampMeshes[i]; }); lights?.lamp(0, 'off'); lights?.lamp(1, 'off'); };
-  H.lightOn = () => { H.target = 1; H.flick = 1.1; lights?.lamp(0, 'flicker', 1.0); lights?.lamp(1, 'flicker', 1.4); setTimeout(() => { if (H.target) { lights?.lamp(0, 'pulse'); lights?.lamp(1, 'pulse'); } }, 1500); };
-  H.lightOff = () => { H.target = 0; H.flick = 0; H.glow = 0; lights?.lamp(0, 'off'); lights?.lamp(1, 'off'); };
+  H.enable = () => { H.active = true; grp.visible = true; H.setDist(H.dist); lights?.setLamps(lampAnchors.map(([x, y, z]) => [x, y - 0.1, z]), 3.4, 0xffc27a); [0, 1, 2].forEach((i) => lights?.lamp(i, 'off')); };
+  H.lightOn = () => { H.target = 1; H.flick = 1.1; [0, 1, 2].forEach((i) => lights?.lamp(i, 'flicker', 0.8 + i * 0.3)); setTimeout(() => { if (H.target) [0, 1, 2].forEach((i) => lights?.lamp(i, 'pulse')); }, 1500); };
+  H.lightOff = () => { H.target = 0; H.flick = 0; H.glow = 0; [0, 1, 2].forEach((i) => lights?.lamp(i, 'off')); };
 
   H.update = (dt) => {
     if (!H.active) return;
@@ -76,7 +80,7 @@ export function createHall({ scene, mats, lights }) {
     const v = H.glow;
     glowMat.opacity = Math.min(1, v) * 0.38;
     crowd.visible = true;                                     // la visibilità la decide la luce, non un interruttore
-    lights?.lamps?.forEach((L, i) => { const a = lampAnchors[i]; if (a) { L.x = a[0]; L.y = a[1] - 0.3; L.z = Z_END - H.dist + a[2]; } });
+    lights?.lamps?.forEach((L, i) => { const lv = L.level ?? 0; if (lampGlows[i]) { lampGlows[i].material.opacity = Math.min(1, lv) * 0.85; lampBulbs[i].material.color.setRGB(1, 0.78 + 0.1 * lv, 0.45 + 0.3 * lv).multiplyScalar(0.25 + 0.9 * lv); } });
     scene.fog.density += (0.026 - scene.fog.density) * Math.min(1, dt * 2);   // nebbia più rada: si deve vedere in fondo alla sala
   };
   return H;

@@ -1,5 +1,6 @@
 // Arredo modulare delle stanze (tubi, cavi, recinzioni, tombini, grondaie). Tutto statico e fuso in pochi mesh.
 import { kitMesh, runZ } from './props.js';
+import { bloodDecals } from './blood.js';
 const P2 = Math.PI / 2;
 const add = async (group, kit, pl) => { try { const m = await kitMesh(kit, pl); if (m) { m.traverse((o) => { o.userData.decor = true; if (globalThis.__lowQ) o.visible = false; }); group.add(m); } } catch (e) { console.warn('decor', kit, e); } };
 const manhole = (x, z, rot = 0) => [{ n: 'water_manhole_cover_frame', p: [x, -0.033, z], r: [0, rot, 0] }, { n: 'water_manhole_cover', p: [x, -0.007, z], r: [0, rot, 0] }]   // incassati: il bordo sporge di ~2 mm;
@@ -8,23 +9,33 @@ const fenceZ = (x, z0, z1) => { const out = []; for (let z = z0 - 0.955; z > z1 
 const cableRun = (x, y, z0, z1) => [...runZ('cable_straight_long', 0.61, x, y, z0, Math.max(z1, z0 - 1.9)), { n: 'cable_box_turn', p: [x, y, z0 + 0.1], r: [0, 0, 0] }];
 
 export function decorTunnel(group) {
+  // tracce di mani sul muro sinistro: una scia che porta verso il portone, come se qualcuno si fosse trascinato lungo la parete
+  bloodDecals(group, [
+    { k: 'C', p: [-1.397, 1.45, -45.2], wall: '+x', h: 0.3, rot: 0.2 }, { k: 'A', p: [-1.397, 1.22, -47.2], wall: '+x', h: 0.31, rot: -0.15, flip: true },
+    { k: 'C', p: [-1.397, 1.05, -49.0], wall: '+x', h: 0.29, rot: 0.3 }, { k: 'A', p: [-1.397, 0.82, -50.6], wall: '+x', h: 0.3, rot: 0.1, a: 0.7 },
+    { k: 'A', p: [1.397, 1.6, -28.5], wall: '-x', h: 0.3, rot: -0.1 },
+    { k: 'X', p: [1.397, 1.55, -40.5], wall: '-x', h: 0.62, rot: 0.2 }, { k: 'X', p: [-1.397, 1.7, -35.0], wall: '+x', h: 0.55, rot: -0.15, flip: true },
+  ]);
   add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -1.27, 2.0, 2.4, -54.4));
   add(group, 'pipes', [...runZ('pipe_thin_200cm_metal', 2.0, -1.33, 1.62, 2.4, -54.4).map((p) => ({ ...p, r: [0, P2, 0] }))]);
   add(group, 'cables', [...cableRun(1.38, 2.0, -3, -7), ...cableRun(1.38, 2.0, -28, -31.5), { n: 'cable_lightswitch', p: [1.38, 1.3, -33], r: [0, 0, 0] }]);
   add(group, 'manhole', [...manhole(-0.15, -14.5), ...manhole(0.3, -45, 0.7)]);
 }
 export function decorHall(group, z0) {
+  bloodDecals(group, [{ k: 'A', p: [-5.995, 1.6, z0 - 7], wall: '+x', h: 0.32, rot: 0.1 }, { k: 'C', p: [-5.995, 1.35, z0 - 7.6], wall: '+x', h: 0.3, rot: -0.2, flip: true }]);
   add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -5.8, 4.9, z0 - 1, z0 - 38));
   add(group, 'cables', [...cableRun(-5.97, 3.2, z0 - 3, z0 - 6), ...cableRun(5.97, 3.0, z0 - 14, z0 - 17)]);
   add(group, 'manhole', manhole(-2.4, z0 - 9, 0.4).concat(manhole(2.0, z0 - 23, 1.2)));
 }
 export function decorCellar(group, z0) {
+  bloodDecals(group, [{ k: 'X', p: [3.995, 1.7, z0 - 14], wall: '-x', h: 0.7, rot: 0.1 }, { k: 'C', p: [3.995, 1.5, z0 - 10], wall: '-x', h: 0.3, rot: 0.15 }, { k: 'A', p: [3.995, 1.25, z0 - 10.9], wall: '-x', h: 0.3, rot: -0.1, flip: true, a: 0.75 }]);
   add(group, 'pipes', [...runZ('pipe_200cm_metal', 2.0, 3.85, 3.6, z0 - 1, z0 - 23), ...runZ('pipe_thin_200cm_metal', 2.0, 3.9, 3.2, z0 - 1, z0 - 23).map((p) => ({ ...p, r: [0, P2, 0] }))]);
   add(group, 'fence', fenceZ(3.25, z0 - 14, z0 - 19));
   add(group, 'cables', cableRun(-3.97, 3.0, z0 - 2, z0 - 5));
   add(group, 'manhole', manhole(-1.0, z0 - 5.5, 0.3));
 }
 export function decorWarehouse(group, z0) {
+  bloodDecals(group, [{ k: 'A', p: [-5.995, 1.5, z0 - 27], wall: '+x', h: 0.32, rot: 0.2 }, { k: 'C', p: [-5.995, 1.2, z0 - 28.2], wall: '+x', h: 0.3, rot: -0.1, a: 0.8 }]);
   add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -2.4, 6.2, z0 - 1, z0 - 34));
   add(group, 'fence', [...fenceZ(-4.05, z0 - 3, z0 - 8), ...fenceZ(4.05, z0 - 28.5, z0 - 34)]);
   add(group, 'gutter', runZ('modular_metal_gutter', 1.51, 5.55, 5.4, z0 - 1, z0 - 14).map((p) => ({ ...p, r: [0, P2, 0] })));

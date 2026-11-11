@@ -29,7 +29,7 @@ export function createLights(scene, camera) {
     lamps,
     setTorch(v) { flashlightOn = v; },
     // cambia stanza: nuove posizioni delle lampade [[x,y,z],...]
-    setLamps(list, gain = 1) { lamps = list.map(([x, y, z], i) => mk(x, y, z, i)); api.lamps = lamps; poolGain = gain; },
+    setLamps(list, gain = 1, color = 0xaec8ff) { lamps = list.map(([x, y, z], i) => mk(x, y, z, i)); api.lamps = lamps; poolGain = gain; pool.forEach((l) => l.color.setHex(color)); },
     // la torcia si spegne per `dur` secondi (poi torna, un po' più debole)
     torchKill(dur, drain = 0.12) { killT = dur; battery = Math.max(0.45, battery - drain); },
     torchStutter(dur = 0.4) { stutterT = dur; },
