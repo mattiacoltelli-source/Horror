@@ -1,6 +1,8 @@
 // Arredo modulare delle stanze (tubi, cavi, recinzioni, tombini, grondaie). Tutto statico e fuso in pochi mesh.
 import { kitMesh, runZ } from './props.js';
+import * as THREE from 'three';
 import { bloodDecals } from './blood.js';
+import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 const P2 = Math.PI / 2;
 const add = async (group, kit, pl) => { try { const m = await kitMesh(kit, pl); if (m) { m.traverse((o) => { o.userData.decor = true; if (globalThis.__lowQ) o.visible = false; }); group.add(m); } } catch (e) { console.warn('decor', kit, e); } };
 const manhole = (x, z, rot = 0) => [{ n: 'water_manhole_cover_frame', p: [x, -0.033, z], r: [0, rot, 0] }, { n: 'water_manhole_cover', p: [x, -0.007, z], r: [0, rot, 0] }]   // incassati: il bordo sporge di ~2 mm;
@@ -28,6 +30,7 @@ export function decorHall(group, z0) {
   add(group, 'manhole', manhole(-2.4, z0 - 9, 0.4).concat(manhole(2.0, z0 - 23, 1.2)));
 }
 export function decorCellar(group, z0) {
+  entryDoor(group, z0);
   bloodDecals(group, [{ k: 'X', p: [3.995, 1.7, z0 - 14], wall: '-x', h: 0.7, rot: 0.1 }, { k: 'C', p: [3.995, 1.5, z0 - 10], wall: '-x', h: 0.3, rot: 0.15 }, { k: 'A', p: [3.995, 1.25, z0 - 10.9], wall: '-x', h: 0.3, rot: -0.1, flip: true, a: 0.75 }]);
   add(group, 'pipes', [...runZ('pipe_200cm_metal', 2.0, 3.85, 3.6, z0 - 1, z0 - 23), ...runZ('pipe_thin_200cm_metal', 2.0, 3.9, 3.2, z0 - 1, z0 - 23).map((p) => ({ ...p, r: [0, P2, 0] }))]);
   add(group, 'fence', fenceZ(3.25, z0 - 14, z0 - 19));
@@ -35,6 +38,7 @@ export function decorCellar(group, z0) {
   add(group, 'manhole', manhole(-1.0, z0 - 5.5, 0.3));
 }
 export function decorWarehouse(group, z0) {
+  entryDoor(group, z0);
   bloodDecals(group, [{ k: 'A', p: [-5.995, 1.5, z0 - 27], wall: '+x', h: 0.32, rot: 0.2 }, { k: 'C', p: [-5.995, 1.2, z0 - 28.2], wall: '+x', h: 0.3, rot: -0.1, a: 0.8 }]);
   add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -2.4, 6.2, z0 - 1, z0 - 34));
   add(group, 'fence', [...fenceZ(-4.05, z0 - 3, z0 - 8), ...fenceZ(4.05, z0 - 28.5, z0 - 34)]);
@@ -43,8 +47,18 @@ export function decorWarehouse(group, z0) {
   add(group, 'cables', [...cableRun(5.97, 3.1, z0 - 6, z0 - 9), ...cableRun(-5.97, 3.1, z0 - 20, z0 - 23)]);
 }
 export function decorTower(group, z0) {
+  entryDoor(group, z0);
   add(group, 'ind', [...runZ('modular_industrial_pipes_01_pipe02', 1.95, -6.8, 6.5, z0 - 1, z0 - 16), ...runZ('modular_industrial_pipes_01_pipe02', 1.95, 6.8, 7.2, z0 - 1, z0 - 16)]);
   add(group, 'pipes', [{ n: 'pipe_valve_large_metal', p: [-6.7, 5.5, z0 - 8], r: [0, 0, 0] }]);
   add(group, 'cables', cableRun(6.97, 3.0, z0 - 3, z0 - 6));
   add(group, 'manhole', manhole(2.2, z0 - 5, 0.9));
+}
+
+// porta chiusa alle spalle: la stanza da cui sei arrivato non si riapre (muro d'ingresso a z0, la stanza va verso -z)
+export function entryDoor(group, z0) {
+  new GLTFLoader().load('assets/models/door.glb', (g) => {
+    const m = g.scene; m.getObjectByName('large_castle_door_left')?.rotation.set(0, 0, 0); m.getObjectByName('large_castle_door_right')?.rotation.set(0, 0, 0);
+    const d = new THREE.Group(); d.position.set(0, 0, z0 - 0.14); d.rotation.y = Math.PI; d.add(m); group.add(d);
+    const gt = new GLTFLoader().load('assets/models/gate.glb', (gg) => { const o = gg.scene; o.scale.setScalar(2.2); o.position.set(-0.08, 1.02, 0.13); d.add(o); });
+  });
 }
