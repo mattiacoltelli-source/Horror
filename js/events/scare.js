@@ -7,7 +7,7 @@ import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 
 export function createScare({ scene, camera, player, audio, lights, instab, finish }) {
   const S = { active: false, kind: null, t: 0, ready: false };
-  const ent = new THREE.Group(); ent.visible = false; scene.add(ent);
+  const ent = new THREE.Group(); ent.visible = false; scene.add(ent); S.ent = ent;
   // due figure a colori, in posa fissa (infermiera davanti a te se ti giri; incappucciata con tentacoli se vai avanti)
   const figs = {};
   const loader = new GLTFLoader();
@@ -30,7 +30,7 @@ export function createScare({ scene, camera, player, audio, lights, instab, fini
     if (S.active) return; S.active = true; S.kind = kind; S.t = 0;
     player.frozen = true; audio.duck(0, 0.05); lights.torchKill(0.95, 0); lights.lamp(2, 'off'); lights.lamp(3, 'off'); lights.lamp(1, 'off'); instab.set(1, 20);
     fwd.set(player.forward.x, 0, player.forward.z).normalize();
-    if (kind === 'ahead') { fwd.set(0, 0, -1); }
+    // la figura compare SEMPRE nella direzione in cui stai guardando (prima, per 'ahead', era fissa verso -z: se guardavi altrove non la vedevi)
     dir.copy(fwd); player.pitch = 0.12;    // sguardo all'altezza del petto (mentre è buio)
     for (const k in figs) figs[k].visible = k === kind;
   };
