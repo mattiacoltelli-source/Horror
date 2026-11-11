@@ -23,6 +23,14 @@ function paperTexture() {
   tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
 }
 
+let glintTex = null;
+const glint = () => {
+  if (glintTex) return glintTex;
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, 'rgba(255,244,214,1)'); r.addColorStop(0.18, 'rgba(255,236,190,.55)'); r.addColorStop(1, 'rgba(255,230,180,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+  glintTex = new THREE.CanvasTexture(c); glintTex.colorSpace = THREE.SRGBColorSpace; return glintTex;
+};
+
 // def: [{ room, parent, p:[x,y,z], ry }] nello stesso ordine di NOTE_TEXT
 export function createNotes({ camera, player, audio, story, say, instab, flags, defs }) {
   const N = { found: new Set(), list: [] };
@@ -30,13 +38,20 @@ export function createNotes({ camera, player, audio, story, say, instab, flags, 
   const fw = new THREE.Vector3(), d = new THREE.Vector3(), p = new THREE.Vector3();
   defs.forEach((def, i) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.36), new THREE.MeshLambertMaterial({ map: paperTexture(), emissive: 0x221a10, emissiveIntensity: 0.35, transparent: false }));
-    m.position.set(...def.p); m.rotation.y = def.ry; m.rotation.z = (i - 2) * 0.05; m.userData.note = i; def.parent.add(m); N.list.push({ i, room: def.room, mesh: m, t: 0 });
+    m.position.set(...def.p); m.rotation.y = def.ry; m.rotation.z = (i - 2) * 0.05; m.userData.note = i; def.parent.add(m);
+    // piccolo luccichio sulla carta (un riflesso della torcia): un punto chiaro che pulsa piano ogni ~3 s, visibile da lontano; sparisce quando la nota è letta
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glint(), color: 0xfff0d0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+    sp.scale.setScalar(0.17); m.add(sp); sp.position.set(0.06, 0.09, 0.03);   // in alto a destra del foglio, appena davanti
+    N.list.push({ i, room: def.room, mesh: m, t: 0, sp, ph: i * 0.77 });
   });
+  let clock = 0;
   N.update = (dt) => {
+    clock += dt;
     if (story.busy()) return; const cur = story.current(); fw.copy(player.forward).normalize();
     for (const n of N.list) {
-      if (n.room !== cur || N.found.has(n.i)) continue;
+      if (n.room !== cur || N.found.has(n.i)) { n.sp.material.opacity = 0; continue; }
       n.mesh.getWorldPosition(p); d.copy(p).sub(camera.position); const dist = d.length(); d.normalize();
+      { const ph = ((clock + n.ph) % 3.1) / 3.1, pulse = Math.exp(-(((ph - 0.2) / 0.09) ** 2)); n.sp.material.opacity = dist < 9 ? 0.42 * pulse * Math.min(1, (9 - dist) / 3) : 0; }
       if (dist < 5.5 && d.dot(fw) > 0.9) n.t += dt; else n.t = Math.max(0, n.t - dt * 2);
       if (n.t > 0.35) { N.found.add(n.i); flags.notes = N.found.size; audio.rustle?.(); instab?.push?.(0.25, 3); say(NOTE_TEXT[n.i], 8500, 'note'); }
     }
