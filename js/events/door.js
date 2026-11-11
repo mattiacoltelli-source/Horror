@@ -11,7 +11,7 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
   let left = null, right = null;
 
   new GLTFLoader().load('assets/models/door.glb', (g) => {
-    const m = g.scene; m.traverse((o) => { if (o.isMesh && o.material) { o.material.envMapIntensity = 0.5; } });
+    const m = g.scene; m.traverse((o) => { if (o.isMesh && o.material) { o.material.envMapIntensity = 0.5; o.material.side = THREE.DoubleSide; } });   // visibile anche dal lato interno (prima, da dentro, spariva)
     grp.add(m); E.loaded = true;
     left = m.getObjectByName('large_castle_door_left'); right = m.getObjectByName('large_castle_door_right');
     left?.rotation.set(0, 0, 0); right?.rotation.set(0, 0, 0);   // chiuso
@@ -32,6 +32,12 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
 
   E.update = (dt) => {
     const pz = player.pos.z; E.t += dt;
+    // il portone si richiude alle tue spalle appena sei dentro la sala (come le altre porte: dietro non si torna)
+    if (!E.shut && E.curA != null && pz < Z_END - 1.3 && E.state !== 'burst' && E.state !== 'hush' && E.state !== 'idle') { E.shut = true; E.shutT = 0; audio.doorBang(doorPos, 0.9); player.addShake(0.5); instab.push(0.7, 4); }
+    if (E.shut && E.shutT < 1) {
+      E.shutT += dt * 2.2; const k = Math.min(1, E.shutT), a = E.curA * (1 - k * k) + (k > 0.85 ? 0.08 * Math.sin((k - 0.85) * 40) * (1 - k) : 0);
+      if (left) left.rotation.y = -Math.max(0, a); if (right) right.rotation.y = Math.max(0, a);
+    }
     switch (E.state) {
       case 'idle':
         if (pz < -43) { go('hush'); audio.duck(0.25, 4); }
@@ -46,7 +52,7 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
         break;
       case 'burst': {
         openT += dt; const a = angle(openT);
-        if (left) left.rotation.y = -a; if (right) right.rotation.y = a;
+        if (left) left.rotation.y = -a; if (right) right.rotation.y = a; E.curA = a;
         if (E.t > 1.6) go('void');
         break;
       }

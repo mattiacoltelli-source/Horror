@@ -27,8 +27,8 @@ export function buildRoom(mats, o) {
   } };
   wallQ(xl, 1); wallQ(xr, -1);
   // pareti di testa (la prima con il vano porta)
-  const endWall = (z, nz, opening) => { for (let x = xl; x < xr - 0.01; x += 2) {
-    const xe = Math.min(x + 2, xr), k = 0.5 + rnd() * 0.3, U = (xx) => xx / wu + 0.3, ins = opening && (x + xe) / 2 > -opening.w / 2 && (x + xe) / 2 < opening.w / 2;
+  const endWall = (z, nz, opening) => { for (let x = xl; x < xr - 0.01; x += 1) {   // pannelli da 1 m: il vano porta (2 m) resta esatto
+    const xe = Math.min(x + 1, xr), k = 0.5 + rnd() * 0.3, U = (xx) => xx / wu + 0.3, ins = opening && (x + xe) / 2 > -opening.w / 2 - 0.02 && (x + xe) / 2 < opening.w / 2 + 0.02;
     const yb = ins ? opening.h : 0;
     B.quad(wall, [[x, yb, z], [xe, yb, z], [xe, h, z], [x, h, z]], [[U(x), yb / wv], [U(xe), yb / wv], [U(xe), h / wv], [U(x), h / wv]], [col(yb, k), col(yb, k), col(h, k), col(h, k)], [0, 0, nz]);
   } };
