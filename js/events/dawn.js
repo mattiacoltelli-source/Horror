@@ -27,7 +27,7 @@ export function createDawn({ scene, camera, player, audio, lights, instab, say, 
 
   const ep = new THREE.Vector3();
   D.update = (dt) => {
-    if (!D.active || D.ended) return; D.t += dt; const t = D.t;
+    if (!D.active || D.ended) return; D.t += dt; const t = D.t; instab.hide();   // il punto non c'è più: qui non sei più in pericolo
     sky.position.set(camera.position.x, camera.position.y, camera.position.z);   // il cielo segue l'occhio: è all'infinito
     // ti alzi: da sdraiato (28 cm) a in piedi (1.62 m), lentamente, dopo qualche secondo di quiete
     const k = THREE.MathUtils.clamp((t - 4) / 4, 0, 1), e = k * k * (3 - 2 * k);
