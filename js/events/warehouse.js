@@ -52,7 +52,8 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
     if (lf) { leaf = new THREE.Group(); leaf.position.set(-0.45, 0, 0); lf.position.set(0.47, 0.93, 0); leaf.add(lf); gate.add(leaf);
       const parts = await Promise.all(['gate_latch_01_frame', 'gate_latch_01_latch', 'gate_latch_01_hook'].map(() => null)); }
     new GLTFLoader().load('assets/models/gate.glb', (g) => { const o = g.scene; o.scale.setScalar(1.7); o.position.set(0.9, 0.95, 0.05); (leaf || gate).add(o); });
-    const side = []; for (const sx of [-1, 1]) for (let x = 1.9 + 0.955; x < 6; x += 1.91) side.push({ n: 'Plane020', p: [sx * x, 1.19, 0], r: [0, 0, 0] }, { n: 'post', p: [sx * (x - 0.955), 1.26, 0], r: [0, 0, 0] });
+    // recinzione CONTINUA dai bordi del cancello fino ai muri laterali (nessun varco): pannelli da 1.91 m che partono esattamente dal telaio (±0.955)
+    const side = []; for (const sx of [-1, 1]) { for (let x = 0.955 + 0.955; x < 6.4; x += 1.91) side.push({ n: 'Plane020', p: [sx * x, 1.19, 0], r: [0, 0, 0] }); for (let x = 0.955; x < 6.1; x += 1.91) side.push({ n: 'post', p: [sx * x, 1.26, 0], r: [0, 0, 0] }); }
     const m = await kitMesh('fence', side); if (m) { m.position.z = gz; m.traverse((o) => { o.userData.decor = true; }); W.group.add(m); }
   })();
   let gateT = 0;
