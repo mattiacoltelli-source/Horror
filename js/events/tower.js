@@ -28,10 +28,27 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   const door = new THREE.Group(); door.position.set(0, 0, zFar + 0.15); T.group.add(door);
   let L = null, R = null;
   loader.load('assets/models/door.glb', (g) => { const m = g.scene; L = m.getObjectByName('large_castle_door_left'); R = m.getObjectByName('large_castle_door_right'); L?.rotation.set(0, 0, 0); R?.rotation.set(0, 0, 0); m.rotation.y = Math.PI; door.add(m); });
+  { // l'oltre-porta è buio: sagoma ad arco nera davanti al muro, dietro i battenti (si vede solo oscurità, mai il muro)
+    const sh = new THREE.Shape(); sh.moveTo(-0.95, 0); sh.lineTo(0.95, 0); sh.lineTo(0.95, 1.92); sh.absarc(0, 1.92, 0.95, 0, Math.PI, false); sh.lineTo(-0.95, 0);
+    const cap = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    cap.position.set(0, 0, zFar + 0.05); cap.rotation.y = 0; T.group.add(cap);
+  }
+
   loader.load('assets/models/gate.glb', (g) => { const o = g.scene; o.scale.setScalar(2.2); o.position.set(-0.08, 1.02, 0.13); o.rotation.y = Math.PI; door.add(o); });
-  const lc = document.createElement('canvas'); lc.width = 256; lc.height = 128; const lg = lc.getContext('2d'); const gr = lg.createRadialGradient(128, 128, 4, 128, 128, 126); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.5, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); lg.fillStyle = gr; lg.fillRect(0, 0, 256, 128);
-  const leak = new THREE.Mesh(new THREE.PlaneGeometry(3.8, 2.6), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(lc), color: new THREE.Color(0.7, 0.8, 0.75), transparent: true, opacity: 0.55, fog: false, depthWrite: false }));
-  leak.rotation.x = -Math.PI / 2; leak.position.set(0, 0.03, zFar + 1.4); T.group.add(leak);
+  // luce che filtra sotto la porta: ventaglio morbido sul pavimento che sfuma su tutti i lati + sottile riga luminosa nella fessura
+  const lc = document.createElement('canvas'); lc.width = 256; lc.height = 128; const lg = lc.getContext('2d');
+  const img = lg.createImageData(256, 128);
+  for (let y = 0; y < 128; y++) for (let x = 0; x < 256; x++) {
+    const u = (x - 128) / 128, v = y / 127;                                   // v=0 sotto la porta, v=1 lontano da essa
+    const fan = Math.max(0, 1 - Math.hypot(u * (0.55 + v * 0.9), v * 1.05));    // si allarga allontanandosi
+    const a = Math.pow(fan, 1.7) * Math.min(1, v * 14) * (1 - Math.pow(Math.abs(u), 3));
+    const i = (y * 256 + x) * 4; img.data[i] = img.data[i + 1] = img.data[i + 2] = 255; img.data[i + 3] = Math.max(0, Math.min(255, a * 255));
+  }
+  lg.putImageData(img, 0, 0);
+  const leak = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 1.8), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(lc), color: new THREE.Color(0.55, 0.66, 0.6), transparent: true, opacity: 0.5, fog: false, depthWrite: false }));
+  leak.rotation.x = -Math.PI / 2; leak.rotation.z = Math.PI; leak.position.set(0, 0.015, zFar + 0.95); T.group.add(leak);
+  const gap = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.012), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.4, 1.6, 1.5), toneMapped: false, fog: false, transparent: true, opacity: 0.55 }));
+  gap.position.set(0, 0.012, zFar + 0.17); T.group.add(gap);
   const white = new THREE.Mesh(new THREE.PlaneGeometry(4, 4.2), new THREE.MeshBasicMaterial({ color: new THREE.Color(2, 2, 1.95), toneMapped: false, fog: false, transparent: true, opacity: 0 }));
   white.position.set(0, 2.1, zFar - 0.4); T.group.add(white);
 
@@ -54,7 +71,7 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
     const near = dd < 3.2 && fw.dot(dv) > 0.6 && st === 'idle'; if (near !== T.near) { T.near = near; actBtn.textContent = 'APRI'; actBtn.classList.toggle('hidden', !near); }
     if (st === 'opening') {
       open += dt; const a = Math.min(1.7, open * 0.7); if (L) L.rotation.y = a; if (R) R.rotation.y = -a;   // si aprono verso la luce
-      white.material.opacity = Math.min(1, open / 2.4); leak.material.opacity = 1; player.pos.z -= Math.min(0.5, dt * 0.4) * (open > 1.4 ? 1 : 0);
+      white.material.opacity = Math.min(1, open / 2.4); leak.material.opacity = 0.9; gap.material.opacity = 1; player.pos.z -= Math.min(0.5, dt * 0.4) * (open > 1.4 ? 1 : 0);
       if (open > 3.4 && st !== 'end') { st = 'end'; finish(TEXT.C, false, true); }
     }
   };

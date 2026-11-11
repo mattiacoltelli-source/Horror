@@ -50,6 +50,12 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   // porta d'uscita in fondo
   const exitDoor = new THREE.Group(); exitDoor.position.set(0, 0, CELLAR.z0 - CELLAR.l + 0.15); C.group.add(exitDoor);
   loader.load('assets/models/door.glb', (g) => { const m = g.scene; m.getObjectByName('large_castle_door_left')?.rotation.set(0, 0, 0); m.getObjectByName('large_castle_door_right')?.rotation.set(0, 0, 0); m.rotation.y = Math.PI; exitDoor.add(m); });
+  { // l'oltre-porta è buio: sagoma ad arco nera davanti al muro, dietro i battenti (si vede solo oscurità, mai il muro)
+    const sh = new THREE.Shape(); sh.moveTo(-0.95, 0); sh.lineTo(0.95, 0); sh.lineTo(0.95, 1.92); sh.absarc(0, 1.92, 0.95, 0, Math.PI, false); sh.lineTo(-0.95, 0);
+    const cap = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    cap.position.set(0, 0, CELLAR.z0 - CELLAR.l + 0.05); cap.rotation.y = 0; C.group.add(cap);
+  }
+
 
   // apparizione: la sagoma nera attraversa il fondo in mezzo secondo
   const shade = hall.silhouette(0); shade.visible = false; C.group.add(shade);

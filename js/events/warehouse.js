@@ -37,6 +37,12 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   // porta d'uscita
   const door = new THREE.Group(); door.position.set(0, 0, zFar + 0.15); W.group.add(door); let L = null, R = null;
   loader.load('assets/models/door.glb', (g) => { const m = g.scene; L = m.getObjectByName('large_castle_door_left'); R = m.getObjectByName('large_castle_door_right'); L?.rotation.set(0, 0, 0); R?.rotation.set(0, 0, 0); m.rotation.y = Math.PI; door.add(m); });
+  { // l'oltre-porta è buio: sagoma ad arco nera davanti al muro, dietro i battenti (si vede solo oscurità, mai il muro)
+    const sh = new THREE.Shape(); sh.moveTo(-0.95, 0); sh.lineTo(0.95, 0); sh.lineTo(0.95, 1.92); sh.absarc(0, 1.92, 0.95, 0, Math.PI, false); sh.lineTo(-0.95, 0);
+    const cap = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    cap.position.set(0, 0, zFar + 0.05); cap.rotation.y = 0; W.group.add(cap);
+  }
+
   // cancello a rete con chiavistello: sbarra la sala prima della porta; si sblocca quando hai preso la pistola
   const gz = zFar + 6.5, gate = new THREE.Group(); gate.position.set(0, 0, gz); W.group.add(gate); let leaf = null;
   W.box = [W.bounds[0], W.bounds[1], gz + 0.5, W.bounds[3]];
