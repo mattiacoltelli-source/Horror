@@ -144,7 +144,26 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
   let light = 0, targetLight = 0, hand = 0, handDecay = 0, shake = 0, lunge = 0, sway = 0;
   let walkZ = CZ, walkW = 0, ex = 7, ez = CZ, entScale = 1, blur = 1.8, waitT = 0, silenceFired = false;
 
-  const dir = new THREE.Vector3();
+  const dir = new THREE.Vector3(), ep = new THREE.Vector3();
+  // la sagoma è nell'inquadratura?
+  const entSeen = (x, z) => {
+    ep.set(x, 1.3, z).project(camera);
+    if (!(ep.z < 1 && Math.abs(ep.x) < 0.95 && Math.abs(ep.y) < 0.95)) return false;
+    // il raggio camera → sagoma deve attraversare il vetro (non il muro)
+    const c = camera.position, t = (GLASS.x - c.x) / (x - c.x);
+    if (!(t > 0 && t < 1)) return false;
+    const gz = c.z + t * (z - c.z), gy = c.y + t * (1.3 - c.y);
+    return gz < GLASS.z0 && gz > GLASS.z1 && gy > GLASS.y0 && gy < GLASS.y1;
+  };
+  const relocate = () => {
+    const c = player.pos, gz = THREE.MathUtils.clamp(c.z, GLASS.z1 + 0.45, GLASS.z0 - 0.45);
+    ez = THREE.MathUtils.clamp(c.z + (gz - c.z) * (4.5 - c.x) / (GLASS.x - c.x), CZ - 3.2, CZ + 3.2);
+  };
+  const teleport = () => {
+    E.state = 'contact'; E.t = 0; E.sc = 0; E.swelled = false;
+    ex = GLASS.x + 0.45; ez = THREE.MathUtils.clamp(player.pos.z, GLASS.z1 + 0.55, GLASS.z0 - 0.55); blur = 0.7;
+    instab.set(0.85, 9);
+  };
   E.update = (dt, time) => {
     const pz = player.pos.z, dxG = Math.hypot(player.pos.x - GLASS.x, pz - CZ);
     mat.uniforms.uTime.value = time;
@@ -155,39 +174,30 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
     E.t += dt;
     switch (E.state) {
       case 'idle':
-        if (pz < -9.5 && E.ready) { E.state = 'tease'; E.t = 0; lights.lamp(1, 'flicker', 2.2); audio.swell(5, 0.6); targetLight = 1; ex = 5.9; ez = CZ - 0.3; ent.visible = true; }
+        if (pz < -9.5 && E.ready) { E.state = 'tease'; E.t = 0; lights.lamp(1, 'flicker', 2.2); audio.swell(5, 0.6); targetLight = 1; ex = 4.5; ez = CZ - 0.2; ent.visible = true; E.gaze = 0; E.away = 0; E.blink = 0; E.unseenT = 0; }
         break;
       case 'tease':
         // la stanza si illumina, la sagoma è già lì, ferma e lontana
         if (E.t > 4.5 && pz < -14.5 || E.t > 11) { E.state = 'stare'; E.t = 0; waitT = 0; instab.set(0.5, 14); }
         break;
       case 'stare': {
-        // resta in lontananza, immobile, a fissarti. Cambia solo se la guardi a lungo o se ti avvicini al vetro.
-        ex = 5.9; ez = CZ - 0.3; blur = 1.5; sway = Math.sin(E.t * 0.8) * 0.006;
-        const toG = new THREE.Vector3(GLASS.x - player.pos.x, 0, CZ - player.pos.z).normalize();
-        const facing = new THREE.Vector3(player.forward.x, 0, player.forward.z).normalize().dot(toG) > 0.75;
-        if (dxG < 7 && facing) waitT += dt; else waitT = Math.max(0, waitT - dt * 0.4);
-        if (waitT > 4.5 || E.t > 28 || dxG < 2.6) { E.state = 'walk'; E.t = 0; walkZ = THREE.MathUtils.clamp(pz, GLASS.z1 + 0.6, GLASS.z0 - 0.6); instab.set(0.65, 12); }
+        // resta lontana, immobile, a fissarti. Se distogli lo sguardo (esce dall'inquadratura) si "teletrasporta" attaccata al vetro.
+        ex = 4.5; blur = 1.3; sway = Math.sin(E.t * 0.8) * 0.006;
+        let seen = entSeen(ex, ez);
+        // finché non la stai vedendo, si sposta (di nascosto) dove potrai vederla attraverso il vetro; una volta vista resta ferma
+        if (!seen) { E.unseenT += dt; if (E.unseenT > 0.4) { relocate(); seen = entSeen(ex, ez); } } else E.unseenT = 0;
+        if (seen && dxG < 10) { E.gaze += dt; E.away = 0; } else E.away += dt;
+        if (E.blink > 0) { E.blink -= dt; if (E.blink <= 0) { targetLight = 1; teleport(); } break; }
+        if (E.gaze > 2.5 && E.away > 0.3) teleport();
+        else if (E.gaze > 16) { E.blink = 0.45; targetLight = 0; }   // se non ti distrai mai: un battito di buio e sparisce
         break;
       }
-      case 'walk': {
-        // si avvicina lentamente verso un punto FISSO del vetro (non segue più lo sguardo/spostamenti)
-        const k = Math.min(1, E.t / 16), e = k * k * (3 - 2 * k);
-        ex = THREE.MathUtils.lerp(5.9, GLASS.x + 1.0, e);
-        ez = THREE.MathUtils.lerp(CZ - 0.3, walkZ, Math.min(1, e * 1.6));
-        blur = THREE.MathUtils.lerp(1.5, 0.9, k);
-        sway = Math.sin(E.t * 2.1) * 0.02;
-        if (k >= 1) { E.state = 'stand'; E.t = 0; waitT = 0; }
-        break;
-      }
-      case 'stand': {
-        // fermo davanti al vetro, aspetta che tu sia vicino e lo guardi
-        sway = Math.sin(E.t * 1.3) * 0.008;
-        const toG = new THREE.Vector3(GLASS.x - player.pos.x, 0, CZ - player.pos.z).normalize();
-        const facing = new THREE.Vector3(player.forward.x, 0, player.forward.z).normalize().dot(toG) > 0.7;
-        const near = dxG < 3.4;
-        if (near && facing) waitT += dt; else waitT = Math.max(0, waitT - dt * 0.5);
-        if ((waitT > 2.4 && E.t > 3) || E.t > 22) { E.state = 'silence'; E.t = 0; audio.duck(0.03, 0.3); instab.set(0.6, 4); }
+      case 'contact': {
+        // è attaccata al vetro, ferma. Appena la rivedi, qualche istante di immobilità... poi il colpo.
+        sway = Math.sin(E.t * 1.3) * 0.006;
+        const seen = entSeen(ex, ez);
+        if (seen) { E.sc += dt; if (!E.swelled) { E.swelled = true; audio.swell(2.2, 0.4); } } else E.sc = Math.max(0, E.sc - dt * 0.5);
+        if (E.sc > 1.9 || E.t > 45) { E.state = 'silence'; E.t = 0; audio.duck(0.03, 0.3); instab.set(0.7, 4); }
         break;
       }
       case 'silence':
@@ -196,7 +206,7 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
         if (E.t > 1.7) { E.state = 'slam'; E.t = 0; lights.lamp(1, 'flicker', 1.2); audio.glassHit(glassPos, 1); audio.duck(0.15, 0.2); player.addShake(0.9); shake = 1; hand = 1; handDecay = 0; lunge = 1; mat.uniforms.uHandZ.value = ez; instab.set(1, 9); }
         break;
       case 'slam':
-        entScale = 1 + 0.06 * lunge; ex = GLASS.x + 0.2 + 0.7 * (1 - lunge);
+        entScale = 1 + 0.06 * lunge; ex = GLASS.x + 0.13 + 0.32 * (1 - lunge);
         lunge = Math.max(0, lunge - dt * 7);
         shake = Math.max(0, shake - dt * 1.2);
         if (E.t > 0.55) { E.state = 'vanish'; E.t = 0; ent.visible = false; targetLight = 0; lights.lamp(1, 'on'); }
@@ -241,6 +251,6 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
     const prevRT = renderer.getRenderTarget(); renderer.setRenderTarget(rt); renderer.clear(); renderer.render(scene, camera); renderer.setRenderTarget(prevRT);
     camera.layers.mask = prevMask; scene.background = prevBg; scene.fog = prevFog;
   };
-  E.reset = () => { E.state = 'idle'; E.t = 0; E.done = false; ent.visible = false; light = targetLight = 0; hand = 0; silenceFired = false; ex = 7; };
+  E.reset = () => { E.state = 'idle'; E.t = 0; E.done = false; E.gaze = 0; E.away = 0; E.blink = 0; ent.visible = false; light = targetLight = 0; hand = 0; silenceFired = false; ex = 7; };
   return E;
 }
