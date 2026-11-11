@@ -7,10 +7,13 @@ import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 const keepSingle = (root) => root.traverse((o) => { if (o.isMesh && /(_b$|magazine_empty|bullet)/.test(o.name)) o.visible = false; });   // il modello ha due versioni sovrapposte: ne tengo una
 export function createCombat({ scene, camera, player, audio, lights, instab, say, flash, scare, ui }) {
   const K = { armed: false, active: false, ammo: 6, aim: 0, aiming: false, state: 'off', t: 0, hits: 0, D: 13, recoil: 0, kick: 0, held: false };
+  const gunMats = [];
   const gun = new THREE.Group(); camera.add(gun); gun.visible = false;
   const holder = new THREE.Group(); gun.add(holder);
   new GLTFLoader().load('assets/models/pistol.glb', (g) => {
-    const m = g.scene; keepSingle(m); m.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.renderOrder = 10; o.material.metalness = Math.min(0.35, o.material.metalness ?? 0); o.material.roughness = 0.55; o.material.envMapIntensity = 1.2; o.material.side = THREE.DoubleSide; } });
+    const m = g.scene; keepSingle(m); m.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.renderOrder = 10; const om = o.material; o.material = new THREE.MeshBasicMaterial({ map: om.map, color: new THREE.Color(0.17, 0.17, 0.18), side: THREE.DoubleSide, fog: false }); gunMats.push(o.material); } });
+    // la torcia è a pochi centimetri dall'arma e la brucia (decadimento della luce): l'arma non è illuminata dalle luci ma ha un tono fisso, scuro come
+    // l'acciaio brunito; si accende solo per un istante col lampo dello sparo (vedi K.fire / K.update)
     m.updateMatrixWorld(true); const b = new THREE.Box3(); m.traverse((o) => { if (o.isMesh && o.visible) b.expandByObject(o); }); const c = b.getCenter(new THREE.Vector3());
     m.position.sub(c); m.rotation.y = Math.PI / 2; holder.scale.setScalar(0.72);           // canna verso -z
     holder.add(m); K.ready = true;
@@ -58,7 +61,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     if (!K.active || K.state !== 'fight' || !K.armed || K.cool > 0 || K.hide > 0) return;     // almeno 1 s tra un colpo e l'altro: niente raffica
     if (K.ammo <= 0) { audio.dry(); return; }
     K.ammo--; K.shots = (K.shots || 0) + 1; K.cool = 1.0; ui.cool?.(true); audio.shot(1); K.recoil += 0.055; K.kick = 1; player.pitch += 0.05; player.yaw += (Math.random() - 0.5) * 0.022; player.addShake(0.3);
-    muzzle.material.opacity = 1; muzzle.rotation.z = Math.random() * 6; K.flashT = 0.07; flash.intensity = 160; flash.position.copy(camera.position).add(fwd.set(0, 0, -0.4).applyQuaternion(camera.quaternion));
+    muzzle.material.opacity = 1; gunMats.forEach((m) => m.color.setRGB(0.55, 0.5, 0.45)); muzzle.rotation.z = Math.random() * 6; K.flashT = 0.07; flash.intensity = 160; flash.position.copy(camera.position).add(fwd.set(0, 0, -0.4).applyQuaternion(camera.quaternion));
     try { navigator.vibrate?.(30); } catch (_) {}
     // il colpo non la prende mai: nel lampo lei non c'è già più, e riappare più vicina in un altro punto
     K.hide = HIDE; K.moved = false; instab.push(0.9, 3); lights.torchStutter(HIDE); lights.lamp(0, 'flicker', HIDE); lights.lamp(1, 'flicker', HIDE); audio.lightOn?.();
@@ -78,6 +81,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
       gun.rotation.set(THREE.MathUtils.lerp(base.r[0], 0, a) + K.kick * 0.22, 0, base.r[2] * (1 - a));
       if (knocked > 0) { knocked += dt; kv.y -= dt * 9; gun.position.addScaledVector(kv, knocked); gun.rotation.z += dt * 9; if (knocked > 0.9) { gun.visible = false; knocked = 0; K.armed = false; } }
       if (K.flashT > 0) { K.flashT -= dt; if (K.flashT <= 0) muzzle.material.opacity = 0; }
+      gunMats.forEach((m) => { m.color.r += (0.17 - m.color.r) * Math.min(1, dt * 9); m.color.g += (0.17 - m.color.g) * Math.min(1, dt * 9); m.color.b += (0.18 - m.color.b) * Math.min(1, dt * 9); });
       flash.intensity *= Math.pow(0.0005, dt);                          // il lampo svanisce in un attimo
       // mirare = più zoom e più precisione
       const baseFov = camera.userData.baseFov ?? 68; camera.fov += (baseFov - a * 14 - camera.fov) * Math.min(1, dt * 12); camera.updateProjectionMatrix();

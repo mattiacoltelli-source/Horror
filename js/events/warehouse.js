@@ -24,7 +24,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   const cartZ = WH.z0 - 26.5;
   prop('assets/models/cart.glb', 0.97, 0, 0, cartZ, Math.PI / 2);
   let pistol = null, ammo = null;
-  prop('assets/models/pistol.glb', 0.13, 0.12, 0.97, cartZ + 0.15, 0.6, (o) => { o.traverse((m) => { if (m.isMesh && /(_b$|magazine_empty|bullet)/.test(m.name)) m.visible = false; }); o.rotation.x = -Math.PI / 2 + 0.0; pistol = o; });
+  prop('assets/models/pistol.glb', 0.13, 0.12, 0.97, cartZ + 0.15, 0.6, (o) => { o.traverse((m) => { if (m.isMesh && /(_b$|magazine_empty|bullet)/.test(m.name)) m.visible = false; if (m.isMesh && m.visible) { m.material = m.material.clone(); m.material.color.multiplyScalar(0.18); m.material.metalnessMap = null; m.material.metalness = 0.2; m.material.roughnessMap = null; m.material.roughness = 0.7; } }); o.rotation.x = -Math.PI / 2 + 0.0; pistol = o; });
   prop('assets/models/ammo.glb', 0.18, -0.2, 0.97, cartZ - 0.1, 0.3, (o) => { ammo = o; });
   // lampada sopra il carrello (è l'unica luce forte della sala)
   const lampPos = [[0, 5.0, WH.z0 - 6], [0, 5.0, WH.z0 - 16], [0, 5.0, cartZ], [5.5, 3.9, WH.z0 - 22]];   // l'ultima: faro con sensore di movimento
