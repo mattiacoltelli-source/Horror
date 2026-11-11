@@ -3,15 +3,16 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { buildRoom } from '../world/rooms.js';
+import { decorTower } from '../world/decor.js';
 
 export const TOWER = { z0: -300, w: 14, l: 18, h: 8.5 };
 const TEXT = { A: 'non ti sei girato.\nera già davanti a te.', B: 'ti sei girato.\nlei non se n\'è mai andata.', C: 'sei uscito.\nlo specchio no.' };
 
-export function createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn }) {
+export function createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn, combat }) {
   const T = { group: new THREE.Group(), opened: false, near: false };
   T.group.visible = false; scene.add(T.group);
   const room = buildRoom(mats, { z0: TOWER.z0, w: TOWER.w, l: TOWER.l, h: TOWER.h, wall: 'stone', floor: 'floorA', ceil: 'brick', pillarEvery: 6, dark: 0.95, seed: 31 });
-  T.group.add(room.group); T.bounds = [room.bounds[0], room.bounds[1], TOWER.z0 - TOWER.l + 1.6, TOWER.z0 - 0.6];
+  T.group.add(room.group); decorTower(T.group, TOWER.z0); T.bounds = [room.bounds[0], room.bounds[1], TOWER.z0 - TOWER.l + 1.6, TOWER.z0 - 0.6];
   const zFar = TOWER.z0 - TOWER.l, loader = new GLTFLoader();
   const stovePos = new THREE.Vector3(-2.4, 0, TOWER.z0 - 6.5);
 
@@ -43,13 +44,13 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   const dv = new THREE.Vector3(), fw = new THREE.Vector3(), ep = new THREE.Vector3(); let wt = 0, open = 0, st = 'idle';
   T.update = (dt, time) => {
     if (!T.group.visible) return;
-    wt += dt; warm.intensity = (36 + Math.sin(time * 9) * 3 + Math.sin(time * 23) * 1.6) * (st === 'idle' ? 1 : 0.5);
+    wt += dt; warm.intensity = (36 + Math.sin(time * 9) * 3 + Math.sin(time * 23) * 1.6) * (st === 'idle' ? 1 : st === 'opening' ? 0.5 : 0.04);
     // la sedia a rotelle si gira verso di te quando non la guardi
     if (T.chair) { ep.set(T.chair.position.x, 1, T.chair.position.z).project(camera); const seen = ep.z < 1 && Math.abs(ep.x) < 1.05;
       if (!seen) { const a = Math.atan2(player.pos.x - T.chair.position.x, player.pos.z - T.chair.position.z); T.chair.rotation.y += Math.atan2(Math.sin(a - T.chair.rotation.y), Math.cos(a - T.chair.rotation.y)) * Math.min(1, dt * 0.5); } }
     // pulsante contestuale vicino alla porta
     dv.set(0 - player.pos.x, 0, zFar - player.pos.z); const dd = dv.length(); dv.normalize(); fw.set(player.forward.x, 0, player.forward.z).normalize();
-    const near = dd < 3.2 && fw.dot(dv) > 0.6 && st === 'idle'; if (near !== T.near) { T.near = near; actBtn.classList.toggle('hidden', !near); }
+    const near = dd < 3.2 && fw.dot(dv) > 0.6 && st === 'idle'; if (near !== T.near) { T.near = near; actBtn.textContent = 'APRI'; actBtn.classList.toggle('hidden', !near); }
     if (st === 'opening') {
       open += dt; const a = Math.min(1.7, open * 0.7); if (L) L.rotation.y = a; if (R) R.rotation.y = -a;   // si aprono verso la luce
       white.material.opacity = Math.min(1, open / 2.4); leak.material.opacity = 1; player.pos.z -= Math.min(0.5, dt * 0.4) * (open > 1.4 ? 1 : 0);
@@ -61,7 +62,9 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   T.open = () => {
     if (T.opened) return; T.opened = true; T.near = false; actBtn.classList.add('hidden');
     if (flags.mirror) { st = 'opening'; open = 0; player.frozen = true; instab.set(0, 10); audio.whisper(3.2, 0.3); say('', 1); return; }
-    st = 'scare'; if (flags.turned) scare.trigger('behind', TEXT.B); else scare.trigger('ahead', TEXT.A);
+    // la porta è chiusa a chiave: dietro di te, nel buio, qualcosa entra nella stanza. Devi girarti.
+    st = 'fight'; actBtn.classList.add('hidden'); audio.doorBang(new THREE.Vector3(0, 1.4, zFar), 0.7); player.addShake(0.5); lights.lamp(0, 'off'); lights.lamp(1, 'off'); audio.duck(0.15, 0.2);
+    setTimeout(() => combat.begin(flags.turned ? 'behind' : 'ahead', flags.turned ? TEXT.B : TEXT.A, new THREE.Vector3(0, 0, TOWER.z0 - 1)), 1600);
   };
   return T;
 }

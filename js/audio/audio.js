@@ -239,6 +239,44 @@ export function createAudio() {
       const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(level, t + dur * 0.4); g.gain.linearRampToValueAtTime(0, t + dur);
       s.connect(bp); bp.connect(am); am.connect(g); g.connect(master); g.connect(verbSend); s.start(t); lf.start(t); s.stop(t + dur + 0.1); lf.stop(t + dur + 0.1);
     },
+    // COLPO DI PISTOLA: schiocco + corpo + tonfo + coda di riverbero lunga; poi fischio nelle orecchie
+    shot(power = 1) {
+      if (!ok) return; const t = ctx.currentTime;
+      const nz = (dur, ftype, f, q, peak, dec, st = Math.random()) => { const s = ctx.createBufferSource(); s.buffer = noiseBuf; const fl = ctx.createBiquadFilter(); fl.type = ftype; fl.frequency.value = f; fl.Q.value = q; const g = ctx.createGain();
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak * power, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0008, t + dec); s.connect(fl); fl.connect(g); g.connect(master); g.connect(verbSend); s.start(t, st, dur); };
+      nz(0.12, 'highpass', 1800, 0.5, 1.0, 0.07);       // schiocco
+      nz(0.3, 'lowpass', 900, 0.6, 0.95, 0.2);          // corpo
+      const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.22);
+      og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(0.95 * power, t + 0.003); og.gain.exponentialRampToValueAtTime(0.001, t + 0.3); o.connect(og); og.connect(master); o.start(t); o.stop(t + 0.35);
+      const rv = ctx.createGain(); rv.gain.value = 1.3 * power; og.connect(rv); rv.connect(verbSend);
+      // bossolo che rimbalza
+      for (const [dt, f] of [[0.28, 3300], [0.36, 2700], [0.41, 3900]]) { const c = ctx.createOscillator(), cg = ctx.createGain(); c.type = 'triangle'; c.frequency.value = f; cg.gain.setValueAtTime(0, t + dt); cg.gain.linearRampToValueAtTime(0.05, t + dt + 0.002); cg.gain.exponentialRampToValueAtTime(0.0004, t + dt + 0.13); c.connect(cg); cg.connect(master); c.start(t + dt); c.stop(t + dt + 0.15); }
+      // acufene: si accumula con i colpi
+      this._ring = Math.min(1, (this._ring || 0) + 0.28);
+      const r = ctx.createOscillator(), rg = ctx.createGain(); r.type = 'sine'; r.frequency.value = 4100; rg.gain.setValueAtTime(0.012 * this._ring, t + 0.05); rg.gain.exponentialRampToValueAtTime(0.0003, t + 3.2); r.connect(rg); rg.connect(master); r.start(t + 0.05); r.stop(t + 3.3);
+    },
+    // otturatore bloccato: click a vuoto
+    dry() {
+      if (!ok) return; const t = ctx.currentTime;
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf; const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2400; const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.4, t + 0.001); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.05); s.connect(hp); hp.connect(g); g.connect(master); s.start(t, Math.random(), 0.08);
+    },
+    // arma che cade sul pavimento di pietra, rimbalza
+    clatter() {
+      if (!ok) return; const t = ctx.currentTime;
+      for (const [dt, v] of [[0, 1], [0.16, 0.6], [0.27, 0.35], [0.34, 0.2]]) {
+        const s = ctx.createBufferSource(); s.buffer = noiseBuf; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 1.2; const g = ctx.createGain();
+        g.gain.setValueAtTime(0, t + dt); g.gain.linearRampToValueAtTime(0.7 * v, t + dt + 0.002); g.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.12); s.connect(bp); bp.connect(g); g.connect(master); g.connect(verbSend); s.start(t + dt, Math.random(), 0.2);
+        for (const fr of [820, 1730, 2900]) { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'triangle'; o.frequency.value = fr * (0.97 + Math.random() * 0.06); og.gain.setValueAtTime(0, t + dt); og.gain.linearRampToValueAtTime(0.06 * v, t + dt + 0.002); og.gain.exponentialRampToValueAtTime(0.0004, t + dt + 0.5); o.connect(og); og.connect(master); o.start(t + dt); o.stop(t + dt + 0.55); }
+      }
+    },
+    // passo pesante e lento (il mostro): tonfo + sfregamento, con posizione 3D
+    heavyStep(pos, power = 1) {
+      if (!ok) return; const t = ctx.currentTime;
+      const pan = ctx.createPanner(); pan.panningModel = 'HRTF'; pan.refDistance = 2; pan.positionX.value = pos.x; pan.positionY.value = 0.3; pan.positionZ.value = pos.z; pan.connect(master); const rs = ctx.createGain(); rs.gain.value = 0.7; pan.connect(rs); rs.connect(verbSend);
+      const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(85, t); o.frequency.exponentialRampToValueAtTime(38, t + 0.2); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.8 * power, t + 0.004); g.gain.exponentialRampToValueAtTime(0.001, t + 0.28); o.connect(g); g.connect(pan); o.start(t); o.stop(t + 0.3);
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf; const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700; const g2 = ctx.createGain(); g2.gain.setValueAtTime(0, t); g2.gain.linearRampToValueAtTime(0.5 * power, t + 0.01); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.3); s.connect(lp); lp.connect(g2); g2.connect(pan); s.start(t, Math.random(), 0.35);
+    },
     // gocce
     _drip(pan = 0) {
       if (!ok) return; const t = ctx.currentTime;

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { Reflector } from '../../vendor/three/Reflector.js';
 import { buildRoom } from '../world/rooms.js';
+import { decorCellar } from '../world/decor.js';
 
 export const CELLAR = { z0: -200, w: 8, l: 24, h: 4.4 };
 const MIRROR = new THREE.Vector3(-3.98, 1.45, -210);
@@ -14,7 +15,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const C = { group: new THREE.Group(), state: 'idle', step: -1, gaze: 0, away: 0, started: false, apDone: false };
   C.group.visible = false; scene.add(C.group);
   const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23 });
-  C.group.add(room.group); C.bounds = [room.bounds[0], room.bounds[1], CELLAR.z0 - CELLAR.l + 1.4, CELLAR.z0 - 0.6];
+  C.group.add(room.group); decorCellar(C.group, CELLAR.z0); C.bounds = [room.bounds[0], room.bounds[1], CELLAR.z0 - CELLAR.l + 1.4, CELLAR.z0 - 0.6];
 
   // specchio
   const mw = 1.7, mh = 2.4;
@@ -98,7 +99,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
       if (ap > 0.5) { shade.visible = false; ap = -1; }
     }
     // --- uscita ---
-    if (C.apDone && P.z < CELLAR.z0 - CELLAR.l + 2.4 && C.state === 'play') { C.state = 'leaving'; story.goto('tower'); }
+    if (C.apDone && P.z < CELLAR.z0 - CELLAR.l + 2.4 && C.state === 'play') { C.state = 'leaving'; story.goto('warehouse'); }
   };
   C.leave = () => { C.group.visible = false; mirror.visible = false; };
   return C;

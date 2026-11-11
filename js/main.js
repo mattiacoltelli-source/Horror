@@ -14,6 +14,9 @@ import { createHall } from './events/hall.js';
 import { createCellar } from './events/cellar.js';
 import { createTower } from './events/tower.js';
 import { createStory } from './story.js';
+import { decorTunnel } from './world/decor.js';
+import { createWarehouse } from './events/warehouse.js';
+import { createCombat } from './events/combat.js';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -44,7 +47,7 @@ addEventListener('resize', resize); resize();
 
 // ---------- mondo ----------
 const mats = makeMaterials();
-scene.add(buildTunnel(mats));
+{ const tg = buildTunnel(mats); scene.add(tg); decorTunnel(tg); }
 
 // riflessi: panorama scurito come environment (leggero, solo per metallo/umido)
 new THREE.TextureLoader().load('assets/tex/bath_bg.jpg', (t) => {
@@ -100,9 +103,10 @@ try {
   nx.putImageData(im, 0, 0); $('grain').style.backgroundImage = `url(${nc.toDataURL('image/png')})`;
 } catch (_) {}
 // ---------- flusso ----------
-let doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null;
+let doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null, wh = null, combat = null;
 const flags = { turned: false, mirror: false };
 const warm = new THREE.PointLight(0xff9a50, 0, 15, 1.7); scene.add(warm);
+const flash = new THREE.PointLight(0xffd9a0, 0, 28, 1.6); scene.add(flash);   // lampo dello sparo
 let state = 'loading', last = 0, time = 0, paused = false, fpsAcc = 0, fpsN = 0, ended = false;
 let started = false;
 const hint = $('subtitle');
@@ -114,9 +118,11 @@ function say(txt, ms = 4000) {
 async function enter() {
   scare ??= createScare({ scene, camera, player, audio, lights, instab, finish });
   hall ??= createHall({ scene, mats, lights });
-  story ??= createStory({ scene, camera, controls, player, audio, hall, getCellar: () => cellar, getTower: () => tower, lights, instab });
+  story ??= createStory({ scene, camera, controls, player, audio, hall, getCellar: () => cellar, getTower: () => tower, getWh: () => wh, lights, instab });
+  combat ??= createCombat({ scene, camera, player, audio, lights, instab, say, flash, scare, ui: { show: (b) => { $('fire').classList.toggle('hidden', !b); $('aim').classList.toggle('hidden', !b); } } });
+  wh ??= createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, actBtn: $('act') });
   cellar ??= createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story });
-  tower ??= createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn: $('act') });
+  tower ??= createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn: $('act'), combat });
   doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar'); } });
   $('enter').disabled = true;
   try { await audio.start(); } catch (_) {}
@@ -158,7 +164,11 @@ function finish(msg, fast = false, light = false) {
   setTimeout(() => $('end').classList.remove('hidden'), fast ? 1800 : 3200);
 }
 $('again').addEventListener('click', () => location.reload());
-$('act').addEventListener('click', () => tower?.open());
+$('act').addEventListener('click', () => { if (wh && wh.near) wh.take(); else if (tower && tower.near) tower.open(); });
+$('fire').addEventListener('pointerdown', (e) => { e.preventDefault(); combat?.fire(); });
+const aimOn = (on) => (e) => { e.preventDefault(); combat?.setAim(on); };
+$('aim').addEventListener('pointerdown', aimOn(true)); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) $('aim').addEventListener(ev, aimOn(false));
+addEventListener('keydown', (e) => { if (e.code === 'Space') combat?.fire(); if (e.code === 'ShiftLeft') combat?.setAim(true); }); addEventListener('keyup', (e) => { if (e.code === 'ShiftLeft') combat?.setAim(false); });
 
 function tick(dt) {
   doorEvent?.update(dt);
@@ -166,6 +176,8 @@ function tick(dt) {
   hall?.update(dt);
   cellar?.update(dt);
   tower?.update(dt, time);
+  wh?.update(dt);
+  combat?.update(dt, time);
   time += dt;
   player.update(dt, time);
   audio.setListener(camera);
@@ -188,13 +200,14 @@ function frame(now) {
   if (fpsAcc > 2) {
     const fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0;
     if (fps < 38 && pr > 0.7) { pr = Math.max(0.7, pr - 0.15); renderer.setPixelRatio(pr); resize(); }
+    else if (fps < 28 && pr <= 0.71 && !globalThis.__lowQ) { globalThis.__lowQ = true; scene.traverse((o) => { if (o.userData.decor) o.visible = false; }); }   // ultimo ripiego: via l'arredo modulare
   }
 }
 requestAnimationFrame((n) => { last = n; frame(n); });
 
 // debug/test: ?debug=1 espone il gioco e permette di saltare avanti
 if (q.has('debug')) {
-  window.__g = { flags, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
+  window.__g = { flags, get combat() { return combat; }, get wh() { return wh; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
     sim(sec, dt = 0.05) { for (let t = 0; t < sec; t += dt) tick(dt); },
     tp(z, yaw = 0) { player.pos.set(0.1, 1.62, z); player.yaw = yaw; player.pitch = 0; } };
 }

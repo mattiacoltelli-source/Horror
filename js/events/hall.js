@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { Z_END, DOOR } from '../world/tunnel.js';
 import { buildRoom } from '../world/rooms.js';
+import { decorHall } from '../world/decor.js';
 
 const TYPES = [
   ['whisperer', 2.5], ['pirate', 1.95], ['nurse', 1.72], ['occ', 1.98], ['diver', 1.85], ['bell', 2.6], ['varka', 1.92], ['root', 3.6],
@@ -21,7 +22,7 @@ export function createHall({ scene, mats, lights }) {
 
   // la sala: pavimento, soffitto, muri di mattoni, pilastri; il vano della porta combacia con quello del tunnel
   const room = buildRoom(mats, { z0: Z_END - 0.35, w: 12, l: 40, h: 6, wall: 'brick', floor: 'floorB', ceil: 'stone', pillarEvery: 6, door: { w: DOOR.w, h: DOOR.h }, dark: 0.9, seed: 11 });
-  grp.add(room.group); H.bounds = room.bounds;
+  grp.add(room.group); H.bounds = room.bounds; decorHall(grp, Z_END - 0.35);
   // grande apertura luminosa in fondo (è il controluce delle sagome)
   const wc = document.createElement('canvas'); wc.width = 256; wc.height = 256; const wg = wc.getContext('2d');
   const rg = wg.createRadialGradient(128, 150, 10, 128, 150, 128); rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(.55, 'rgba(255,255,255,.8)'); rg.addColorStop(1, 'rgba(255,255,255,0)');

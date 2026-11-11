@@ -203,17 +203,6 @@ export function buildTunnel(mats) {
       [[0, 0], [0.35 / bu, 0], [0.35 / bu, DOOR.h / bv], [0, DOOR.h / bv]], [gray(.2), gray(.2), gray(.2), gray(.2)], [-s2, 0, 0]);
   }
 
-  // Tubature lungo il muro sinistro (cilindri uniti)
   const g = B.build(mats);
-  const pipeGeo = new THREE.CylinderGeometry(0.055, 0.055, Z_START - Z_END, 10, 1, true);
-  pipeGeo.rotateX(Math.PI / 2);
-  const uv = pipeGeo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 0.5, uv.getY(i) * (Z_START - Z_END) / 1.2);
-  const col = new Float32Array(pipeGeo.attributes.position.count * 3).fill(0.55);
-  pipeGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  for (const [x, y] of [[-W + 0.1, 2.35], [-W + 0.12, 2.12]]) {
-    const pipe = new THREE.Mesh(pipeGeo, mats.rust);
-    pipe.position.set(x, y, (Z_START + Z_END) / 2);
-    g.add(pipe);
-  }
   return g;
 }

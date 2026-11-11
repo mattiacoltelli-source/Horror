@@ -2,9 +2,11 @@
 
 Horror psicologico in prima persona, verticale (9:16), per browser mobile. Sito statico: HTML + CSS + JavaScript + Three.js, nessun build.
 
-**Stato: gioco completo (~10 min).** Tunnel → vetro con la sagoma → portone → sala della folla (+ scelta «non guardare dietro») → cantina (specchio impossibile, apparizione) → torre (porta d'uscita, 3 finali).
+**Stato: gioco completo.** Tunnel → vetro con la sagoma → portone → sala della folla (+ scelta «non guardare dietro») → cantina (specchio impossibile, apparizione) → magazzino (pistola) → torre (combattimento perso + 3 finali).
 
 Finali: **A** non ti sei girato · **B** ti sei girato · **C** (segreto) hai guardato lo specchio fino in fondo.
+
+Combattimento: pistola a 6 colpi, MIRA (tieni premuto) e SPARA; il mostro ti disarma sempre.
 
 Scorciatoie per provare: `?start=porta` · `?start=cantina` · `?start=torre` (con `&turned=1` o `&mirror=1`).
 
