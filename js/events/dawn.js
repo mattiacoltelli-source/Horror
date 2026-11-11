@@ -35,24 +35,16 @@ export function createDawn({ scene, camera, player, audio, lights, instab, say, 
     if (t > 4 && t < 8) player.pitch += (0.12 - player.pitch) * Math.min(1, dt * 0.5);       // lo sguardo scende verso l'orizzonte mentre ti alzi
     if (t > 2 && D.said === 0) { D.said = 1; say('', 1); }
     if (t > 8.5 && D.said === 1) { D.said = 2; say('è tutto fermo.', 4000); }
-    // IL PARADISO ERA SOLO UN'ALTRA STANZA: il vento si ferma di colpo, silenzio, un respiro lontano; sulla linea dei monti compare una
-    // sagoma immobile che ti guarda; quando la guardi, o dopo poco, non c'è più.
+    // FINALE: sei solo. Il vento si ferma di colpo, silenzio; un respiro lontano alle tue spalle si avvicina piano, passo dopo passo.
+    // Non c'è nessuno da vedere. Quando è a un soffio da te, tutto si spegne di colpo: buio e silenzio.
     if (t > 11.5 && D.said === 2) { D.said = 3; wind?.stop(0.12); wind = null; }
-    if (t > 13.5 && D.said === 3) { D.said = 4; breath = audio.breath(); breath?.setLevel(0.3, 0.8); }
-    if (D.said >= 4 && breath) { const a = player.yaw + Math.PI; breath.setPos(camera.position.x + Math.sin(a) * 9, 1.2, camera.position.z + Math.cos(a) * 9); }   // lontano, alle tue spalle
-    if (t > 15.5 && D.said === 4) {
-      D.said = 5; farT = 0; farLook = 0; farYaw = player.yaw;
-      const dist = 44, ax = -Math.sin(farYaw) * dist, az = -Math.cos(farYaw) * dist;       // davanti a te, all'orizzonte
-      far.position.set(camera.position.x + ax, 1.1, camera.position.z + az); far.scale.setScalar(2.1); far.rotation.y = farYaw; far.visible = true;
+    if (t > 13 && D.said === 3) { D.said = 4; breath = audio.breath(); breath?.setLevel(0.3, 0.8); D.bt = 0; }
+    if (D.said >= 4 && breath) {
+      D.bt += dt; const k = Math.min(1, D.bt / 8), e = k * k, dist = THREE.MathUtils.lerp(10, 0.9, e), a = player.yaw + Math.PI;
+      breath.setPos(camera.position.x + Math.sin(a) * dist, 1.3, camera.position.z + Math.cos(a) * dist); breath.setLevel(0.3 + 0.9 * e, 0.5);
+      if (k >= 1 && D.said === 4) { D.said = 5; audio.cut(0.02); fade.style.transition = 'opacity .12s'; fade.style.opacity = 1; D.endAt = t + 1.8; }   // buio e silenzio di colpo
     }
-    if (farT >= 0) {
-      farT += dt;
-      ep.set(far.position.x, far.position.y + 1.5, far.position.z).project(camera); const centered = ep.z < 1 && Math.hypot(ep.x, ep.y * 0.5) < 0.32;
-      farLook = centered ? farLook + dt : Math.max(0, farLook - dt * 0.5);
-      if (farLook > 1.2 || farT > 5) { far.visible = false; farT = -1; breath?.stop(); breath = null; D.endAt = D.t + 3.2; }
-    }
-    // dopo qualche secondo di silenzio vuoto: il finale
-    if (t > (D.endAt ?? 32)) { D.ended = true; wind?.stop(); breath?.stop(); finish(D.text, false); }
+    if (t > (D.endAt ?? 40)) { D.ended = true; wind?.stop(); breath?.stop(); audio.unmute?.(); finish(D.text, true); }
   };
   return D;
 }
