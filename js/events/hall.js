@@ -36,22 +36,26 @@ export function createHall({ scene, mats, lights }) {
   // la folla: corpo quasi nero + SOLO contorno illuminato (rim) dalle lampade alle spalle. Più è vicina, più il corpo si spegne
   // e resta il contorno: da vicino non si vedono i dettagli del modello, solo una sagoma con il bordo di luce.
   const rimU = { value: 0 };
-  const mkLit = () => { const m = new THREE.MeshStandardMaterial({ color: 0x1d1c1c, roughness: 0.97, metalness: 0 });
+  const mkLit = () => { const m = new THREE.MeshLambertMaterial({ color: 0x1d1c1c });   // Lambert: niente riflesso speculare, così la torcia da vicino non li "accende" (lo specular dielettrico li faceva sembrare chiari)
     m.onBeforeCompile = (sh) => { sh.uniforms.uRim = rimU; sh.uniforms.uNear = { value: 0 }; m.userData.sh = sh;
       sh.vertexShader = 'varying vec3 vObj;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vObj = position;');
-      sh.fragmentShader = 'uniform float uRim; uniform float uNear; varying vec3 vObj;\n' + sh.fragmentShader
+      sh.fragmentShader = `uniform float uRim; uniform float uNear; varying vec3 vObj;
+        float hh(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+        float vn(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(mix(hh(i), hh(i + vec3(1,0,0)), f.x), mix(hh(i + vec3(0,1,0)), hh(i + vec3(1,1,0)), f.x), f.y), mix(mix(hh(i + vec3(0,0,1)), hh(i + vec3(1,0,1)), f.x), mix(hh(i + vec3(0,1,1)), hh(i + vec3(1,1,1)), f.x), f.y), f.z); }
+` + sh.fragmentShader
         .replace('#include <color_fragment>', `#include <color_fragment>
-          // macchie di sangue (solo quando è vicino): rumore a grandi chiazze + colature verticali, rosso quasi nero
-          vec3 q = vObj * vec3(5.0, 2.2, 5.0);
-          float n1 = fract(sin(dot(floor(q), vec3(12.9, 78.2, 37.7))) * 43758.5);
-          float n2 = fract(sin(dot(floor(q * 2.1 + 3.0), vec3(39.3, 11.1, 91.7))) * 24634.6);
-          float stain = smoothstep(0.78, 0.9, n1 * 0.6 + n2 * 0.55) * uNear;
-          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.11, 0.004, 0.004), stain);`)
+          // sangue (solo da vicino): chiazze morbide a più ottave + colature verticali; niente griglia, bordi sfumati
+          float nA = vn(vObj * vec3(2.4, 1.0, 2.4)) * 0.62 + vn(vObj * vec3(5.6, 2.4, 5.6)) * 0.38;
+          float blot = smoothstep(0.60, 0.74, nA);
+          float drip = smoothstep(0.58, 0.78, vn(vec3(vObj.x * 17.0, vObj.y * 1.3, vObj.z * 17.0))) * smoothstep(0.50, 0.66, vn(vObj * vec3(2.0, 0.8, 2.0) + 7.3));
+          float stain = clamp(blot * 0.85 + drip, 0.0, 1.0) * uNear;
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.085, 0.003, 0.004) * (0.7 + 0.6 * nA), stain);`)
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
           float rimF = pow(1.0 - clamp(dot(normalize(vNormal), normalize(vViewPosition)), 0.0, 1.0), 5.0);
           float topF = clamp(normalize(vNormal).y * 0.5 + 0.55, 0.0, 1.0);
           totalEmissiveRadiance += vec3(1.0, 0.58, 0.26) * rimF * topF * uRim * (0.16 * (1.0 - uNear) + 0.05 * uNear);`); };
-    m.customProgramCacheKey = () => 'crowdrim2'; return m; };
+    m.customProgramCacheKey = () => 'crowdrim4'; return m; };
   const loader = new GLTFLoader();
   Promise.all(TYPES.map(([n, h]) => new Promise((res) => loader.load(`assets/models/m_${n}.glb`, (gl) => {
     const geos = []; gl.scene.updateMatrixWorld(true);
