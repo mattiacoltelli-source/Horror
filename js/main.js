@@ -175,7 +175,7 @@ function tick(dt) {
   doorEvent?.update(dt);
   scare?.update(dt);
   hall?.update(dt, camera);
-  if (runner) { if (glassEvent.done && !runner.done && player.pos.z < -27 && player.pos.z > -52) runner.start(); runner.update(dt, time); }
+  if (runner) { if (glassEvent.done && !runner.done && player.pos.z < -30.5 && player.pos.z > -36) runner.start(); runner.update(dt, time); }
   cellar?.update(dt);
   tower?.update(dt, time);
   wh?.update(dt);

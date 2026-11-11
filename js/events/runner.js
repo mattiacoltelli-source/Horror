@@ -1,22 +1,21 @@
-// DOPO IL VETRO: appena ti allontani, una sagoma nera corre lungo il muro di fronte a te, nel buio del tunnel, e svanisce.
-// Veloce (poco più di un secondo), a 5-15 m, nel cono della torcia e nella penombra: si capisce solo che qualcuno ha corso.
+// DOPO IL VETRO: un uomo grosso, di spalle, in un angolo del corridoio, fermo a fissare il muro. Compare solo quando la luce
+// sfarfalla; poi la luce si spegne e, quando torna, non c'è più. Nessun suono, nessun movimento: è l'immobilità a fare paura.
 import * as THREE from 'three';
 
 export function createRunner({ scene, player, audio, lights, instab, hall }) {
-  const R = { t: -1, done: false, mesh: null, z0: 0, stepT: 0 };
+  const R = { t: -1, done: false, mesh: null };
+  const LAMP = 2;                                   // la lampada di z ≈ -33
   R.start = () => {
     if (R.done || R.t >= 0) return; R.done = true; R.t = 0;
-    if (!R.mesh) { R.mesh = hall.silhouette(1); scene.add(R.mesh); }
-    R.z0 = player.pos.z - 3.5; R.mesh.visible = true; R.stepT = 0;
-    audio.dash(1.0); instab.set(0.9, 7); lights.lamp(1, 'flicker', 0.9); player.addShake(0.12);
+    if (!R.mesh) { R.mesh = hall.silhouette(5); scene.add(R.mesh); }
+    R.mesh.position.set(-0.98, 0, -37.4); R.mesh.rotation.set(0, -Math.PI / 2, 0); R.mesh.visible = false;
+    lights.lamp(LAMP, 'flicker', 1.6); instab.push(0.7, 6);
   };
-  R.update = (dt, time) => {
-    if (R.t < 0) return; R.t += dt;
-    const D = 1.15, k = Math.min(1, R.t / D);
-    R.mesh.position.set(-0.98, Math.abs(Math.sin(R.t * 17)) * 0.07, R.z0 - 15 * k);
-    R.mesh.rotation.set(0.22, Math.PI, Math.sin(R.t * 17) * 0.05);         // di schiena, piegata in avanti nella corsa
-    R.stepT -= dt; if (R.stepT <= 0 && k < 1) { R.stepT = 0.13; audio.step(1.6); }
-    if (k >= 1) { R.mesh.visible = false; R.t = -1; }
+  R.update = (dt) => {
+    if (R.t < 0) return; R.t += dt; const t = R.t;
+    if (t > 0.3 && t < 1.7) R.mesh.visible = true;               // la vedi solo nei guizzi di luce
+    if (t >= 1.7 && R.mesh.visible) { R.mesh.visible = false; lights.lamp(LAMP, 'off'); }
+    if (t > 2.9) { lights.lamp(LAMP, 'on'); R.t = -1; }          // la luce torna: l'angolo è vuoto
   };
   return R;
 }
