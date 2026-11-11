@@ -20,7 +20,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
 
   // specchio
   const mw = 1.7, mh = 2.4;
-  const mirror = new Reflector(new THREE.PlaneGeometry(mw, mh), { textureWidth: 256, textureHeight: 384, color: new THREE.Color(0x9aa2a6), clipBias: 0.003 });
+  const mirror = new Reflector(new THREE.PlaneGeometry(mw, mh), { textureWidth: 256, textureHeight: 384, color: new THREE.Color(0xffffff), clipBias: 0.003 });
   mirror.position.copy(MIRROR); mirror.rotation.y = Math.PI / 2; C.group.add(mirror);
   const dc = document.createElement('canvas'); dc.width = 256; dc.height = 384; const dg = dc.getContext('2d');
   for (let i = 0; i < 700; i++) { dg.fillStyle = `rgba(18,20,19,${Math.random() * 0.25})`; dg.beginPath(); dg.arc(Math.random() * 256, Math.random() * 384, 0.5 + Math.random() * 2.2, 0, 7); dg.fill(); }
@@ -51,6 +51,8 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     const t = new THREE.CanvasTexture(c); return t; };
   const mkShadow = (sharp, h) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(h * 0.5, h), new THREE.MeshBasicMaterial({ map: shadowTex(sharp), color: 0x000000, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 })); m.rotation.y = Math.PI / 2; C.group.add(m); return m; };
   const shFar = mkShadow(false, 1.7), shNear = mkShadow(true, 1.9);
+  // SAGOMA CHE CORRE sul muro di fronte allo specchio (vera geometria: si vede nel riflesso, e a volte con la coda dell'occhio)
+  const runM = hall.silhouette(1); runM.visible = false; C.group.add(runM); let runT = -1, runDone = false;
   // velo di luce pallida nello specchio durante l'occhiata: l'ombra deve stagliarsi su qualcosa di più chiaro del riflesso buio
   const mistC = document.createElement('canvas'); mistC.width = 128; mistC.height = 192; { const g = mistC.getContext('2d'); const gr = g.createRadialGradient(64, 90, 4, 64, 96, 100); gr.addColorStop(0, 'rgba(210,225,220,.95)'); gr.addColorStop(.55, 'rgba(170,190,185,.45)'); gr.addColorStop(1, 'rgba(150,170,165,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 192); }
   const mist = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 2.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(mistC), transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
@@ -79,7 +81,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   let ap = -1;
 
   C.enter = () => {
-    C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.opacity = 0; mist.material.opacity = 0; shNear.material.opacity = 0;
+    C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; runDone = false; runT = -1; runM.visible = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.opacity = 0; mist.material.opacity = 0; shNear.material.opacity = 0;
     player.box = C.bounds; player.pos.set(0.4, 1.62, CELLAR.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     lights.setLamps(lampPos, 2.1); scene.fog.density = 0.04; audio.duck(1, 1); instab.set(0.1, 6);
   };
@@ -118,6 +120,16 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
         if (C.started && !C.stepped && C.away > 0.45 && C.step < 4) { C.step++; C.stepped = true; audio.whisper(1.6, 0.18 + C.step * 0.06); instab.push(0.5 + C.step * 0.13, 6); }
       }
     }
+    // appena ti avvicini allo specchio: una sagoma nera corre lungo il muro di fronte (riflessa nello specchio)
+    if (!runDone && !C.started && dm < 5.2 && dotv > 0.75 && mirror.visible && (C.gl === undefined || C.gl < 0)) { runDone = true; runT = 0; audio.dash(0.9); instab.push(0.8, 6); lights.lamp(0, 'flicker', 0.8); }
+    if (runT >= 0) {
+      runT += dt; const k = Math.min(1, runT / 1.15);
+      runM.visible = true; runM.position.set(CELLAR.w / 2 - 1.3, Math.abs(Math.sin(runT * 18)) * 0.07, THREE.MathUtils.lerp(MIRROR.z + 3.6, MIRROR.z - 3.6, k));
+      runM.rotation.set(0.2, Math.PI, Math.sin(runT * 18) * 0.05);
+      if (flash) { flash.color.setHex(0xffc890); flash.position.set(CELLAR.w / 2 - 2.6, 2.6, MIRROR.z); flash.intensity = 160 * Math.sin(Math.min(1, k) * Math.PI) ** 0.5; }   // illumina il muro di fronte: la sagoma nera si stacca
+      if (k >= 1) { runM.visible = false; runT = -1; if (flash) flash.intensity = 0; }
+    }
+    C.dbg = { runDone, runT, dm, dotv, mv: mirror.visible, tt: C.tt };
     // 2) DA VICINO: dopo ~2 s l'impronta di sangue affiora dall'interno del vetro; poi, a ogni ritorno, qualcosa in più
     if (C.started && looking) C.since += dt;
     if (C.started && !C.near0) { C.near0 = true; lights.lamp(0, 'flicker', 0.9); lights.lamp(1, 'flicker', 0.9); audio.whisper(1.2, 0.16); }
