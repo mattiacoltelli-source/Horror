@@ -142,7 +142,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     // --- specchio ---
     d.set(MIRROR.x - P.x, 0, MIRROR.z - P.z); const dm = d.length(); d.normalize();
     fw.set(player.forward.x, 0, player.forward.z).normalize();
-    const dotv = fw.dot(d), looking = dotv > 0.82 && dm < 6.5, turnedAway = dotv < 0.25 || dm > 8;
+    const dotv = fw.dot(d), looking = dotv > 0.82 && dm < 6.5, turnedAway = dotv < 0.6 || dm > 8;
     mirror.visible = dm < 11 && dotv > -0.2;                              // niente render se non serve
     C.tt = (C.tt || 0) + dt;
     // 1) PRIMA OCCHIATA, DI SBIECO E DA LONTANO: qualcosa si muove dietro di te nel riflesso, un'ombra, per un attimo
@@ -166,7 +166,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
       if (turnedAway) {
         C.away += dt;
         // distogli lo sguardo e torni: è più vicina
-        if (C.started && !C.stepped && C.away > 0.45 && C.step < 4) { C.step++; C.stepped = true; audio.whisper(1.6, 0.18 + C.step * 0.06); instab.push(0.5 + C.step * 0.13, 6); }
+        if (C.started && !C.stepped && C.away > 0.3 && C.step < 4) { C.step++; C.stepped = true; audio.whisper(1.6, 0.18 + C.step * 0.06); instab.push(0.5 + C.step * 0.13, 6); }
       }
     }
     // appena ti avvicini allo specchio: una sagoma nera corre lungo il muro di fronte (riflessa nello specchio)
@@ -216,7 +216,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     } else if (far1.visible || (flash && C.farT >= 0 && flash.intensity > 0 && !shadowOn)) { far1.visible = false; if (flash && C.farT >= 0) flash.intensity = 0; }
     // (il vecchio modello 3D nel riflesso è disattivato: troppo definito)
     fig.visible = false;
-    if (shadowOn && C.step === 4) { C.late = (C.late || 0) + dt; if (C.late > 4.6 && !flags.mirror) { flags.mirror = true; lights.lamp(0, 'flicker', 1.4); lights.lamp(1, 'flicker', 1.4); audio.whisper(2.6, 0.4); say('ci sei anche tu.', 4500); instab.set(1, 6); player.addShake(0.35); } } else if (!shadowOn) C.late = 0;
+    if (shadowOn && C.step >= 2) { C.late = (C.late || 0) + dt; if (C.late > 1.4 && !flags.mirror) { flags.mirror = true; lights.lamp(0, 'flicker', 1.4); lights.lamp(1, 'flicker', 1.4); audio.whisper(2.6, 0.4); say('ci sei anche tu.', 4500); instab.set(1, 6); player.addShake(0.35); } } else if (!shadowOn) C.late = 0;
     if (!cornerDone && C.started && P.z < CELLAR.z0 - 11.5 && P.z > CELLAR.z0 - 14) { cornerDone = true; cornerT = 0; lights.lamp(1, 'flicker', 1.6); instab.push(0.7, 6); }
     if (cornerT >= 0) {
       cornerT += dt;
