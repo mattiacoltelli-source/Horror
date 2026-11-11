@@ -51,8 +51,8 @@
   function show(txt) { el.textContent = txt; if (still) return; el.classList.add('glitch'); setTimeout(function () { el.classList.remove('glitch'); }, 260); }
   show(M[0]); el.classList.add('flick');
   timer = setInterval(function () { n = (n + 1) % M.length; show(M[n]); }, 2600);
-  // il titolo ogni tanto si guasta per un istante (solo finche' la pagina iniziale e' visibile)
-  (function tg() { setTimeout(function () { var h = document.querySelector('#intro h1'), intro = document.getElementById('intro'); if (h && intro && !intro.classList.contains('hidden') && !still) { h.classList.add('tglitch'); setTimeout(function () { h.classList.remove('tglitch'); }, 240); } if (intro && !intro.classList.contains('hidden')) tg(); }, 7000 + Math.random() * 4000); })();
+  // il titolo si guasta per un istante ogni 2,5 secondi (solo finche' la pagina iniziale e' visibile)
+  (function tg() { setTimeout(function () { var h = document.querySelector('#intro h1'), intro = document.getElementById('intro'); if (h && intro && !intro.classList.contains('hidden') && !still) { h.classList.add('tglitch'); setTimeout(function () { h.classList.remove('tglitch'); }, 240); } if (intro && !intro.classList.contains('hidden')) tg(); }, 2500); })();
   window.__loadMsgStop = function () { clearInterval(timer); el.classList.remove('flick', 'glitch'); };
 })();
 </script>

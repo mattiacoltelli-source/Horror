@@ -76,3 +76,6 @@ h1.tglitch{animation:tglitch .22s steps(1,end)}
 #intro h1{margin-bottom:26px}
 #intro .intro-inner{transform:translateY(-3vh)}
 @media (prefers-reduced-motion:reduce){#intro .tag span{animation:none;opacity:1}}
+
+/* la luce in alto a destra: ferma e piu' tenue (niente sfarfallio) */
+#intro::after{animation:none;opacity:.5}
