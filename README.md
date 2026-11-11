@@ -21,4 +21,5 @@ Apri `http://localhost:8123` (su desktop: WASD + trascinamento a destra; `?debug
 - `assets/models` — modelli GLB
 
 ## Crediti asset (verificare le licenze originali prima di pubblicare)
+Passi: Kenney «Impact Sounds» (CC0, kenney.nl), assets/audio.
 Texture e modelli forniti dall'autore del progetto, provenienti da Poly Haven e ambientCG (CC0): Bricks097, Ground110, Ground112, stone_wall_02, rusty_metal_04, caged_hanging_light, can_rusted, small_lpg_tank, rusted_wheel_rim_02, security_camera_01, creepy_bathroom (HDRI). Modello «whisperer» fornito dall'autore (licenza da confermare). Three.js: MIT.

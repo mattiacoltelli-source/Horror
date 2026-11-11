@@ -15,6 +15,7 @@ export function createAudio() {
         await ctx.resume();
         build();
         ok = true;
+        loadSteps();
       } catch (e) { console.warn('audio non disponibile', e); }
     },
     suspend() { ctx?.suspend?.(); },
@@ -39,6 +40,23 @@ export function createAudio() {
     },
     step(speed = 1) {
       if (!ok) return; const t = ctx.currentTime;
+      if (steps.length) {
+        // campione reale (CC0): variazione di campione, intonazione e lato; leggermente ovattato e con coda di riverbero
+        let i; do { i = Math.floor(Math.random() * steps.length); } while (i === lastStep && steps.length > 1); lastStep = i;
+        const src = ctx.createBufferSource(); src.buffer = steps[i]; src.playbackRate.value = 0.9 + Math.random() * 0.14;
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200;
+        const g = ctx.createGain(); g.gain.value = 0.34 * (0.7 + 0.3 * speed) * (0.9 + Math.random() * 0.2);
+        const pn = ctx.createStereoPanner(); pn.pan.value = (stepSide = -stepSide) * 0.12;
+        src.connect(lp); lp.connect(g); g.connect(pn); pn.connect(master);
+        const rs = ctx.createGain(); rs.gain.value = 0.55; g.connect(rs); rs.connect(verbSend);
+        src.start(t);
+        // corpo: tonfo del tallone, che dà peso al passo su un pavimento di pietra
+        const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sine';
+        o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.14);
+        og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(0.16 * (0.6 + 0.4 * speed), t + 0.008); og.gain.exponentialRampToValueAtTime(0.0006, t + 0.2);
+        o.connect(og); og.connect(master); o.start(t); o.stop(t + 0.25);
+        return;
+      }
       const g = ctx.createGain(); g.gain.value = 0;
       const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 240 + Math.random() * 140; f.Q.value = 0.9;
       const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.playbackRate.value = 0.8 + Math.random() * 0.3;
@@ -187,7 +205,16 @@ export function createAudio() {
     },
   };
 
-  let dripOn = true;
+  let dripOn = true, steps = [], lastStep = -1, stepSide = 1;
+  async function loadSteps() {
+    try {
+      const bufs = await Promise.all([0, 1, 2, 3, 4].map(async (i) => {
+        const r = await fetch(`assets/audio/step${i}.mp3`); if (!r.ok) throw new Error(r.status);
+        return ctx.decodeAudioData(await r.arrayBuffer());
+      }));
+      steps = bufs;
+    } catch (e) { console.warn('passi: uso la sintesi', e); steps = []; }
+  }
   function build() {
     const sr = ctx.sampleRate;
     // buffer di rumore bianco condiviso
