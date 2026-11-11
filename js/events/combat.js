@@ -160,12 +160,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
         // RITMO FISSO, anche se non spari: a 3 s fa un passo verso il punto successivo del percorso (si sente il tonfo); a 4.5 s la luce sfarfalla
         // e si sposta di colpo al punto seguente. Non dipende da te: puoi camminare, guardare dove vuoi, restare fermo.
         K.sched = (K.sched || 0) + dt; monPlace();
-        if (K.sched >= 3.0 && !K.walked && K.wi <= K.W.length) {
-          K.walked = true; const nx = K.W[Math.min(K.wi, K.W.length - 1)]; const dx = nx.x - K.M.x, dz = nx.z - K.M.z, dd = Math.max(0.01, Math.hypot(dx, dz));
-          K.tx = K.M.x + (dx / dd) * Math.min(1.1, dd * 0.4); K.tz = K.M.z + (dz / dd) * Math.min(1.1, dd * 0.4); audio.heavyStep(mon.position, 1);
-        }
         if (K.sched >= 4.5) { K.sched = 0; K.walked = false; K.tx = null; K.startFlicker(); }
-        if (K.tx != null) { const f = Math.min(1, dt * 3.2); K.M.x += (K.tx - K.M.x) * f; K.M.z += (K.tz - K.M.z) * f; clampM(); }
         monPlace(); mon.visible = true;
         }
       }
