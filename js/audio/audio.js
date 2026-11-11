@@ -302,7 +302,7 @@ export function createAudio() {
       const lf = ctx.createOscillator(), lg = ctx.createGain(); lf.frequency.value = 0.11; lg.gain.value = 0.07 * level; lf.connect(lg); lg.connect(g.gain);
       const lf2 = ctx.createOscillator(), lg2 = ctx.createGain(); lf2.frequency.value = 0.07; lg2.gain.value = 140; lf2.connect(lg2); lg2.connect(lp.frequency);
       s.connect(lp); lp.connect(bp); bp.connect(g); g.connect(master); g.connect(verbSend); s.start(t); lf.start(t); lf2.start(t);
-      return { stop() { const n = ctx.currentTime; g.gain.cancelScheduledValues(n); g.gain.setTargetAtTime(0, n, 1.2); setTimeout(() => { try { s.stop(); lf.stop(); lf2.stop(); } catch (_) {} }, 6000); } };
+      return { stop(tc = 1.2) { const n = ctx.currentTime; g.gain.cancelScheduledValues(n); g.gain.setTargetAtTime(0, n, tc); setTimeout(() => { try { s.stop(); lf.stop(); lf2.stop(); } catch (_) {} }, 6000); } };
     },
     // gocce
     _drip(pan = 0) {
