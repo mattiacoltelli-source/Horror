@@ -49,7 +49,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
   K.begin = async (kind, text, from) => {
     K.kind = kind; K.text = text; K.active = true; K.state = 'fight'; K.t = 0; K.hits = 0; K.shots = 0; K.cool = 0; K.hide = 0; K.lat = 0; K.ammo = 4; K.D = 13; K.stepT = 1.5; K.said = false; K.turnedOnce = false;
     if (!K.armed) K.give();
-    await K.setMonster(kind); K.from = from.clone(); K.M = { x: from.x, z: from.z }; K.Dt = null; K.wi = 1; K.sched = 0; K.walked = false;
+    await K.setMonster(kind); K.from = from.clone(); K.M = { x: from.x, z: from.z }; K.Dt = null; K.wi = 1; K.sched = 0; K.walked = false; K.fin = false; K.finT = 0; K.side = 1;
     // PERCORSO PRESTABILITO, nel mondo (non dipende da dove sei né da dove guardi): zig-zag dall'ingresso verso il fondo della stanza
     K.W = [[0, 0], [-4, -3], [3.5, -5], [-3, -8], [2, -10.5], [-1, -12.5]].map(([dx, dz]) => ({ x: from.x + dx, z: from.z + dz }));           // punto da cui il mostro si avvicina (verso il giocatore)
     mon.visible = true; pose = 'ready'; player.speedMul = 0.55; player.lookMul = 0.8; ui.show(true);   // puoi camminare piano; per sparare devi fermarti instab.set(0.9, 60);
@@ -80,13 +80,18 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
   const HIDE = 0.6;   // durata del farfallio che copre il teletrasporto
   const SHOT_D = [9.8, 6.6, 3.9, 1.3];   // distanza dopo ogni colpo: sempre più vicina, qualunque cosa tu faccia
 
-  // prossimo punto del percorso; finiti i punti prestabiliti, gli ultimi scatti la portano vicino a te
-  K.nextSpot = () => {
-    if (K.wi < K.W.length) return K.W[K.wi++];
-    const n = K.wi++ - K.W.length, d = Math.max(1.3, 3.4 - 1.0 * n), a = Math.atan2(K.M.z - player.pos.z, K.M.x - player.pos.x);
-    const [x0, x1, z0, z1] = bounds(); return { x: Math.min(x1, Math.max(x0, player.pos.x + Math.cos(a) * d)), z: Math.min(z1, Math.max(z0, player.pos.z + Math.sin(a) * d)) };
+  // punto "fuori centro": a lato rispetto allo sguardo (30-65 gradi, di solito ai margini o fuori inquadratura), a distanza di sicurezza; alterna destra/sinistra
+  const sidePoint = (dist) => {
+    const view = Math.atan2(player.forward.z, player.forward.x), [x0, x1, z0, z1] = bounds(); let best = null;
+    for (const sg of [K.side = -(K.side || 1), -K.side]) {
+      const a = view + sg * (0.55 + Math.random() * 0.5), x = Math.min(x1, Math.max(x0, player.pos.x + Math.cos(a) * dist)), z = Math.min(z1, Math.max(z0, player.pos.z + Math.sin(a) * dist));
+      const d = Math.hypot(x - player.pos.x, z - player.pos.z); if (!best || d > best.d + 0.8) best = { x, z, d };
+    }
+    return best;
   };
-  K.startFlicker = () => { K.hide = HIDE; K.moved = false; K.tgt = K.nextSpot(); lights.torchStutter(HIDE); lights.lamp(0, 'flicker', HIDE); lights.lamp(1, 'flicker', HIDE); audio.lightOn?.(); };
+  // prossimo punto del percorso; finiti i punti prestabiliti, si sposta di lato a distanza (la chiusura finale avviene solo a colpi finiti)
+  K.nextSpot = () => K.wi < K.W.length ? K.W[K.wi++] : sidePoint(5.5);
+  K.startFlicker = (tgt) => { K.hide = HIDE; K.moved = false; K.tgt = tgt || K.nextSpot(); lights.torchStutter(HIDE); lights.lamp(0, 'flicker', HIDE); lights.lamp(1, 'flicker', HIDE); audio.lightOn?.(); };
   K.fire = () => {
     if (!K.active || K.state !== 'fight' || !K.armed || K.cool > 0 || K.hide > 0) return;
     if (player.speedNow > 0.18) return;                    // non si spara camminando: molla il joystick, ti fermi, poi spari     // almeno 1 s tra un colpo e l'altro: niente raffica
@@ -95,7 +100,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     muzzle.material.opacity = 1; gunMats.forEach((m) => m.color.setRGB(0.55, 0.5, 0.45)); muzzle.rotation.z = Math.random() * 6; K.flashT = 0.07; flash.intensity = 160; flash.position.copy(camera.position).add(fwd.set(0, 0, -0.4).applyQuaternion(camera.quaternion));
     try { navigator.vibrate?.(30); } catch (_) {}
     // il colpo non la prende mai: nel lampo lei non c'è già più, e riappare più vicina in un altro punto
-    K.idle = 0; K.sched = 0; instab.push(0.9, 3); K.startFlicker();
+    K.idle = 0; K.sched = 0; instab.push(0.9, 3); K.tx = null; K.startFlicker(sidePoint(Math.max(5, Math.min(8.5, K.D))));
   };
   K.setAim = (on) => { K.aiming = on; };
   K.hideAll = () => { gun.visible = false; K.active = false; K.armed = false; mon.visible = false; muzzle.material.opacity = 0; ui.show(false); ui.aimAll?.(false); };
@@ -130,7 +135,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
         // poi riappare a tratti nel nuovo posto. Non si vede mai il salto: si vede solo che, tra un guizzo e l'altro, è più vicino.
         K.hide -= dt; const el = HIDE - K.hide;
         if (el >= 0.26 && !K.moved) {
-          K.moved = true; K.idle = 0; K.M.x = K.tgt.x; K.M.z = K.tgt.z; clampM(); K.walked = false; K.sched = 0; audio.heavyStep(mon.position, 0.9);
+          K.moved = true; K.idle = 0; K.M.x = K.tgt.x; K.M.z = K.tgt.z; clampM(); K.walked = false; K.tx = null; K.sched = 0; audio.heavyStep(mon.position, 0.9);
         }
         monPlace();
         const dark = el > 0.2 && el < 0.34, strobe = Math.sin(el * 83) + Math.sin(el * 47 + 1) > -0.6;
@@ -138,6 +143,23 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
         lights.override = dark ? 0 : (strobe ? null : 0.12 * 34);     // la torcia segue il guizzo; fuori dal farfallio torna normale
         if (K.hide <= 0) { mon.visible = true; lights.override = null; K.moved = false; monPlace(); }
       } else {
+        if (K.fin) {
+          // FINALE: colpi finiti. Compare DAVANTI a te, ben visibile, ferma un attimo; poi avanza lenta, passo dopo passo, e ti raggiunge.
+          K.finT += dt; monPlace();
+          if (K.finT > 1.8) {
+            const sp = 0.4 + Math.min(0.45, (K.finT - 1.8) * 0.05), dx = player.pos.x - K.M.x, dz = player.pos.z - K.M.z, dd = Math.max(0.01, Math.hypot(dx, dz));
+            K.M.x += dx / dd * sp * dt; K.M.z += dz / dd * sp * dt; K.stp = (K.stp || 0) + dt; if (K.stp > 0.95) { K.stp = 0; audio.heavyStep(mon.position, 0.8); }
+          }
+          monPlace(); mon.visible = true;
+        } else {
+        if (K.ammo <= 0 && K.cool <= 0) {
+          K.fin = true; K.finT = 0; K.sched = 0; K.tx = null; const view = Math.atan2(player.forward.z, player.forward.x), [x0, x1, z0, z1] = bounds(); let pick = null;
+          for (const da of [0, 0.3, -0.3, 0.6, -0.6]) {   // davanti a te (o quasi) con più spazio possibile, almeno ~4 m se la stanza lo permette
+            let d = 5.2, x, z; do { x = player.pos.x + Math.cos(view + da) * d; z = player.pos.z + Math.sin(view + da) * d; d -= 0.3; } while ((x < x0 || x > x1 || z < z0 || z > z1) && d > 1.5);
+            const dd = Math.hypot(x - player.pos.x, z - player.pos.z); if (!pick || dd > pick.dd + 0.5) pick = { x, z, dd }; if (dd >= 4) break;
+          }
+          K.startFlicker({ x: Math.min(x1, Math.max(x0, pick.x)), z: Math.min(z1, Math.max(z0, pick.z)) });
+        }
         // RITMO FISSO, anche se non spari: a 3 s fa un passo verso il punto successivo del percorso (si sente il tonfo); a 4.5 s la luce sfarfalla
         // e si sposta di colpo al punto seguente. Non dipende da te: puoi camminare, guardare dove vuoi, restare fermo.
         K.sched = (K.sched || 0) + dt; monPlace();
@@ -148,12 +170,13 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
         if (K.sched >= 4.5) { K.sched = 0; K.walked = false; K.tx = null; K.startFlicker(); }
         if (K.tx != null) { const f = Math.min(1, dt * 3.2); K.M.x += (K.tx - K.M.x) * f; K.M.z += (K.tz - K.M.z) * f; clampM(); }
         monPlace(); mon.visible = true;
+        }
       }
       // se non ti sei ancora girato
       fwd.set(player.forward.x, 0, player.forward.z); const facing = fwd.dot(K.axis ?? fwd) > 0.3;   // (K.axis = dal giocatore verso la creatura)
       K.turnedOnce ||= facing;
       if (!K.turnedOnce && K.t > 5 && !K.said) { K.said = true; say('girati.', 4500); }
-      if (K.D <= 1.5 && !(K.hide > 0)) { K.state = 'disarm'; K.t = 0; ui.cool?.(false); }
+      if (K.D <= 1.5 && !(K.hide > 0) && (!K.fin || K.finT > 3.5)) { K.state = 'disarm'; K.t = 0; ui.cool?.(false); }
     } else if (K.state === 'disarm') {
       // ti afferra la mano e ti strappa la pistola: l'arma vola via
       if (K.t < 0.02 && !K.knock) { K.knock = true; knocked = 0.0001; kv.set(0.5, 0.5, 0.3); audio.heavyStep(mon.position, 1.2); audio.clatter(); player.addShake(1.1); player.yaw += 0.35; player.pitch -= 0.25; pose = 'low'; lights.torchStutter(0.3); ui.show(false); try { navigator.vibrate?.([80, 30, 120]); } catch (_) {} }
