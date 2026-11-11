@@ -2,7 +2,7 @@
 export function createStory({ scene, camera, controls, player, audio, hall, getCellar, getTower, getWh, getMorgue, lights, instab }) {
   let busy = false, current = 'tunnel';
   const fade = document.getElementById('fade');
-  const hideLegacy = (keep) => scene.children.forEach((o) => { if (!o.isLight && o !== camera && !keep.includes(o)) o.visible = false; });
+  const hideLegacy = (keep) => scene.children.forEach((o) => { if (!o.isLight && o !== camera && !o.userData.keep && !keep.includes(o)) o.visible = false; });
   const S = {
     current: () => current, busy: () => busy,
     goto(name) {
