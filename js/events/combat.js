@@ -46,14 +46,14 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
   };
 
   K.mon = mon;
-  K.begin = async (kind, text, from, limit = 20, calm = null) => {
-    K.limit = limit; K.calm = calm; K.canLower = false; K.lowered = false;   // secondi di teletrasporti prima del jump scare (dipende dalle scelte)
+  K.begin = async (kind, text, from, limit = 20, calm = null, unarmed = false) => {
+    K.limit = limit; K.calm = calm; K.unarmed = unarmed;   // unarmed: niente pistola, e dopo 1-2 teletrasporti scatta il jump scare K.canLower = false; K.lowered = false;   // secondi di teletrasporti prima del jump scare (dipende dalle scelte)
     K.kind = kind; K.text = text; K.active = true; K.state = 'fight'; K.t = 0; K.hits = 0; K.shots = 0; K.cool = 0; K.hide = 0; K.lat = 0; K.ammo = 4; K.D = 13; K.stepT = 1.5; K.said = false; K.turnedOnce = false;
-    if (!K.armed) K.give();
+    if (!K.armed && !unarmed) K.give();
     await K.setMonster(kind); K.from = from.clone(); K.M = { x: from.x, z: from.z }; K.Dt = null; K.wi = 1; K.sched = 0; K.walked = false; K.fin = false; K.finT = 0; K.side = 1;
     // PERCORSO PRESTABILITO, nel mondo (non dipende da dove sei né da dove guardi): zig-zag dall'ingresso verso il fondo della stanza
     K.W = [[0, 0], [-4, -3], [3.5, -5], [-3, -8], [2, -10.5], [-1, -12.5]].map(([dx, dz]) => ({ x: from.x + dx, z: from.z + dz }));           // punto da cui il mostro si avvicina (verso il giocatore)
-    mon.visible = true; pose = 'ready'; player.speedMul = 0.55; player.lookMul = 0.8; ui.show(true);   // puoi camminare piano; per sparare devi fermarti instab.set(0.9, 60);
+    mon.visible = true; pose = 'ready'; player.speedMul = unarmed ? 1 : 0.55; player.lookMul = unarmed ? 1 : 0.8; if (!unarmed) ui.show(true);   // puoi camminare piano; per sparare devi fermarti instab.set(0.9, 60);
     audio.duck(0.3, 0.5);
   };
   // LA SUORA VIVE NEL MONDO: ha una posizione fissa nella stanza (K.M) che non dipende da dove guardi né dagli spostamenti dello schermo.
