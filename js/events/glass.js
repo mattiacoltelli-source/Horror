@@ -177,7 +177,7 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
 
   const glassPos = new THREE.Vector3(GLASS.x, 1.3, CZ);
   let light = 0, targetLight = 0, hand = 0, handDecay = 0, shake = 0, lunge = 0, sway = 0;
-  const PATH = { a: [8.2, CZ - 3.5], b: [4.4, CZ - 0.1], dur: 7.5, contact: CZ + 0.2 };   // viene da lontano VERSO il vetro (non parallelo al corridoio)
+  const PATH = { a: [8.2, CZ - 3.5], b: [4.4, CZ - 0.1], dur: 3.2, contact: CZ + 0.2 };   // tutto a tempo: ~7.5 s dall'avvicinamento alla mano sul vetro, indipendente da dove guardi   // viene da lontano VERSO il vetro (non parallelo al corridoio)
   let walkZ = CZ, walkW = 0, ex = 7, ez = CZ, entScale = 1, blur = 1.8, waitT = 0, silenceFired = false;
 
   const dir = new THREE.Vector3(), ep = new THREE.Vector3();
@@ -218,29 +218,24 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
         break;
       }
       case 'stare': {
-        // resta lontana, immobile, a fissarti. Se distogli lo sguardo (esce dall'inquadratura) si "teletrasporta" attaccata al vetro.
+        // ferma un attimo, lontana, a fissarti. SOLO A TEMPO (1.3 s): non dipende da dove guardi; poi un battito di buio e te la trovi attaccata al vetro.
         ex = PATH.b[0]; ez = PATH.b[1]; E.yaw = -Math.PI / 2 + Math.sin(E.t * 0.4) * 0.12; blur = 1.3;
-        sway = Math.sin(E.t * 0.55) * 0.28 + Math.sin(E.t * 1.3) * 0.04;      // piccolo dondolio: sposta il peso, non è un'immagine incollata al vetro
-        const seen = entSeen(ex, ez);                       // la sagoma NON si sposta per restare nell'inquadratura: resta dov'è
-        if (seen && dxG < 12) { E.gaze += dt; E.away = 0; } else E.away += dt;
+        sway = Math.sin(E.t * 0.55) * 0.12 + Math.sin(E.t * 1.3) * 0.03;
         if (E.blink > 0) { E.blink -= dt; if (E.blink <= 0) { targetLight = 1; teleport(); } break; }
-        if (E.gaze > 2.5 && E.away > 0.3) teleport();                       // l'hai vista e distogli lo sguardo: te la trovi vicina
-        else if (E.gaze > 16) { E.blink = 0.45; targetLight = 0; }          // se non ti distrai mai: un battito di buio
-        else if ((E.t > 15 && dxG < 5) || E.t > 40) { E.blink = 0.45; targetLight = 0; }   // se non l'hai mai guardata: scatta comunque
+        if (E.t > 1.3) { E.blink = 0.35; targetLight = 0; }
         break;
       }
       case 'contact': {
-        // è attaccata al vetro, ferma. Appena la rivedi, qualche istante di immobilità... poi il colpo.
+        // attaccata al vetro, ferma 1.5 s (si sente salire il suono), qualunque cosa tu guardi; poi il silenzio e il colpo
         sway = Math.sin(E.t * 1.3) * 0.006;
-        const seen = entSeen(ex, ez);
-        if (seen) { E.sc += dt; if (!E.swelled) { E.swelled = true; audio.swell(2.2, 0.4); } } else E.sc = Math.max(0, E.sc - dt * 0.5);
-        if (E.sc > 1.9 || E.t > 45) { E.state = 'silence'; E.t = 0; audio.duck(0.03, 0.3); instab.set(0.7, 4); }
+        if (!E.swelled) { E.swelled = true; audio.swell(2.2, 0.4); }
+        if (E.t > 1.5) { E.state = 'silence'; E.t = 0; audio.duck(0.03, 0.3); instab.set(0.7, 4); }
         break;
       }
       case 'silence':
         // silenzio totale: la lampada vicino si spegne un attimo, poi il colpo
-        if (E.t > 0.6 && !silenceFired) { silenceFired = true; lights.lamp(1, 'off'); }
-        if (E.t > 1.7) { E.state = 'slam'; E.t = 0; lights.lamp(1, 'flicker', 1.2); audio.glassHit(glassPos, 1); audio.duck(0.15, 0.2); player.addShake(0.9); shake = 1; ent.visible = false; hand = 1; handDecay = 0; lunge = 1; mat.uniforms.uHandZ.value = ez; instab.set(1, 9); }
+        if (E.t > 0.35 && !silenceFired) { silenceFired = true; lights.lamp(1, 'off'); }
+        if (E.t > 0.95) { E.state = 'slam'; E.t = 0; lights.lamp(1, 'flicker', 1.2); audio.glassHit(glassPos, 1); audio.duck(0.15, 0.2); player.addShake(0.9); shake = 1; ent.visible = false; hand = 1; handDecay = 0; lunge = 1; mat.uniforms.uHandZ.value = ez; instab.set(1, 9); }
         break;
       case 'slam':
         entScale = 1 + 0.06 * lunge; ex = GLASS.x + 0.13 + 0.32 * (1 - lunge);
