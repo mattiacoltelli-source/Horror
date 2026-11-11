@@ -99,7 +99,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const corner = hall.silhouette(5); corner.visible = false; corner.position.set(CELLAR.w / 2 - 0.75, 0, CELLAR.z0 - 21.6); corner.rotation.y = Math.PI / 2; C.group.add(corner); let cornerT = -1, cornerDone = false;
   // PARTICOLARE: in fondo alla stanza, nel riflesso, una piccola sagoma sotto una luce lontana che si accende e si spegne: compare, sparisce,
   // ricompare un po' più in là. Solo mentre guardi lo specchio. Niente suono, niente scatto.
-  const far1 = hall.silhouette(5); far1.scale.setScalar(0.58); far1.visible = false; far1.rotation.y = -Math.PI / 2; C.group.add(far1);
+  const far1 = hall.silhouette(5); far1.material = far1.material.clone(); far1.material.transparent = true; far1.material.opacity = 0.4; far1.material.depthWrite = false; far1.scale.setScalar(0.42); far1.visible = false; far1.rotation.y = -Math.PI / 2; C.group.add(far1);
   // SAGOMA CHE CORRE sul muro di fronte allo specchio (vera geometria: si vede nel riflesso, e a volte con la coda dell'occhio)
   const runM = hall.silhouette(1); runM.visible = false; C.group.add(runM); let runT = -1, runDone = false;
   // velo di luce pallida nello specchio durante l'occhiata: l'ombra deve stagliarsi su qualcosa di più chiaro del riflesso buio
@@ -209,10 +209,10 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
       if (C.sw) { C.swt += dt; F.uW.value = Math.min(1, C.swt / 1.6); if (C.swt > 0.3 && !C.sw2) { C.sw2 = true; audio.whisper(1.4, 0.2); } }
     }
     if (C.farT >= 0 && shadowOn) {
-      C.farT += dt; const cyc = 6.0, ph = C.farT % cyc, n = Math.floor(C.farT / cyc);
-      const vis = n < 4 && ph > 0.8 && ph < 2.7 && !(ph > 1.5 && ph < 1.62);             // un piccolo "tremolio" a metà (la lampadina)
-      if (vis && !far1.visible) far1.position.set(CELLAR.w / 2 - 0.9, 0, MIRROR.z + [-1.5, 0.9, -0.5, 1.5][n % 4]);
-      far1.visible = vis; if (flash) { flash.color.setHex(0xffd9a8); flash.position.set(CELLAR.w / 2 - 3.4, 2.4, far1.position.z + 0.5); flash.intensity = vis ? 3.4 : 0; }
+      C.farT += dt; const cyc = 7.5, ph = C.farT % cyc, n = Math.floor(C.farT / cyc);
+      const vis = n < 3 && ph > 1.2 && ph < 2.1 && Math.sin(C.farT * 31) > -0.35;   // un'occhiata: meno di un secondo, a tratti             // un piccolo "tremolio" a metà (la lampadina)
+      if (vis && !far1.visible) far1.position.set(CELLAR.w / 2 - 0.9, 0, MIRROR.z + [-2.0, 1.9, -1.6][n % 3]);   // ai margini dell'immagine, mai al centro
+      far1.visible = vis; 
     } else if (far1.visible || (flash && C.farT >= 0 && flash.intensity > 0 && !shadowOn)) { far1.visible = false; if (flash && C.farT >= 0) flash.intensity = 0; }
     // (il vecchio modello 3D nel riflesso è disattivato: troppo definito)
     fig.visible = false;
