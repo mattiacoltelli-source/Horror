@@ -64,8 +64,8 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   const reds = [redLight(W.group, { x: WH.w / 2 - 0.1, y: 2.9, z: WH.z0 - 11, dir: 1 }), redLight(W.group, { x: -WH.w / 2 + 0.1, y: 2.9, z: WH.z0 - 27, dir: -1 })]; reds.forEach((r) => (r.root.visible = false));
   // entrando dal CANCELLO ROSSO, alle spalle trovi il cancello (non la porta di legno): chiuso, con il chiavistello e un po' di rosso dietro
   const gateIn = new THREE.Group(); gateIn.position.set(0, 0, WH.z0 - 0.22); gateIn.rotation.y = Math.PI; gateIn.visible = false; W.group.add(gateIn);
-  { const back = new THREE.Mesh(new THREE.PlaneGeometry(2.05, 2.95), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); back.position.set(0, 1.5, -0.09); back.rotation.y = Math.PI; gateIn.add(back); }
-  const inGlow = doorGlow(gateIn, { x: 0, z: -0.14, w: 2.3, h: 2.8 });
+  { const back = new THREE.Mesh(new THREE.PlaneGeometry(1.95, 2.95), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); back.position.set(0, 1.5, -0.09); gateIn.add(back); }
+  const inGlow = doorGlow(gateIn, { x: 0, z: -0.06, w: 2.2, h: 2.8 });
   (async () => {
     const fr = await kitObject('fence', 'Cylinder184'); if (fr) { fr.position.set(0, 1.26, 0); gateIn.add(fr); }
     const lf2 = await kitObject('fence', 'Cylinder140'); let lf3 = null; if (lf2) { lf3 = new THREE.Group(); lf3.position.set(-0.45, 0, 0); lf2.position.set(0.47, 0.93, 0); lf3.add(lf2); gateIn.add(lf3); }
