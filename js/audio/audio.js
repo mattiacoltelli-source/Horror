@@ -277,6 +277,21 @@ export function createAudio() {
       const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(85, t); o.frequency.exponentialRampToValueAtTime(38, t + 0.2); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.8 * power, t + 0.004); g.gain.exponentialRampToValueAtTime(0.001, t + 0.28); o.connect(g); g.connect(pan); o.start(t); o.stop(t + 0.3);
       const s = ctx.createBufferSource(); s.buffer = noiseBuf; const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700; const g2 = ctx.createGain(); g2.gain.setValueAtTime(0, t); g2.gain.linearRampToValueAtTime(0.5 * power, t + 0.01); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.3); s.connect(lp); lp.connect(g2); g2.connect(pan); s.start(t, Math.random(), 0.35);
     },
+    // cigolio metallico di ruote/telaio che si bloccano: sega filtrata con pitch che scende e vibrato lento, + grana
+    squeak(dur = 0.7, pos = null) {
+      if (!ok) return; const t = ctx.currentTime;
+      const out = ctx.createGain(); out.gain.value = 1;
+      if (pos) { const pn = ctx.createPanner(); pn.panningModel = 'HRTF'; pn.refDistance = 2; pn.positionX.value = pos.x; pn.positionY.value = 0.6; pn.positionZ.value = pos.z; out.connect(pn); pn.connect(master); pn.connect(verbSend); } else { out.connect(master); out.connect(verbSend); }
+      for (const [f0, f1, v] of [[1180, 760, 1], [1790, 1150, 0.5]]) {
+        const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f1 * 1.04, t + dur * 0.55); o.frequency.exponentialRampToValueAtTime(f1 * 0.8, t + dur);
+        const lf = ctx.createOscillator(), lg = ctx.createGain(); lf.frequency.value = 9; lg.gain.value = 38; lf.connect(lg); lg.connect(o.frequency);
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 6;
+        const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.07 * v, t + 0.05); g.gain.setValueAtTime(0.07 * v, t + dur * 0.7); g.gain.linearRampToValueAtTime(0, t + dur);
+        o.connect(bp); bp.connect(g); g.connect(out); o.start(t); lf.start(t); o.stop(t + dur + 0.05); lf.stop(t + dur + 0.05);
+      }
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const hp = ctx.createBiquadFilter(); hp.type = 'bandpass'; hp.frequency.value = 2600; hp.Q.value = 2; const g2 = ctx.createGain();
+      g2.gain.setValueAtTime(0, t); g2.gain.linearRampToValueAtTime(0.03, t + 0.08); g2.gain.linearRampToValueAtTime(0, t + dur); s.connect(hp); hp.connect(g2); g2.connect(out); s.start(t); s.stop(t + dur + 0.05);
+    },
     // gocce
     _drip(pan = 0) {
       if (!ok) return; const t = ctx.currentTime;

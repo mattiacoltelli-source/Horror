@@ -23,12 +23,14 @@ const ASPECT = { A: 309 / 425, C: 284 / 373, X: 0.5 };
 // list: [{ k:'A'|'C', p:[x,y,z], wall:'+x'|'-x'|'+z'|'-z', h:0.30, rot:0, flip:false, a:0.8 }]
 // wall = verso in cui guarda il decal (la normale del muro verso la stanza)
 export function bloodDecals(group, list) {
+  const made = [];
   const rotY = { '+x': Math.PI / 2, '-x': -Math.PI / 2, '+z': 0, '-z': Math.PI };
   for (const d of list) {
     const h = d.h ?? 0.3, w = h * ASPECT[d.k];
     const mat = new THREE.MeshStandardMaterial({ map: get(d.k), transparent: true, color: d.k === 'X' ? new THREE.Color(1, 1, 1) : new THREE.Color(0.55, 0.07, 0.06), roughness: d.k === 'X' ? 0.7 : 0.28, metalness: 0, opacity: d.a ?? 0.85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3, alphaTest: 0.02 });
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); if (d.flip) m.scale.x = -1;
     m.rotation.set(0, rotY[d.wall], (d.rot ?? 0)); m.rotation.order = 'YXZ';
-    m.position.set(...d.p); m.userData.blood = true; group.add(m);
+    m.position.set(...d.p); m.userData.blood = true; group.add(m); made.push(m);
   }
+  return made;
 }

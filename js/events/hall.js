@@ -36,13 +36,22 @@ export function createHall({ scene, mats, lights }) {
   // la folla: corpo quasi nero + SOLO contorno illuminato (rim) dalle lampade alle spalle. Più è vicina, più il corpo si spegne
   // e resta il contorno: da vicino non si vedono i dettagli del modello, solo una sagoma con il bordo di luce.
   const rimU = { value: 0 };
-  const mkLit = () => { const m = new THREE.MeshStandardMaterial({ color: 0x1d1c1c, roughness: 0.95, metalness: 0 });
+  const mkLit = () => { const m = new THREE.MeshStandardMaterial({ color: 0x1d1c1c, roughness: 0.97, metalness: 0 });
     m.onBeforeCompile = (sh) => { sh.uniforms.uRim = rimU; sh.uniforms.uNear = { value: 0 }; m.userData.sh = sh;
-      sh.fragmentShader = 'uniform float uRim; uniform float uNear;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-        float rimF = pow(1.0 - clamp(dot(normalize(vNormal), normalize(vViewPosition)), 0.0, 1.0), 5.0);
-        float topF = clamp(normalize(vNormal).y * 0.5 + 0.55, 0.0, 1.0);                       // il bordo si accende dove la luce arriva da dietro e dall'alto
-        totalEmissiveRadiance += vec3(1.0, 0.58, 0.26) * rimF * topF * uRim * (0.16 + 0.22 * uNear);`); };
-    m.customProgramCacheKey = () => 'crowdrim'; return m; };
+      sh.vertexShader = 'varying vec3 vObj;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vObj = position;');
+      sh.fragmentShader = 'uniform float uRim; uniform float uNear; varying vec3 vObj;\n' + sh.fragmentShader
+        .replace('#include <color_fragment>', `#include <color_fragment>
+          // macchie di sangue (solo quando è vicino): rumore a grandi chiazze + colature verticali, rosso quasi nero
+          vec3 q = vObj * vec3(5.0, 2.2, 5.0);
+          float n1 = fract(sin(dot(floor(q), vec3(12.9, 78.2, 37.7))) * 43758.5);
+          float n2 = fract(sin(dot(floor(q * 2.1 + 3.0), vec3(39.3, 11.1, 91.7))) * 24634.6);
+          float stain = smoothstep(0.78, 0.9, n1 * 0.6 + n2 * 0.55) * uNear;
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.11, 0.004, 0.004), stain);`)
+        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+          float rimF = pow(1.0 - clamp(dot(normalize(vNormal), normalize(vViewPosition)), 0.0, 1.0), 5.0);
+          float topF = clamp(normalize(vNormal).y * 0.5 + 0.55, 0.0, 1.0);
+          totalEmissiveRadiance += vec3(1.0, 0.58, 0.26) * rimF * topF * uRim * (0.16 * (1.0 - uNear) + 0.05 * uNear);`); };
+    m.customProgramCacheKey = () => 'crowdrim2'; return m; };
   const loader = new GLTFLoader();
   Promise.all(TYPES.map(([n, h]) => new Promise((res) => loader.load(`assets/models/m_${n}.glb`, (gl) => {
     const geos = []; gl.scene.updateMatrixWorld(true);
@@ -93,8 +102,9 @@ export function createHall({ scene, mats, lights }) {
     const v = H.glow;
     glowMat.opacity = Math.min(1, v) * 0.38;
     rimU.value = Math.min(1, v) * (0.5 + 0.5 * lampPulse());
-    crowd.children.forEach((m) => { if (!m.userData.crowd) return; const d = Math.hypot(m.getWorldPosition(wp).x - camPos.x, wp.z - camPos.z), near = Math.min(1, Math.max(0, (11 - d) / 8));
-      m.material.color.setScalar(0.115 * (1 - 0.8 * near)); if (m.material.userData.sh) m.material.userData.sh.uniforms.uNear.value = near; });
+    crowd.children.forEach((m) => { if (!m.userData.crowd) return; const d = Math.hypot(m.getWorldPosition(wp).x - camPos.x, wp.z - camPos.z), near = Math.min(1, Math.max(0, (15 - d) / 8));
+      m.material.color.setScalar(0.06 * (1 - 0.9 * near));   // da vicino: sagoma quasi nera, niente dettaglio
+      if (m.material.userData.sh) m.material.userData.sh.uniforms.uNear.value = near; });
     crowd.visible = true;                                     // la visibilità la decide la luce, non un interruttore
     lights?.lamps?.forEach((L, i) => { const lv = L.level ?? 0; if (lampGlows[i]) { lampGlows[i].material.opacity = Math.min(1, lv) * 0.85; lampBulbs[i].material.color.setRGB(1, 0.78 + 0.1 * lv, 0.45 + 0.3 * lv).multiplyScalar(0.25 + 0.9 * lv); } });
     scene.fog.density += (0.026 - scene.fog.density) * Math.min(1, dt * 2);   // nebbia più rada: si deve vedere in fondo alla sala

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { Reflector } from '../../vendor/three/Reflector.js';
 import { buildRoom } from '../world/rooms.js';
+import { bloodDecals } from '../world/blood.js';
 import { decorCellar } from '../world/decor.js';
 
 export const CELLAR = { z0: -200, w: 8, l: 24, h: 4.4 };
@@ -32,13 +33,15 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   bx(0.09, 0.1, mw + 0.2, MIRROR.y + mh / 2 + 0.05, MIRROR.z); bx(0.09, 0.1, mw + 0.2, MIRROR.y - mh / 2 - 0.05, MIRROR.z);
   bx(0.09, mh, 0.1, MIRROR.y, MIRROR.z + mw / 2 + 0.05); bx(0.09, mh, 0.1, MIRROR.y, MIRROR.z - mw / 2 - 0.05);
 
-  // la figura nello specchio: l'infermiera, pallida (così si legge nel buio del riflesso)
-  const fig = new THREE.Group(); fig.visible = false; C.group.add(fig);
-  new GLTFLoader().load('assets/models/c_nurse.glb', (g) => {
-    const m = g.scene; m.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.material.color?.multiplyScalar(0.75); o.material.emissive?.setRGB(0.07, 0.07, 0.08); o.material.roughness = 0.9; } });
-    const b = new THREE.Box3().setFromObject(m), sz = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3());
-    m.scale.setScalar(1.8 / sz.y); b.setFromObject(m); m.position.set(-c.x, -b.min.y, -c.z); fig.add(m); C.figReady = true;
-  });
+  // nello specchio: mai un modello visibile. Un'ombra scura che compare e scompare (vedo / non vedo) e impronte di sangue
+  // che affiorano dall'interno del vetro. L'ombra usa la stessa sagoma nera della folla.
+  const fig = hall.silhouette(2); fig.visible = false; C.group.add(fig); C.figReady = true;
+  const mdecals = bloodDecals(C.group, [
+    { k: 'A', p: [MIRROR.x + 0.012, 1.55, MIRROR.z + 0.28], wall: '+x', h: 0.5, rot: 0.15, a: 0.0 },
+    { k: 'C', p: [MIRROR.x + 0.012, 1.18, MIRROR.z - 0.34], wall: '+x', h: 0.46, rot: -0.2, flip: true, a: 0.0 },
+  ]); mdecals_fix(); const mdTarget = [0, 0, 0];
+  function mdecals_fix() { mdecals.forEach((m) => { const mat = new THREE.MeshBasicMaterial({ map: m.material.map, transparent: true, opacity: 0, color: new THREE.Color(0.36, 0.02, 0.02), depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }); m.material = mat; }); }
+  const noise = (t) => Math.sin(t * 13.1) * Math.sin(t * 7.3 + 1.7) + Math.sin(t * 29.0) * 0.5;
 
   // lampade, oggetti di scena
   const loader = new GLTFLoader(), lampPos = [[0, 3.75, CELLAR.z0 - 6], [0, 3.75, CELLAR.z0 - 18]];
@@ -62,7 +65,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   let ap = -1;
 
   C.enter = () => {
-    C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false;
+    C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false;
     player.box = C.bounds; player.pos.set(0.4, 1.62, CELLAR.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     lights.setLamps(lampPos, 2.1); scene.fog.density = 0.04; audio.duck(1, 1); instab.set(0.1, 6);
   };
@@ -74,11 +77,21 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     // --- specchio ---
     d.set(MIRROR.x - P.x, 0, MIRROR.z - P.z); const dm = d.length(); d.normalize();
     fw.set(player.forward.x, 0, player.forward.z).normalize();
-    const looking = fw.dot(d) > 0.82 && dm < 6.5, turnedAway = fw.dot(d) < 0.25 || dm > 8;
-    mirror.visible = dm < 9 && fw.dot(d) > -0.2;                          // niente render se non serve
+    const dotv = fw.dot(d), looking = dotv > 0.82 && dm < 6.5, turnedAway = dotv < 0.25 || dm > 8;
+    mirror.visible = dm < 11 && dotv > -0.2;                              // niente render se non serve
+    C.tt = (C.tt || 0) + dt;
+    // 1) PRIMA OCCHIATA, DI SBIECO E DA LONTANO: qualcosa si muove dietro di te nel riflesso, un'ombra, per un attimo
+    if (!C.glanced && !C.started && dm > 4.5 && dm < 12 && dotv > 0.5 && dotv < 0.95 && mirror.visible && C.tt > 3) { C.glanced = true; C.gl = 0; audio.whisper(1.0, 0.1); instab.push(0.45, 5); }
+    if (C.gl !== undefined && C.gl >= 0) {
+      C.gl += dt; const k = C.gl / 1.25;
+      const px = P.x, pz = P.z, side = new THREE.Vector3(-d.z, 0, d.x);
+      fig.position.set(px - d.x * 5.2 + side.x * THREE.MathUtils.lerp(-2.6, 2.4, k), 0, pz - d.z * 5.2 + side.z * THREE.MathUtils.lerp(-2.6, 2.4, k));
+      fig.rotation.y = Math.atan2(d.x, d.z); fig.visible = k < 1 && noise(C.tt) > -0.35;
+      if (k >= 1) { fig.visible = false; C.gl = -1; }
+    }
     if (looking) {
       C.away = 0; C.stepped = false; C.gaze += dt;
-      if (!C.started && C.gaze > 1.1) { C.started = true; C.step = 0; instab.push(0.5, 8); }
+      if (!C.started && C.gaze > 1.1) { C.started = true; C.step = 0; C.since = 0; instab.push(0.5, 8); }
     } else {
       C.gaze = 0;
       if (turnedAway) {
@@ -87,14 +100,18 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
         if (C.started && !C.stepped && C.away > 0.45 && C.step < 4) { C.step++; C.stepped = true; audio.whisper(1.6, 0.18 + C.step * 0.06); instab.push(0.5 + C.step * 0.13, 6); }
       }
     }
-    // la figura sta dietro di te, vista nel riflesso: dalla posizione dello specchio verso il giocatore, prolungata
-    fig.visible = !!(looking && C.started && C.step >= 0 && C.figReady && C.state === 'play');
-    if (fig.visible) {
-      const dist = DIST[Math.min(4, C.step)];
-      fig.position.set(P.x - d.x * dist, 0, P.z - d.z * dist);
-      fig.rotation.y = Math.atan2(d.x, d.z);                                 // guarda lo specchio
-      if (C.step === 4) { C.late = (C.late || 0) + dt; if (C.late > 4.6 && !flags.mirror) { flags.mirror = true; lights.lamp(0, 'flicker', 1.4); lights.lamp(1, 'flicker', 1.4); audio.whisper(2.6, 0.4); say('ci sei anche tu.', 4500); instab.set(1, 6); player.addShake(0.35); } }
-    } else C.late = 0;
+    // 2) DA VICINO: dopo ~2 s l'impronta di sangue affiora dall'interno del vetro; poi, a ogni ritorno, qualcosa in più
+    if (C.started && looking) C.since += dt;
+    if (C.started && C.since > 2 && !C.blood0) { C.blood0 = true; mdTarget[0] = 0.9; audio.whisper(1.8, 0.22); lights.lamp(0, 'flicker', 0.5); instab.push(0.8, 6); }
+    if (C.step >= 2) mdTarget[1] = 0.85; if (C.step >= 3) mdTarget[2] = 0.7;
+    mdecals.forEach((m, i) => { if (i < 2) m.material.opacity += (mdTarget[i] - m.material.opacity) * Math.min(1, dt * 2.2); });
+    // l'ombra dietro di te, solo nel riflesso: vedo/non vedo (mai ferma e piena), più vicina a ogni ritorno
+    const shadowOn = looking && C.started && C.step >= 1 && C.figReady && C.state === 'play';
+    if (C.gl === undefined || C.gl < 0) {
+      fig.visible = !!shadowOn && noise(C.tt * 0.9) > -0.25;
+      if (shadowOn) { const dist = DIST[Math.min(4, C.step)]; fig.position.set(P.x - d.x * dist, 0, P.z - d.z * dist); fig.rotation.y = Math.atan2(d.x, d.z); }
+    }
+    if (shadowOn && C.step === 4) { C.late = (C.late || 0) + dt; if (C.late > 4.6 && !flags.mirror) { flags.mirror = true; lights.lamp(0, 'flicker', 1.4); lights.lamp(1, 'flicker', 1.4); audio.whisper(2.6, 0.4); say('ci sei anche tu.', 4500); instab.set(1, 6); player.addShake(0.35); } } else if (!shadowOn) C.late = 0;
     // --- apparizione (spavento) ---
     if (!C.apDone && P.z < CELLAR.z0 - 14.2) {
       C.apDone = true; ap = 0; shade.visible = true; audio.dash(0.5); player.addShake(0.7); lights.torchStutter(0.3); instab.set(1, 8); try { navigator.vibrate?.([60, 30, 90]); } catch (_) {}

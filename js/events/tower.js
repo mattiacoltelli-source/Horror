@@ -46,8 +46,8 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   }
   lg.putImageData(img, 0, 0);
   const leak = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 1.8), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(lc), color: new THREE.Color(0.55, 0.66, 0.6), transparent: true, opacity: 0.5, fog: false, depthWrite: false }));
-  leak.rotation.x = -Math.PI / 2; leak.rotation.z = Math.PI; leak.position.set(0, 0.015, zFar + 0.95); T.group.add(leak);
-  const gap = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.012), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.4, 1.6, 1.5), toneMapped: false, fog: false, transparent: true, opacity: 0.55 }));
+  leak.rotation.x = -Math.PI / 2; leak.rotation.z = Math.PI; leak.position.set(0, 0.015, zFar + 0.95); leak.visible = false;   // tolto: sembrava finto; resta la sola fessura
+  const gap = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.012), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.4, 1.6, 1.5), toneMapped: false, fog: false, transparent: true, opacity: 0.22 }));
   gap.position.set(0, 0.012, zFar + 0.17); T.group.add(gap);
   const white = new THREE.Mesh(new THREE.PlaneGeometry(4, 4.2), new THREE.MeshBasicMaterial({ color: new THREE.Color(2, 2, 1.95), toneMapped: false, fog: false, transparent: true, opacity: 0 }));
   white.position.set(0, 2.1, zFar - 0.4); T.group.add(white);
@@ -63,15 +63,26 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   T.update = (dt, time) => {
     if (!T.group.visible) return;
     wt += dt; warm.intensity = (36 + Math.sin(time * 9) * 3 + Math.sin(time * 23) * 1.6) * (st === 'idle' ? 1 : st === 'opening' ? 0.5 : 0.04);
-    // la sedia a rotelle si gira verso di te quando non la guardi
-    if (T.chair) { ep.set(T.chair.position.x, 1, T.chair.position.z).project(camera); const seen = ep.z < 1 && Math.abs(ep.x) < 1.05;
-      if (!seen) { const a = Math.atan2(player.pos.x - T.chair.position.x, player.pos.z - T.chair.position.z); T.chair.rotation.y += Math.atan2(Math.sin(a - T.chair.rotation.y), Math.cos(a - T.chair.rotation.y)) * Math.min(1, dt * 0.5); } }
+    // CARROZZINA: quando non la guardi si gira verso di te; quando la guardi (dopo averla persa di vista) può avanzare di ~40 cm
+    // piano, per circa un secondo, e si blocca con un cigolio. Al massimo 3 volte, con pause: resta un dubbio, non uno scherzo.
+    if (T.chair) {
+      const C = T.chair; T.chY ??= C.position.y; ep.set(C.position.x, 1, C.position.z).project(camera); const inView = ep.z < 1 && Math.abs(ep.x) < 0.6 && Math.abs(ep.y) < 0.9;
+      const dxp = player.pos.x - C.position.x, dzp = player.pos.z - C.position.z, dist = Math.hypot(dxp, dzp);
+      if (!inView) { T.chUnseen = (T.chUnseen || 0) + dt; const a = Math.atan2(dxp, dzp); C.rotation.y += Math.atan2(Math.sin(a - C.rotation.y), Math.cos(a - C.rotation.y)) * Math.min(1, dt * 0.5); }
+      else if (!T.chMove && (T.chUnseen || 0) > 4 && (T.chCount || 0) < 3 && dist > 2.6 && dist < 11) { T.chMove = 1; T.chT = 0; T.chCount = (T.chCount || 0) + 1; T.chUnseen = 0; T.chFrom = C.position.clone(); T.chDir = new THREE.Vector3(dxp, 0, dzp).normalize(); }
+      if (inView) T.chSeenT = (T.chSeenT || 0) + dt; else T.chSeenT = 0;
+      if (T.chMove) {
+        T.chT += dt; const k = Math.min(1, T.chT / 1.1), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        C.position.copy(T.chFrom).addScaledVector(T.chDir, 0.42 * e); C.position.y = T.chY + Math.sin(T.chT * 38) * 0.003 * (1 - k);
+        if (k >= 1) { T.chMove = 0; C.position.y = T.chY; audio.squeak(0.6, C.position); }
+      }
+    }
     // pulsante contestuale vicino alla porta
     dv.set(0 - player.pos.x, 0, zFar - player.pos.z); const dd = dv.length(); dv.normalize(); fw.set(player.forward.x, 0, player.forward.z).normalize();
     const near = dd < 3.2 && fw.dot(dv) > 0.6 && st === 'idle'; if (near !== T.near) { T.near = near; actBtn.textContent = 'APRI'; actBtn.classList.toggle('hidden', !near); }
     if (st === 'opening') {
       open += dt; const a = Math.min(1.7, open * 0.7); if (L) L.rotation.y = a; if (R) R.rotation.y = -a;   // si aprono verso la luce
-      white.material.opacity = Math.min(1, open / 2.4); leak.material.opacity = 0.9; gap.material.opacity = 1; player.pos.z -= Math.min(0.5, dt * 0.4) * (open > 1.4 ? 1 : 0);
+      white.material.opacity = Math.min(1, open / 2.4); leak.visible = true; leak.material.opacity = 0.9; gap.material.opacity = 1; player.pos.z -= Math.min(0.5, dt * 0.4) * (open > 1.4 ? 1 : 0);
       if (open > 3.4 && st !== 'end') { st = 'end'; finish(TEXT.C, false, true); }
     }
   };
