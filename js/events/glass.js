@@ -165,6 +165,7 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
 
   const glassPos = new THREE.Vector3(GLASS.x, 1.3, CZ);
   let light = 0, targetLight = 0, hand = 0, handDecay = 0, shake = 0, lunge = 0, sway = 0;
+  const PATH = { a: [3.4, CZ - 2.7], b: [4.2, CZ + 0.5], dur: 7.5, contact: CZ + 0.2 };   // entra dall'estremità lontana del vetro e cammina verso la zona dove arrivi   // A→B: sempre lo stesso tragitto
   let walkZ = CZ, walkW = 0, ex = 7, ez = CZ, entScale = 1, blur = 1.8, waitT = 0, silenceFired = false;
 
   const dir = new THREE.Vector3(), ep = new THREE.Vector3();
@@ -178,13 +179,9 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
     const gz = c.z + t * (z - c.z), gy = c.y + t * (1.3 - c.y);
     return gz < GLASS.z0 && gz > GLASS.z1 && gy > GLASS.y0 && gy < GLASS.y1;
   };
-  const relocate = () => {
-    const c = player.pos, gz = THREE.MathUtils.clamp(c.z, GLASS.z1 + 0.45, GLASS.z0 - 0.45);
-    ez = THREE.MathUtils.clamp(c.z + (gz - c.z) * (4.5 - c.x) / (GLASS.x - c.x), CZ - 3.2, CZ + 3.2);
-  };
   const teleport = () => {
     E.state = 'contact'; E.t = 0; E.sc = 0; E.swelled = false;
-    ex = GLASS.x + 0.45; ez = THREE.MathUtils.clamp(player.pos.z, GLASS.z1 + 0.55, GLASS.z0 - 0.55); blur = 0.7;
+    ex = GLASS.x + 0.45; ez = PATH.contact; blur = 0.7;
     instab.set(0.85, 9);
   };
   E.update = (dt, time) => {
@@ -197,22 +194,26 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
     E.t += dt;
     switch (E.state) {
       case 'idle':
-        if (pz < -9.5 && E.ready) { E.state = 'tease'; E.t = 0; lights.lamp(1, 'flicker', 2.2); audio.swell(5, 0.6); targetLight = 1; ex = 4.5; ez = CZ - 0.2; ent.visible = true; E.gaze = 0; E.away = 0; E.blink = 0; E.unseenT = 0; }
+        if (pz < -15 && E.ready) { E.state = 'walk0'; E.t = 0; lights.lamp(1, 'flicker', 2.2); audio.swell(5, 0.6); targetLight = 1; ex = PATH.a[0]; ez = PATH.a[1]; ent.visible = true; E.gaze = 0; E.away = 0; E.blink = 0; E.unseenT = 0; }
         break;
-      case 'tease':
-        // la stanza si illumina, la sagoma è già lì, ferma e lontana
-        if (E.t > 4.5 && pz < -14.5 || E.t > 11) { E.state = 'stare'; E.t = 0; waitT = 0; instab.set(0.5, 14); }
+      case 'walk0': {
+        // PERCORSO FISSO, sempre uguale, indipendente da dove guardi o ti trovi: cammina dentro la stanza fino al suo punto
+        const k = Math.min(1, E.t / PATH.dur), e = k;
+        ex = THREE.MathUtils.lerp(PATH.a[0], PATH.b[0], e); ez = THREE.MathUtils.lerp(PATH.a[1], PATH.b[1], e);
+        const wy = Math.atan2(PATH.b[0] - PATH.a[0], PATH.b[1] - PATH.a[1]), fy = -Math.PI / 2, m = THREE.MathUtils.smoothstep(k, 0.78, 1);
+        E.yaw = wy + Math.atan2(Math.sin(fy - wy), Math.cos(fy - wy)) * m; blur = 1.5; sway = Math.sin(E.t * 2.0) * 0.012;
+        if (k >= 1) { E.state = 'stare'; E.t = 0; waitT = 0; instab.set(0.5, 14); E.yaw = fy; }
         break;
+      }
       case 'stare': {
         // resta lontana, immobile, a fissarti. Se distogli lo sguardo (esce dall'inquadratura) si "teletrasporta" attaccata al vetro.
-        ex = 4.5; blur = 1.3; sway = Math.sin(E.t * 0.8) * 0.006;
-        let seen = entSeen(ex, ez);
-        // finché non la stai vedendo, si sposta (di nascosto) dove potrai vederla attraverso il vetro; una volta vista resta ferma
-        if (!seen) { E.unseenT += dt; if (E.unseenT > 0.4) { relocate(); seen = entSeen(ex, ez); } } else E.unseenT = 0;
-        if (seen && dxG < 10) { E.gaze += dt; E.away = 0; } else E.away += dt;
+        ex = PATH.b[0]; ez = PATH.b[1]; E.yaw = -Math.PI / 2; blur = 1.3; sway = Math.sin(E.t * 0.8) * 0.006;
+        const seen = entSeen(ex, ez);                       // la sagoma NON si sposta per restare nell'inquadratura: resta dov'è
+        if (seen && dxG < 12) { E.gaze += dt; E.away = 0; } else E.away += dt;
         if (E.blink > 0) { E.blink -= dt; if (E.blink <= 0) { targetLight = 1; teleport(); } break; }
-        if (E.gaze > 2.5 && E.away > 0.3) teleport();
-        else if (E.gaze > 16) { E.blink = 0.45; targetLight = 0; }   // se non ti distrai mai: un battito di buio e sparisce
+        if (E.gaze > 2.5 && E.away > 0.3) teleport();                       // l'hai vista e distogli lo sguardo: te la trovi vicina
+        else if (E.gaze > 16) { E.blink = 0.45; targetLight = 0; }          // se non ti distrai mai: un battito di buio
+        else if ((E.t > 15 && dxG < 5) || E.t > 40) { E.blink = 0.45; targetLight = 0; }   // se non l'hai mai guardata: scatta comunque
         break;
       }
       case 'contact': {
@@ -253,12 +254,12 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
     mat.uniforms.uHand.value = hand;
     mat.uniforms.uBlur.value = blur;
     if (mixer) {
-      const w = E.state === 'walk' ? 1 : 0; walkW += (w - walkW) * Math.min(1, dt * 3);
+      const w = E.state === 'walk0' ? 1 : 0; walkW += (w - walkW) * Math.min(1, dt * 3);
       actions.Walk?.setEffectiveWeight(walkW); actions.Idle?.setEffectiveWeight(1 - walkW); mixer.update(dt);
     }
     ent.position.set(ex, 0, ez + sway);
     wall.position.set(ex + 0.9, 2.4, ez + 0.55 + sway * 0.5);
-    ent.rotation.y = -Math.PI / 2 + Math.sin(time * 0.7) * 0.03; // di fronte al corridoio (verso -x)
+    ent.rotation.y = (E.yaw ?? -Math.PI / 2) + Math.sin(time * 0.7) * 0.03; // di fronte al corridoio (verso -x)
     ent.scale.setScalar(entScale);
   };
 
