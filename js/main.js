@@ -93,6 +93,12 @@ place('assets/models/cam.glb', 0.3, -W + 0.12, 2.0, -12, Math.PI / 2 + 0.25);
 // ---------- evento ----------
 const glassEvent = createGlassEvent({ scene, renderer, camera, player, audio, lights, instab });
 
+// grana della pellicola (leggerissima, generata una volta)
+try {
+  const nc = document.createElement('canvas'); nc.width = nc.height = 128; const nx = nc.getContext('2d'), im = nx.createImageData(128, 128);
+  for (let i = 0; i < im.data.length; i += 4) { const v = Math.random() * 255; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; }
+  nx.putImageData(im, 0, 0); $('grain').style.backgroundImage = `url(${nc.toDataURL('image/png')})`;
+} catch (_) {}
 // ---------- flusso ----------
 let doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null;
 const flags = { turned: false, mirror: false };
@@ -144,7 +150,10 @@ $('resume').addEventListener('click', () => setPaused(false));
 
 function finish(msg, fast = false, light = false) {
   if (ended) return; ended = true; controls.enabled = false; instab.hide();
-  $('endtext').innerText = msg || 'fine del prototipo';
+  $('endtext').innerText = msg || 'fine';
+  const n = /^non ti sei girato/.test(msg || '') ? 1 : /^ti sei girato/.test(msg || '') ? 2 : /^sei uscito/.test(msg || '') ? 3 : 0;
+  $('endsub').textContent = n ? (n === 3 ? 'finale segreto · 3 di 3' : `finale ${n} di 3`) : '';
+  setTimeout(() => audio.duck(0, 1.5), 400);
   $('fade').style.background = light ? '#dfe8e2' : '#000'; $('fade').style.transition = fast ? 'opacity .25s' : 'opacity 3s'; $('fade').style.opacity = 1;
   setTimeout(() => $('end').classList.remove('hidden'), fast ? 1800 : 3200);
 }

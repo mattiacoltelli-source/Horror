@@ -35,7 +35,7 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
 
   T.enter = () => {
     T.group.visible = true; T.opened = false; player.box = T.bounds; player.pos.set(0.3, 1.62, TOWER.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
-    lights.setLamps([[0, 5.4, TOWER.z0 - 7], [0, 5.4, TOWER.z0 - 13]]); scene.fog.density = 0.04; audio.duck(1, 1.5); instab.set(0.05, 6);
+    lights.setLamps([[0, 5.4, TOWER.z0 - 7], [0, 5.4, TOWER.z0 - 13]], 2.4); scene.fog.density = 0.04; audio.duck(1, 1.5); instab.set(0.05, 6);
     warm.position.set(stovePos.x + 0.1, 1.0, stovePos.z + 0.2); warm.intensity = 36;
   };
   T.leave = () => { T.group.visible = false; warm.intensity = 0; };

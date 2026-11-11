@@ -57,7 +57,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   C.enter = () => {
     C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false;
     player.box = C.bounds; player.pos.set(0.4, 1.62, CELLAR.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
-    lights.setLamps(lampPos); scene.fog.density = 0.055; audio.duck(1, 1); instab.set(0.1, 6);
+    lights.setLamps(lampPos, 2.1); scene.fog.density = 0.04; audio.duck(1, 1); instab.set(0.1, 6);
   };
 
   const mc = new THREE.Vector3(), fw = new THREE.Vector3(), tmp = new THREE.Vector3(), d = new THREE.Vector3();

@@ -26,7 +26,7 @@ export function createHall({ scene, mats, lights }) {
   const wc = document.createElement('canvas'); wc.width = 256; wc.height = 256; const wg = wc.getContext('2d');
   const rg = wg.createRadialGradient(128, 150, 10, 128, 150, 128); rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(.55, 'rgba(255,255,255,.8)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
   wg.fillStyle = rg; wg.beginPath(); wg.moveTo(20, 256); wg.lineTo(20, 110); wg.arc(128, 110, 108, Math.PI, 0); wg.lineTo(236, 256); wg.closePath(); wg.fill();
-  const glowMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(wc), color: new THREE.Color(0.3, 0.38, 0.36), transparent: true, opacity: 0, fog: false, depthWrite: false });
+  const glowMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(wc), color: new THREE.Color(0.1, 0.13, 0.12), transparent: true, opacity: 0, fog: false, depthWrite: false });
   const win = new THREE.Mesh(new THREE.PlaneGeometry(9, 8), glowMat); win.position.set(0, 3.9, Z_END - 40.35 + 0.05); grp.add(win);
 
   // la folla e il bagliore dietro di essa

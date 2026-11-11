@@ -24,3 +24,4 @@ button:disabled{opacity:.35}
 #endtext{white-space:pre-line;line-height:1.8}
 #act{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 30%);transform:translateX(-50%);z-index:5;background:rgba(0,0,0,.35);padding:14px 30px;transition:opacity .6s}
 #act.hidden{opacity:0;pointer-events:none}
+#endsub{margin:-26px 0 38px}
