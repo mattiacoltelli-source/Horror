@@ -20,6 +20,7 @@ export const TILES = {
   floorA: [1.6, 1.6],
   floorB: [1.6, 1.6],
   rust: [1.2, 1.2],
+  mfloor: [1.5, 1.5],
 };
 
 export function makeMaterials(base = 'assets/tex/') {
@@ -44,5 +45,6 @@ export function makeMaterials(base = 'assets/tex/') {
   m.floorA = set('floorA', { tint: 0xc0bcb4, nrm: 1.3, wet: 0.72 });
   m.floorB = set('floorB', { tint: 0xb8b2a8, nrm: 1.3, wet: 0.72 });
   m.rust = set('rust', { metal: true, noAO: true, tint: 0xd0c8c0, nrm: 1.0 });
+  m.mfloor = new THREE.MeshStandardMaterial({ map: tex(`${base}mg_floor.jpg`, true), vertexColors: true, roughness: 0.5, metalness: 0, color: 0xc8c8c0 });
   return m;
 }

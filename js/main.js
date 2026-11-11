@@ -18,6 +18,7 @@ import { createStory } from './story.js';
 import { createDust } from './world/dust.js';
 import { decorTunnel } from './world/decor.js';
 import { createWarehouse } from './events/warehouse.js';
+import { createMorgue } from './events/morgue.js';
 import { createCombat } from './events/combat.js';
 
 const $ = (id) => document.getElementById(id);
@@ -107,7 +108,7 @@ try {
   nx.putImageData(im, 0, 0); $('grain').style.backgroundImage = `url(${nc.toDataURL('image/png')})`;
 } catch (_) {}
 // ---------- flusso ----------
-let dawn = null, doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null, wh = null, combat = null;
+let dawn = null, doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null, wh = null, morgue = null, combat = null;
 const flags = { turned: false, mirror: false };
 const warm = new THREE.PointLight(0xff9a50, 0, 15, 1.7); scene.add(warm);
 const flash = new THREE.PointLight(0xffd9a0, 0, 28, 1.6); scene.add(flash);   // lampo dello sparo
@@ -123,8 +124,9 @@ async function enter() {
   scare ??= createScare({ scene, camera, player, audio, lights, instab, finish: (m, f) => (dawn ? dawn.start(m) : finish(m, f)) });
   hall ??= createHall({ scene, mats, lights });
   dawn ??= createDawn({ scene, camera, player, audio, lights, instab, say, finish, onStart: () => combat?.hideAll(), hall });
-  story ??= createStory({ scene, camera, controls, player, audio, hall, getCellar: () => cellar, getTower: () => tower, getWh: () => wh, lights, instab });
+  story ??= createStory({ scene, camera, controls, player, audio, hall, getCellar: () => cellar, getTower: () => tower, getWh: () => wh, getMorgue: () => morgue, lights, instab });
   combat ??= createCombat({ scene, camera, player, audio, lights, instab, say, flash, scare, ui: { aimAll: (b) => { controls.aimAll = b; if (b) { controls.move.x = controls.move.y = 0; $('stick').style.opacity = 0; } }, cool: (b) => $('fire').classList.toggle('cool', b), show: (b) => { $('fire').classList.toggle('hidden', !b); $('dot').classList.toggle('hidden', !b); } } });
+  morgue ??= createMorgue({ scene, mats, player, audio, lights, instab, say, hall, story });
   wh ??= createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, actBtn: $('act') });
   cellar ??= createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash });
   tower ??= createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn: $('act'), combat });
@@ -139,7 +141,7 @@ async function enter() {
   // scorciatoie di prova: ?start=cantina | torre  (&turned=1 / &mirror=1 per simulare le scelte)
   { const st = q.get('start'); flags.turned = q.get('turned') === '1'; flags.mirror = q.get('mirror') === '1';
     if (st === 'epilogo') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; dawn.start(q.get('turned') === '1' ? 'ti sei girato.' : 'non ti sei girato.'); }
-    if (st === 'cantina' || st === 'torre' || st === 'magazzino') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; story.goto(st === 'cantina' ? 'cellar' : st === 'magazzino' ? 'warehouse' : 'tower'); } }
+    if (st === 'cantina' || st === 'torre' || st === 'magazzino' || st === 'obitorio') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; story.goto(st === 'cantina' ? 'cellar' : st === 'obitorio' ? 'morgue' : st === 'magazzino' ? 'warehouse' : 'tower'); } }
   controls.enabled = true; started = true; state = 'play';
   $('fade').style.opacity = 0;
   setTimeout(() => instab.show(), 4000);
@@ -182,7 +184,7 @@ function tick(dt) {
   dawn?.update(dt);
   cellar?.update(dt);
   tower?.update(dt, time);
-  wh?.update(dt);
+  wh?.update(dt); morgue?.update(dt);
   combat?.update(dt, time);
   time += dt;
   player.update(dt, time);
@@ -213,7 +215,7 @@ requestAnimationFrame((n) => { last = n; frame(n); });
 
 // debug/test: ?debug=1 espone il gioco e permette di saltare avanti
 if (q.has('debug')) {
-  window.__g = { get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
+  window.__g = { get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
     sim(sec, dt = 0.05) { for (let t = 0; t < sec; t += dt) tick(dt); },
     tp(z, yaw = 0) { player.pos.set(0.1, 1.62, z); player.yaw = yaw; player.pitch = 0; } };
 }

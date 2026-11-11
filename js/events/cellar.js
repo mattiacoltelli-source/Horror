@@ -233,7 +233,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
       if (ap > 0.5) { shade.visible = false; ap = -1; }
     }
     // --- uscita ---
-    if (C.apDone && P.z < CELLAR.z0 - CELLAR.l + 2.4 && C.state === 'play') { C.state = 'leaving'; story.goto('warehouse'); }
+    if (C.apDone && P.z < CELLAR.z0 - CELLAR.l + 2.4 && C.state === 'play') { C.state = 'leaving'; story.goto('morgue'); }
   };
   C.leave = () => { C.group.visible = false; mirror.visible = false; };
   return C;
