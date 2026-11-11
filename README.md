@@ -8,7 +8,7 @@ Finali: **A** non ti sei girato · **B** ti sei girato · **C** (segreto) hai gu
 
 Combattimento: pistola a 4 colpi; trascini per guardare, joystick per camminare piano, ma per sparare devi fermarti (SPARA); il mostro ti disarma sempre.
 
-Scorciatoie per provare: `?start=porta` · `?start=cantina` · `?start=obitorio` · `?start=magazzino` · `?start=torre` · `?start=epilogo` (con `&turned=1`, `&mirror=1` o `&door=red|breath`).
+Scorciatoie per provare: `?start=porta` · `?start=cantina` · `?start=obitorio` · `?start=magazzino` · `?start=torre` · `?start=epilogo` (con `&turned=1`, `&mirror=1` o `&door=red|breath`, `&weapon=axe` o `&nogun=1`).
 
 Storia: il paziente. Due righe per stanza, tre finali (negazione, accettazione, segreto). Nell'obitorio scegli tra il cancello (luce rossa) e la porta (respiro): cambia il magazzino.
 

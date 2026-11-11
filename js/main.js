@@ -132,7 +132,7 @@ async function enter() {
   hall ??= createHall({ scene, mats, lights });
   dawn ??= createDawn({ scene, camera, player, audio, lights, instab, say, finish, onStart: () => combat?.hideAll(), hall });
   story ??= createStory({ scene, camera, controls, player, audio, hall, getCellar: () => cellar, getTower: () => tower, getWh: () => wh, getMorgue: () => morgue, say, lights, instab });
-  combat ??= createCombat({ scene, camera, player, audio, lights, instab, say, flash, scare, ui: { aimAll: (b) => { controls.aimAll = b; if (b) { controls.move.x = controls.move.y = 0; $('stick').style.opacity = 0; } }, cool: (b) => $('fire').classList.toggle('cool', b), show: (b) => { $('fire').classList.toggle('hidden', !b); $('dot').classList.toggle('hidden', !b); } } });
+  combat ??= createCombat({ scene, camera, player, audio, lights, instab, say, flash, scare, ui: { aimAll: (b) => { controls.aimAll = b; if (b) { controls.move.x = controls.move.y = 0; $('stick').style.opacity = 0; } }, label: (t) => ($('fire').textContent = t), cool: (b) => $('fire').classList.toggle('cool', b), show: (b) => { $('fire').classList.toggle('hidden', !b); $('dot').classList.toggle('hidden', !b); } } });
   morgue ??= createMorgue({ scene, mats, player, camera, audio, lights, instab, say, hall, story, flags, actBtn: $('act') });
   ambient ??= createAmbient({ player, audio, story, combat });
   wh ??= createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, flags, actBtn: $('act') });
@@ -156,7 +156,7 @@ async function enter() {
   // ?start=porta → salta il tunnel e parte a ~8 m dal portone (per provare solo la parte finale)
   if (q.get('start') === 'porta') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, -46); }
   // scorciatoie di prova: ?start=cantina | torre  (&turned=1 / &mirror=1 per simulare le scelte)
-  { const st = q.get('start'); flags.turned = q.get('turned') === '1'; flags.mirror = q.get('mirror') === '1'; flags.noGun = q.get('nogun') === '1'; flags.door = q.get('door') === 'red' ? 'red' : q.get('door') === 'breath' ? 'breath' : null;
+  { const st = q.get('start'); flags.turned = q.get('turned') === '1'; flags.mirror = q.get('mirror') === '1'; flags.noGun = q.get('nogun') === '1'; flags.weapon = q.get('weapon') === 'axe' ? 'axe' : null; flags.door = q.get('door') === 'red' ? 'red' : q.get('door') === 'breath' ? 'breath' : null;
     if (st === 'epilogo') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; dawn.start(q.get('turned') === '1' ? 'ti sei girato.\nlei non se n\'è mai andata.\nl\'incendio l\'hai acceso tu.' : 'non ti sei girato.\nera già davanti a te.\nnon volevi ricordare.'); }
     if (st === 'cantina' || st === 'torre' || st === 'magazzino' || st === 'obitorio') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; story.goto(st === 'cantina' ? 'cellar' : st === 'obitorio' ? 'morgue' : st === 'magazzino' ? 'warehouse' : 'tower'); } }
   controls.enabled = true; started = true; state = 'play';

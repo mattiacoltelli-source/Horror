@@ -22,6 +22,13 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
   const muzzle = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.16), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(mc), color: 0xffd9a0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
   muzzle.position.set(0, 0.025, -0.2); muzzle.renderOrder = 11; holder.add(muzzle);
 
+  // ASCIA (scelta alternativa alla pistola): in mano, bassa a destra; COLPISCI fa un fendente a vuoto (lei non c'è più: si sposta nel lampo). 2 colpi, poi il jump scare.
+  const axeG = new THREE.Group(); camera.add(axeG); axeG.visible = false; let swing = -1; const axeBase = { p: [0.1, -0.72, -0.55], r: [-0.3, 0.3, -0.12] };
+  new GLTFLoader().load('assets/models/axe.glb', (g) => {
+    const m = g.scene; m.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.renderOrder = 10; const om = o.material; o.material = new THREE.MeshBasicMaterial({ map: om.map, color: new THREE.Color(0.3, 0.28, 0.26) }); } });
+    const b = new THREE.Box3().setFromObject(m); m.position.y -= b.min.y; axeG.add(m);   // origine = fondo del manico
+  }, undefined, (e) => console.warn('axe', e));
+  K.giveAxe = () => { K.armed = true; K.weapon = 'axe'; axeG.visible = true; gun.visible = false; };
   // il mostro
   const mon = new THREE.Group(); mon.visible = false; scene.add(mon); let monModel = null;
   K.setMonster = (kind) => new Promise((res) => new GLTFLoader().load(kind === 'behind' ? 'assets/models/c_nurse.glb' : 'assets/models/c_occ.glb', (g) => {
@@ -35,7 +42,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     low: { p: [0.13, -0.24, -0.42], r: [-0.45, 0, 0.1] }, ready: { p: [0.09, -0.115, -0.45], r: [0, 0, 0.03] }, ads: { p: [0, -0.078, -0.36], r: [0, 0, 0] },
   };
   let pose = 'low', pz = new THREE.Vector3(...poses.low.p), pr = new THREE.Euler(...poses.low.r), knocked = 0, kv = new THREE.Vector3();
-  K.give = () => { K.armed = true; gun.visible = true; pose = 'low'; };
+  K.give = () => { K.armed = true; K.weapon = 'pistol'; gun.visible = true; axeG.visible = false; pose = 'low'; };
   K.ammoLeft = () => K.ammo;
 
   const ray = new THREE.Ray(), pt = new THREE.Vector3(), dir = new THREE.Vector3(), fwd = new THREE.Vector3();
@@ -48,12 +55,12 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
   K.mon = mon;
   K.begin = async (kind, text, from, limit = 20, calm = null, unarmed = false) => {
     K.limit = limit; K.calm = calm; K.unarmed = unarmed;   // unarmed: niente pistola, e dopo 1-2 teletrasporti scatta il jump scare K.canLower = false; K.lowered = false;   // secondi di teletrasporti prima del jump scare (dipende dalle scelte)
-    K.kind = kind; K.text = text; K.active = true; K.state = 'fight'; K.t = 0; K.hits = 0; K.shots = 0; K.cool = 0; K.hide = 0; K.lat = 0; K.ammo = 4; K.D = 13; K.stepT = 1.5; K.said = false; K.turnedOnce = false;
+    K.kind = kind; K.text = text; K.active = true; K.state = 'fight'; K.t = 0; K.hits = 0; K.shots = 0; K.cool = 0; K.hide = 0; K.lat = 0; K.ammo = K.weapon === 'axe' ? 2 : 4; K.D = 13; K.stepT = 1.5; K.said = false; K.turnedOnce = false;
     if (!K.armed && !unarmed) K.give();
     await K.setMonster(kind); K.from = from.clone(); K.M = { x: from.x, z: from.z }; K.Dt = null; K.wi = 1; K.sched = 0; K.walked = false; K.fin = false; K.finT = 0; K.side = 1;
     // PERCORSO PRESTABILITO, nel mondo (non dipende da dove sei né da dove guardi): zig-zag dall'ingresso verso il fondo della stanza
     K.W = [[0, 0], [-4, -3], [3.5, -5], [-3, -8], [2, -10.5], [-1, -12.5]].map(([dx, dz]) => ({ x: from.x + dx, z: from.z + dz }));           // punto da cui il mostro si avvicina (verso il giocatore)
-    mon.visible = true; pose = 'ready'; player.speedMul = unarmed ? 1 : 0.55; player.lookMul = unarmed ? 1 : 0.8; if (!unarmed) ui.show(true);   // puoi camminare piano; per sparare devi fermarti instab.set(0.9, 60);
+    mon.visible = true; pose = 'ready'; player.speedMul = unarmed ? 1 : 0.55; player.lookMul = unarmed ? 1 : 0.8; if (!unarmed) { ui.show(true); ui.label?.(K.weapon === 'axe' ? 'COLPISCI' : 'SPARA'); }   // puoi camminare piano; per sparare devi fermarti instab.set(0.9, 60);
     audio.duck(0.3, 0.5);
   };
   // LA SUORA VIVE NEL MONDO: ha una posizione fissa nella stanza (K.M) che non dipende da dove guardi né dagli spostamenti dello schermo.
@@ -106,6 +113,10 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     if (!K.active || K.state !== 'fight' || !K.armed || K.cool > 0 || K.hide > 0) return;
     if (player.speedNow > 0.18) return;                    // non si spara camminando: molla il joystick, ti fermi, poi spari     // almeno 1 s tra un colpo e l'altro: niente raffica
     if (K.ammo <= 0) { audio.dry(); return; }
+    if (K.weapon === 'axe') {   // fendente a vuoto: nel lampo lei non c'è già più
+      K.ammo--; K.shots = (K.shots || 0) + 1; K.cool = 1.1; ui.cool?.(true); audio.swish?.(); swing = 0; player.addShake(0.18);
+      K.idle = 0; K.sched = 0; instab.push(0.9, 3); K.tx = null; if (K.ammo <= 0) K.beginRush(); else K.startFlicker(sidePoint(Math.max(5, Math.min(8.5, K.D)))); return;
+    }
     K.ammo--; K.shots = (K.shots || 0) + 1; K.cool = 1.0; ui.cool?.(true); audio.shot(1); K.recoil += 0.055; K.kick = 1; player.pitch += 0.05; player.yaw += (Math.random() - 0.5) * 0.022; player.addShake(0.3);
     muzzle.material.opacity = 1; gunMats.forEach((m) => m.color.setRGB(0.55, 0.5, 0.45)); muzzle.rotation.z = Math.random() * 6; K.flashT = 0.07; flash.intensity = 160; flash.position.copy(camera.position).add(fwd.set(0, 0, -0.4).applyQuaternion(camera.quaternion));
     try { navigator.vibrate?.(30); } catch (_) {}
@@ -118,7 +129,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     if (K.actBtn) K.actBtn.classList.add('hidden'); audio.duck(0.25, 1.2); K.cd0 = Math.max(1.5, K.D); K.stp = 0;
   };
   K.setAim = (on) => { K.aiming = on; };
-  K.hideAll = () => { gun.visible = false; K.active = false; K.armed = false; mon.visible = false; muzzle.material.opacity = 0; ui.show(false); ui.aimAll?.(false); };
+  K.hideAll = () => { gun.visible = false; axeG.visible = false; K.active = false; K.armed = false; mon.visible = false; muzzle.material.opacity = 0; ui.show(false); ui.aimAll?.(false); };
 
   K.update = (dt, time) => {
     // viewmodel (anche fuori dal combattimento: arma bassa)
@@ -137,6 +148,11 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
       // mirare = più zoom e più precisione
       const baseFov = camera.userData.baseFov ?? 68; camera.fov += (baseFov - a * 14 - camera.fov) * Math.min(1, dt * 12); camera.updateProjectionMatrix();
       if (!K.active) player.lookMul = 1;
+    }
+    if (axeG.visible) {   // ascia: leggero respiro, fendente quando colpisci
+      if (swing >= 0) swing += dt / 0.55; if (swing > 1) swing = -1; const sw = swing < 0 ? 0 : Math.sin(Math.PI * Math.min(1, swing) ** 0.7);
+      const mv = K.active && player.speedNow > 0.18 ? 1 : 0, sway = Math.sin(time * 1.5) * 0.004 + Math.sin(time * 7) * 0.002 * mv;
+      axeG.position.set(axeBase.p[0] - 0.16 * sw, axeBase.p[1] + 0.14 * sw + sway, axeBase.p[2] - 0.12 * sw); axeG.rotation.set(axeBase.r[0] - 0.7 * sw, axeBase.r[1] + 0.1 * sw, axeBase.r[2] + 1.0 * sw);   // fendente diagonale, da destra verso il centro
     }
     // recupero del rinculo
     if (K.recoil > 0) { const r = Math.min(K.recoil, dt * 0.25); K.recoil -= r; player.pitch -= r * 0.8; }
