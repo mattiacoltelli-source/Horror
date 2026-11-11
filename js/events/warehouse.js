@@ -5,10 +5,11 @@ import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { buildRoom } from '../world/rooms.js';
 import { kitMesh, kitObject } from '../world/props.js';
 import { decorWarehouse } from '../world/decor.js';
+import { unseenMover } from './ambient.js';
 
 export const WH = { z0: -400, w: 12, l: 36, h: 6.5 };
 
-export function createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, actBtn }) {
+export function createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, flags = {}, actBtn }) {
   const W = { group: new THREE.Group(), taken: false, state: 'idle', t: 0, near: false };
   W.group.visible = false; scene.add(W.group);
   const room = buildRoom(mats, { z0: WH.z0, w: WH.w, l: WH.l, h: WH.h, wall: 'brick', floor: 'floorB', ceil: 'stone', pillarEvery: 6, dark: 0.8, seed: 41 });
@@ -19,7 +20,9 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   // scaffali e cestini lungo i muri, un po' sparsi (non una fila perfetta)
   [-9, -13.5, -19, -24, -31, -33.5].forEach((dz, i) => { prop('assets/models/rack.glb', 1.9, i % 2 ? 5.2 : -5.2, 0, WH.z0 + dz - 0.4, (i % 2 ? -1 : 1) * Math.PI / 2 + (i % 3) * 0.05); });
   prop('assets/models/bin.glb', 0.9, -4.2, 0, WH.z0 - 5, 0.4); prop('assets/models/bin.glb', 0.9, 4.4, 0, WH.z0 - 21, 1.9); prop('assets/models/tank.glb', 0.55, -4.6, 0, WH.z0 - 28, 0.3);
-  prop('assets/models/rim.glb', 0.5, 3.4, 0, WH.z0 - 12, 0.7); prop('assets/models/can.glb', 0.12, -2.1, 0, WH.z0 - 15, 1.1); prop('assets/models/stool.glb', 0.46, 1.8, 0, WH.z0 - 7.5, 0.2);
+  prop('assets/models/rim.glb', 0.5, 3.4, 0, WH.z0 - 12, 0.7); prop('assets/models/can.glb', 0.12, -2.1, 0, WH.z0 - 15, 1.1); prop('assets/models/stool.glb', 0.46, 1.8, 0, WH.z0 - 7.5, 0.2, (o) => { W.stool = o; });
+  // lo sgabello, quando non lo guardi, si sposta verso il centro della sala (al massimo 2 volte)
+  const stoolMove = unseenMover({ camera, getObj: () => W.stool, max: 2, gap: 8, move: () => { W.stool.position.x -= 0.5; W.stool.position.z -= 0.45; W.stool.rotation.y += 0.7; audio.squeak?.(0.4, W.stool.position.clone()); } });
   // il carrello con la pistola e le munizioni
   const cartZ = WH.z0 - 26.5;
   prop('assets/models/cart.glb', 0.97, 0, 0, cartZ, Math.PI / 2);
@@ -66,22 +69,23 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   };
   W.leave = () => { W.group.visible = false; };
 
-  const dv = new THREE.Vector3(), fw = new THREE.Vector3(), tmp = new THREE.Vector3(); let steps = 0, stepT = 0, doorT = 0;
+  const dv = new THREE.Vector3(), fw = new THREE.Vector3(), tmp = new THREE.Vector3(); let steps = 0, stepT = 0, doorT = 0; const STEPS = flags.turned ? 5.6 : 7.4;   // chi si e' girato ha meno tempo prima che arrivi
   W.update = (dt) => {
     if (!W.group.visible) return; const P = player.pos; W.t += dt;
     // faro con sensore: passi nel suo raggio e si accende con un tonfo; qualcuno è già lì, fermo, nella luce. Poi si spegne.
-    if (W.sec === 0 && P.z < WH.z0 - 12) { W.sec = 1; W.secT = 0; lights.lamp(3, 'flicker', 0.5); shade.position.set(3.6, 0, WH.z0 - 22.5); shade.rotation.y = Math.PI / 2 + 0.2; shade.visible = true; audio.lightOn(); audio.whisper(1.6, 0.12); instab.push(0.7, 5); player.addShake(0.15); }
+    if (W.sec === 0 && P.z < WH.z0 - 12) { W.sec = 1; W.secT = 0; lights.lamp(3, 'flicker', 0.5); shade.position.set(flags.turned ? 2.5 : 3.6, 0, WH.z0 - 22.5); shade.rotation.y = Math.PI / 2 + 0.2; shade.visible = true; audio.lightOn(); audio.whisper(1.6, 0.12); instab.push(0.7, 5); player.addShake(0.15); }
     if (W.sec === 1) { W.secT += dt; secMats.forEach((m) => (m.emissiveIntensity = 2.2 * (lights.lamps[3]?.level ?? 0)));
       if (W.secT > 0.55 && W.secT < 0.6) lights.lamp(3, 'on');
       if ((W.secT > 4.2 || P.z < WH.z0 - 19) && W.secT > 1.2) { W.sec = 2; shade.visible = false; lights.lamp(3, 'off'); audio.lightOn(); secMats.forEach((m) => (m.emissiveIntensity = 0)); } }
+    stoolMove(dt, W.state === 'walk');
     // pulsante PRENDI vicino al carrello
     dv.set(0 - P.x, 0, cartZ - P.z); const dd = dv.length(); dv.normalize(); fw.set(player.forward.x, 0, player.forward.z).normalize();
     const near = !W.taken && dd < 2.1 && fw.dot(dv) > 0.5; if (near !== W.near) { W.near = near; actBtn.textContent = 'PRENDI'; actBtn.classList.toggle('hidden', !near); }
     if (W.state === 'taken') {
       // al buio: passi pesanti da dietro, sempre più vicini; poi la porta si apre
       steps += dt; stepT -= dt;
-      if (stepT <= 0 && steps < 7.4) { stepT = 1.15; const k = steps / 7.4; fw.set(player.forward.x, 0, player.forward.z); const back = tmp.set(P.x, 0, P.z).addScaledVector(fw, -(15 - 10 * k)); audio.heavyStep(back, 0.6 + 0.5 * k); player.addShake(0.08 * k); }
-      if (steps > 7.6 && W.state === 'taken') { W.state = 'open'; doorT = 0; lights.lamp(2, 'on'); lights.lamp(0, 'off'); lights.lamp(1, 'off'); }
+      if (stepT <= 0 && steps < STEPS) { stepT = 1.15; const k = steps / STEPS; fw.set(player.forward.x, 0, player.forward.z); const back = tmp.set(P.x, 0, P.z).addScaledVector(fw, -(15 - 10 * k)); audio.heavyStep(back, 0.6 + 0.5 * k); player.addShake(0.08 * k); }
+      if (steps > STEPS + 0.2 && W.state === 'taken') { W.state = 'open'; doorT = 0; lights.lamp(2, 'on'); lights.lamp(0, 'off'); lights.lamp(1, 'off'); }
     }
     if (W.state === 'open') { if (gateT === 0) { audio.clatter(); player.box = W.bounds; } gateT += dt; if (leaf) leaf.rotation.y = -Math.min(1.7, gateT * 1.1); doorT += dt; const a = Math.min(1.5, doorT * 0.5); if (L) L.rotation.y = a; if (R) R.rotation.y = -a; }
     if (W.taken && W.state === 'open' && P.z < zFar + 2.4 && !W.leaving) { W.leaving = true; story.goto('tower'); }

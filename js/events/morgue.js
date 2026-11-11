@@ -4,10 +4,11 @@ import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { buildRoom } from '../world/rooms.js';
 import { entryDoor } from '../world/decor.js';
+import { unseenMover } from './ambient.js';
 
 export const MORGUE = { z0: -500, w: 9, l: 15, h: 3.0 };
 
-export function createMorgue({ scene, mats, player, audio, lights, instab, say, hall, story }) {
+export function createMorgue({ scene, mats, player, camera, audio, lights, instab, say, hall, story, flags = {} }) {
   const M = { group: new THREE.Group(), state: 'idle', t: 0 };
   M.group.visible = false; scene.add(M.group);
   const { z0, w, l, h } = MORGUE, zFar = z0 - l;
@@ -52,11 +53,14 @@ export function createMorgue({ scene, mats, player, audio, lights, instab, say, 
     const m = new THREE.Mesh(new THREE.PlaneGeometry(0.13, 0.27), new THREE.MeshLambertMaterial({ map: i % 2 ? fR : fL, color: new THREE.Color(0.055, 0.006, 0.004), transparent: true, opacity: 0.8 - Math.min(0.4, i * 0.03), depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
     m.rotation.set(-Math.PI / 2, 0, Math.sin(i * 1.7) * 0.18); m.position.set(0.2 + Math.sin(i * 0.5) * 0.35 + (i % 2 ? 0.1 : -0.1), 0.012, zz); prints.add(m);
   }
+  // la sedia, quando non la guardi, si gira un po' verso di te (come la sedia a rotelle della torre): al massimo 3 volte
+  const chairMove = unseenMover({ camera, getObj: () => M.chair, max: 3, gap: 7, move: (n) => { M.chair.rotation.y += 0.3; audio.squeak?.(0.5, M.chair.position.clone()); } });
   entryDoor(M.group, z0);   // la porta si è chiusa alle tue spalle
   const back = new THREE.Mesh(new THREE.PlaneGeometry(2.1, h), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); back.position.set(0, h / 2, z0 + 0.06); back.rotation.y = Math.PI; M.group.add(back);
   const shade = hall.silhouette(5); shade.visible = false; M.group.add(shade);
 
   M.enter = () => {
+    M.trig = chairZ + 3.5 + Math.random() * 2; M.variant = flags.turned ? 'near' : (Math.random() < 0.5 ? 'far' : 'breath');   // l'evento cambia a ogni partita e in base a cosa hai scelto
     M.group.visible = true; M.state = 'walk'; M.t = 0; M.leaving = false; prints.visible = false; M.fall = null; M.dropped = false;
     player.box = M.bounds; player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false;
     lights.setLamps(lampPos, 1.9, 0xc4d4cc); scene.fog.density = 0.042; audio.duck(1, 1.5); instab.set(0.1, 6);
@@ -70,12 +74,15 @@ export function createMorgue({ scene, mats, player, audio, lights, instab, say, 
     if (M.tool && !M.dropped) { const tp = M.tool.getWorldPosition(new THREE.Vector3()), dx = tp.x - P.x, dz = tp.z - P.z, dd = Math.hypot(dx, dz), f = player.forward;
       if (dd < 3 && dd > 1.2 && (f.x * dx + f.z * dz) / dd < -0.25) { M.dropped = true; M.group.attach(M.tool); M.fall = { vy: 0.4, vx: (Math.random() - 0.5) * 0.4, spin: 6 + Math.random() * 4 }; } }
     if (M.fall && M.tool) { const F = M.fall, o = M.tool; F.vy -= 9.8 * dt; o.position.y += F.vy * dt; o.position.x -= 0.25 * dt; o.rotation.x += F.spin * dt * (o.position.y > 0.03 ? 1 : 0); if (o.position.y <= 0.02) { o.position.y = 0.02; M.fall = null; o.rotation.x = 0; audio.tinkle?.(); } }
-    if (M.state === 'walk' && P.z < chairZ + 4.5) {
-      M.state = 'beat'; M.bt = 0; lights.lamp(0, 'flicker', 1.1); audio.lightOn?.(); audio.whisper?.(1.6, 0.1); instab.push(0.6, 5);
-      shade.position.set(0.4, 0, zFar + 2.2); shade.rotation.y = 0; shade.visible = true;
+    if (M.state === 'walk' && P.z < M.trig) {
+      M.state = 'beat'; M.bt = 0; lights.lamp(0, 'flicker', 1.1); audio.lightOn?.(); instab.push(0.6, 5);
+      if (M.variant === 'breath') audio.breath?.(); else audio.whisper?.(1.6, 0.1);
+      if (M.variant === 'near') shade.position.set(-1.5, 0, chairZ - 3.2); else shade.position.set(0.4, 0, zFar + 2.2);   // se ti sei girato nella sala della folla, ti sta vicino; altrimenti in fondo o solo il respiro
+      shade.rotation.y = 0; shade.visible = M.variant !== 'breath';
     }
-    if (M.state === 'beat') { M.bt += dt; shade.visible = M.bt < 0.95 && Math.sin(M.bt * 40) > -0.3; if (M.bt > 0.5) prints.visible = true;   // nel buio tra un guizzo e l'altro ci sono le impronte
-      if (M.bt > 1.0) { M.state = 'after'; shade.visible = false; } }
+    if (M.state === 'beat') { M.bt += dt; shade.visible = M.variant !== 'breath' && M.bt < (M.variant === 'near' ? 1.25 : 0.95) && Math.sin(M.bt * 40) > -0.3; if (M.bt > 0.5) prints.visible = true;   // nel buio tra un guizzo e l'altro ci sono le impronte
+      if (M.bt > 1.3) { M.state = 'after'; shade.visible = false; } }
+    chairMove(dt, M.state === 'after');
     if (!M.leaving && P.z < zFar + 2.4) { M.leaving = true; story.goto('warehouse'); }
   };
   return M;

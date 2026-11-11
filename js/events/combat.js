@@ -1,12 +1,12 @@
-// COMBATTIMENTO (non arcade): pistola compatta con 6 colpi, mira con zoom e sensibilità ridotta, rinculo, lampo che illumina
+// COMBATTIMENTO (non arcade): pistola compatta con 4 colpi, mira con zoom e sensibilità ridotta, rinculo, lampo che illumina
 // la stanza per un istante. Il mostro si vede solo nei lampi e nel cono della torcia e avanza a scatti. I primi colpi lo
-// fanno arretrare; poi ti raggiunge, ti disarma e il combattimento è perso: è scritto così, ma non si capisce subito.
+// fanno arretrare; finiti i 4 colpi (o dopo ~20 s di teletrasporti) scatta il jump scare finale e il combattimento è perso: è scritto così, ma non si capisce subito.
 import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 
 const keepSingle = (root) => root.traverse((o) => { if (o.isMesh && /(_b$|magazine_empty|bullet)/.test(o.name)) o.visible = false; });   // il modello ha due versioni sovrapposte: ne tengo una
 export function createCombat({ scene, camera, player, audio, lights, instab, say, flash, scare, ui }) {
-  const K = { armed: false, active: false, ammo: 6, aim: 0, aiming: false, state: 'off', t: 0, hits: 0, D: 13, recoil: 0, kick: 0, held: false };
+  const K = { armed: false, active: false, ammo: 4, aim: 0, aiming: false, state: 'off', t: 0, hits: 0, D: 13, recoil: 0, kick: 0, held: false };
   const gunMats = [];
   const gun = new THREE.Group(); camera.add(gun); gun.visible = false;
   const holder = new THREE.Group(); gun.add(holder);
@@ -46,7 +46,8 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
   };
 
   K.mon = mon;
-  K.begin = async (kind, text, from) => {
+  K.begin = async (kind, text, from, limit = 20) => {
+    K.limit = limit;   // secondi di teletrasporti prima del jump scare (dipende dalle scelte)
     K.kind = kind; K.text = text; K.active = true; K.state = 'fight'; K.t = 0; K.hits = 0; K.shots = 0; K.cool = 0; K.hide = 0; K.lat = 0; K.ammo = 4; K.D = 13; K.stepT = 1.5; K.said = false; K.turnedOnce = false;
     if (!K.armed) K.give();
     await K.setMonster(kind); K.from = from.clone(); K.M = { x: from.x, z: from.z }; K.Dt = null; K.wi = 1; K.sched = 0; K.walked = false; K.fin = false; K.finT = 0; K.side = 1;
@@ -158,7 +159,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
           K.M.x += dx / dd * Math.min(dd, sp * dt); K.M.z += dz / dd * Math.min(dd, sp * dt); K.stp = (K.stp || 0) + dt; if (K.stp > 0.22) { K.stp = 0; audio.heavyStep(mon.position, 1.1); player.addShake(0.25); }
           monPlace(); mon.visible = true;
         } else {
-        if (K.t > 20) K.beginRush();   // sono passati 20 s di teletrasporti: jump scare
+        if (K.t > K.limit) K.beginRush();   // sono passati 20 s di teletrasporti: jump scare
         // RITMO FISSO, anche se non spari: a 3 s fa un passo verso il punto successivo del percorso (si sente il tonfo); a 4.5 s la luce sfarfalla
         // e si sposta di colpo al punto seguente. Non dipende da te: puoi camminare, guardare dove vuoi, restare fermo.
         K.sched = (K.sched || 0) + dt; monPlace();

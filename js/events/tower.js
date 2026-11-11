@@ -93,7 +93,7 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
     if (flags.mirror) { st = 'opening'; open = 0; player.frozen = true; instab.set(0, 10); audio.whisper(3.2, 0.3); say('', 1); return; }
     // la porta è chiusa a chiave: dietro di te, nel buio, qualcosa entra nella stanza. Devi girarti.
     st = 'fight'; actBtn.classList.add('hidden'); audio.doorBang(new THREE.Vector3(0, 1.4, zFar), 0.7); player.addShake(0.5); lights.lamp(0, 'off'); lights.lamp(1, 'off'); audio.duck(0.15, 0.2);
-    setTimeout(() => combat.begin(flags.turned ? 'behind' : 'ahead', flags.turned ? TEXT.B : TEXT.A, new THREE.Vector3(0, 0, TOWER.z0 - 1)), 1600);
+    setTimeout(() => combat.begin(flags.turned ? 'behind' : 'ahead', flags.turned ? TEXT.B : TEXT.A, new THREE.Vector3(0, 0, TOWER.z0 - 1), flags.turned ? 16 : 21), 1600);
   };
   return T;
 }
