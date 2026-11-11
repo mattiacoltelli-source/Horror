@@ -270,6 +270,11 @@ export function createAudio() {
         for (const fr of [820, 1730, 2900]) { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'triangle'; o.frequency.value = fr * (0.97 + Math.random() * 0.06); og.gain.setValueAtTime(0, t + dt); og.gain.linearRampToValueAtTime(0.06 * v, t + dt + 0.002); og.gain.exponentialRampToValueAtTime(0.0004, t + dt + 0.5); o.connect(og); og.connect(master); o.start(t + dt); o.stop(t + dt + 0.55); }
       }
     },
+    // fruscio di carta (un foglio che viene letto): rumore filtrato, breve
+    rustle() {
+      if (!ok) return; const t = ctx.currentTime, s = ctx.createBufferSource(); s.buffer = noiseBuf; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.setValueAtTime(2600, t); bp.frequency.linearRampToValueAtTime(1500, t + 0.35); bp.Q.value = 0.8; const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.1, t + 0.04); g.gain.linearRampToValueAtTime(0.05, t + 0.14); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.4); s.connect(bp); bp.connect(g); g.connect(master); s.start(t);
+    },
     // oggetto piccolo di metallo che cade su piastrelle: 3 tintinnii acuti, sempre piu' brevi e deboli
     tinkle() {
       if (!ok) return; const t = ctx.currentTime;

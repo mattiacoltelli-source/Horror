@@ -46,8 +46,8 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
   };
 
   K.mon = mon;
-  K.begin = async (kind, text, from, limit = 20) => {
-    K.limit = limit;   // secondi di teletrasporti prima del jump scare (dipende dalle scelte)
+  K.begin = async (kind, text, from, limit = 20, calm = null) => {
+    K.limit = limit; K.calm = calm; K.canLower = false; K.lowered = false;   // secondi di teletrasporti prima del jump scare (dipende dalle scelte)
     K.kind = kind; K.text = text; K.active = true; K.state = 'fight'; K.t = 0; K.hits = 0; K.shots = 0; K.cool = 0; K.hide = 0; K.lat = 0; K.ammo = 4; K.D = 13; K.stepT = 1.5; K.said = false; K.turnedOnce = false;
     if (!K.armed) K.give();
     await K.setMonster(kind); K.from = from.clone(); K.M = { x: from.x, z: from.z }; K.Dt = null; K.wi = 1; K.sched = 0; K.walked = false; K.fin = false; K.finT = 0; K.side = 1;
@@ -112,6 +112,11 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     // il colpo non la prende mai: nel lampo lei non c'è già più, e riappare più vicina in un altro punto
     K.idle = 0; K.sched = 0; instab.push(0.9, 3); K.tx = null; if (K.ammo <= 0) K.beginRush(); else K.startFlicker(sidePoint(Math.max(5, Math.min(8.5, K.D))));
   };
+  // SCELTA FINALE (solo chi ha trovato tutte le note): ABBASSA LA PISTOLA. Smetti di combattere; lei arriva, lenta, senza jump scare. Quarto finale.
+  K.lower = () => {
+    if (!K.canLower || K.state !== 'fight') return; K.canLower = false; K.lowered = true; K.state = 'calm'; K.hide = 0; lights.override = null; pose = 'low'; ui.show(false); ui.cool?.(false);
+    if (K.actBtn) K.actBtn.classList.add('hidden'); audio.duck(0.25, 1.2); K.cd0 = Math.max(1.5, K.D); K.stp = 0;
+  };
   K.setAim = (on) => { K.aiming = on; };
   K.hideAll = () => { gun.visible = false; K.active = false; K.armed = false; mon.visible = false; muzzle.material.opacity = 0; ui.show(false); ui.aimAll?.(false); };
 
@@ -137,6 +142,16 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     if (K.recoil > 0) { const r = Math.min(K.recoil, dt * 0.25); K.recoil -= r; player.pitch -= r * 0.8; }
     if (!K.active) return;
     K.t += dt;
+    if (K.state === 'fight' && K.calm && !K.fin && K.hide <= 0 && K.t > 3.5) { if (!K.canLower) { K.canLower = true; if (K.actBtn) { K.actBtn.textContent = 'ABBASSA LA PISTOLA'; K.actBtn.classList.remove('hidden'); } } }
+    if (K.fin && K.canLower) { K.canLower = false; K.actBtn?.classList.add('hidden'); }
+    if (K.state === 'calm') {
+      // lei si avvicina piano e ti guarda; la torcia si spegne a poco a poco; nessun colpo, nessuno scatto
+      monPlace(); const dx = player.pos.x - K.M.x, dz = player.pos.z - K.M.z, dd = Math.max(0.01, Math.hypot(dx, dz)), prog = 1 - Math.min(1, dd / K.cd0);
+      K.M.x += dx / dd * Math.min(dd, 0.75 * dt); K.M.z += dz / dd * Math.min(dd, 0.75 * dt); K.stp += dt; if (K.stp > 1.15) { K.stp = 0; audio.heavyStep(mon.position, 0.7); }
+      lights.override = 34 * (1 - 0.82 * prog); mon.visible = true; monPlace();
+      if (K.D <= 1.3) { K.state = 'over'; K.hideAll(); lights.override = null; player.speedMul = 1; player.lookMul = 1; K.calm?.end?.(); }
+      return;
+    }
     if (K.state === 'fight') {
       // cadenza e teletrasporto
       if (K.cool > 0) K.cool -= dt;

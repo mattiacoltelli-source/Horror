@@ -77,7 +77,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   W.enter = () => {
     W.group.visible = true; W.taken = false; W.state = 'walk'; W.t = 0; W.beat = false; gateT = 0; if (leaf) leaf.rotation.y = 0;
     player.box = W.box; player.pos.set(0.3, 1.62, WH.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
-    const red = flags.door === 'red'; lights.setLamps(lampPos, red ? 1.7 : 2.2, red ? 0xff5a44 : 0xaec8ff); reds.forEach((r) => (r.root.visible = red)); W.red = red; entry.visible = !red; gateIn.visible = red; W.br = 6 + Math.random() * 4; W.brN = 0; lights.lamp(3, 'off'); W.sec = 0; scene.fog.density = 0.032; audio.duck(1, 1.5); instab.set(0.08, 6);
+    const red = flags.door === 'red'; lights.setLamps(lampPos, red ? 1.7 : 2.2, red ? 0xff5a44 : 0xaec8ff); reds.forEach((r) => (r.root.visible = red)); W.nearGate = false; W.red = red; entry.visible = !red; gateIn.visible = red; W.br = 6 + Math.random() * 4; W.brN = 0; lights.lamp(3, 'off'); W.sec = 0; scene.fog.density = 0.032; audio.duck(1, 1.5); instab.set(0.08, 6);
   };
   W.leave = () => { W.group.visible = false; };
 
@@ -99,12 +99,16 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
       // al buio: passi pesanti da dietro, sempre più vicini; poi la porta si apre
       steps += dt; stepT -= dt;
       if (stepT <= 0 && steps < STEPS) { stepT = 1.15; const k = steps / STEPS; fw.set(player.forward.x, 0, player.forward.z); const back = tmp.set(P.x, 0, P.z).addScaledVector(fw, -(15 - 10 * k)); audio.heavyStep(back, 0.6 + 0.5 * k); player.addShake(0.08 * k); }
-      if (steps > STEPS + 0.2 && W.state === 'taken') { W.state = 'open'; doorT = 0; lights.lamp(2, 'on'); lights.lamp(0, 'off'); lights.lamp(1, 'off'); }
+      if (steps > STEPS + 0.2 && W.state === 'taken') { W.state = 'ready'; doorT = 0; lights.lamp(2, 'on'); lights.lamp(0, 'off'); lights.lamp(1, 'off'); }   // il cancello ora si apre con APRI
+    }
+    if (W.state === 'ready') {   // vicino al cancello: APRI (come le altre porte)
+      const ng = Math.abs(P.x) < 1.7 && Math.abs(P.z - gz) < 2.8 && player.forward.z < -0.35; if (ng !== W.nearGate) { W.nearGate = ng; actBtn.textContent = 'APRI'; actBtn.classList.toggle('hidden', !ng); }
     }
     if (W.state === 'open') { if (gateT === 0) { audio.clatter(); player.box = W.bounds; } gateT += dt; if (leaf) leaf.rotation.y = -Math.min(1.7, gateT * 1.1); doorT += dt; const a = Math.min(1.5, doorT * 0.5); if (L) L.rotation.y = a; if (R) R.rotation.y = -a; }
     if (W.taken && W.state === 'open' && P.z < zFar + 2.4 && !W.leaving) { W.leaving = true; story.goto('tower'); }
   };
 
+  W.openGate = () => { if (W.state !== 'ready') return; W.state = 'open'; W.nearGate = false; actBtn.classList.add('hidden'); };
   W.take = () => {
     if (W.taken) return; W.taken = true; W.near = false; actBtn.classList.add('hidden'); W.leaving = false;
     if (pistol) pistol.visible = false; if (ammo) ammo.visible = false; combat.give(); audio.clatter(); instab.set(0.9, 12);

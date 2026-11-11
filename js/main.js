@@ -20,6 +20,8 @@ import { decorTunnel } from './world/decor.js';
 import { createWarehouse } from './events/warehouse.js';
 import { createMorgue } from './events/morgue.js';
 import { createAmbient } from './events/ambient.js';
+import { createNotes } from './events/notes.js';
+import { W as TUNNEL_W } from './world/tunnel.js';
 import { createCombat } from './events/combat.js';
 
 const $ = (id) => document.getElementById(id);
@@ -109,15 +111,15 @@ try {
   nx.putImageData(im, 0, 0); $('grain').style.backgroundImage = `url(${nc.toDataURL('image/png')})`;
 } catch (_) {}
 // ---------- flusso ----------
-let dawn = null, doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null, wh = null, morgue = null, ambient = null, combat = null;
-const flags = { turned: false, mirror: false, door: null };
+let dawn = null, doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null, wh = null, morgue = null, ambient = null, notes = null, combat = null;
+const flags = { turned: false, mirror: false, door: null, notes: 0 };
 const warm = new THREE.PointLight(0xff9a50, 0, 15, 1.7); scene.add(warm);
 const flash = new THREE.PointLight(0xffd9a0, 0, 28, 1.6); scene.add(flash);   // lampo dello sparo
 let state = 'loading', last = 0, time = 0, paused = false, fpsAcc = 0, fpsN = 0, ended = false;
 let started = false;
 const hint = $('subtitle');
-function say(txt, ms = 4000) {
-  hint.textContent = txt; hint.style.opacity = 1;
+function say(txt, ms = 4000, style = '') {
+  hint.classList.toggle('note', style === 'note'); hint.textContent = txt; hint.style.opacity = 1;
   clearTimeout(say.t); say.t = setTimeout(() => (hint.style.opacity = 0), ms);
 }
 
@@ -132,6 +134,15 @@ async function enter() {
   wh ??= createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, flags, actBtn: $('act') });
   cellar ??= createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash });
   tower ??= createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn: $('act'), combat });
+  combat.actBtn = $('act');
+  const WZ = -400, CZ = -200, MZ = -500, TZ = -300;   // z0 delle stanze (vedi i moduli)
+  notes ??= createNotes({ camera, player, audio, story, say, instab, flags, defs: [
+    { room: 'tunnel', parent: scene, p: [-TUNNEL_W + 0.03, 1.45, -8], ry: Math.PI / 2 },
+    { room: 'cellar', parent: cellar.group, p: [3.97, 1.5, CZ - 7], ry: -Math.PI / 2 },
+    { room: 'morgue', parent: morgue.group, p: [-4.2, 1.45, MZ - 3.4], ry: Math.PI / 2 },
+    { room: 'warehouse', parent: wh.group, p: [-5.96, 1.5, WZ - 17], ry: Math.PI / 2 },
+    { room: 'tower', parent: tower.group, p: [-6.96, 1.5, TZ - 5], ry: Math.PI / 2 },
+  ] });
   doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar'); } });
   $('enter').disabled = true;
   try { await audio.start(); } catch (_) {}
@@ -168,14 +179,14 @@ $('resume').addEventListener('click', () => setPaused(false));
 function finish(msg, fast = false, light = false) {
   if (ended) return; ended = true; controls.enabled = false; instab.hide();
   $('endtext').innerText = msg || 'fine';
-  const n = /^non ti sei girato/.test(msg || '') ? 1 : /^ti sei girato/.test(msg || '') ? 2 : /^sei uscito/.test(msg || '') ? 3 : 0;
-  $('endsub').textContent = n ? (n === 3 ? 'finale segreto · 3 di 3' : `finale ${n} di 3`) : '';
+  const n = /^non ti sei girato/.test(msg || '') ? 1 : /^ti sei girato/.test(msg || '') ? 2 : /^sei uscito/.test(msg || '') ? 3 : /^ricordi tutto/.test(msg || '') ? 4 : 0;
+  $('endsub').textContent = (n ? (n === 3 ? 'finale segreto · 3 di 4' : n === 4 ? 'finale · 4 di 4 · condanna' : `finale ${n} di 4`) : '') + (n && notes ? `\nricordi: ${flags.notes ?? 0} di 5` : '');
   setTimeout(() => audio.duck(0, 1.5), 400);
   $('fade').style.background = light ? '#dfe8e2' : '#000'; $('fade').style.transition = fast ? 'opacity .25s' : 'opacity 3s'; $('fade').style.opacity = 1;
   setTimeout(() => $('end').classList.remove('hidden'), fast ? 1800 : 3200);
 }
 $('again').addEventListener('click', () => location.reload());
-$('act').addEventListener('click', () => { if (wh && wh.near) wh.take(); else if (tower && tower.near) tower.open(); else if (morgue && morgue.near) morgue.open(); });
+$('act').addEventListener('click', () => { if (wh && wh.near) wh.take(); else if (wh && wh.nearGate) wh.openGate(); else if (tower && tower.near) tower.open(); else if (morgue && morgue.near) morgue.open(); else if (combat && combat.canLower) combat.lower(); });
 $('fire').addEventListener('pointerdown', (e) => { e.preventDefault(); combat?.fire(); });
 addEventListener('keydown', (e) => { if (e.code === 'Space') combat?.fire(); });
 
@@ -187,7 +198,7 @@ function tick(dt) {
   dawn?.update(dt);
   cellar?.update(dt);
   tower?.update(dt, time);
-  wh?.update(dt); morgue?.update(dt); ambient?.update(dt);
+  wh?.update(dt); morgue?.update(dt); ambient?.update(dt); notes?.update(dt);
   combat?.update(dt, time);
   time += dt;
   player.update(dt, time);
@@ -218,7 +229,7 @@ requestAnimationFrame((n) => { last = n; frame(n); });
 
 // debug/test: ?debug=1 espone il gioco e permette di saltare avanti
 if (q.has('debug')) {
-  window.__g = { get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
+  window.__g = { get notes() { return notes; }, get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
     sim(sec, dt = 0.05) { for (let t = 0; t < sec; t += dt) tick(dt); },
     tp(z, yaw = 0) { player.pos.set(0.1, 1.62, z); player.yaw = yaw; player.pitch = 0; } };
 }

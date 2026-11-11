@@ -9,6 +9,7 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;overscroll-behavi
 #sig i{display:block;width:100%;height:100%;border-radius:50%;background:var(--c,#3fdc6e);box-shadow:0 0 calc(6px + 10px*var(--p,0)) var(--c,#3fdc6e),0 0 24px var(--c,#3fdc6e);opacity:var(--o,.8);transform:scale(var(--s,1))}
 #stick{position:fixed;width:96px;height:96px;margin:-48px 0 0 -48px;border-radius:50%;border:1px solid rgba(200,210,200,.18);pointer-events:none;opacity:0;transition:opacity .2s}
 #stick i{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px;border-radius:50%;background:rgba(200,210,200,.16)}
+#subtitle.note{font-style:italic;color:#d8caa8;letter-spacing:.05em;white-space:pre-line;line-height:1.5;padding:10px 20px;font-size:14px;background:linear-gradient(transparent,rgba(0,0,0,.6) 25%,rgba(0,0,0,.6) 75%,transparent);text-shadow:0 0 4px #000,0 0 8px #000}
 #subtitle{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 22%);text-align:center;font-size:15px;letter-spacing:.12em;color:#b9bdb8;opacity:0;transition:opacity 1.2s;pointer-events:none;text-shadow:0 0 6px #000}
 .screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;background:#030403;z-index:10;transition:opacity 1.2s}
 .screen.hidden{opacity:0;pointer-events:none;visibility:hidden}
@@ -24,7 +25,7 @@ button:disabled{opacity:.35}
 #endtext{white-space:pre-line;line-height:1.8}
 #act{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 30%);transform:translateX(-50%);z-index:5;background:rgba(0,0,0,.35);padding:14px 30px;transition:opacity .6s}
 #act.hidden{opacity:0;pointer-events:none}
-#endsub{margin:-26px 0 38px}
+#endsub{margin:-26px 0 38px;white-space:pre-line}
 .rnd{position:fixed;right:20px;width:74px;height:74px;border-radius:50%;padding:0;font-size:11px;letter-spacing:.14em;min-height:0;background:rgba(0,0,0,.35);border-color:rgba(200,210,200,.35);z-index:5;transition:opacity .4s;touch-action:none}
 #fire{bottom:calc(env(safe-area-inset-bottom,0px) + 11%)}
 #aim{bottom:calc(env(safe-area-inset-bottom,0px) + 11% + 90px);width:60px;height:60px}
