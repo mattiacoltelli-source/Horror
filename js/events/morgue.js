@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { buildRoom } from '../world/rooms.js';
+import { entryDoor } from '../world/decor.js';
 
 export const MORGUE = { z0: -500, w: 9, l: 15, h: 3.0 };
 
@@ -24,7 +25,7 @@ export function createMorgue({ scene, mats, player, audio, lights, instab, say, 
     const t = sz.z / 2 - 0.02;
     for (let i = 0; i < 5; i++) { const z = z0 - 1.5 - i * 3; put(-w / 2 + t, z, Math.PI / 2); put(w / 2 - t, z, -Math.PI / 2); }
     for (const sx of [-1, 1]) { put(sx * 2.45, zFar + t, 0); put(sx * 4.35, zFar + t - 0.02, 0); }   // parete di testa con il varco della porta (1.9 m)
-    for (const x of [-3, 3]) put(x, z0 - t, Math.PI);
+    for (const sx of [-1, 1]) { put(sx * 2.45, z0 - t, Math.PI); put(sx * 4.35, z0 - t + 0.02, Math.PI); }   // parete d'ingresso con il varco della porta da cui sei arrivato
   })();
 
   // sedia da visita al centro della sala, con la lampada sopra
@@ -45,6 +46,8 @@ export function createMorgue({ scene, mats, player, audio, lights, instab, say, 
   const door = new THREE.Group(); door.position.set(0, 0, zFar + 0.15); M.group.add(door);
   load('assets/models/door.glb').then((m) => { if (!m) return; const L = m.getObjectByName('large_castle_door_left'), R = m.getObjectByName('large_castle_door_right'); L?.rotation.set(0, 1.5, 0); R?.rotation.set(0, -1.5, 0); m.rotation.y = Math.PI; door.add(m); });
   const cap = new THREE.Mesh(new THREE.PlaneGeometry(2.1, h), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); cap.position.set(0, h / 2, zFar + 0.05); M.group.add(cap);
+  entryDoor(M.group, z0);   // la porta si è chiusa alle tue spalle
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(2.1, h), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); back.position.set(0, h / 2, z0 + 0.06); back.rotation.y = Math.PI; M.group.add(back);
   const shade = hall.silhouette(5); shade.visible = false; M.group.add(shade);
 
   M.enter = () => {
