@@ -270,6 +270,14 @@ export function createAudio() {
         for (const fr of [820, 1730, 2900]) { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'triangle'; o.frequency.value = fr * (0.97 + Math.random() * 0.06); og.gain.setValueAtTime(0, t + dt); og.gain.linearRampToValueAtTime(0.06 * v, t + dt + 0.002); og.gain.exponentialRampToValueAtTime(0.0004, t + dt + 0.5); o.connect(og); og.connect(master); o.start(t + dt); o.stop(t + dt + 0.55); }
       }
     },
+    // battito di cuore (due tonfi bassi): quando premi ENTRA
+    heartbeat() {
+      if (!ok) return; const t = ctx.currentTime;
+      [[0, 1], [0.34, 0.75]].forEach(([dt, v]) => {
+        const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(78, t + dt); o.frequency.exponentialRampToValueAtTime(42, t + dt + 0.18);
+        g.gain.setValueAtTime(0, t + dt); g.gain.linearRampToValueAtTime(0.5 * v, t + dt + 0.012); g.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.3); o.connect(g); g.connect(master); o.start(t + dt); o.stop(t + dt + 0.35);
+      });
+    },
     // fendente d'ascia nell'aria: rumore filtrato che sale e scende, breve e secco
     swish() {
       if (!ok) return; const t = ctx.currentTime, s = ctx.createBufferSource(); s.buffer = noiseBuf; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.4; bp.frequency.setValueAtTime(500, t); bp.frequency.exponentialRampToValueAtTime(2600, t + 0.16); bp.frequency.exponentialRampToValueAtTime(700, t + 0.34); const g = ctx.createGain();

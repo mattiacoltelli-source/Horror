@@ -46,3 +46,22 @@ button:disabled{opacity:.35}
 @keyframes lmglitch{0%{opacity:.1;transform:translateX(-3px)}33%{opacity:.9;transform:translateX(2px)}66%{opacity:.3;transform:translateX(-1px)}100%{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){#loadmsg.flick,#loadmsg.glitch{animation:none}}
 #loadmsg{min-height:2.8em;color:#8f948f;letter-spacing:.08em}
+
+/* ---- pagina iniziale: fondo vivo, titolo che si guasta, pulsante piu' da gioco ---- */
+#intro{overflow:hidden}
+#intro .intro-inner{position:relative;z-index:2}
+#intro::before{content:"";position:absolute;inset:-20%;z-index:0;pointer-events:none;
+  background:radial-gradient(60% 40% at 25% 70%,rgba(70,86,72,.22),transparent 70%),radial-gradient(55% 38% at 80% 35%,rgba(54,66,60,.2),transparent 70%),radial-gradient(70% 45% at 50% 95%,rgba(40,52,44,.28),transparent 70%);
+  animation:fogdrift 38s ease-in-out infinite alternate;will-change:transform}
+#intro::after{content:"";position:absolute;top:-18%;right:-22%;width:78%;height:46%;z-index:1;pointer-events:none;
+  background:radial-gradient(closest-side,rgba(170,200,185,.2),rgba(120,150,135,.07) 55%,transparent 75%);animation:lampflick 7.3s steps(1,end) infinite}
+@keyframes fogdrift{0%{transform:translate3d(-3%,2%,0) scale(1)}100%{transform:translate3d(4%,-3%,0) scale(1.12)}}
+@keyframes lampflick{0%{opacity:.85}6%{opacity:.3}8%{opacity:.9}31%{opacity:.7}33%{opacity:.15}36%{opacity:.8}37%{opacity:.4}39%{opacity:.85}71%{opacity:.75}73%{opacity:.2}74%{opacity:.8}100%{opacity:.85}}
+/* titolo: ogni tanto uno scatto, con sdoppiamento di colore */
+h1.tglitch{animation:tglitch .22s steps(1,end)}
+@keyframes tglitch{0%{transform:translateX(-4px);text-shadow:4px 0 rgba(170,40,40,.7),-4px 0 rgba(50,140,170,.6)}25%{transform:translateX(3px) skewX(-3deg);text-shadow:-3px 0 rgba(170,40,40,.7),3px 0 rgba(50,140,170,.6)}50%{transform:translateX(-2px);opacity:.55}75%{transform:translateX(1px);opacity:1;text-shadow:2px 0 rgba(170,40,40,.5),-2px 0 rgba(50,140,170,.4)}100%{transform:none}}
+/* pulsante: il bordo respira piano; al tocco si accende */
+#enter:not(:disabled){animation:btnbreath 3.6s ease-in-out infinite}
+@keyframes btnbreath{0%,100%{border-color:#3d423c;box-shadow:0 0 0 rgba(150,180,160,0)}50%{border-color:#6a7468;box-shadow:0 0 14px rgba(120,150,130,.12)}}
+#enter:active:not(:disabled){animation:none;border-color:#9fb4a2;box-shadow:0 0 26px rgba(130,170,140,.35);background:#0f130f}
+@media (prefers-reduced-motion:reduce){#intro::before,#intro::after,h1.tglitch,#enter:not(:disabled){animation:none}}
