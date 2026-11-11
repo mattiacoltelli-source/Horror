@@ -38,8 +38,8 @@ export function createMorgue({ scene, mats, player, audio, lights, instab, say, 
   for (const [dx, dz] of [[-0.3, -0.7], [0.3, -0.7], [-0.3, 0.7], [0.3, 0.7]]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.9, 0.04), steel); leg.position.set(dx, 0.45, dz); tbl.add(leg); }
   M.group.add(tbl);
   ['mg_tool1', 'mg_tool3', 'mg_tool4'].forEach((n, i) => load(`assets/models/${n}.glb`).then((o) => { if (!o) return; const b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x, b.min.y, c.z)); const g = new THREE.Group(); g.add(o); g.position.set(-0.12 + i * 0.12, 0.92, -0.5 + i * 0.45); g.rotation.y = [0.4, 1.2, -0.3][i]; tbl.add(g); }));
-  // lampade sospese sopra la sala e sopra la sedia
-  const lampPos = [[0, 2.8, z0 - 2.5], [0, 2.8, chairZ], [0, 2.8, zFar + 2.5]];
+  // lampada sospesa sopra la sedia
+  const lampPos = [[0, 2.8, chairZ]];   // una sola lampada, sopra la sedia: gli angoli restano bui
   load('assets/models/hlamp.glb').then((o) => { if (!o) return; for (const [x, , z] of lampPos) { const c = o.clone(true); c.position.set(x, h, z); M.group.add(c); } });
   // porta d'uscita in fondo, aperta sul buio
   const door = new THREE.Group(); door.position.set(0, 0, zFar + 0.15); M.group.add(door);
@@ -50,7 +50,7 @@ export function createMorgue({ scene, mats, player, audio, lights, instab, say, 
   M.enter = () => {
     M.group.visible = true; M.state = 'walk'; M.t = 0; M.leaving = false;
     player.box = M.bounds; player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false;
-    lights.setLamps(lampPos, 1.5, 0xc4d4cc); scene.fog.density = 0.042; audio.duck(1, 1.5); instab.set(0.1, 6);
+    lights.setLamps(lampPos, 1.9, 0xc4d4cc); scene.fog.density = 0.042; audio.duck(1, 1.5); instab.set(0.1, 6);
   };
   M.leave = () => { M.group.visible = false; };
   M.update = (dt) => {
@@ -58,7 +58,7 @@ export function createMorgue({ scene, mats, player, audio, lights, instab, say, 
     { const dx = P.x - 0.2, dz = P.z - chairZ, d = Math.hypot(dx, dz), R = 1.15; if (d < R) { P.x = 0.2 + dx / Math.max(d, 0.01) * R; P.z = chairZ + dz / Math.max(d, 0.01) * R; }   // la sedia è un ostacolo
       const tx = w / 2 - 0.9; if (Math.abs(P.x - tx) < 0.75 && Math.abs(P.z - (z0 - 5)) < 1.1) P.x = tx - 0.75; }   // il tavolo anche
     if (M.state === 'walk' && P.z < chairZ + 4.5) {
-      M.state = 'beat'; M.bt = 0; lights.lamp(1, 'flicker', 1.1); lights.lamp(2, 'flicker', 1.1); audio.lightOn?.(); audio.whisper?.(1.6, 0.1); instab.push(0.6, 5);
+      M.state = 'beat'; M.bt = 0; lights.lamp(0, 'flicker', 1.1); audio.lightOn?.(); audio.whisper?.(1.6, 0.1); instab.push(0.6, 5);
       shade.position.set(0.4, 0, zFar + 2.2); shade.rotation.y = 0; shade.visible = true;
     }
     if (M.state === 'beat') { M.bt += dt; shade.visible = M.bt < 0.95 && Math.sin(M.bt * 40) > -0.3; if (M.bt > 1.0) { M.state = 'after'; shade.visible = false; } }
