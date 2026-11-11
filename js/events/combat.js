@@ -92,6 +92,15 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
   // prossimo punto del percorso; finiti i punti prestabiliti, si sposta di lato a distanza (la chiusura finale avviene solo a colpi finiti)
   K.nextSpot = () => K.wi < K.W.length ? K.W[K.wi++] : sidePoint(5.5);
   K.startFlicker = (tgt) => { K.hide = HIDE; K.moved = false; K.tgt = tgt || K.nextSpot(); lights.torchStutter(HIDE); lights.lamp(0, 'flicker', HIDE); lights.lamp(1, 'flicker', HIDE); audio.lightOn?.(); };
+  // JUMP SCARE FINALE: sfarfallio, compare davanti a te a ~5 m (nel buio), poi scatta addosso e sei morto. Nessuna fase intermedia.
+  K.beginRush = () => {
+    if (K.fin) return; K.fin = true; K.finT = 0; K.sched = 0; K.tx = null; const view = Math.atan2(player.forward.z, player.forward.x), [x0, x1, z0, z1] = bounds(); let pick = null;
+    for (const da of [0, 0.3, -0.3, 0.6, -0.6]) {
+      let d = 5.5, x, z; do { x = player.pos.x + Math.cos(view + da) * d; z = player.pos.z + Math.sin(view + da) * d; d -= 0.3; } while ((x < x0 || x > x1 || z < z0 || z > z1) && d > 1.5);
+      const dd = Math.hypot(x - player.pos.x, z - player.pos.z); if (!pick || dd > pick.dd + 0.5) pick = { x, z, dd }; if (dd >= 4.5) break;
+    }
+    K.startFlicker({ x: Math.min(x1, Math.max(x0, pick.x)), z: Math.min(z1, Math.max(z0, pick.z)) });
+  };
   K.fire = () => {
     if (!K.active || K.state !== 'fight' || !K.armed || K.cool > 0 || K.hide > 0) return;
     if (player.speedNow > 0.18) return;                    // non si spara camminando: molla il joystick, ti fermi, poi spari     // almeno 1 s tra un colpo e l'altro: niente raffica
@@ -100,7 +109,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     muzzle.material.opacity = 1; gunMats.forEach((m) => m.color.setRGB(0.55, 0.5, 0.45)); muzzle.rotation.z = Math.random() * 6; K.flashT = 0.07; flash.intensity = 160; flash.position.copy(camera.position).add(fwd.set(0, 0, -0.4).applyQuaternion(camera.quaternion));
     try { navigator.vibrate?.(30); } catch (_) {}
     // il colpo non la prende mai: nel lampo lei non c'è già più, e riappare più vicina in un altro punto
-    K.idle = 0; K.sched = 0; instab.push(0.9, 3); K.tx = null; K.startFlicker(sidePoint(Math.max(5, Math.min(8.5, K.D))));
+    K.idle = 0; K.sched = 0; instab.push(0.9, 3); K.tx = null; if (K.ammo <= 0) K.beginRush(); else K.startFlicker(sidePoint(Math.max(5, Math.min(8.5, K.D))));
   };
   K.setAim = (on) => { K.aiming = on; };
   K.hideAll = () => { gun.visible = false; K.active = false; K.armed = false; mon.visible = false; muzzle.material.opacity = 0; ui.show(false); ui.aimAll?.(false); };
@@ -149,14 +158,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
           K.M.x += dx / dd * Math.min(dd, sp * dt); K.M.z += dz / dd * Math.min(dd, sp * dt); K.stp = (K.stp || 0) + dt; if (K.stp > 0.22) { K.stp = 0; audio.heavyStep(mon.position, 1.1); player.addShake(0.25); }
           monPlace(); mon.visible = true;
         } else {
-        if ((K.ammo <= 0 && K.cool <= 0) || K.t > 20) {   // colpi finiti, oppure sono passati 20 s di teletrasporti: jump scare
-          K.fin = true; K.finT = 0; K.sched = 0; K.tx = null; const view = Math.atan2(player.forward.z, player.forward.x), [x0, x1, z0, z1] = bounds(); let pick = null;
-          for (const da of [0, 0.3, -0.3, 0.6, -0.6]) {   // parte dalla direzione in cui guardi, con più spazio possibile (~5 m)
-            let d = 5.5, x, z; do { x = player.pos.x + Math.cos(view + da) * d; z = player.pos.z + Math.sin(view + da) * d; d -= 0.3; } while ((x < x0 || x > x1 || z < z0 || z > z1) && d > 1.5);
-            const dd = Math.hypot(x - player.pos.x, z - player.pos.z); if (!pick || dd > pick.dd + 0.5) pick = { x, z, dd }; if (dd >= 4.5) break;
-          }
-          K.startFlicker({ x: Math.min(x1, Math.max(x0, pick.x)), z: Math.min(z1, Math.max(z0, pick.z)) });
-        }
+        if (K.t > 20) K.beginRush();   // sono passati 20 s di teletrasporti: jump scare
         // RITMO FISSO, anche se non spari: a 3 s fa un passo verso il punto successivo del percorso (si sente il tonfo); a 4.5 s la luce sfarfalla
         // e si sposta di colpo al punto seguente. Non dipende da te: puoi camminare, guardare dove vuoi, restare fermo.
         K.sched = (K.sched || 0) + dt; monPlace();
@@ -168,7 +170,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
       fwd.set(player.forward.x, 0, player.forward.z); const facing = fwd.dot(K.axis ?? fwd) > 0.3;   // (K.axis = dal giocatore verso la creatura)
       K.turnedOnce ||= facing;
       if (!K.turnedOnce && K.t > 5 && !K.said) { K.said = true; say('girati.', 4500); }
-      if (K.D <= 1.5 && !(K.hide > 0)) { K.state = 'disarm'; K.t = 0; ui.cool?.(false); }
+      if (K.D <= 1.5 && !(K.hide > 0)) { K.state = 'over'; K.hideAll(); ui.cool?.(false); player.speedMul = 1; player.lookMul = 1; lights.override = null; scare.trigger(K.kind, K.text); }
     } else if (K.state === 'disarm') {
       // ti afferra la mano e ti strappa la pistola: l'arma vola via
       if (K.t < 0.02 && !K.knock) { K.knock = true; knocked = 0.0001; kv.set(0.5, 0.5, 0.3); audio.heavyStep(mon.position, 1.2); audio.clatter(); player.addShake(1.1); player.yaw += 0.35; player.pitch -= 0.25; pose = 'low'; lights.torchStutter(0.3); ui.show(false); try { navigator.vibrate?.([80, 30, 120]); } catch (_) {} }
