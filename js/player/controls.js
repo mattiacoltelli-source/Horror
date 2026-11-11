@@ -10,7 +10,7 @@ export function createControls(el = document.body) {
 
   el.addEventListener('pointerdown', (e) => {
     if (!st.enabled || e.target.closest('button')) return;
-    const left = e.clientX < innerWidth * 0.5;
+    const left = e.clientX < innerWidth * 0.5 && !st.aimAll;   // in combattimento ovunque tocchi = mira
     if (left && mp === null) {
       mp = e.pointerId; mo = { x: e.clientX, y: e.clientY };
       stick.style.left = e.clientX + 'px'; stick.style.top = e.clientY + 'px'; stick.style.opacity = 1;

@@ -47,10 +47,11 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     K.kind = kind; K.text = text; K.active = true; K.state = 'fight'; K.t = 0; K.hits = 0; K.shots = 0; K.cool = 0; K.hide = 0; K.lat = 0; K.ammo = 6; K.D = 13; K.stepT = 1.5; K.said = false; K.turnedOnce = false;
     if (!K.armed) K.give();
     await K.setMonster(kind); K.from = from.clone();           // punto da cui il mostro si avvicina (verso il giocatore)
-    mon.visible = true; pose = 'ready'; player.speedMul = 0; ui.show(true); instab.set(0.9, 60);
+    mon.visible = true; pose = 'ready'; player.speedMul = 0; player.lookMul = 0.8; ui.aimAll?.(true); ui.show(true); instab.set(0.9, 60);
     audio.duck(0.3, 0.5);
   };
   const monPlace = () => { const d = new THREE.Vector3(player.pos.x - K.from.x, 0, player.pos.z - K.from.z).normalize(); const lat = K.lat || 0; mon.position.set(player.pos.x - d.x * K.D - d.z * lat, 0, player.pos.z - d.z * K.D + d.x * lat); mon.rotation.y = Math.atan2(d.x + (d.z * lat) / Math.max(1, K.D) * 0.0, d.z); K.axis = d; };
+  const HIDE = 0.6;   // durata del farfallio che copre il teletrasporto
   const SHOT_D = [10.6, 8.4, 6.3, 4.5, 2.9, 1.3];   // distanza dopo ogni colpo: sempre più vicina, qualunque cosa tu faccia
 
   K.fire = () => {
@@ -60,7 +61,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     muzzle.material.opacity = 1; muzzle.rotation.z = Math.random() * 6; K.flashT = 0.07; flash.intensity = 160; flash.position.copy(camera.position).add(fwd.set(0, 0, -0.4).applyQuaternion(camera.quaternion));
     try { navigator.vibrate?.(30); } catch (_) {}
     // il colpo non la prende mai: nel lampo lei non c'è già più, e riappare più vicina in un altro punto
-    K.hide = 0.34; instab.push(0.9, 3);
+    K.hide = HIDE; K.moved = false; instab.push(0.9, 3); lights.torchStutter(HIDE); lights.lamp(0, 'flicker', HIDE); lights.lamp(1, 'flicker', HIDE); audio.lightOn?.();
   };
   K.setAim = (on) => { K.aiming = on; };
 
@@ -79,7 +80,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
       flash.intensity *= Math.pow(0.0005, dt);                          // il lampo svanisce in un attimo
       // mirare = più zoom e più precisione
       const baseFov = camera.userData.baseFov ?? 68; camera.fov += (baseFov - a * 14 - camera.fov) * Math.min(1, dt * 12); camera.updateProjectionMatrix();
-      player.lookMul = 1 - a * 0.55;
+      if (!K.active) player.lookMul = 1;
     }
     // recupero del rinculo
     if (K.recoil > 0) { const r = Math.min(K.recoil, dt * 0.25); K.recoil -= r; player.pitch -= r * 0.8; }
@@ -89,11 +90,17 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
       // cadenza e teletrasporto
       if (K.cool > 0) { K.cool -= dt; if (K.cool <= 0) ui.cool?.(false); }
       if (K.hide > 0) {
-        K.hide -= dt; mon.visible = false;
-        if (K.hide <= 0) {
-          K.D = Math.min(K.D, SHOT_D[Math.min(5, K.shots - 1)]); K.lat = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 1.1) * Math.min(1, K.D / 6); K.stepT = 1.6 + Math.random() * 0.5;
-          monPlace(); mon.visible = true; audio.heavyStep(mon.position, 0.9); lights.torchStutter(0.12);
+        // FARFALLIO: la luce sfarfalla a raffica; il mostro compare a tratti nel vecchio posto, c'è un vero buio di ~0.1 s in cui si sposta,
+        // poi riappare a tratti nel nuovo posto. Non si vede mai il salto: si vede solo che, tra un guizzo e l'altro, è più vicino.
+        K.hide -= dt; const el = HIDE - K.hide;
+        if (el >= 0.26 && !K.moved) {
+          K.moved = true; K.D = Math.min(K.D, SHOT_D[Math.min(5, K.shots - 1)]); K.lat = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 1.1) * Math.min(1, K.D / 6); K.stepT = 1.6 + Math.random() * 0.5; audio.heavyStep(mon.position, 0.9);
         }
+        monPlace();
+        const dark = el > 0.2 && el < 0.34, strobe = Math.sin(el * 83) + Math.sin(el * 47 + 1) > -0.6;
+        mon.visible = !dark && (el < 0.2 ? strobe : (el < 0.5 ? strobe : true));
+        lights.override = dark ? 0 : (strobe ? null : 0.12 * 34);     // la torcia segue il guizzo; fuori dal farfallio torna normale
+        if (K.hide <= 0) { mon.visible = true; lights.override = null; K.moved = false; monPlace(); }
       } else {
         // fra un colpo e l'altro avanza lentamente a scatti (passi pesanti dietro di te) e si ferma
         K.stepT -= dt;
@@ -108,7 +115,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     } else if (K.state === 'disarm') {
       // ti afferra la mano e ti strappa la pistola: l'arma vola via
       if (K.t < 0.02 && !K.knock) { K.knock = true; knocked = 0.0001; kv.set(0.5, 0.5, 0.3); audio.heavyStep(mon.position, 1.2); audio.clatter(); player.addShake(1.1); player.yaw += 0.35; player.pitch -= 0.25; pose = 'low'; lights.torchStutter(0.3); ui.show(false); try { navigator.vibrate?.([80, 30, 120]); } catch (_) {} }
-      if (K.t > 1.0) { K.state = 'over'; K.active = false; mon.visible = false; player.speedMul = 1; scare.trigger(K.kind, K.text); }
+      if (K.t > 1.0) { K.state = 'over'; K.active = false; mon.visible = false; player.speedMul = 1; player.lookMul = 1; ui.aimAll?.(false); scare.trigger(K.kind, K.text); }
     }
   };
   return K;
