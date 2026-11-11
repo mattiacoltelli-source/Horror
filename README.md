@@ -6,7 +6,7 @@ Horror psicologico in prima persona, verticale (9:16), per browser mobile. Sito 
 
 Finali: **A** non ti sei girato · **B** ti sei girato · **C** (segreto) hai guardato lo specchio fino in fondo.
 
-Combattimento: pistola a 4 colpi, MIRA (tieni premuto) e SPARA; il mostro ti disarma sempre.
+Combattimento: pistola a 4 colpi; trascini per guardare, joystick per camminare piano, ma per sparare devi fermarti (SPARA); il mostro ti disarma sempre.
 
 Scorciatoie per provare: `?start=porta` · `?start=cantina` · `?start=torre` (con `&turned=1` o `&mirror=1`).
 

@@ -50,15 +50,16 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     K.kind = kind; K.text = text; K.active = true; K.state = 'fight'; K.t = 0; K.hits = 0; K.shots = 0; K.cool = 0; K.hide = 0; K.lat = 0; K.ammo = 4; K.D = 13; K.stepT = 1.5; K.said = false; K.turnedOnce = false;
     if (!K.armed) K.give();
     await K.setMonster(kind); K.from = from.clone();           // punto da cui il mostro si avvicina (verso il giocatore)
-    mon.visible = true; pose = 'ready'; player.speedMul = 0; player.lookMul = 0.8; ui.aimAll?.(true); ui.show(true); instab.set(0.9, 60);
+    mon.visible = true; pose = 'ready'; player.speedMul = 0.55; player.lookMul = 0.8; ui.show(true);   // puoi camminare piano; per sparare devi fermarti instab.set(0.9, 60);
     audio.duck(0.3, 0.5);
   };
-  const monPlace = () => { const d = new THREE.Vector3(player.pos.x - K.from.x, 0, player.pos.z - K.from.z).normalize(); const lat = K.lat || 0; mon.position.set(player.pos.x - d.x * K.D - d.z * lat, 0, player.pos.z - d.z * K.D + d.x * lat); mon.rotation.y = Math.atan2(d.x + (d.z * lat) / Math.max(1, K.D) * 0.0, d.z); K.axis = d; };
+  const monPlace = () => { if (!K.from) return; const d = new THREE.Vector3(player.pos.x - K.from.x, 0, player.pos.z - K.from.z).normalize(); const lat = K.lat || 0; mon.position.set(player.pos.x - d.x * K.D - d.z * lat, 0, player.pos.z - d.z * K.D + d.x * lat); mon.rotation.y = Math.atan2(d.x + (d.z * lat) / Math.max(1, K.D) * 0.0, d.z); K.axis = d; };
   const HIDE = 0.6;   // durata del farfallio che copre il teletrasporto
   const SHOT_D = [9.8, 6.6, 3.9, 1.3];   // distanza dopo ogni colpo: sempre più vicina, qualunque cosa tu faccia
 
   K.fire = () => {
-    if (!K.active || K.state !== 'fight' || !K.armed || K.cool > 0 || K.hide > 0) return;     // almeno 1 s tra un colpo e l'altro: niente raffica
+    if (!K.active || K.state !== 'fight' || !K.armed || K.cool > 0 || K.hide > 0) return;
+    if (player.speedNow > 0.18) return;                    // non si spara camminando: molla il joystick, ti fermi, poi spari     // almeno 1 s tra un colpo e l'altro: niente raffica
     if (K.ammo <= 0) { audio.dry(); return; }
     K.ammo--; K.shots = (K.shots || 0) + 1; K.cool = 1.0; ui.cool?.(true); audio.shot(1); K.recoil += 0.055; K.kick = 1; player.pitch += 0.05; player.yaw += (Math.random() - 0.5) * 0.022; player.addShake(0.3);
     muzzle.material.opacity = 1; gunMats.forEach((m) => m.color.setRGB(0.55, 0.5, 0.45)); muzzle.rotation.z = Math.random() * 6; K.flashT = 0.07; flash.intensity = 160; flash.position.copy(camera.position).add(fwd.set(0, 0, -0.4).applyQuaternion(camera.quaternion));
@@ -72,7 +73,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
   K.update = (dt, time) => {
     // viewmodel (anche fuori dal combattimento: arma bassa)
     if (gun.visible) {
-      K.aim = 0;   // niente mira: il puntino al centro dello schermo indica dove va il colpo
+      K.aim = 0; K.moving = player.speedNow > 0.18; if (K.active && K.state === 'fight') { pose = K.moving ? 'low' : 'ready'; ui.cool?.(K.cool > 0 || K.moving); }   // niente mira: il puntino al centro dello schermo indica dove va il colpo
       const base = poses[pose]; const a = K.aim;
       const tp = pz.set(...base.p).lerp(new THREE.Vector3(...poses.ads.p), a);
       const sway = Math.sin(time * 1.7) * 0.002 * (1 - a * 0.7);
@@ -93,7 +94,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     K.t += dt;
     if (K.state === 'fight') {
       // cadenza e teletrasporto
-      if (K.cool > 0) { K.cool -= dt; if (K.cool <= 0) ui.cool?.(false); }
+      if (K.cool > 0) K.cool -= dt;
       if (K.hide > 0) {
         // FARFALLIO: la luce sfarfalla a raffica; il mostro compare a tratti nel vecchio posto, c'è un vero buio di ~0.1 s in cui si sposta,
         // poi riappare a tratti nel nuovo posto. Non si vede mai il salto: si vede solo che, tra un guizzo e l'altro, è più vicino.
@@ -120,7 +121,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     } else if (K.state === 'disarm') {
       // ti afferra la mano e ti strappa la pistola: l'arma vola via
       if (K.t < 0.02 && !K.knock) { K.knock = true; knocked = 0.0001; kv.set(0.5, 0.5, 0.3); audio.heavyStep(mon.position, 1.2); audio.clatter(); player.addShake(1.1); player.yaw += 0.35; player.pitch -= 0.25; pose = 'low'; lights.torchStutter(0.3); ui.show(false); try { navigator.vibrate?.([80, 30, 120]); } catch (_) {} }
-      if (K.t > 1.0) { K.state = 'over'; K.active = false; mon.visible = false; player.speedMul = 1; player.lookMul = 1; ui.aimAll?.(false); scare.trigger(K.kind, K.text); }
+      if (K.t > 1.0) { K.state = 'over'; K.active = false; mon.visible = false; player.speedMul = 1; player.lookMul = 1; scare.trigger(K.kind, K.text); }
     }
   };
   return K;
