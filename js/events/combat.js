@@ -49,11 +49,32 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
   K.begin = async (kind, text, from) => {
     K.kind = kind; K.text = text; K.active = true; K.state = 'fight'; K.t = 0; K.hits = 0; K.shots = 0; K.cool = 0; K.hide = 0; K.lat = 0; K.ammo = 4; K.D = 13; K.stepT = 1.5; K.said = false; K.turnedOnce = false;
     if (!K.armed) K.give();
-    await K.setMonster(kind); K.from = from.clone();           // punto da cui il mostro si avvicina (verso il giocatore)
+    await K.setMonster(kind); K.from = from.clone(); K.M = { x: from.x, z: from.z }; K.Dt = null;           // punto da cui il mostro si avvicina (verso il giocatore)
     mon.visible = true; pose = 'ready'; player.speedMul = 0.55; player.lookMul = 0.8; ui.show(true);   // puoi camminare piano; per sparare devi fermarti instab.set(0.9, 60);
     audio.duck(0.3, 0.5);
   };
-  const monPlace = () => { if (!K.from) return; const d = new THREE.Vector3(player.pos.x - K.from.x, 0, player.pos.z - K.from.z).normalize(); const lat = K.lat || 0; mon.position.set(player.pos.x - d.x * K.D - d.z * lat, 0, player.pos.z - d.z * K.D + d.x * lat); mon.rotation.y = Math.atan2(d.x + (d.z * lat) / Math.max(1, K.D) * 0.0, d.z); K.axis = d; };
+  // LA SUORA VIVE NEL MONDO: ha una posizione fissa nella stanza (K.M) che non dipende da dove guardi né dagli spostamenti dello schermo.
+  // Cambia solo quando cammina (verso di te), quando si sposta di lato, o quando si teletrasporta in un punto prestabilito.
+  const bounds = () => { const b = player.box; return b ? [b[0] + 0.5, b[1] - 0.5, b[2] + 0.5, b[3] - 0.5] : [-6, 6, -318, -302]; };
+  const clampM = () => { const [x0, x1, z0, z1] = bounds(); K.M.x = Math.min(x1, Math.max(x0, K.M.x)); K.M.z = Math.min(z1, Math.max(z0, K.M.z)); };
+  // punti prestabiliti: 12 direzioni fisse (ogni 30°) attorno al giocatore; scelgo tra quelle più vicine alla sua direzione di sguardo AL MOMENTO
+  // del teletrasporto (tendenzialmente la vedi comparire), poi la posizione resta ferma nel mondo.
+  const spot = (dist) => {
+    const yaw = player.yaw, view = Math.atan2(-Math.cos(yaw), -Math.sin(yaw));            // direzione di sguardo nel piano (x = cos, z = sin)
+    const [x0, x1, z0, z1] = bounds(), cands = [];
+    for (let k = 0; k < 12; k++) {
+      const a = k * Math.PI / 6, px = Math.min(x1, Math.max(x0, player.pos.x + Math.cos(a) * dist)), pz = Math.min(z1, Math.max(z0, player.pos.z + Math.sin(a) * dist));
+      const dEff = Math.hypot(px - player.pos.x, pz - player.pos.z), diff = Math.abs(Math.atan2(Math.sin(a - view), Math.cos(a - view)));
+      if (dEff >= Math.min(dist * 0.8, dist - 0.4)) cands.push({ diff, px, pz });          // scarto i punti schiacciati contro i muri
+    }
+    cands.sort((u, v) => u.diff - v.diff); const pool = cands.filter((c) => c.diff < 0.8).slice(0, 3), use = pool.length ? pool : cands.slice(0, 3);
+    const c = use[Math.floor(Math.random() * use.length)] ?? { px: K.M.x, pz: K.M.z }; K.M.x = c.px; K.M.z = c.pz; K.Dt = null;
+  };
+  const monPlace = () => {
+    if (!K.M) return; const dx = player.pos.x - K.M.x, dz = player.pos.z - K.M.z; K.D = Math.hypot(dx, dz);
+    mon.position.set(K.M.x, 0, K.M.z); mon.rotation.y = Math.atan2(dx, dz);                     // ti guarda sempre; se esce dallo schermo non importa
+    K.axis = new THREE.Vector3(-dx, 0, -dz).normalize();
+  };
   const HIDE = 0.6;   // durata del farfallio che copre il teletrasporto
   const SHOT_D = [9.8, 6.6, 3.9, 1.3];   // distanza dopo ogni colpo: sempre più vicina, qualunque cosa tu faccia
 
@@ -100,7 +121,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
         // poi riappare a tratti nel nuovo posto. Non si vede mai il salto: si vede solo che, tra un guizzo e l'altro, è più vicino.
         K.hide -= dt; const el = HIDE - K.hide;
         if (el >= 0.26 && !K.moved) {
-          K.moved = true; K.D = Math.min(K.D, SHOT_D[Math.min(3, K.shots - 1)]); K.Dt = K.D; K.idle = 0; K.lat = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 1.1) * Math.min(1, K.D / 6); K.stepT = 1.6 + Math.random() * 0.5; audio.heavyStep(mon.position, 0.9);
+          K.moved = true; K.idle = 0; K.stepT = 1.6 + Math.random() * 0.5; spot(SHOT_D[Math.min(3, K.shots - 1)]); audio.heavyStep(mon.position, 0.9);
         }
         monPlace();
         const dark = el > 0.2 && el < 0.34, strobe = Math.sin(el * 83) + Math.sin(el * 47 + 1) > -0.6;
@@ -108,22 +129,23 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
         lights.override = dark ? 0 : (strobe ? null : 0.12 * 34);     // la torcia segue il guizzo; fuori dal farfallio torna normale
         if (K.hide <= 0) { mon.visible = true; lights.override = null; K.moved = false; monPlace(); }
       } else {
-        // NON ASPETTA: tra un colpo e l'altro si muove. Avanza a passi pesanti, ogni tanto finta (arretra un poco), si sposta di lato;
-        // più tempo passa senza che tu spari, più si fa sotto. Il tetto è la distanza dell'ultimo colpo: non si allontana mai più di così.
-        K.idle = (K.idle || 0) + dt; K.stepT -= dt;
+        // NON ASPETTA: tra un colpo e l'altro cammina nel mondo verso di te a passi pesanti, ogni tanto finta (arretra) o si sposta di lato.
+        // Più tempo passa senza che tu spari, più si fa sotto. Il tetto è la distanza dell'ultimo colpo.
+        K.idle = (K.idle || 0) + dt; K.stepT -= dt; monPlace();
         const cap = K.shots > 0 ? SHOT_D[Math.min(3, K.shots - 1)] : 13;
         if (K.stepT <= 0) {
-          const pr = Math.min(1, K.idle / 7), roll = Math.random();
-          if (roll < 0.2 - 0.12 * pr && K.D < cap - 0.2 && K.D > 4.5) { K.Dt = Math.min(cap, K.D + 0.6 + Math.random() * 0.6); K.stepT = 0.85 + Math.random() * 0.4; }          // finta: arretra
-          else if (roll < 0.34) { K.latT = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 1.4) * Math.min(1, K.D / 5); K.stepT = 0.8 + Math.random() * 0.5; }         // si sposta di lato
-          else { K.Dt = Math.max(1.4, (K.Dt ?? K.D) - (0.6 + 0.5 * pr + Math.random() * 0.3)); K.stepT = 1.05 - 0.3 * pr + Math.random() * 0.35; audio.heavyStep(mon.position, 1); }   // si avvicina
+          const pr = Math.min(1, K.idle / 7), roll = Math.random(), ux = (player.pos.x - K.M.x) / Math.max(0.01, K.D), uz = (player.pos.z - K.M.z) / Math.max(0.01, K.D);
+          K.tx = K.M.x; K.tz = K.M.z;
+          if (roll < 0.2 - 0.12 * pr && K.D < cap - 0.4 && K.D > 4.5) { K.tx -= ux * (0.6 + Math.random() * 0.5); K.tz -= uz * (0.6 + Math.random() * 0.5); K.stepT = 0.85 + Math.random() * 0.4; }          // finta: arretra
+          else if (roll < 0.34) { const sd = (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 1.2); K.tx += -uz * sd; K.tz += ux * sd; K.stepT = 0.8 + Math.random() * 0.5; }                         // si sposta di lato
+          else { const st = 0.6 + 0.5 * pr + Math.random() * 0.3; K.tx += ux * st; K.tz += uz * st; K.stepT = 1.05 - 0.3 * pr + Math.random() * 0.35; audio.heavyStep(mon.position, 1); }                     // si avvicina
+          if (Math.hypot(player.pos.x - K.tx, player.pos.z - K.tz) > cap) { K.tx = K.M.x; K.tz = K.M.z; }              // mai più lontana del tetto
         }
-        if (K.Dt == null) K.Dt = K.D; K.Dt = Math.min(K.Dt, cap);
-        K.D += (K.Dt - K.D) * Math.min(1, dt * 3.2); K.lat = K.lat ?? 0; K.lat += ((K.latT ?? 0) - K.lat) * Math.min(1, dt * 1.6);
-        monPlace(); mon.position.x += Math.sin(time * 2.2) * 0.02; mon.visible = K.D < 16;
+        if (K.tx != null) { const f = Math.min(1, dt * 3.2); K.M.x += (K.tx - K.M.x) * f; K.M.z += (K.tz - K.M.z) * f; clampM(); }
+        monPlace(); mon.visible = true;
       }
       // se non ti sei ancora girato
-      fwd.set(player.forward.x, 0, player.forward.z); const facing = fwd.dot(K.axis ? K.axis.clone().multiplyScalar(-1) : fwd) > 0.3;
+      fwd.set(player.forward.x, 0, player.forward.z); const facing = fwd.dot(K.axis ?? fwd) > 0.3;   // (K.axis = dal giocatore verso la creatura)
       K.turnedOnce ||= facing;
       if (!K.turnedOnce && K.t > 5 && !K.said) { K.said = true; say('girati.', 4500); }
       if (K.D <= 1.5 && !(K.hide > 0)) { K.state = 'disarm'; K.t = 0; ui.cool?.(false); }
