@@ -87,6 +87,7 @@ LAMPS.forEach((z, i) => place('assets/models/lamp.glb', 0.32, 0, H0 + W - 0.62, 
   const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.5, 5), new THREE.MeshBasicMaterial({ color: 0x050505 }));
   cord.position.set(0, H0 + W - 0.2, z); scene.add(cord);
 }));
+place('assets/models/slamp2.glb', 0.9, 1.15, 1.55, -17, -Math.PI / 2); place('assets/models/slamp2.glb', 0.9, 1.15, 1.55, -39, -Math.PI / 2);
 place('assets/models/can.glb', 0.12, -0.7, 0, -4.5, 0.6);
 place('assets/models/can.glb', 0.12, 0.55, 0, -29, 2.1);
 place('assets/models/tank.glb', 0.55, -W + 0.3, 0, -36, 0.3);

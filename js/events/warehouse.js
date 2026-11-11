@@ -27,8 +27,13 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   prop('assets/models/pistol.glb', 0.13, 0.12, 0.97, cartZ + 0.15, 0.6, (o) => { o.rotation.x = -Math.PI / 2 + 0.0; pistol = o; });
   prop('assets/models/ammo.glb', 0.18, -0.2, 0.97, cartZ - 0.1, 0.3, (o) => { ammo = o; });
   // lampada sopra il carrello (è l'unica luce forte della sala)
-  const lampPos = [[0, 5.6, WH.z0 - 6], [0, 5.6, WH.z0 - 16], [0, 4.2, cartZ]];
-  loader.load('assets/models/lamp.glb', (g) => { for (const [x, y, z] of lampPos) { const o = g.scene.clone(true); const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(0.34 / (b.max.y - b.min.y)); b.setFromObject(o); o.position.set(x - (b.max.x + b.min.x) / 2, y - b.max.y, z); W.group.add(o); const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 6.5 - y, 5), new THREE.MeshBasicMaterial({ color: 0 })); cord.position.set(x, y + (6.5 - y) / 2, z); W.group.add(cord); } });
+  const lampPos = [[0, 5.0, WH.z0 - 6], [0, 5.0, WH.z0 - 16], [0, 5.0, cartZ], [5.5, 3.9, WH.z0 - 22]];   // l'ultima: faro con sensore di movimento
+  loader.load('assets/models/hlamp.glb', (g) => { for (const [x, , z] of lampPos.slice(0, 3)) { const o = g.scene.clone(true); o.position.set(x, WH.h, z); W.group.add(o); } });
+  // faro di sicurezza con sensore (si accende da solo quando passi, poi si spegne)
+  let sec = null; const secMats = [];
+  loader.load('assets/models/seclight.glb', (g) => { sec = g.scene; sec.position.set(5.85, 4.1, WH.z0 - 22); sec.rotation.y = Math.PI / 2; sec.traverse((m) => { if (m.isMesh && m.material.emissive) { m.material = m.material.clone(); m.material.emissive.set(0xdfe8d8); secMats.push(m.material); } }); W.group.add(sec); });
+  // lampade a muro industriali lungo le pareti
+  [[-5.85, -8, Math.PI / 2], [5.85, -18, -Math.PI / 2], [-5.85, -24, Math.PI / 2], [5.85, -31, -Math.PI / 2]].forEach(([x, dz, ry]) => prop('assets/models/wlamp.glb', 0.43, x, 2.7, WH.z0 + dz, ry));
   // porta d'uscita
   const door = new THREE.Group(); door.position.set(0, 0, zFar + 0.15); W.group.add(door); let L = null, R = null;
   loader.load('assets/models/door.glb', (g) => { const m = g.scene; L = m.getObjectByName('large_castle_door_left'); R = m.getObjectByName('large_castle_door_right'); L?.rotation.set(0, 0, 0); R?.rotation.set(0, 0, 0); m.rotation.y = Math.PI; door.add(m); });
@@ -50,16 +55,18 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   W.enter = () => {
     W.group.visible = true; W.taken = false; W.state = 'walk'; W.t = 0; W.beat = false; gateT = 0; if (leaf) leaf.rotation.y = 0;
     player.box = W.box; player.pos.set(0.3, 1.62, WH.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
-    lights.setLamps(lampPos.slice(0, 2).concat([lampPos[2]]), 2.2); scene.fog.density = 0.032; audio.duck(1, 1.5); instab.set(0.08, 6);
+    lights.setLamps(lampPos, 2.2); lights.lamp(3, 'off'); W.sec = 0; scene.fog.density = 0.032; audio.duck(1, 1.5); instab.set(0.08, 6);
   };
   W.leave = () => { W.group.visible = false; };
 
   const dv = new THREE.Vector3(), fw = new THREE.Vector3(), tmp = new THREE.Vector3(); let steps = 0, stepT = 0, doorT = 0;
   W.update = (dt) => {
     if (!W.group.visible) return; const P = player.pos; W.t += dt;
-    // piccolo presagio a metà sala: sfarfallio e una sagoma lontana tra gli scaffali che sparisce
-    if (!W.beat && P.z < WH.z0 - 12) { W.beat = true; lights.lamp(0, 'flicker', 1.2); lights.lamp(1, 'flicker', 1.2); shade.position.set(-4.4, 0, WH.z0 - 24); shade.rotation.y = 0.5; shade.visible = true; audio.whisper(1.8, 0.14); instab.push(0.7, 5); }
-    if (shade.visible && P.z < WH.z0 - 18) { shade.visible = false; lights.lamp(0, 'flicker', 0.5); }
+    // faro con sensore: passi nel suo raggio e si accende con un tonfo; qualcuno è già lì, fermo, nella luce. Poi si spegne.
+    if (W.sec === 0 && P.z < WH.z0 - 12) { W.sec = 1; W.secT = 0; lights.lamp(3, 'flicker', 0.5); shade.position.set(3.6, 0, WH.z0 - 22.5); shade.rotation.y = Math.PI / 2 + 0.2; shade.visible = true; audio.lightOn(); audio.whisper(1.6, 0.12); instab.push(0.7, 5); player.addShake(0.15); }
+    if (W.sec === 1) { W.secT += dt; secMats.forEach((m) => (m.emissiveIntensity = 2.2 * (lights.lamps[3]?.level ?? 0)));
+      if (W.secT > 0.55 && W.secT < 0.6) lights.lamp(3, 'on');
+      if ((W.secT > 4.2 || P.z < WH.z0 - 19) && W.secT > 1.2) { W.sec = 2; shade.visible = false; lights.lamp(3, 'off'); audio.lightOn(); secMats.forEach((m) => (m.emissiveIntensity = 0)); } }
     // pulsante PRENDI vicino al carrello
     dv.set(0 - P.x, 0, cartZ - P.z); const dd = dv.length(); dv.normalize(); fw.set(player.forward.x, 0, player.forward.z).normalize();
     const near = !W.taken && dd < 2.1 && fw.dot(dv) > 0.5; if (near !== W.near) { W.near = near; actBtn.textContent = 'PRENDI'; actBtn.classList.toggle('hidden', !near); }

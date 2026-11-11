@@ -23,7 +23,8 @@ void main(){
   float b = uBlur;
   for(int i=-2;i<=2;i++) for(int j=-2;j<=2;j++) r += texture2D(tRoom, sc+vec2(float(i),float(j))*uTexel*b).rgb;
   r /= 25.;
-  r *= uLight*.5;
+  r *= uLight*.95;
+  r += r*r*0.9;                      // alone: la luce si espande oltre il suo bordo, come in un vetro smerigliato vero
   vec3 tint = vec3(.30,.36,.34);
   vec3 col = r*.82 + tint*(.07+.13*n)*(.35+uLight*.65);
   col = max(col, tint*0.05);           // anche a stanza spenta il vetro non è nero
@@ -92,9 +93,9 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
   const black = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false });
   // parete luminosa dietro la sagoma: controluce freddo con gradiente (è ciò che rende leggibile la silhouette)
   const gc = document.createElement('canvas'); gc.width = 256; gc.height = 256; const gg = gc.getContext('2d');
-  const grd = gg.createRadialGradient(128, 118, 8, 128, 128, 150); grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(.5, 'rgba(255,255,255,.9)'); grd.addColorStop(.8, 'rgba(255,255,255,.4)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+  const grd = gg.createRadialGradient(128, 128, 2, 128, 128, 128); grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(.12, 'rgba(255,255,255,.85)'); grd.addColorStop(.35, 'rgba(255,255,255,.28)'); grd.addColorStop(.65, 'rgba(255,255,255,.06)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
   gg.fillStyle = grd; gg.fillRect(0, 0, 256, 256);
-  const wall = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gc), color: new THREE.Color(0.95, 1.05, 1.0), transparent: true, toneMapped: false }));
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gc), color: new THREE.Color(1.0, 0.86, 0.62), transparent: true, toneMapped: false, depthWrite: false }));
   wall.position.set(CX + 6.6, 1.5, CZ); wall.rotation.y = -Math.PI / 2; room.add(wall); E.wall = wall;
   setLayer(room);
 
@@ -221,7 +222,11 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
         break;
     }
     light += (targetLight - light) * Math.min(1, dt * (targetLight > light ? 0.5 : 6));
-    mat.uniforms.uLight.value = light;
+    // la lampada dietro il vetro respira (onda lenta + tremolio) e ogni tanto cala: la sagoma si vede, poi non più
+    E.dip = (E.dip || 0) - dt; let pf = 0.62 + 0.26 * Math.sin(time * 1.7) + 0.07 * Math.sin(time * 6.3 + 1) + 0.03 * Math.sin(time * 47);
+    if (E.dip > 0) pf = 0.1 + Math.random() * 0.08; else if (Math.random() < dt * 0.2) E.dip = 0.08 + Math.random() * 0.16;
+    if (E.state === 'slam') pf = 1.25;
+    mat.uniforms.uLight.value = light * pf; wall.material.opacity = Math.min(1, pf * 1.05) * light;
     mat.uniforms.uShake.value = shake;
     mat.uniforms.uHand.value = hand;
     mat.uniforms.uBlur.value = blur;
@@ -230,7 +235,7 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
       actions.Walk?.setEffectiveWeight(walkW); actions.Idle?.setEffectiveWeight(1 - walkW); mixer.update(dt);
     }
     ent.position.set(ex, 0, ez + sway);
-    wall.position.set(ex + 0.9, 1.45, ez + sway * 0.5);
+    wall.position.set(ex + 0.9, 2.4, ez + 0.55 + sway * 0.5);
     ent.rotation.y = -Math.PI / 2 + Math.sin(time * 0.7) * 0.03; // di fronte al corridoio (verso -x)
     ent.scale.setScalar(entScale);
   };

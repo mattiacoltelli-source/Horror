@@ -56,6 +56,10 @@ export function createLights(scene, camera) {
           L.modeT -= dt;
           k = (Math.sin(L.t * 60) > 0.2 ? 1 : 0.05) * (Math.random() > 0.15 ? 1 : 0);
           if (L.modeT <= 0) L.mode = 'on';
+        } else if (L.mode === 'pulse') {
+          // lampadina che respira: onda lenta + tremolio, ogni tanto un calo breve (filamento che cede)
+          if (L.dip > 0) { L.dip -= dt; k = 0.12 + Math.random() * 0.1; }
+          else { k = 0.62 + 0.26 * Math.sin(L.t * 1.9 + L.i * 2.1) + 0.07 * Math.sin(L.t * 7.3 + L.i) + 0.03 * Math.sin(L.t * 51); if (Math.random() < dt * 0.22) L.dip = 0.07 + Math.random() * 0.16; }
         } else {
           // lampade vecchie: leggero ronzio, rari sfarfallii casuali
           k = 0.9 + Math.sin(L.t * 3.1 + L.i) * 0.03;
