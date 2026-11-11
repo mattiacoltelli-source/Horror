@@ -93,8 +93,9 @@ function handsTexture() {
     if (!A || !C) return;
     g.clearRect(0, 0, 512, 256); g.filter = 'blur(1.4px)';
     const hA = 104, wA = hA * A.width / A.height, hC = 98, wC = hC * C.width / C.height;   // mani grandi (creatura alta), ma non gigantesche
-    g.drawImage(A, 196 - wA / 2, 128 - hA / 2 - 8, wA, hA);
-    g.save(); g.translate(330, 0); g.scale(-1, 1); g.drawImage(C, -wC / 2, 128 - hC / 2, wC, hC); g.restore();
+    // pollici verso il centro: a sinistra la sagoma A specchiata, a destra la C com'è
+    g.save(); g.translate(196, 0); g.scale(-1, 1); g.drawImage(A, -wA / 2, 128 - hA / 2 - 8, wA, hA); g.restore();
+    g.drawImage(C, 330 - wC / 2, 128 - hC / 2, wC, hC);
     g.filter = 'none'; tex.needsUpdate = true;
   });
   return tex;
@@ -225,7 +226,7 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
       case 'silence':
         // silenzio totale: la lampada vicino si spegne un attimo, poi il colpo
         if (E.t > 0.6 && !silenceFired) { silenceFired = true; lights.lamp(1, 'off'); }
-        if (E.t > 1.7) { E.state = 'slam'; E.t = 0; lights.lamp(1, 'flicker', 1.2); audio.glassHit(glassPos, 1); audio.duck(0.15, 0.2); player.addShake(0.9); shake = 1; hand = 1; handDecay = 0; lunge = 1; mat.uniforms.uHandZ.value = ez; instab.set(1, 9); }
+        if (E.t > 1.7) { E.state = 'slam'; E.t = 0; lights.lamp(1, 'flicker', 1.2); audio.glassHit(glassPos, 1); audio.duck(0.15, 0.2); player.addShake(0.9); shake = 1; ent.visible = false; hand = 1; handDecay = 0; lunge = 1; mat.uniforms.uHandZ.value = ez; instab.set(1, 9); }
         break;
       case 'slam':
         entScale = 1 + 0.06 * lunge; ex = GLASS.x + 0.13 + 0.32 * (1 - lunge);

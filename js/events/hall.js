@@ -33,7 +33,16 @@ export function createHall({ scene, mats, lights }) {
   // la folla e il bagliore dietro di essa
   const crowd = new THREE.Group(); grp.add(crowd);
   const black = new THREE.MeshBasicMaterial({ color: 0x000000 });
-  const lit = new THREE.MeshStandardMaterial({ color: 0x1d1c1c, roughness: 0.92, metalness: 0 });   // la folla è illuminata davvero dalle lampade: si vede solo ciò che la luce raggiunge
+  // la folla: corpo quasi nero + SOLO contorno illuminato (rim) dalle lampade alle spalle. Più è vicina, più il corpo si spegne
+  // e resta il contorno: da vicino non si vedono i dettagli del modello, solo una sagoma con il bordo di luce.
+  const rimU = { value: 0 };
+  const mkLit = () => { const m = new THREE.MeshStandardMaterial({ color: 0x1d1c1c, roughness: 0.95, metalness: 0 });
+    m.onBeforeCompile = (sh) => { sh.uniforms.uRim = rimU; sh.uniforms.uNear = { value: 0 }; m.userData.sh = sh;
+      sh.fragmentShader = 'uniform float uRim; uniform float uNear;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        float rimF = pow(1.0 - clamp(dot(normalize(vNormal), normalize(vViewPosition)), 0.0, 1.0), 5.0);
+        float topF = clamp(normalize(vNormal).y * 0.5 + 0.55, 0.0, 1.0);                       // il bordo si accende dove la luce arriva da dietro e dall'alto
+        totalEmissiveRadiance += vec3(1.0, 0.58, 0.26) * rimF * topF * uRim * (0.16 + 0.22 * uNear);`); };
+    m.customProgramCacheKey = () => 'crowdrim'; return m; };
   const loader = new GLTFLoader();
   Promise.all(TYPES.map(([n, h]) => new Promise((res) => loader.load(`assets/models/m_${n}.glb`, (gl) => {
     const geos = []; gl.scene.updateMatrixWorld(true);
@@ -46,7 +55,7 @@ export function createHall({ scene, mats, lights }) {
   }, undefined, () => res(null))))).then((geos) => {
     LAYOUT.forEach(([x, z, t], i) => {
       const ge = geos[t]; if (!ge) return;
-      const m = new THREE.Mesh(ge, lit); m.position.set(x * 0.6 + Math.sin(i * 7.3) * 0.3, 0, z + Math.cos(i * 3.1) * 0.4);
+      const m = new THREE.Mesh(ge, mkLit()); m.userData.crowd = true; m.position.set(x * 0.6 + Math.sin(i * 7.3) * 0.3, 0, z + Math.cos(i * 3.1) * 0.4);
       m.rotation.y = Math.sin(i * 5.7) * 0.28; m.matrixAutoUpdate = true; crowd.add(m);
     });
     H.geos = geos; H.ready = true; pending.forEach(([m, i]) => { if (geos[i]) m.geometry = geos[i]; });
@@ -72,13 +81,20 @@ export function createHall({ scene, mats, lights }) {
   H.lightOn = () => { H.target = 1; H.flick = 1.1; [0, 1, 2].forEach((i) => lights?.lamp(i, 'flicker', 0.8 + i * 0.3)); setTimeout(() => { if (H.target) [0, 1, 2].forEach((i) => lights?.lamp(i, 'pulse')); }, 1500); };
   H.lightOff = () => { H.target = 0; H.flick = 0; H.glow = 0; [0, 1, 2].forEach((i) => lights?.lamp(i, 'off')); };
 
-  H.update = (dt) => {
-    if (!H.active) return;
+  const wp = new THREE.Vector3(), camPos = new THREE.Vector3(); let lampPulseV = 1;
+  const lampPulse = () => lampPulseV;
+  H.update = (dt, cam) => {
+    if (cam) camPos.copy(cam.position);
+    { const L = lights?.lamps; lampPulseV = L && L.length ? Math.min(1, L.reduce((a, l) => a + (l.level ?? 0), 0) / L.length) : 1; }
+    if (!H.active || !grp.visible) return;
     if (H.flick > 0) H.flick -= dt;
     const k = H.target * (H.flick > 0 ? (Math.random() > 0.5 ? 1 : 0.08) : 1);
     H.glow += (k - H.glow) * Math.min(1, dt * (k > H.glow ? 14 : 30));
     const v = H.glow;
     glowMat.opacity = Math.min(1, v) * 0.38;
+    rimU.value = Math.min(1, v) * (0.5 + 0.5 * lampPulse());
+    crowd.children.forEach((m) => { if (!m.userData.crowd) return; const d = Math.hypot(m.getWorldPosition(wp).x - camPos.x, wp.z - camPos.z), near = Math.min(1, Math.max(0, (11 - d) / 8));
+      m.material.color.setScalar(0.115 * (1 - 0.8 * near)); if (m.material.userData.sh) m.material.userData.sh.uniforms.uNear.value = near; });
     crowd.visible = true;                                     // la visibilità la decide la luce, non un interruttore
     lights?.lamps?.forEach((L, i) => { const lv = L.level ?? 0; if (lampGlows[i]) { lampGlows[i].material.opacity = Math.min(1, lv) * 0.85; lampBulbs[i].material.color.setRGB(1, 0.78 + 0.1 * lv, 0.45 + 0.3 * lv).multiplyScalar(0.25 + 0.9 * lv); } });
     scene.fog.density += (0.026 - scene.fog.density) * Math.min(1, dt * 2);   // nebbia più rada: si deve vedere in fondo alla sala

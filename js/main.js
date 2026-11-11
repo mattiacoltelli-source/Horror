@@ -120,7 +120,7 @@ async function enter() {
   scare ??= createScare({ scene, camera, player, audio, lights, instab, finish });
   hall ??= createHall({ scene, mats, lights });
   story ??= createStory({ scene, camera, controls, player, audio, hall, getCellar: () => cellar, getTower: () => tower, getWh: () => wh, lights, instab });
-  combat ??= createCombat({ scene, camera, player, audio, lights, instab, say, flash, scare, ui: { show: (b) => { $('fire').classList.toggle('hidden', !b); $('aim').classList.toggle('hidden', !b); } } });
+  combat ??= createCombat({ scene, camera, player, audio, lights, instab, say, flash, scare, ui: { show: (b) => { $('fire').classList.toggle('hidden', !b); $('dot').classList.toggle('hidden', !b); } } });
   wh ??= createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, actBtn: $('act') });
   cellar ??= createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story });
   tower ??= createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn: $('act'), combat });
@@ -167,14 +167,12 @@ function finish(msg, fast = false, light = false) {
 $('again').addEventListener('click', () => location.reload());
 $('act').addEventListener('click', () => { if (wh && wh.near) wh.take(); else if (tower && tower.near) tower.open(); });
 $('fire').addEventListener('pointerdown', (e) => { e.preventDefault(); combat?.fire(); });
-const aimOn = (on) => (e) => { e.preventDefault(); combat?.setAim(on); };
-$('aim').addEventListener('pointerdown', aimOn(true)); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) $('aim').addEventListener(ev, aimOn(false));
-addEventListener('keydown', (e) => { if (e.code === 'Space') combat?.fire(); if (e.code === 'ShiftLeft') combat?.setAim(true); }); addEventListener('keyup', (e) => { if (e.code === 'ShiftLeft') combat?.setAim(false); });
+addEventListener('keydown', (e) => { if (e.code === 'Space') combat?.fire(); });
 
 function tick(dt) {
   doorEvent?.update(dt);
   scare?.update(dt);
-  hall?.update(dt);
+  hall?.update(dt, camera);
   cellar?.update(dt);
   tower?.update(dt, time);
   wh?.update(dt);

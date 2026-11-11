@@ -4,13 +4,14 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 
+const keepSingle = (root) => root.traverse((o) => { if (o.isMesh && /(_b$|magazine_empty|bullet)/.test(o.name)) o.visible = false; });   // il modello ha due versioni sovrapposte: ne tengo una
 export function createCombat({ scene, camera, player, audio, lights, instab, say, flash, scare, ui }) {
   const K = { armed: false, active: false, ammo: 6, aim: 0, aiming: false, state: 'off', t: 0, hits: 0, D: 13, recoil: 0, kick: 0, held: false };
   const gun = new THREE.Group(); camera.add(gun); gun.visible = false;
   const holder = new THREE.Group(); gun.add(holder);
   new GLTFLoader().load('assets/models/pistol.glb', (g) => {
-    const m = g.scene; m.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.renderOrder = 10; o.material.metalness = Math.min(0.35, o.material.metalness ?? 0); o.material.roughness = 0.55; o.material.envMapIntensity = 1.2; o.material.side = THREE.DoubleSide; } });
-    const b = new THREE.Box3().setFromObject(m), c = b.getCenter(new THREE.Vector3());
+    const m = g.scene; keepSingle(m); m.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.renderOrder = 10; o.material.metalness = Math.min(0.35, o.material.metalness ?? 0); o.material.roughness = 0.55; o.material.envMapIntensity = 1.2; o.material.side = THREE.DoubleSide; } });
+    m.updateMatrixWorld(true); const b = new THREE.Box3(); m.traverse((o) => { if (o.isMesh && o.visible) b.expandByObject(o); }); const c = b.getCenter(new THREE.Vector3());
     m.position.sub(c); m.rotation.y = Math.PI / 2; holder.scale.setScalar(0.72);           // canna verso -z
     holder.add(m); K.ready = true;
   }, undefined, (e) => console.warn('pistol', e));
@@ -68,7 +69,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
   K.update = (dt, time) => {
     // viewmodel (anche fuori dal combattimento: arma bassa)
     if (gun.visible) {
-      K.aim += ((K.aiming && K.active && K.state === 'fight' ? 1 : 0) - K.aim) * Math.min(1, dt * 9);
+      K.aim = 0;   // niente mira: il puntino al centro dello schermo indica dove va il colpo
       const base = poses[pose]; const a = K.aim;
       const tp = pz.set(...base.p).lerp(new THREE.Vector3(...poses.ads.p), a);
       const sway = Math.sin(time * 1.7) * 0.002 * (1 - a * 0.7);

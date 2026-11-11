@@ -34,3 +34,5 @@ button:disabled{opacity:.35}
 #upd button{padding:10px 16px;min-height:40px;font-size:12px;letter-spacing:.2em;border-color:#6f9a7a;color:#bfe3c8}
 .linkbtn{border:0;background:none;color:#7f867e;letter-spacing:.2em;font-size:12px;text-decoration:underline;padding:14px;margin-top:6px}
 .linkbtn.hidden{display:none}
+#dot{position:fixed;left:50%;top:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;background:rgba(255,235,225,.85);box-shadow:0 0 4px rgba(255,255,255,.55),0 0 0 1px rgba(0,0,0,.45);pointer-events:none;z-index:4;transition:opacity .4s}
+#dot.hidden{opacity:0}
