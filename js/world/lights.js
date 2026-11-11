@@ -18,7 +18,8 @@ export function createLights(scene, camera) {
     return l;
   });
 
-  const lamps = LAMPS.map((z, i) => ({ z, i, base: 1, flick: 0, kill: false, level: 1, t: Math.random() * 10 }));
+  const mk = (x, y, z, i) => ({ x, y, z, i, base: 1, flick: 0, kill: false, level: 1, t: Math.random() * 10 });
+  let lamps = LAMPS.map((z, i) => mk(0, 2.95, z, i));
   const dummy = new THREE.Vector3();
   let flashlightOn = true, torchLevel = 1, battery = 1, killT = 0, stutterT = 0, nextStutter = 25 + Math.random() * 25;
 
@@ -27,12 +28,14 @@ export function createLights(scene, camera) {
     torch,
     lamps,
     setTorch(v) { flashlightOn = v; },
+    // cambia stanza: nuove posizioni delle lampade [[x,y,z],...]
+    setLamps(list) { lamps = list.map(([x, y, z], i) => mk(x, y, z, i)); api.lamps = lamps; },
     // la torcia si spegne per `dur` secondi (poi torna, un po' più debole)
     torchKill(dur, drain = 0.12) { killT = dur; battery = Math.max(0.45, battery - drain); },
     torchStutter(dur = 0.4) { stutterT = dur; },
     // sfarfallio/spegnimento di una lampada: mode 'off' | 'flicker' | 'on'
-    lamp(i, mode, dur = 1) { const L = lamps[i]; L.mode = mode; L.modeT = dur; L.modeT0 = dur; },
-    update(dt, t, playerZ, glassGlow = 0) {
+    lamp(i, mode, dur = 1) { const L = lamps[i]; if (!L) return; L.mode = mode; L.modeT = dur; L.modeT0 = dur; },
+    update(dt, t, playerZ, px = 0) {
       // batteria: cala lentamente (mai sotto 0.45: non si resta al buio per sempre) e dà rari singhiozzi
       battery = Math.max(0.45, battery - dt * 0.0011);
       nextStutter -= dt * (1.6 - battery);
@@ -61,11 +64,10 @@ export function createLights(scene, camera) {
         L.level = k;
       }
       // assegna le 2 luci alle lampade più vicine al giocatore
-      const order = [...lamps].sort((a, b) => Math.abs(a.z - playerZ) - Math.abs(b.z - playerZ));
+      const order = [...lamps].sort((a, b) => Math.hypot(a.x - px, a.z - playerZ) - Math.hypot(b.x - px, b.z - playerZ));
       for (let i = 0; i < pool.length; i++) {
         const L = order[i];
-        pool[i].position.set(0, 2.95, L.z);
-        pool[i].intensity = 14 * L.level;
+        if (L) { pool[i].position.set(L.x, L.y, L.z); pool[i].intensity = 14 * L.level; } else pool[i].intensity = 0;
       }
       for (const L of lamps) if (L.mesh) { L.mesh.userData.setGlow?.(L.level); }
     },

@@ -11,6 +11,9 @@ import { createGlassEvent } from './events/glass.js';
 import { createDoorEvent } from './events/door.js';
 import { createScare } from './events/scare.js';
 import { createHall } from './events/hall.js';
+import { createCellar } from './events/cellar.js';
+import { createTower } from './events/tower.js';
+import { createStory } from './story.js';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -91,7 +94,9 @@ place('assets/models/cam.glb', 0.3, -W + 0.12, 2.0, -12, Math.PI / 2 + 0.25);
 const glassEvent = createGlassEvent({ scene, renderer, camera, player, audio, lights, instab });
 
 // ---------- flusso ----------
-let doorEvent = null, scare = null, hall = null;
+let doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null;
+const flags = { turned: false, mirror: false };
+const warm = new THREE.PointLight(0xff9a50, 0, 15, 1.7); scene.add(warm);
 let state = 'loading', last = 0, time = 0, paused = false, fpsAcc = 0, fpsN = 0, ended = false;
 let started = false;
 const hint = $('subtitle');
@@ -102,8 +107,11 @@ function say(txt, ms = 4000) {
 
 async function enter() {
   scare ??= createScare({ scene, camera, player, audio, lights, instab, finish });
-  hall ??= createHall({ scene, mats });
-  doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, scare, hall });
+  hall ??= createHall({ scene, mats, lights });
+  story ??= createStory({ scene, camera, controls, player, audio, hall, getCellar: () => cellar, getTower: () => tower, lights, instab });
+  cellar ??= createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story });
+  tower ??= createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn: $('act') });
+  doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar'); } });
   $('enter').disabled = true;
   try { await audio.start(); } catch (_) {}
   try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el, { navigationUI: 'hide' })?.catch?.(() => {}); } catch (_) {}
@@ -111,6 +119,9 @@ async function enter() {
   $('intro').classList.add('hidden');
   // ?start=porta → salta il tunnel e parte a ~8 m dal portone (per provare solo la parte finale)
   if (q.get('start') === 'porta') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, -46); }
+  // scorciatoie di prova: ?start=cantina | torre  (&turned=1 / &mirror=1 per simulare le scelte)
+  { const st = q.get('start'); flags.turned = q.get('turned') === '1'; flags.mirror = q.get('mirror') === '1';
+    if (st === 'cantina' || st === 'torre') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; story.goto(st === 'cantina' ? 'cellar' : 'tower'); } }
   controls.enabled = true; started = true; state = 'play';
   $('fade').style.opacity = 0;
   setTimeout(() => instab.show(), 4000);
@@ -131,22 +142,25 @@ function setPaused(p) {
 document.addEventListener('visibilitychange', () => document.hidden && setPaused(true));
 $('resume').addEventListener('click', () => setPaused(false));
 
-function finish(msg, fast = false) {
+function finish(msg, fast = false, light = false) {
   if (ended) return; ended = true; controls.enabled = false; instab.hide();
   $('endtext').innerText = msg || 'fine del prototipo';
-  $('fade').style.transition = fast ? 'opacity .25s' : 'opacity 3s'; $('fade').style.opacity = 1;
+  $('fade').style.background = light ? '#dfe8e2' : '#000'; $('fade').style.transition = fast ? 'opacity .25s' : 'opacity 3s'; $('fade').style.opacity = 1;
   setTimeout(() => $('end').classList.remove('hidden'), fast ? 1800 : 3200);
 }
 $('again').addEventListener('click', () => location.reload());
+$('act').addEventListener('click', () => tower?.open());
 
 function tick(dt) {
   doorEvent?.update(dt);
   scare?.update(dt);
   hall?.update(dt);
+  cellar?.update(dt);
+  tower?.update(dt, time);
   time += dt;
   player.update(dt, time);
   audio.setListener(camera);
-  lights.update(dt, time, player.pos.z);
+  lights.update(dt, time, player.pos.z, player.pos.x);
   glassEvent.update(dt, time);
   instab.update(dt);
   if (doorEvent?.ended) finish();
@@ -171,7 +185,7 @@ requestAnimationFrame((n) => { last = n; frame(n); });
 
 // debug/test: ?debug=1 espone il gioco e permette di saltare avanti
 if (q.has('debug')) {
-  window.__g = { get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
+  window.__g = { flags, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
     sim(sec, dt = 0.05) { for (let t = 0; t < sec; t += dt) tick(dt); },
     tp(z, yaw = 0) { player.pos.set(0.1, 1.62, z); player.yaw = yaw; player.pitch = 0; } };
 }

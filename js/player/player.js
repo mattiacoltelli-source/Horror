@@ -29,9 +29,14 @@ export function createPlayer(camera, controls, audio) {
     p.speedNow += (target - p.speedNow) * Math.min(1, dt * 8);
     if (mag > 0.01) {
       tmp.normalize().multiplyScalar(p.speedNow * dt);
-      const xl = p.pos.z < Z_END - 1.2 ? 3 : p.pos.z < Z_END + 0.3 ? 0.62 : W - RADIUS;   // oltre il portone il vano è più stretto
-      p.pos.x = THREE.MathUtils.clamp(p.pos.x + tmp.x, -xl, xl);
-      p.pos.z = THREE.MathUtils.clamp(p.pos.z + tmp.z, p.zMin, Z_START - 0.4);
+      if (p.box) {   // stanze: rettangolo di movimento
+        p.pos.x = THREE.MathUtils.clamp(p.pos.x + tmp.x, p.box[0], p.box[1]);
+        p.pos.z = THREE.MathUtils.clamp(p.pos.z + tmp.z, p.box[2], p.box[3]);
+      } else {
+        const xl = p.pos.z < Z_END - 1.2 ? 5.4 : p.pos.z < Z_END + 0.3 ? 0.62 : W - RADIUS;   // oltre il portone la sala è larga
+        p.pos.x = THREE.MathUtils.clamp(p.pos.x + tmp.x, -xl, xl);
+        p.pos.z = THREE.MathUtils.clamp(p.pos.z + tmp.z, p.zMin, Z_START - 0.4);
+      }
     }
     // head-bob + passi
     const moving = p.speedNow > 0.15;

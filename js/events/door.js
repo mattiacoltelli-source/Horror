@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { Z_END, DOOR } from '../world/tunnel.js';
 
-export function createDoorEvent({ scene, player, audio, lights, instab, say, camera, scare, hall }) {
+export function createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone }) {
   const E = { state: 'idle', t: 0, ended: false, loaded: false };
   const grp = new THREE.Group(); grp.position.set(0, 0, Z_END + 0.06); scene.add(grp);
   let left = null, right = null;
@@ -15,9 +15,6 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
     grp.add(m); E.loaded = true;
     left = m.getObjectByName('large_castle_door_left'); right = m.getObjectByName('large_castle_door_right');
     left?.rotation.set(0, 0, 0); right?.rotation.set(0, 0, 0);   // chiuso
-    // vano buio dietro il portone finché la sala è spenta
-    const v = new THREE.Mesh(new THREE.PlaneGeometry(DOOR.w + 0.4, DOOR.h + 0.2), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-    v.position.set(0, DOOR.h / 2, -0.25); grp.add(v); E.voidPlane = v;
   }, undefined, (e) => console.warn('door.glb', e));
 
   let breath = null, openT = 0;
@@ -60,7 +57,7 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
       case 'lit': {
         // la sala è illuminata: in fondo, file di sagome ferme che ti fissano
         const P = PHASES[ph];
-        if (E.t > P.hold) { go('dark'); hall?.lightOff(); lights.torchKill(P.dark - 0.4, 0.04); audio.duck(0, 0.05); audio.shuffle(P.dark, 0.55); instab.push(0.9, 4); if (E.voidPlane) E.voidPlane.visible = true; }
+        if (E.t > P.hold) { go('dark'); hall?.lightOff(); lights.torchKill(P.dark - 0.4, 0.04); audio.duck(0, 0.05); audio.shuffle(P.dark, 0.55); instab.push(0.9, 4); }
         break;
       }
       case 'dark': {
@@ -68,39 +65,42 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
         // mentre sei al buio si avvicinano (non lo vedi: lo senti)
         if (E.t > P.dark) {
           ph++;
-          if (ph >= PHASES.length) { go('breath'); startBreath(); }
+          if (ph >= PHASES.length) { go('choice'); startBreath(); }
           else { hall?.setDist(PHASES[ph].d); go('lit'); lightOn(); }
         }
         break;
       }
-      case 'breath':
-        // il respiro esce dal buio e si avvicina fino a stare dietro di te
+      case 'choice': {
+        // il respiro si avvicina da dietro; «non guardare dietro.»: voltarsi o no
         if (breath) {
-          const k = Math.min(1, Math.max(0, (E.t - 1) / 22)), e = k * k;
+          const k = Math.min(1, E.t / 16), e = k * k;
           const back = tmp.copy(player.forward).multiplyScalar(-1.4).add(camera.position); back.y = 1.35;
-          breath.setPos(THREE.MathUtils.lerp(0, back.x, e), 1.3, THREE.MathUtils.lerp(Z_END - 3, back.z, e)); breath.setLevel(0.55 + 0.9 * e, 0.8);
+          breath.setPos(THREE.MathUtils.lerp(0, back.x, e), 1.3, THREE.MathUtils.lerp(Z_END - 3, back.z, e)); breath.setLevel(0.5 + 0.9 * e, 0.8);
         }
-        if (E.t > 2 && !E.torch) { E.torch = true; lights.torchKill(1.4, 0.1); instab.push(0.9, 5); }
-        if (E.t > 5 && !E.said) { E.said = true; say('non guardare dietro.', 6000); instab.push(1, 8); }
-        // SCELTA: voltarsi (guardare alle spalle) o andare avanti nel buio
-        if (E.t > 3 && E.said) {
-          const back = player.forward.z > 0.3;
-          E.turnT = back ? (E.turnT || 0) + dt : 0;
-          if (E.turnT > 0.35) { go('over'); breath?.stop(); breath = null; scare.trigger('behind'); }
-        }
-        if (E.said && pz < Z_END + 1.2) { go('dark2'); breath?.stop(); breath = null; audio.duck(0, 0.3); lights.torchKill(3.2, 0.1); instab.set(0.2, 12); }
-        if (E.t > 30) { go('over'); breath?.stop(); breath = null; scare.trigger('ahead'); }
+        if (E.t > 1.2 && !E.said) { E.said = true; say('non guardare dietro.', 5500); instab.push(1, 10); }
+        if (E.t > 5 && !E.torch) { E.torch = true; lights.torchKill(1.2, 0.08); }
+        if (E.t > 2.5 && E.said && player.forward.z > 0.3) { E.turnT = (E.turnT || 0) + dt; if (E.turnT > 0.3) { go('turned'); breath?.stop(); breath = null; audio.duck(0, 0.05); lights.lamp(3, 'on'); showShade(); } } else E.turnT = 0;
+        if (E.t > 17) { go('ignored'); }
         break;
-      case 'dark2':
-        // sei entrato: torcia morta, silenzio. Un attimo di sollievo... poi qualche passo avanti.
-        if (E.t > 3.4) audio.duck(0.25, 2);
-        if ((E.t > 5 && pz < Z_END - 1.4) || E.t > 20) { go('over'); scare.trigger('ahead'); }
+      }
+      case 'turned':
+        // ti sei girato: in fondo al tunnel, nel controluce della lampada, qualcuno sta fermo. Nessun suono.
+        if (E.t > 0.9 && !E.fl) { E.fl = true; lights.lamp(3, 'flicker', 1.1); }
+        if (E.t > 2.2 && shade && shade.visible) shade.visible = false;      // sparita nel battito di luce
+        if (E.t > 3.4) { go('over'); audio.duck(0.2, 1); onHallDone?.(true); }
+        break;
+      case 'ignored':
+        // hai tirato dritto: il respiro è sul collo, la torcia muore
+        if (E.t === 0 || !E.k) { E.k = true; breath?.setLevel(1.6, 0.3); lights.torchKill(4, 0.1); instab.set(1, 8); }
+        if (E.t > 3.6) { go('over'); breath?.stop(); breath = null; audio.duck(0.2, 1); onHallDone?.(false); }
         break;
     }
   };
 
-  function lightOn() { hall?.lightOn(); audio.lightOn(); instab.set(0.3 + ph * 0.25, 8); if (E.voidPlane) E.voidPlane.visible = false; }
-  function startBreath() { E.torch = false; E.said = false; breath = audio.breath(); breath?.setPos(0, 1.3, Z_END - 3); breath?.setLevel(0.5, 1.2); }
+  function lightOn() { hall?.lightOn(); audio.lightOn(); instab.set(0.3 + ph * 0.25, 8); }
+  let shade = null;
+  function showShade() { if (!shade) { shade = hall.silhouette(2); scene.add(shade); } shade.position.set(0, 0, Z_END + 3.2); shade.rotation.y = Math.PI; shade.visible = true; }
+  function startBreath() { E.torch = false; E.said = false; E.k = false; E.fl = false; E.turnT = 0; breath = audio.breath(); breath?.setPos(0, 1.3, Z_END - 3); breath?.setLevel(0.5, 1.2); }
   E.getPh = () => ph;
   return E;
 }

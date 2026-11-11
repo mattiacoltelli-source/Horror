@@ -15,7 +15,7 @@ export const LAMPS = [-6, -17.5, -33, -47];
 let seed = 1337;
 const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
 
-class Builder {
+export class Builder {
   constructor() { this.m = {}; }
   bucket(k) { return this.m[k] ??= { p: [], n: [], u: [], c: [] }; }
   // quad con normale desiderata n (corregge il verso di avvolgimento)
@@ -50,7 +50,7 @@ class Builder {
   }
 }
 
-const gray = (v) => [v, v, v];
+export const gray = (v) => [v, v, v];
 
 export function buildTunnel(mats) {
   seed = 1337;

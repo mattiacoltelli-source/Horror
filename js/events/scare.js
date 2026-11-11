@@ -25,7 +25,8 @@ export function createScare({ scene, camera, player, audio, lights, instab, fini
   const fwd = new THREE.Vector3(), pos = new THREE.Vector3();
   let kick = 0, dir = new THREE.Vector3();
 
-  S.trigger = (kind) => {
+  S.trigger = (kind, text) => {
+    S.text = text;
     if (S.active) return; S.active = true; S.kind = kind; S.t = 0;
     player.frozen = true; audio.duck(0, 0.05); lights.torchKill(0.95, 0); lights.lamp(2, 'off'); lights.lamp(3, 'off'); lights.lamp(1, 'off'); instab.set(1, 20);
     fwd.set(player.forward.x, 0, player.forward.z).normalize();
@@ -58,7 +59,7 @@ export function createScare({ scene, camera, player, audio, lights, instab, fini
       if (e > 0.42 && !S.cut) { S.cut = true; ent.visible = false; lights.override = 0; audio.cut(0.03); }
       if (e > 1.6 && !S.done) {
         S.done = true; camera.fov = baseFov(); camera.updateProjectionMatrix();
-        finish(S.kind === 'behind' ? 'ti sei girato.' : 'non ti sei girato.\nera già davanti a te.', true);
+        finish(S.text || (S.kind === 'behind' ? 'ti sei girato.' : 'non ti sei girato.'), true);
       }
     }
   };

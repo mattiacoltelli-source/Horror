@@ -22,3 +22,5 @@ button:disabled{opacity:.35}
 #rotate{z-index:30;font-size:15px;letter-spacing:.2em}
 @media (orientation:landscape) and (max-height:520px){#rotate.hidden{opacity:1;visibility:visible;pointer-events:auto}}
 #endtext{white-space:pre-line;line-height:1.8}
+#act{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 30%);transform:translateX(-50%);z-index:5;background:rgba(0,0,0,.35);padding:14px 30px;transition:opacity .6s}
+#act.hidden{opacity:0;pointer-events:none}

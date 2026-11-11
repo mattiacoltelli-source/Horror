@@ -2,7 +2,11 @@
 
 Horror psicologico in prima persona, verticale (9:16), per browser mobile. Sito statico: HTML + CSS + JavaScript + Three.js, nessun build.
 
-**Stato: prototipo (vertical slice) — tunnel, torcia, evento «La sagoma dietro il vetro», indicatore di instabilità.**
+**Stato: gioco completo (~10 min).** Tunnel → vetro con la sagoma → portone → sala della folla (+ scelta «non guardare dietro») → cantina (specchio impossibile, apparizione) → torre (porta d'uscita, 3 finali).
+
+Finali: **A** non ti sei girato · **B** ti sei girato · **C** (segreto) hai guardato lo specchio fino in fondo.
+
+Scorciatoie per provare: `?start=porta` · `?start=cantina` · `?start=torre` (con `&turned=1` o `&mirror=1`).
 
 ## Avvio locale
 ```
@@ -15,7 +19,7 @@ Apri `http://localhost:8123` (su desktop: WASD + trascinamento a destra; `?debug
 - `js/world/` — materiali PBR, tunnel procedurale, luci (torcia + pool di 2 luci)
 - `js/player/` — controlli touch, movimento/collisioni
 - `js/audio/` — audio procedurale Web Audio
-- `js/events/glass.js` — evento del vetro
+- `js/events/glass.js` — vetro · `door.js` — portone + sala della folla + scelta · `hall.js` — sala/folla · `cellar.js` — specchio e apparizione · `tower.js` — porta d'uscita e finali · `scare.js` — jump scare · `js/story.js` — stanze e transizioni
 - `js/ui/instability.js` — indicatore di instabilità
 - `assets/tex` — texture convertite (colore / normal / ORM)
 - `assets/models` — modelli GLB

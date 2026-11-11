@@ -217,6 +217,28 @@ export function createAudio() {
     // taglio netto: tutto muto
     cut(time = 0.04) { if (!ok) return; master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0, ctx.currentTime, time); },
     unmute() { if (!ok) return; master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0.9, ctx.currentTime, 0.2); },
+    // passaggio fulmineo di una presenza da sinistra a destra: spostamento d'aria + tonfo sordo
+    dash(dur = 0.5) {
+      if (!ok) return; const t = ctx.currentTime;
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.4; bp.frequency.setValueAtTime(380, t); bp.frequency.exponentialRampToValueAtTime(1500, t + dur * 0.45); bp.frequency.exponentialRampToValueAtTime(450, t + dur);
+      const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.9, t + dur * 0.4); g.gain.linearRampToValueAtTime(0, t + dur + 0.1);
+      const pn = ctx.createStereoPanner(); pn.pan.setValueAtTime(-0.95, t); pn.pan.linearRampToValueAtTime(0.95, t + dur);
+      s.connect(bp); bp.connect(g); g.connect(pn); pn.connect(master); const rs = ctx.createGain(); rs.gain.value = 0.7; pn.connect(rs); rs.connect(verbSend);
+      s.start(t); s.stop(t + dur + 0.2);
+      const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(70, t + dur * 0.4); o.frequency.exponentialRampToValueAtTime(28, t + dur * 0.4 + 0.5);
+      og.gain.setValueAtTime(0, t + dur * 0.4); og.gain.linearRampToValueAtTime(0.9, t + dur * 0.4 + 0.01); og.gain.exponentialRampToValueAtTime(0.001, t + dur * 0.4 + 0.7);
+      o.connect(og); og.connect(master); o.start(t + dur * 0.4); o.stop(t + dur * 0.4 + 0.8);
+    },
+    // sussurro senza parole (rumore aspirato filtrato), per i momenti dello specchio
+    whisper(dur = 2.2, level = 0.35) {
+      if (!ok) return; const t = ctx.currentTime;
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 3; bp.frequency.setValueAtTime(1900, t); bp.frequency.linearRampToValueAtTime(1300, t + dur);
+      const am = ctx.createGain(); am.gain.value = 0.5; const lf = ctx.createOscillator(), lg = ctx.createGain(); lf.frequency.value = 6.5; lg.gain.value = 0.5; lf.connect(lg); lg.connect(am.gain);
+      const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(level, t + dur * 0.4); g.gain.linearRampToValueAtTime(0, t + dur);
+      s.connect(bp); bp.connect(am); am.connect(g); g.connect(master); g.connect(verbSend); s.start(t); lf.start(t); s.stop(t + dur + 0.1); lf.stop(t + dur + 0.1);
+    },
     // gocce
     _drip(pan = 0) {
       if (!ok) return; const t = ctx.currentTime;
