@@ -12,7 +12,8 @@ export function createDawn({ scene, camera, player, audio, lights, instab, say, 
 
   D.start = (text) => {
     if (D.active) return; D.active = true; D.t = 0; D.text = text || ''; D.said = 0;
-    onStart?.();                                   // via pistola e interfaccia di tiro
+    onStart?.(); camera.children.forEach((c) => { if (c.isPoints) c.visible = false; });   // all'aperto niente polvere della torcia
+                                   // via pistola e interfaccia di tiro
     // via tutto il resto: resta solo il cielo
     scene.children.forEach((o) => { if (o !== sky && !o.isLight && o !== camera) o.visible = false; });
     scene.fog.density = 0; scene.background = new THREE.Color(0x000000); scene.environment = null;

@@ -34,3 +34,22 @@ export function bloodDecals(group, list) {
   }
   return made;
 }
+
+// Macchie di umidità e sporco sui muri (rompono la ripetizione dei mattoni): chiazze scure irregolari con colature, non rosse.
+let stainTex = null;
+function stainTexture() {
+  if (stainTex) return stainTex;
+  const c = document.createElement('canvas'); c.width = 256; c.height = 384; const g = c.getContext('2d'); let sd = 11; const r = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 26; i++) { const x = 70 + r() * 116, y = 40 + r() * 160, rad = 18 + r() * 46, gr = g.createRadialGradient(x, y, 2, x, y, rad); gr.addColorStop(0, 'rgba(8,10,9,.55)'); gr.addColorStop(.6, 'rgba(8,10,9,.2)'); gr.addColorStop(1, 'rgba(8,10,9,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+  for (let i = 0; i < 9; i++) { const x = 60 + r() * 136, y0 = 60 + r() * 100, h = 120 + r() * 200, gr = g.createLinearGradient(0, y0, 0, y0 + h); gr.addColorStop(0, 'rgba(8,10,9,.34)'); gr.addColorStop(1, 'rgba(8,10,9,0)'); g.fillStyle = gr; g.fillRect(x, y0, 2 + r() * 5, h); }
+  g.globalCompositeOperation = 'destination-in'; const m = g.createRadialGradient(128, 190, 20, 128, 190, 190); m.addColorStop(0, '#fff'); m.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = m; g.fillRect(0, 0, 256, 384);
+  stainTex = new THREE.CanvasTexture(c); return stainTex;
+}
+// list: [{ p:[x,y,z], wall:'+x'|'-x'|'+z'|'-z', w:1.6, h:2.4, a:.7, flip:bool }]
+export function stainDecals(group, list) {
+  const rotY = { '+x': Math.PI / 2, '-x': -Math.PI / 2, '+z': 0, '-z': Math.PI };
+  for (const d of list) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(d.w ?? 1.6, d.h ?? 2.4), new THREE.MeshBasicMaterial({ map: stainTexture(), color: 0x000000, transparent: true, opacity: d.a ?? 0.7, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, fog: true }));
+    m.rotation.y = rotY[d.wall]; if (d.flip) m.scale.x = -1; m.position.set(...d.p); m.userData.stain = true; group.add(m);
+  }
+}

@@ -15,6 +15,7 @@ import { createDawn } from './events/dawn.js';
 import { createCellar } from './events/cellar.js';
 import { createTower } from './events/tower.js';
 import { createStory } from './story.js';
+import { createDust } from './world/dust.js';
 import { decorTunnel } from './world/decor.js';
 import { createWarehouse } from './events/warehouse.js';
 import { createCombat } from './events/combat.js';
@@ -59,6 +60,7 @@ new THREE.TextureLoader().load('assets/tex/bath_bg.jpg', (t) => {
 });
 
 const lights = createLights(scene, camera);
+const dust = createDust(camera);
 const audio = createAudio();
 const controls = createControls();
 const player = createPlayer(camera, controls, audio);
@@ -176,6 +178,7 @@ function tick(dt) {
   doorEvent?.update(dt);
   scare?.update(dt);
   hall?.update(dt, camera);
+  dust.update(dt, time);
   dawn?.update(dt);
   cellar?.update(dt);
   tower?.update(dt, time);

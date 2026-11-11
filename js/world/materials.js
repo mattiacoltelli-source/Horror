@@ -31,7 +31,7 @@ export function makeMaterials(base = 'assets/tex/') {
       roughnessMap: tex(`${base}${name}_orm.jpg`, false),
       aoMap: opts.noAO ? null : tex(`${base}${name}_orm.jpg`, false),
       metalnessMap: opts.metal ? tex(`${base}${name}_orm.jpg`, false) : null,
-      roughness: 1,
+      roughness: opts.wet ?? 1,
       metalness: opts.metal ? 1 : 0,
       vertexColors: true,
       color: opts.tint ?? 0xffffff,
@@ -41,8 +41,8 @@ export function makeMaterials(base = 'assets/tex/') {
   };
   m.brick = set('brick', { tint: 0xb9b2aa });
   m.stone = set('stone', { tint: 0x8c867f, nrm: 1.6 });
-  m.floorA = set('floorA', { tint: 0xc0bcb4, nrm: 1.3 });
-  m.floorB = set('floorB', { tint: 0xb8b2a8, nrm: 1.3 });
+  m.floorA = set('floorA', { tint: 0xc0bcb4, nrm: 1.3, wet: 0.72 });
+  m.floorB = set('floorB', { tint: 0xb8b2a8, nrm: 1.3, wet: 0.72 });
   m.rust = set('rust', { metal: true, noAO: true, tint: 0xd0c8c0, nrm: 1.0 });
   return m;
 }
