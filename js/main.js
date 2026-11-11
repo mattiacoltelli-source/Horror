@@ -93,7 +93,7 @@ place('assets/models/can.glb', 0.12, -0.7, 0, -4.5, 0.6);
 place('assets/models/can.glb', 0.12, 0.55, 0, -29, 2.1);
 place('assets/models/tank.glb', 0.55, -W + 0.3, 0, -36, 0.3);
 place('assets/models/rim.glb', 0.5, 0.75, 0, -41, 1.2);
-place('assets/models/cam.glb', 0.3, -W + 0.12, 2.0, -12, Math.PI / 2 + 0.25);
+place('assets/models/cam.glb', 0.3, -W + 0.12, 2.0, -12, Math.PI - 0.55);   // punta avanti nel corridoio, leggermente verso il centro: guarda alle spalle chi l'ha appena superata
 
 // ---------- evento ----------
 const glassEvent = createGlassEvent({ scene, renderer, camera, player, audio, lights, instab });
