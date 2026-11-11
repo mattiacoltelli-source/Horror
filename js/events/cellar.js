@@ -42,15 +42,58 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   ]); mdecals_fix(); const mdTarget = [0, 0, 0];
   function mdecals_fix() { mdecals.forEach((m) => { const mat = new THREE.MeshBasicMaterial({ map: m.material.map, transparent: true, opacity: 0, color: new THREE.Color(0.36, 0.02, 0.02), depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }); m.material = mat; }); }
   const wash = (lv, P, d) => { if (!flash) return; flash.color.setHex(0xffcf9a); flash.position.set(P.x - d.x * 3.2, 2.3, P.z - d.z * 3.2 + 1.2); flash.intensity = lv; };
-  // OMBRE sul piano dello specchio: garantite da qualunque angolo; ombra morbida (lontana) e ombra più definita (vicina)
-  const shadowTex = (sharp) => { const c = document.createElement('canvas'); c.width = 128; c.height = 256; const g = c.getContext('2d'); g.filter = `blur(${sharp ? 2.5 : 7}px)`; g.fillStyle = '#000';
-    g.beginPath(); g.ellipse(64, 40, 17, 21, 0, 0, 7); g.fill();                                           // testa
-    g.beginPath(); g.moveTo(40, 66); g.bezierCurveTo(30, 90, 28, 130, 34, 200); g.lineTo(94, 200); g.bezierCurveTo(100, 130, 98, 90, 88, 66); g.closePath(); g.fill();   // tronco
-    g.lineWidth = 9; g.lineCap = 'round'; g.strokeStyle = '#000'; g.beginPath(); g.moveTo(40, 80); g.quadraticCurveTo(18, 140, 22, 214); g.moveTo(88, 80); g.quadraticCurveTo(110, 140, 106, 214); g.stroke();  // braccia lunghe
-    g.fillRect(48, 196, 12, 56); g.fillRect(68, 196, 12, 56);
-    const t = new THREE.CanvasTexture(c); return t; };
-  const mkShadow = (sharp, h) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(h * 0.5, h), new THREE.MeshBasicMaterial({ map: shadowTex(sharp), color: 0x000000, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 })); m.rotation.y = Math.PI / 2; C.group.add(m); return m; };
-  const shFar = mkShadow(false, 1.7), shNear = mkShadow(true, 1.9);
+  // PRESENZA: una massa scura INDEFINITA nel vetro (nebbia di ombra, senza testa né braccia): bordi che si sfilacciano, si sposta
+  // lentamente, a tratti si addensa. Si capisce che c'è "qualcosa", non cosa. Nessuna figura riconoscibile.
+  const NOISE = `float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+    float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
+    float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p=p*2.03+1.7;a*=.5;}return v;}`;
+  const presMat = () => new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
+    uniforms: { uT: { value: 0 }, uA: { value: 0 }, uC: { value: new THREE.Vector2(0.5, 0.42) }, uS: { value: new THREE.Vector2(0.2, 0.34) }, uSeed: { value: Math.random() * 20 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `precision highp float; varying vec2 vUv; uniform float uT, uA, uSeed; uniform vec2 uC, uS;\n${NOISE}
+      void main(){
+        vec2 p = (vUv - uC) / uS;
+        p.x += 0.55 * (fbm(vec2(p.y * 0.9 + uSeed, uT * 0.22)) - 0.5);                       // la massa ondeggia di lato
+        p.y += 0.25 * (fbm(vec2(p.x * 1.1 - uSeed, uT * 0.17)) - 0.5);
+        float core = exp(-pow(p.x * 1.05, 2.0)) * smoothstep(-1.15, -0.35, p.y) * (1.0 - smoothstep(0.35, 1.25, p.y));   // alta e vaga
+        float cloud = fbm(vUv * vec2(3.2, 2.2) + vec2(uT * 0.09, -uT * 0.13) + uSeed);
+        float a = core * smoothstep(0.05, 0.55, cloud + core * 0.55);
+        a = pow(a, 0.9) * uA;
+        // velo pallido dietro la massa: l'ombra deve stagliarsi su qualcosa (il riflesso è troppo buio da solo)
+        float hz = uA * (0.1 + 0.17 * fbm(vUv * 3.0 + uT * 0.05)) * smoothstep(0.0, 0.25, vUv.y) * smoothstep(1.0, 0.7, vUv.y);
+        float m = clamp(a, 0.0, 1.0);
+        gl_FragColor = vec4(mix(vec3(0.62, 0.68, 0.66), vec3(0.004, 0.005, 0.005), m), clamp(max(hz, m * 0.94), 0.0, 0.95));
+      }` });
+  const mkPres = () => { const m = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), presMat()); m.rotation.y = Math.PI / 2; m.position.set(MIRROR.x + 0.017, MIRROR.y, MIRROR.z); C.group.add(m); return m; };
+  const shFar = mkPres(), shNear = mkPres();
+  shFar.material.uniforms.uS.value.set(0.16, 0.3); shNear.material.uniforms.uS.value.set(0.2, 0.36);
+  // CONDENSA + SEGNI: qualcuno respira sul vetro dall'altra parte (chiazza di vapore che pulsa) e poi lo attraversa con le dita
+  // (tre solchi che puliscono il vapore dall'alto in basso).
+  const fogMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5,
+    uniforms: { uT: { value: 0 }, uM: { value: 0 }, uW: { value: 0 }, uB: { value: new THREE.Vector2(0.47, 0.52) } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `precision highp float; varying vec2 vUv; uniform float uT, uM, uW; uniform vec2 uB;\n${NOISE}
+      void main(){
+        vec2 d = (vUv - uB) * vec2(1.0, 1.35);
+        float edge = fbm(vUv * 6.0 + vec2(0.0, uT * 0.05)) - 0.5;
+        float m = smoothstep(0.36 + edge * 0.18, 0.02, length(d)) * uM;
+        float lines = 0.0;
+        for (int i = 0; i < 3; i++) {
+          float fi = float(i);
+          float x = uB.x + (fi - 1.0) * 0.085 + 0.016 * sin(vUv.y * 9.0 + fi * 2.1) + 0.02 * (fbm(vec2(vUv.y * 3.0, fi * 4.0)) - 0.5);
+          float top = 0.84 - fi * 0.03, bot = 0.16 + fi * 0.045;
+          float reach = top - (top - bot) * uW;                                        // il dito scende con uW
+          float inside = step(reach, vUv.y) * step(vUv.y, top);
+          float w = 0.013 + 0.005 * fbm(vec2(vUv.y * 8.0, fi));
+          lines = max(lines, smoothstep(w, w * 0.35, abs(vUv.x - x)) * inside);
+        }
+        float lip = 0.0;                                                               // bordo più chiaro dove il vapore è stato spinto
+        for (int i = 0; i < 3; i++) { float fi = float(i); float x = uB.x + (fi - 1.0) * 0.085 + 0.016 * sin(vUv.y * 9.0 + fi * 2.1) + 0.02 * (fbm(vec2(vUv.y * 3.0, fi * 4.0)) - 0.5); lip = max(lip, smoothstep(0.03, 0.012, abs(abs(vUv.x - x) - 0.026)) * step(0.16, vUv.y)); }
+        float a = m * (1.0 - lines * 0.95) * (0.55 + 0.45 * fbm(vUv * 14.0));
+        vec3 col = vec3(0.74, 0.8, 0.78);
+        gl_FragColor = vec4(col, clamp(a * 0.34 + lip * m * uW * 0.16, 0.0, 0.5));
+      }` });
+  const fogM = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), fogMat); fogM.rotation.y = Math.PI / 2; fogM.position.set(MIRROR.x + 0.019, MIRROR.y, MIRROR.z); C.group.add(fogM);
   // SAGOMA CHE CORRE sul muro di fronte allo specchio (vera geometria: si vede nel riflesso, e a volte con la coda dell'occhio)
   const runM = hall.silhouette(1); runM.visible = false; C.group.add(runM); let runT = -1, runDone = false;
   // velo di luce pallida nello specchio durante l'occhiata: l'ombra deve stagliarsi su qualcosa di più chiaro del riflesso buio
@@ -81,7 +124,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   let ap = -1;
 
   C.enter = () => {
-    C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; runDone = false; runT = -1; runM.visible = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.opacity = 0; mist.material.opacity = 0; shNear.material.opacity = 0;
+    C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; runDone = false; runT = -1; runM.visible = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.uniforms.uA.value = 0; mist.material.opacity = 0; shNear.material.uniforms.uA.value = 0; fogMat.uniforms.uM.value = 0; fogMat.uniforms.uW.value = 0; C.b1 = C.b2 = C.sw = C.sw2 = false;
     player.box = C.bounds; player.pos.set(0.4, 1.62, CELLAR.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     lights.setLamps(lampPos, 2.1); scene.fog.density = 0.04; audio.duck(1, 1); instab.set(0.1, 6);
   };
@@ -103,11 +146,11 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
       const px = P.x, pz = P.z, side = new THREE.Vector3(-d.z, 0, d.x);
       fig.position.set(px - d.x * 5.2 + side.x * THREE.MathUtils.lerp(-3.4, 3.2, k), 0, pz - d.z * 5.2 + side.z * THREE.MathUtils.lerp(-3.4, 3.2, k));
       fig.rotation.y = Math.atan2(d.x, d.z); fig.visible = k < 1 && noise(C.tt) > -0.7; wash(k < 1 ? 22 * Math.sin(Math.min(1, k * 1.3) * Math.PI) : 0, P, d);
-      shFar.position.set(MIRROR.x + 0.02, 1.35, MIRROR.z + THREE.MathUtils.lerp(0.9, -0.9, Math.min(1, k)));   // attraversa lo specchio in meno di un secondo
-      shFar.material.opacity = k < 1 ? 0.9 * Math.sin(Math.min(1, k) * Math.PI) ** 0.5 * (noise(C.tt * 2) > -0.6 ? 1 : 0.4) : 0;
+      shFar.material.uniforms.uC.value.set(THREE.MathUtils.lerp(0.9, 0.1, Math.min(1, k)), 0.46);   // attraversa lo specchio in meno di un secondo
+      shFar.material.uniforms.uA.value = k < 1 ? 1.3 * Math.sin(Math.min(1, k) * Math.PI) ** 0.5 * (noise(C.tt * 2) > -0.6 ? 1 : 0.5) : 0;
       mist.material.opacity = k < 1 ? 0.55 * Math.sin(Math.min(1, k) * Math.PI) ** 0.7 : 0;
       fig.visible = false;
-      if (k >= 1) { fig.visible = false; C.gl = -1; wash(0, P, d); shFar.material.opacity = 0; mist.material.opacity = 0; }
+      if (k >= 1) { fig.visible = false; C.gl = -1; wash(0, P, d); shFar.material.uniforms.uA.value = 0; mist.material.opacity = 0; }
     }
     if (looking) {
       C.away = 0; C.stepped = false; C.gaze += dt;
@@ -136,16 +179,30 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     if (C.started && C.since > 2 && !C.blood0) { C.blood0 = true; mdTarget[0] = 0.9; audio.whisper(1.8, 0.22); lights.lamp(0, 'flicker', 0.5); instab.push(0.8, 6); }
     if (C.step >= 2) mdTarget[1] = 0.85; if (C.step >= 3) mdTarget[2] = 0.7;
     mdecals.forEach((m, i) => { if (i < 2) m.material.opacity += (mdTarget[i] - m.material.opacity) * Math.min(1, dt * 2.2); });
-    // da vicino: un'ombra più definita, dietro la tua spalla nel riflesso, che affiora e svanisce
-    { const on = C.started && looking && C.since > 0.35 && C.since < 3.6; const target = on ? 0.78 * (0.6 + 0.4 * Math.sin(C.since * 3.1)) * (noise(C.tt * 1.7) > -0.5 ? 1 : 0.3) : 0;
-      shNear.position.set(MIRROR.x + 0.02, 1.25, MIRROR.z + 0.28 + Math.sin(C.since * 0.9) * 0.05); shNear.material.opacity += (target - shNear.material.opacity) * Math.min(1, dt * 6); }
-    // l'ombra dietro di te, solo nel riflesso: vedo/non vedo (mai ferma e piena), più vicina a ogni ritorno
-    const shadowOn = looking && C.started && C.step >= 0 && C.figReady && C.state === 'play';
-    if (C.gl === undefined || C.gl < 0) {
-      fig.visible = !!shadowOn && (C.step === 0 ? (C.since > 0.4 && C.since < 3.2 && noise(C.tt * 1.1) > -0.55) : noise(C.tt * 0.9) > -0.35);
-      wash(shadowOn && fig.visible ? 16 : 0, P, d);
-      if (shadowOn) { const dist = DIST[Math.min(4, C.step)]; fig.position.set(P.x - d.x * dist, 0, P.z - d.z * dist); fig.rotation.y = Math.atan2(d.x, d.z); }
+    // DA VICINO, in sequenza (il tempo conta solo mentre guardi): 1) massa d'ombra vaga dietro la spalla · 2) impronta di sangue ·
+    // 3) il vetro si appanna (respiro dall'altra parte) due volte · 4) tre dita lo attraversano e lasciano solchi nel vapore
+    const shadowOn = looking && C.started && C.step >= 0 && C.state === 'play';
+    { const st = Math.max(0, C.step);
+      const base = shadowOn ? (C.since > 0.35 ? 0.85 + 0.25 * st : 0) : 0;
+      const flick = 0.62 + 0.38 * Math.sin(C.tt * 2.3) * Math.sin(C.tt * 0.7 + 1) + 0.2 * noise(C.tt * 0.8);   // vedo / non vedo: si addensa e si dirada
+      const target = Math.max(0, Math.min(1.25, base * (0.7 + flick * 0.6)));
+      const U = shNear.material.uniforms; U.uA.value += (target - U.uA.value) * Math.min(1, dt * 2.4); U.uT.value = C.tt;
+      U.uC.value.set(0.64 - 0.05 * st + Math.sin(C.tt * 0.31) * 0.03, 0.42);                       // dietro la tua spalla, via via più al centro
+      U.uS.value.set(0.17 + 0.035 * st, 0.34 + 0.02 * st);
+      shFar.material.uniforms.uT.value = C.tt;
+      // vapore
+      const F = fogMat.uniforms; F.uT.value = C.tt;
+      if (shadowOn && C.since > 3.2 && !C.b1) { C.b1 = true; C.b1t = 0; audio.whisper(1.6, 0.14); }
+      if (shadowOn && C.since > 5.0 && !C.b2) { C.b2 = true; C.b2t = 0; audio.whisper(1.8, 0.18); instab.push(0.85, 6); }
+      let mt = 0;
+      if (C.b1) { C.b1t += dt; mt = Math.max(mt, 0.8 * Math.sin(Math.min(1, C.b1t / 2.4) * Math.PI) ** 0.8); }
+      if (C.b2) { C.b2t += dt; mt = Math.max(mt, 1.0 * Math.min(1, C.b2t / 1.2) * (C.sw ? 1 : 1)); }
+      F.uM.value += (mt - F.uM.value) * Math.min(1, dt * 3);
+      if (C.b2 && C.b2t > 1.5 && !C.sw) { C.sw = true; C.swt = 0; audio.squeak(1.6); lights.lamp(0, 'flicker', 0.7); }
+      if (C.sw) { C.swt += dt; F.uW.value = Math.min(1, C.swt / 1.6); if (C.swt > 0.3 && !C.sw2) { C.sw2 = true; audio.whisper(1.4, 0.2); } }
     }
+    // (il vecchio modello 3D nel riflesso è disattivato: troppo definito)
+    fig.visible = false;
     if (shadowOn && C.step === 4) { C.late = (C.late || 0) + dt; if (C.late > 4.6 && !flags.mirror) { flags.mirror = true; lights.lamp(0, 'flicker', 1.4); lights.lamp(1, 'flicker', 1.4); audio.whisper(2.6, 0.4); say('ci sei anche tu.', 4500); instab.set(1, 6); player.addShake(0.35); } } else if (!shadowOn) C.late = 0;
     // --- apparizione (spavento) ---
     if (!C.apDone && P.z < CELLAR.z0 - 14.2) {
