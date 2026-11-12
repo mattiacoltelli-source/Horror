@@ -53,3 +53,17 @@ export function stainDecals(group, list) {
     m.rotation.y = rotY[d.wall]; if (d.flip) m.scale.x = -1; m.position.set(...d.p); m.userData.stain = true; group.add(m);
   }
 }
+
+
+// SCRITTE sul muro (sangue o bomboletta, immagini con trasparenza in assets/tex): grandi, leggibili nel cono della torcia.
+// list: [{ img, p:[x,y,z], wall:'+x'|'-x'|'+z'|'-z', w: larghezza in metri, rot: 0, a: 0.95 }]  (l'altezza segue le proporzioni dell'immagine)
+const wtex = {};
+export function writingDecals(group, list) {
+  const rotY = { '+x': Math.PI / 2, '-x': -Math.PI / 2, '+z': 0, '-z': Math.PI }, made = [];
+  for (const d of list) {
+    const t = (wtex[d.img] ??= (() => { const x = loader.load(d.img, (tt) => { d.__asp = tt.image.width / tt.image.height; }); x.colorSpace = THREE.SRGBColorSpace; x.anisotropy = 4; return x; })());
+    const asp = d.aspect ?? 4.5, mat = new THREE.MeshStandardMaterial({ map: t, transparent: true, color: new THREE.Color(0.95, 0.62, 0.62), emissive: 0x300606, emissiveIntensity: 1.0, roughness: 0.32, metalness: 0, opacity: d.a ?? 0.96, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(d.w, d.w / asp), mat); m.rotation.set(0, rotY[d.wall], d.rot ?? 0); m.rotation.order = 'YXZ'; m.position.set(...d.p); m.userData.writing = true; group.add(m); made.push(m);
+  }
+  return made;
+}

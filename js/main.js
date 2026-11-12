@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { P } from './personal.js';
+import { P, PKEY } from './personal.js';
 import { GLTFLoader } from '../vendor/three/loaders/GLTFLoader.js';
 import { makeMaterials, setAnisotropy } from './world/materials.js';
 import { buildTunnel, LAMPS, W, Z_END, H0 } from './world/tunnel.js';
@@ -23,6 +23,7 @@ import { createWarehouse } from './events/warehouse.js';
 import { createMorgue } from './events/morgue.js';
 import { createAmbient } from './events/ambient.js';
 import { createNotes } from './events/notes.js';
+import { writingDecals } from './world/blood.js';
 import { W as TUNNEL_W } from './world/tunnel.js';
 import { createCombat } from './events/combat.js';
 
@@ -176,6 +177,12 @@ async function enter() {
     { room: 'warehouse', parent: wh.group, p: [-5.96, 1.5, WZ - 17], ry: Math.PI / 2 },
     { room: 'tower', parent: tower.group, p: [-6.96, 1.5, TZ - 5], ry: Math.PI / 2 },
   ] });
+  // SCRITTE DI SANGUE per la versione di Yana (frasi in italiano e in ucraino), grandi sui muri
+  if (PKEY === 'yana' && !window.__writ) { window.__writ = true;
+    writingDecals(scene, [{ img: 'assets/tex/wr_yana_1.png', aspect: 5.09, p: [-1.38, 1.35, -13.4], wall: '+x', w: 4.4 }, { img: 'assets/tex/wr_yana_3.png', aspect: 4.34, p: [-1.38, 1.3, -31], wall: '+x', w: 4.2 }]);
+    writingDecals(cellar.group, [{ img: 'assets/tex/wr_yana_2.png', aspect: 2.42, p: [-3.96, 1.7, CZ - 15.2], wall: '+x', w: 3.6 }]);
+    writingDecals(tower.group, [{ img: 'assets/tex/wr_yana_4.png', aspect: 4.26, p: [0, 3.7, TZ - 0.05], wall: '-z', w: 5.4 }]);   // sul muro d'ingresso, sopra la porta: lo vedi quando ti giri
+  }
   doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar'); } });
   $('enter').disabled = true;
   try { await audio.start(); audio.heartbeat?.(); navigator.vibrate?.(30); } catch (_) {}

@@ -8,6 +8,7 @@ const PRESETS = {
 };
 const key = (new URLSearchParams(location.search).get('per') || '').trim().toLowerCase();
 export const P = PRESETS[key] || null;
+export const PKEY = P ? key : '';   // 'elisa' | 'yana' | ''
 
 // sussurro con la voce sintetica del telefono: basso, lento, una o due volte in tutta la partita.
 // Se il profilo ha una lingua (es. ucraino) e il telefono ha quella voce, parla in quella lingua; altrimenti dice il nome in italiano (e, per le altre frasi, tace: il testo e' gia' sullo schermo).
