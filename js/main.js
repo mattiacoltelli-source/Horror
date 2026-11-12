@@ -24,6 +24,7 @@ import { createMorgue } from './events/morgue.js';
 import { createAmbient } from './events/ambient.js';
 import { createNotes } from './events/notes.js';
 import { writingDecals } from './world/blood.js';
+import { RIBS } from './world/tunnel.js';
 import { W as TUNNEL_W } from './world/tunnel.js';
 import { createCombat } from './events/combat.js';
 
@@ -179,10 +180,13 @@ async function enter() {
   ] });
   // SCRITTE DI SANGUE per le versioni personalizzate (frasi con il suo nome; per Yana anche in ucraino), grandi sui muri
   const WR = { yana: { t1: ['yana_1', 5.09, 4.4], t3: ['yana_3', 4.34, 4.2], c2: ['yana_2', 2.42, 3.6], w4: ['yana_4', 4.26, 5.4] }, elisa: { t1: ['elisa_1', 4.89, 4.4], t3: ['elisa_3', 3.89, 4.0], c2: ['elisa_2', 2.63, 3.6], w4: ['elisa_4', 4.78, 5.4] } }[PKEY];
-  if (WR && !window.__writ) { window.__writ = true; const im = (k) => 'assets/tex/wr_' + WR[k][0] + '.png', asp = (k) => WR[k][1], wd = (k) => WR[k][2];
-    writingDecals(scene, [{ img: im('t1'), aspect: asp('t1'), p: [-1.38, 1.35, -13.4], wall: '+x', w: wd('t1') }, { img: im('t3'), aspect: asp('t3'), p: [-1.38, 1.3, -31], wall: '+x', w: wd('t3') }]);   // tunnel: prima e dopo il vetro
-    writingDecals(cellar.group, [{ img: im('c2'), aspect: asp('c2'), p: [-3.96, 1.7, CZ - 15.2], wall: '+x', w: wd('c2') }]);   // cantina: dopo lo specchio, tra due pilastri
-    writingDecals(tower.group, [{ img: im('w4'), aspect: asp('w4'), p: [0, 3.7, TZ - 0.05], wall: '-z', w: wd('w4') }]);   // torre: sul muro d'ingresso, sopra la porta: la vedi quando ti giri
+  if (WR && !window.__writ) { window.__writ = true; const im = (k) => 'assets/tex/wr_' + WR[k][0] + '.png', asp = (k) => WR[k][1];
+    // CRITERIO: ogni scritta sta al CENTRO dello spazio libero tra due elementi fissi (costoloni del tunnel, pilastri della cantina) e la sua larghezza e' limitata allo spazio, cosi' niente la taglia
+    const fit = (a, b, k, thick, maxW) => ({ z: (a + b) / 2, w: Math.min(maxW ?? WR[k][2], Math.abs(a - b) - thick - 0.5) });
+    const t1 = fit(RIBS[1], RIBS[2], 't1', 0.5), t3 = fit(RIBS[4], RIBS[5], 't3', 0.5), c2 = fit(CZ - 13, CZ - 18, 'c2', 0.9);   // tunnel: prima e dopo il vetro; cantina: dopo lo specchio
+    writingDecals(scene, [{ img: im('t1'), aspect: asp('t1'), p: [-1.38, 1.0, t1.z], wall: '+x', w: t1.w }, { img: im('t3'), aspect: asp('t3'), p: [-1.38, 1.0, t3.z], wall: '+x', w: t3.w }]);   // sotto il tubo sottile (y 1.62)
+    writingDecals(cellar.group, [{ img: im('c2'), aspect: asp('c2'), p: [-3.96, 1.7, c2.z], wall: '+x', w: c2.w }]);
+    writingDecals(tower.group, [{ img: im('w4'), aspect: asp('w4'), p: [0, 3.7, TZ - 0.05], wall: '-z', w: WR.w4[2] }]);   // torre: muro d'ingresso, sopra la porta: la vedi quando ti giri
   }
   doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar'); } });
   $('enter').disabled = true;
