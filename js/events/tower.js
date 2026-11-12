@@ -7,7 +7,7 @@ import { decorTower } from '../world/decor.js';
 import { addExtras, pedestal } from '../world/extra.js';
 
 export const TOWER = { z0: -300, w: 14, l: 18, h: 8.5 };
-const TEXT = { A: 'non ti sei girato.\nera già davanti a te.\nnon volevi ricordare.', B: 'ti sei girato.\nlei non se n\'è mai andata.\nl\'incendio l\'hai acceso tu.', C: 'sei uscito.\nlo specchio no.\nuna parte di te è rimasta qui.', D: 'ricordi tutto.\nl\'incendio l\'hai acceso tu.\nresti con lei. l\'hai scelto tu.' };
+const TEXT = { A: 'non ti sei girato.\nera già davanti a te.\nnon volevi ricordare.', B: 'ti sei girato.\nlei non se n\'è mai andata.\nl\'incendio l\'hai acceso tu.', D: 'ricordi tutto.\nl\'incendio l\'hai acceso tu.\nresti con lei. l\'hai scelto tu.' };
 
 export function createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn, combat }) {
   const T = { group: new THREE.Group(), opened: false, near: false };
@@ -83,17 +83,12 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
     // pulsante contestuale vicino alla porta
     dv.set(0 - player.pos.x, 0, zFar - player.pos.z); const dd = dv.length(); dv.normalize(); fw.set(player.forward.x, 0, player.forward.z).normalize();
     const near = dd < 3.2 && fw.dot(dv) > 0.6 && st === 'idle'; if (near !== T.near) { T.near = near; actBtn.textContent = 'APRI'; actBtn.classList.toggle('hidden', !near); }
-    if (st === 'opening') {
-      open += dt; const a = Math.min(1.7, open * 0.7); if (L) L.rotation.y = a; if (R) R.rotation.y = -a;   // si aprono verso la luce
-      white.material.opacity = Math.min(1, open / 2.4); leak.visible = true; leak.material.opacity = 0.9; gap.material.opacity = 1; player.pos.z -= Math.min(0.5, dt * 0.4) * (open > 1.4 ? 1 : 0);
-      if (open > 3.4 && st !== 'end') { st = 'end'; finish(TEXT.C, false, true); }
-    }
   };
 
   // APRI: il finale dipende dalle scelte
   T.open = () => {
     if (T.opened) return; T.opened = true; T.near = false; actBtn.classList.add('hidden');
-    if (flags.mirror) { st = 'opening'; open = 0; player.frozen = true; instab.set(0, 10); audio.whisper(3.2, 0.3); say('', 1); return; }
+    // (il vecchio finale segreto dello specchio non c'è più: la suora arriva sempre, qualunque cosa tu abbia guardato)
     // la porta è chiusa a chiave: dietro di te, nel buio, qualcosa entra nella stanza. Devi girarti.
     st = 'fight'; actBtn.classList.add('hidden'); audio.doorBang(new THREE.Vector3(0, 1.4, zFar), 0.7); player.addShake(0.5); lights.lamp(0, 'off'); lights.lamp(1, 'off'); audio.duck(0.15, 0.2);
     setTimeout(() => combat.begin(flags.turned ? 'behind' : 'ahead', flags.turned ? TEXT.B : TEXT.A, new THREE.Vector3(0, 0, TOWER.z0 - 1), flags.noGun ? 9.2 : (flags.turned ? 16 : 21) + ((flags.notes ?? 0) >= 5 ? 6 : 0), !flags.noGun && flags.weapon !== 'axe' && (flags.notes ?? 0) >= 5 ? { end: () => finish(TEXT.D) } : null, !!flags.noGun), 1600);   // senza pistola: 2 teletrasporti (4.5 s e 9 s) e poi il jump scare
