@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { P } from './personal.js';
 import { GLTFLoader } from '../vendor/three/loaders/GLTFLoader.js';
 import { makeMaterials, setAnisotropy } from './world/materials.js';
 import { buildTunnel, LAMPS, W, Z_END, H0 } from './world/tunnel.js';
@@ -184,7 +185,7 @@ async function enter() {
   $('fade').style.opacity = 0;
   setTimeout(() => instab.show(), 4000);
   setTimeout(() => say('sinistra: muoviti   ·   destra: guarda', 5000), 1800);
-  if (!q.get('start')) { setTimeout(() => { if (story?.current() === 'tunnel') say('corridoio di servizio. non fermarti, dicevano.', 5200); }, 9500); setTimeout(() => { if (story?.current() === 'tunnel') say('qualcuno ti segue da prima che entrassi.', 5200); }, 17500); }
+  if (!q.get('start')) { setTimeout(() => { if (story?.current() === 'tunnel') say(P ? P.name + '. non fermarti, dicevano.' : 'corridoio di servizio. non fermarti, dicevano.', 5200); }, 9500); setTimeout(() => { if (story?.current() === 'tunnel') say('qualcuno ti segue da prima che entrassi.', 5200); }, 17500); }
   last = performance.now();
 }
 $('enter').addEventListener('click', enter);
@@ -204,7 +205,7 @@ $('resume').addEventListener('click', () => setPaused(false));
 function finish(msg, fast = false, light = false) {
   if (ended) return; ended = true; controls.enabled = false; instab.hide();
   $('endtext').innerText = msg || 'fine';
-  const n = /^non ti sei girato/.test(msg || '') ? 1 : /^ti sei girato/.test(msg || '') ? 2 : 0;
+  const n = /^non ti sei girat/.test(msg || '') ? 1 : /^ti sei girat/.test(msg || '') ? 2 : 0;
   $('endsub').textContent = (n ? `finale ${n} di 2` : '') + (n && notes ? `\nricordi: ${flags.notes ?? 0} di 5` : '');
   setTimeout(() => audio.duck(0, 1.5), 400);
   $('fade').style.background = light ? '#dfe8e2' : '#000'; $('fade').style.transition = fast ? 'opacity .25s' : 'opacity 3s'; $('fade').style.opacity = 1;

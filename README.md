@@ -23,6 +23,9 @@ Storia: il paziente. Due righe per stanza, tre finali (negazione, accettazione, 
 - **Vibrazione** su porte, vetro, passi pesanti, note e TV (solo Android).
 - Il service worker non scarica più tutti gli asset in anticipo: si caricano e si mettono in cache quando servono.
 
+## Versione personalizzata
+`?per=elisa` (profili in `js/personal.js`): nome, genere e capelli rossi entrano nella trama (note, frasi delle stanze, finali, messaggi di caricamento, capelli rossi della sorella, il nome sussurrato con la voce sintetica del telefono). Senza il parametro il gioco è identico per tutti. Non si salva niente.
+
 ## Avvio locale
 ```
 npx http-server -p 8123 -c-1 .

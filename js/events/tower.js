@@ -7,9 +7,10 @@ import { decorTower } from '../world/decor.js';
 import { addExtras, pedestal, turnToward } from '../world/extra.js';
 import { unseenMover } from './ambient.js';
 import { addAtmosphere } from '../world/atmos.js';
+import { P } from '../personal.js';
 
 export const TOWER = { z0: -300, w: 14, l: 18, h: 8.5 };
-const TEXT = { A: 'non ti sei girato.\nera già davanti a te.\nnon volevi ricordare.', B: 'ti sei girato.\nlei non se n\'è mai andata.\nl\'incendio l\'hai acceso tu.' };
+const TEXT = P ? { A: 'non ti sei girata, ' + P.name + '.\nera già davanti a te.\nnon volevi ricordare.', B: 'ti sei girata, ' + P.name + '.\nlei non se n\'è mai andata.\nl\'incendio l\'hai acceso tu.' } : { A: 'non ti sei girato.\nera già davanti a te.\nnon volevi ricordare.', B: 'ti sei girato.\nlei non se n\'è mai andata.\nl\'incendio l\'hai acceso tu.' };
 
 export function createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn, combat }) {
   const T = { group: new THREE.Group(), opened: false, near: false };

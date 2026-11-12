@@ -2,15 +2,25 @@
 // compare il testo, in corsivo, per qualche secondo. Non c'è nessun contatore: alla fine una riga discreta dice quante ne hai trovate.
 // Le note raccontano la storia; chi le trova tutte e 5 ha qualche secondo in più nel combattimento della torre.
 import * as THREE from 'three';
+import { P } from '../personal.js';
 import { W as TUNNEL_W } from '../world/tunnel.js';
 
-export const NOTE_TEXT = [
+const NOTE_STD = [
   'paziente n. 17.\ningresso: notte del 3 novembre.\nnon risponde al proprio nome.',
   'ha rotto lo specchio ogni mattina.\nogni mattina lo rimettiamo.\ndice che quella non è la sua faccia.',
   'terapia della sedia: sospesa.\nchiede ogni giorno di sua sorella.\nsorella: deceduta. lui era in casa, quando è bruciata.',
   'incendio partito dal magazzino.\ninnesco volontario. benzina sui registri.\nun solo sopravvissuto: paziente n. 17.',
   'non l\'ho mai lasciato solo.\nl\'ho tirato fuori io, dal fuoco.\nnon lo lascerò nemmeno ora.',
 ];
+// versione per Elisa: stessa storia, ma la paziente n. 17 è lei e la sorella ha i suoi capelli rossi
+const NOTE_PER = [
+  'paziente n. 17: ' + (P?.name ?? '') + '.\ningresso: notte del 3 novembre.\ncapelli rossi. molto carina, annota l\'infermiere, e lo sottolinea due volte.',
+  'ha rotto lo specchio ogni mattina.\nogni mattina lo rimettiamo.\ndice che quei capelli rossi non sono i suoi.',
+  'terapia della sedia: sospesa.\nchiede ogni giorno di sua sorella, quella con i capelli come i suoi.\nsorella: deceduta. ' + (P?.name ?? '') + ' era in casa, quando è bruciata.',
+  'incendio partito dal magazzino.\ninnesco volontario. benzina sui registri.\nun solo sopravvissuto: ' + (P?.name ?? '') + '.',
+  'non l\'ho mai lasciata sola.\nl\'ho tirata fuori io, dal fuoco.\nnon la lascerò nemmeno ora.',
+];
+export const NOTE_TEXT = P ? NOTE_PER : NOTE_STD;
 
 let tex = null;
 function paperTexture() {
