@@ -7,7 +7,7 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
   // LA TRAMA, due righe per stanza (il paziente: un incendio, una cura, una colpa). Compaiono come i suggerimenti, senza schermate di testo.
   const LINES = {
     cellar: ['lo specchio non c\'era, prima.', P ? 'ricordi la tua faccia, ' + P.name + '?' : 'ricordi la tua faccia?'],
-    morgue: ['sedia, cinghie, tre strumenti.', P ? 'qui ti hanno curata, ' + P.name + '.' : 'qui ti hanno curato.'],
+    morgue: ['sedia, cinghie, tre strumenti.', P ? 'qui ti hanno cura' + (P.f === false ? 'to' : 'ta') + ', ' + P.name + '.' : 'qui ti hanno curato.'],
     warehouse: ['tutto ciò che è bruciato è passato da qui.', 'qualcuno ha lasciato la pistola dove l\'avresti trovata.'],
     tower: ['l\'ultima stanza era la sua.', 'non si arrabbia. aspetta.'],
   };

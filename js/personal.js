@@ -6,9 +6,15 @@ const PRESETS = {
   yana: { name: 'Yana', hair: 'biondi', f: true, hairHex: 0x8c7440, joke: 'capelli biondi, occhi azzurri. molto carina, annota l\'infermiere. il turno di notte, da allora, lo chiedono tutti.', detail: 'quegli occhi azzurri non sono i suoi', sister: 'quella con i capelli biondi come i suoi',
     lang: 'uk-UA', whisper: ['Яно.', 'Спи, Яно.'], turn: 'Обернись, Яно.', nurse: 'ogni sera le dice «добраніч», buonanotte, come vuole lei.' },   // ucraina: sussurri in ucraino (se il telefono ha la voce), buonanotte nella nota dell\'infermiera
 };
-const key = (new URLSearchParams(location.search).get('per') || '').trim().toLowerCase();
-export const P = PRESETS[key] || null;
-export const PKEY = P ? key : '';   // 'elisa' | 'yana' | ''
+const qs = new URLSearchParams(location.search), raw = (qs.get('per') || '').trim(), key = raw.toLowerCase();
+// profilo generico: basta il nome (?per=gabriele). Opzionali: &g=m|f (genere, default f), &capelli=biondi|rossi|castani|neri|grigi (default castani)
+const HAIR = { biondi: 0x8c7440, rossi: 0x6a1708, castani: 0x3a2412, neri: 0x14100c, grigi: 0x777777 };
+function generic() {
+  const f = (qs.get('g') || 'f').toLowerCase() !== 'm', hk = (qs.get('capelli') || '').toLowerCase(), hair = HAIR[hk] ? hk : 'castani', name = raw.charAt(0).toUpperCase() + raw.slice(1);
+  return { name, f, hair, hairHex: HAIR[hair], joke: 'capelli ' + hair + '. ' + (f ? 'molto carina' : 'un bel ragazzo') + ', annota l\'infermiere, e lo sottolinea due volte.', detail: 'quella faccia non è la sua', sister: 'quella con i capelli ' + hair + ' come i suoi' };
+}
+export const P = PRESETS[key] || (/^[a-zàèéìòù' -]{2,14}$/i.test(raw) ? generic() : null);
+export const PKEY = P ? key : '';   // 'elisa' | 'yana' | altro nome | ''
 
 // sussurro con la voce sintetica del telefono: basso, lento, una o due volte in tutta la partita.
 // Se il profilo ha una lingua (es. ucraino) e il telefono ha quella voce, parla in quella lingua; altrimenti dice il nome in italiano (e, per le altre frasi, tace: il testo e' gia' sullo schermo).
