@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 
-export function createSorella({ group, camera, player, audio, lights, instab, zMin, zMax, xMax = 4.2 }) {
+export function createSorella({ group, camera, player, audio, lights, instab, say, zMin, zMax, xMax = 4.2 }) {
   const S = { state: 'off', model: null, mixer: null, act: {}, t: 0, seen: 0, n: 0, loading: null, wait: 0, eyes: null, sp: [], fromP: new THREE.Vector3(), toP: new THREE.Vector3(), eyeV: 0 };
   const gc = document.createElement('canvas'); gc.width = gc.height = 64; { const g = gc.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,230,170,1)'); r.addColorStop(.18, 'rgba(255,140,50,.95)'); r.addColorStop(.5, 'rgba(255,70,15,.28)'); r.addColorStop(1, 'rgba(255,60,10,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); }
   const glowTex = new THREE.CanvasTexture(gc);
@@ -25,7 +25,7 @@ export function createSorella({ group, camera, player, audio, lights, instab, zM
   }, undefined, () => res(null))));
   const play = (name, fade = 0.2) => { const a = S.act[name]; if (!a) return; for (const k in S.act) if (S.act[k] !== a && S.act[k].isRunning()) S.act[k].fadeOut(fade); a.reset().fadeIn(fade).play(); };
   const hide = () => { if (S.model) S.model.visible = false; S.sp.forEach((s) => { s.visible = false; }); };
-  S.reset = () => { S.pending = false; S.state = 'idle'; S.t = 0; S.seen = 0; S.n = 0; S.wait = 0; hide(); };
+  S.reset = () => { S.behindUsed = false; S.pending = false; S.state = 'idle'; S.t = 0; S.seen = 0; S.n = 0; S.wait = 0; hide(); };
   const f = new THREE.Vector3(), d = new THREE.Vector3(), p = new THREE.Vector3(), q = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3();
   const face = () => { const m = S.model; m.rotation.y = Math.atan2(player.pos.x - m.position.x, player.pos.z - m.position.z); };
   const place = (x, z) => { const m = S.model; m.position.set(Math.max(-xMax, Math.min(xMax, x)), 0, Math.max(zMin, Math.min(zMax, z))); face(); m.visible = true; S.seen = 0; S.t = 0; S.eyeV = 0; play('Idle', 0.01); S.state = 'show'; S.n++; };
@@ -45,7 +45,8 @@ export function createSorella({ group, camera, player, audio, lights, instab, zM
   // IMBOSCATA: quando prendi l'arma, se non l'hai ancora vista fare il lampo, arriva da dietro (non serve guardarla): ~1,2 s dopo, 0,3 s di corsa
   S.ambush = () => {
     if (S.state === 'done' || S.state === 'dash' || S.state === 'off') return;
-    S.load(); S.pending = true;
+    if (S.behindUsed) return;               // da dietro ne succede una sola: o l'avviso nel buio, o l'imboscata
+    S.behindUsed = true; S.load(); S.pending = true;
   };
   S.update = (dt, enabled = true) => {
     if (S.state === 'off' || S.state === 'done' || !enabled) return;
@@ -54,6 +55,25 @@ export function createSorella({ group, camera, player, audio, lights, instab, zM
       if (!S.model) { S.load(); return; }
       if (player.pos.z < zMax - 7) place(-3.4, Math.max(zMin, player.pos.z - 19));
       return;
+    }
+    // AVVISO NEGLI ANGOLI BUI (a circa tre quarti della sala): una scritta ti dice di girarti, e alle spalle, lontano, due occhi nel buio
+    if (!S.behindUsed && S.model && ['idle', 'show', 'wait', 'fade'].includes(S.state) && S.n < 3 && player.pos.z < zMax - 24) {
+      S.behindUsed = true; hide(); S.state = 'warn'; S.t = 0; say?.('abbi paura degli angoli bui.\ngirati.', 5000);
+    }
+    if (S.state === 'warn') {
+      S.t += dt; if (S.t < 2.4) return;
+      camera.getWorldDirection(f); p.set(f.x, 0, f.z).normalize(); const m = S.model, sd = (Math.random() < 0.5 ? -1 : 1) * 3.0;
+      m.position.set(Math.max(-xMax, Math.min(xMax, sd)), 0, Math.min(zMax, camera.position.z - p.z * 13)); face(); m.visible = true; S.eyeV = 0; S.seen = 0; S.t = 0; play('Idle', 0.01); S.state = 'behind'; return;
+    }
+    if (S.state === 'behind') {
+      S.mixer.update(dt); S.t += dt; const m = S.model; camera.getWorldDirection(f); d.copy(m.position).setY(1.4).sub(camera.position); const dist = d.length(); d.normalize();
+      S.eyeV = Math.min(1, S.eyeV + dt * 2.2); updateEyes(S.eyeV * (0.85 + 0.15 * Math.sin(S.t * 3.1)));
+      if (d.dot(f) > 0.6) S.seen += dt;
+      if (S.seen > 1.6 || S.t > 9 || dist < 7) { S.state = 'behindFade'; S.t = 0; }
+      return;
+    }
+    if (S.state === 'behindFade') {
+      S.t += dt; updateEyes(Math.random() < 0.5 ? 0 : 0.6 * (1 - S.t / 0.3)); if (S.t > 0.3) { hide(); S.state = 'done'; } return;
     }
     if (S.state === 'ambushWait') {
       S.t += dt; if (S.t < 1.2) return;
