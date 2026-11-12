@@ -7,6 +7,7 @@ import { kitMesh, kitObject } from '../world/props.js';
 import { decorWarehouse } from '../world/decor.js';
 import { unseenMover } from './ambient.js';
 import { redLight, doorGlow } from '../world/redlight.js';
+import { addExtras, pedestal } from '../world/extra.js';
 
 export const WH = { z0: -400, w: 12, l: 36, h: 6.5 };
 
@@ -22,6 +23,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   [-9, -13.5, -19, -24, -31, -33.5].forEach((dz, i) => { prop('assets/models/rack.glb', 1.9, i % 2 ? 5.2 : -5.2, 0, WH.z0 + dz - 0.4, (i % 2 ? -1 : 1) * Math.PI / 2 + (i % 3) * 0.05); });
   prop('assets/models/bin.glb', 0.9, -4.2, 0, WH.z0 - 5, 0.4); prop('assets/models/bin.glb', 0.9, 4.4, 0, WH.z0 - 21, 1.9); prop('assets/models/tank.glb', 0.55, -4.6, 0, WH.z0 - 28, 0.3);
   prop('assets/models/rim.glb', 0.5, 3.4, 0, WH.z0 - 12, 0.7); prop('assets/models/can.glb', 0.12, -2.1, 0, WH.z0 - 15, 1.1); prop('assets/models/stool.glb', 0.46, 1.8, 0, WH.z0 - 7.5, 0.2, (o) => { W.stool = o; });
+  addExtras(W.group, [['x_spray', 0.24, -3.0, 0, WH.z0 - 26, 0.9], ['x_gnome', 0.6, 4.5, 0, WH.z0 - 16.3, -2.2], ['x_tv', 0.42, -3.6, 0, WH.z0 - 9.5, 0.5], ['x_basket', 0.3, 4.4, 0, WH.z0 - 27, 1.2]]);
   // lo sgabello, quando non lo guardi, si sposta verso il centro della sala (al massimo 2 volte)
   const stoolMove = unseenMover({ camera, getObj: () => W.stool, max: 2, gap: 8, move: () => { W.stool.position.x -= 0.5; W.stool.position.z -= 0.45; W.stool.rotation.y += 0.7; audio.squeak?.(0.4, W.stool.position.clone()); } });
   // il carrello con la pistola e le munizioni

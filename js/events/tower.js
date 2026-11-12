@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { buildRoom } from '../world/rooms.js';
 import { decorTower } from '../world/decor.js';
+import { addExtras, pedestal } from '../world/extra.js';
 
 export const TOWER = { z0: -300, w: 14, l: 18, h: 8.5 };
 const TEXT = { A: 'non ti sei girato.\nera già davanti a te.\nnon volevi ricordare.', B: 'ti sei girato.\nlei non se n\'è mai andata.\nl\'incendio l\'hai acceso tu.', C: 'sei uscito.\nlo specchio no.\nuna parte di te è rimasta qui.', D: 'ricordi tutto.\nl\'incendio l\'hai acceso tu.\nresti con lei. l\'hai scelto tu.' };
@@ -23,6 +24,8 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   prop('assets/models/shelf.glb', 2.0, -6.4, TOWER.z0 - 12, Math.PI / 2);
   prop('assets/models/can.glb', 0.12, 2.8, TOWER.z0 - 4, 0.9);
   prop('assets/models/chair.glb', 1.0, 2.2, TOWER.z0 - 10.5, Math.PI, (o) => { T.chair = o; });
+  pedestal(T.group, -6.1, TOWER.z0 - 15.5);
+  addExtras(T.group, [['x_clock', 2.3, -6.6, 0, TOWER.z0 - 4.5, Math.PI / 2], ['x_lion', 0.44, 6.3, 1.15, TOWER.z0 - 9, -Math.PI / 2], ['x_bust', 0.52, -6.1, 0.95, TOWER.z0 - 15.5, Math.PI / 2 + 0.4]]);
 
   // porta d'uscita con bagliore sotto
   const door = new THREE.Group(); door.position.set(0, 0, zFar + 0.15); T.group.add(door);
