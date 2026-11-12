@@ -2,6 +2,7 @@
 // Il portone si spalanca contro il giocatore. Dietro: buio. Poi una luce lontana mostra una folla di sagome ferme che ti fissa.
 // La luce si spegne; quando torna, sono più vicine. Tre volte. Infine il respiro, «non guardare dietro.» e la scelta.
 import * as THREE from 'three';
+import { rgbPulse } from '../ui/rgbshift.js';
 import { P } from '../personal.js';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { Z_END, DOOR } from '../world/tunnel.js';
@@ -59,7 +60,7 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
       }
       case 'void':
         // buio e silenzio: ti aspetti qualcosa
-        if (E.t > 3.2) { ph = 0; go('lit'); lightOn(); say('erano qui tutti, quella notte.', 4800); }
+        if (E.t > 3.2) { ph = 0; go('lit'); lightOn(); say('erano qui tutti, quella notte.', 4800); rgbPulse(1); }
         break;
       case 'lit': {
         // la sala è illuminata: in fondo, file di sagome ferme che ti fissano

@@ -9,6 +9,7 @@ import { createPlayer } from './player/player.js';
 import { createAudio } from './audio/audio.js';
 import { createRats } from './events/rats.js';
 import { createInstability } from './ui/instability.js';
+import { createRgbShift } from './ui/rgbshift.js';
 import { createGlassEvent } from './events/glass.js';
 import { createDoorEvent } from './events/door.js';
 import { createScare } from './events/scare.js';
@@ -75,6 +76,7 @@ const controls = createControls();
 const player = createPlayer(camera, controls, audio);
 const rats = createRats({ camera, player, audio });
 const instab = createInstability(audio);
+const rgbShift = createRgbShift(renderer);
 
 // ---------- oggetti di scena ----------
 const gl = new GLTFLoader();
@@ -292,7 +294,7 @@ function frame(now) {
   if (paused || state === 'loading') { if (state === 'loading') renderer.render(scene, camera); return; }
   if (!(window.__g && window.__g.hold)) tick(dt);
   glassEvent.preRender();
-  renderer.render(scene, camera);
+  rgbShift.update(dt); rgbShift.render(scene, camera);
 
   // qualità adattiva: se i frame calano, scala la risoluzione
   fpsAcc += dt; fpsN++;

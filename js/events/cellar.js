@@ -13,6 +13,7 @@ import { unseenMover } from './ambient.js';
 import { addAtmosphere } from '../world/atmos.js';
 import { P as PROF, whisperName } from '../personal.js';
 import { createFingerWriter } from '../world/fingerwrite.js';
+import { rgbPulse } from '../ui/rgbshift.js';
 
 export const CELLAR = { z0: -200, w: 8, l: 24, h: 4.4 };
 const MIRROR = new THREE.Vector3(-3.98, 1.45, -210);
@@ -237,7 +238,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     } else if (far1.visible || (flash && C.farT >= 0 && flash.intensity > 0 && !shadowOn)) { far1.visible = false; if (flash && C.farT >= 0) flash.intensity = 0; }
     // (il vecchio modello 3D nel riflesso è disattivato: troppo definito)
     fig.visible = false;
-    if (shadowOn && C.step >= 2) { C.late = (C.late || 0) + dt; if (C.late > 1.4 && !flags.mirror) { flags.mirror = true; lights.lamp(0, 'flicker', 1.4); lights.lamp(1, 'flicker', 1.4); audio.whisper(2.6, 0.4); say('ci sei anche tu.', 4500); instab.set(1, 6); player.addShake(0.35); } } else if (!shadowOn) C.late = 0;
+    if (shadowOn && C.step >= 2) { C.late = (C.late || 0) + dt; if (C.late > 1.4 && !flags.mirror) { flags.mirror = true; lights.lamp(0, 'flicker', 1.4); lights.lamp(1, 'flicker', 1.4); audio.whisper(2.6, 0.4); say('ci sei anche tu.', 4500); instab.set(1, 6); rgbPulse(1); player.addShake(0.35); } } else if (!shadowOn) C.late = 0;
     if (!cornerDone && C.started && P.z < CELLAR.z0 - 11.5 && P.z > CELLAR.z0 - 14) { cornerDone = true; cornerT = 0; lights.lamp(1, 'flicker', 1.6); instab.push(0.7, 6); }
     if (cornerT >= 0) {
       cornerT += dt;
