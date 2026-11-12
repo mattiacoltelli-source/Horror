@@ -179,13 +179,19 @@ async function enter() {
     { room: 'tower', parent: tower.group, p: [-6.96, 1.5, TZ - 5], ry: Math.PI / 2 },
   ] });
   // SCRITTE DI SANGUE per le versioni personalizzate (frasi con il suo nome; per Yana anche in ucraino), grandi sui muri
-  const WR = { yana: { t1: ['yana_1', 5.09, 4.4], t3: ['yana_3', 4.34, 4.2], c2: ['yana_2', 2.42, 3.6], w4: ['yana_4', 4.26, 5.4] }, elisa: { t1: ['elisa_1', 4.89, 4.4], t3: ['elisa_3', 3.89, 4.0], c2: ['elisa_2', 2.63, 3.6], w4: ['elisa_4', 4.78, 5.4] } }[PKEY];
+  const WR = { yana: { t1: ['yana_1', 5.09, 4.4], t3: ['yana_3', 4.34, 4.2], c2: ['yana_2', 2.42, 3.6], w4: ['yana_4', 4.26, 5.4], o: ['yana_o', 7.05, 4.2], h: ['yana_h', 3.87, 2.65], m: ['yana_m', 6.67, 4.0] }, elisa: { t1: ['elisa_1', 4.89, 4.4], t3: ['elisa_3', 3.89, 4.0], c2: ['elisa_2', 2.63, 3.6], w4: ['elisa_4', 4.78, 5.4], o: ['elisa_o', 6.88, 4.2], h: ['elisa_h', 4.15, 2.65], m: ['elisa_m', 6.83, 4.0] } }[PKEY];
   if (WR && !window.__writ) { window.__writ = true; const im = (k) => 'assets/tex/wr_' + WR[k][0] + '.png', asp = (k) => WR[k][1];
     // CRITERIO: ogni scritta sta al CENTRO dello spazio libero tra due elementi fissi (costoloni del tunnel, pilastri della cantina) e la sua larghezza e' limitata allo spazio, cosi' niente la taglia
     const fit = (a, b, k, thick, maxW) => ({ z: (a + b) / 2, w: Math.min(maxW ?? WR[k][2], Math.abs(a - b) - thick - 0.5) });
     const t1 = fit(RIBS[1], RIBS[2], 't1', 0.5), t3 = fit(RIBS[4], RIBS[5], 't3', 0.5), c2 = fit(CZ - 13, CZ - 18, 'c2', 0.9);   // tunnel: prima e dopo il vetro; cantina: dopo lo specchio
     writingDecals(scene, [{ img: im('t1'), aspect: asp('t1'), p: [-1.38, 1.0, t1.z], wall: '+x', w: t1.w }, { img: im('t3'), aspect: asp('t3'), p: [-1.38, 1.0, t3.z], wall: '+x', w: t3.w }]);   // sotto il tubo sottile (y 1.62)
     writingDecals(cellar.group, [{ img: im('c2'), aspect: asp('c2'), p: [-3.96, 1.7, c2.z], wall: '+x', w: c2.w }]);
+    // obitorio: muro sinistro (parte verde, sopra le piastrelle), al centro della sala
+    writingDecals(morgue.group, [{ img: im('o'), aspect: asp('o'), p: [-4.22, 2.1, MZ - 6.6], wall: '+x', w: 6.0 }]);
+    // sala dei mostri: sui due muri laterali, tra la porta chiusa e il primo pilastro (e' li' che guardi mentre ti giri); stesso centro, larghezza limitata allo spazio
+    { const hz = Z_END - 0.35, hs = fit(hz, hz - 3.15, 'h', 0, WR.h[2] + 1); writingDecals(hall.group, [{ img: im('h'), aspect: asp('h'), p: [-5.99, 1.7, hs.z], wall: '+x', w: hs.w }, { img: im('h'), aspect: asp('h'), p: [5.99, 1.7, hs.z], wall: '-x', w: hs.w }]); }
+    // magazzino: muro sinistro, tra due pilastri (sotto la lampada a muro, lontano dagli scaffali)
+    { const ws = fit(WZ - 21.6, WZ - 27.6, 'm', 0.9, WR.m[2]); writingDecals(wh.group, [{ img: im('m'), aspect: asp('m'), p: [-5.96, 1.3, ws.z], wall: '+x', w: ws.w }]); }
     writingDecals(tower.group, [{ img: im('w4'), aspect: asp('w4'), p: [0, 3.7, TZ - 0.05], wall: '-z', w: WR.w4[2] }]);   // torre: muro d'ingresso, sopra la porta: la vedi quando ti giri
   }
   doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar'); } });
