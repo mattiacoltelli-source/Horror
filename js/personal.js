@@ -3,7 +3,7 @@
 // name: nome; hair: aggettivo dei capelli; hairHex: colore dei capelli della sorella (bruciati); joke: riga della nota 1 (battuta leggera); detail: tratto per la nota 2
 const PRESETS = {
   elisa: { name: 'Elisa', hair: 'rossi', f: true, hairHex: 0x6a1708, joke: 'capelli rossi. molto carina, annota l\'infermiere, e lo sottolinea due volte.', detail: 'quei capelli rossi non sono i suoi', sister: 'quella con i capelli come i suoi' },
-  yana: { name: 'Yana', hair: 'biondi', f: true, hairHex: 0x8c7440, joke: 'capelli biondi, occhi azzurri. l\'infermiere annota solo quelli, e li sottolinea due volte.', detail: 'quegli occhi azzurri non sono i suoi', sister: 'quella con i capelli biondi come i suoi' },
+  yana: { name: 'Yana', hair: 'biondi', f: true, hairHex: 0x8c7440, joke: 'capelli biondi, occhi azzurri. molto carina, annota l\'infermiere. il turno di notte, da allora, lo chiedono tutti.', detail: 'quegli occhi azzurri non sono i suoi', sister: 'quella con i capelli biondi come i suoi' },
 };
 const key = (new URLSearchParams(location.search).get('per') || '').trim().toLowerCase();
 export const P = PRESETS[key] || null;
