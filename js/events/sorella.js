@@ -4,6 +4,7 @@
 // Se arrivi al carrello senza che sia successo, scatta comunque. Una volta sola per partita.
 import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
+import { P } from '../personal.js';
 
 export function createSorella({ group, camera, player, audio, lights, instab, say, zMin, zMax, xMax = 4.2 }) {
   const S = { state: 'off', model: null, mixer: null, act: {}, t: 0, seen: 0, n: 0, loading: null, wait: 0, eyes: null, sp: [], fromP: new THREE.Vector3(), toP: new THREE.Vector3(), eyeV: 0 };
@@ -15,6 +16,7 @@ export function createSorella({ group, camera, player, audio, lights, instab, sa
       if (!o.isMesh) return; o.frustumCulled = false; o.material.envMapIntensity = 0.12;
       if (o.material.name === 'skin_game') { S.skin = o.material; o.material.color.multiplyScalar(0.45); o.material.roughness = 0.85; o.material.metalness = 0; }
       if (o.material.name === 'cloth_game') o.material.color.multiplyScalar(0.5);
+      if (P && o.material.name === 'hair') { o.material.color.setHex(0x6a1708); o.material.roughness = 0.6; }   // versione per Elisa: i capelli della sorella sono rossi, come i suoi
       if (o.material.name === 'ember') { o.material.emissiveIntensity = 3.2; S.eyes = o; }
     });
     for (let i = 0; i < 2; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true, opacity: 0 })); sp.scale.setScalar(0.26); sp.visible = false; group.add(sp); S.sp.push(sp); }
