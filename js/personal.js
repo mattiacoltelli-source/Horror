@@ -7,11 +7,11 @@ const PRESETS = {
     lang: 'uk-UA', whisper: ['Яно.', 'Спи, Яно.'], turn: 'Обернись, Яно.', nurse: 'ogni sera le dice «добраніч», buonanotte, come vuole lei.' },   // ucraina: sussurri in ucraino (se il telefono ha la voce), buonanotte nella nota dell\'infermiera
 };
 const qs = new URLSearchParams(location.search), raw = (qs.get('per') || '').trim(), key = raw.toLowerCase();
-// profilo generico: basta il nome (?per=gabriele). Opzionali: &g=m|f (genere, default f), &capelli=biondi|rossi|castani|neri|grigi (default castani)
+// profilo generico: basta il nome (?per=gabriele). Opzionali: &g=m|f (genere, default f), &capelli=biondi|rossi|castani|neri|grigi (default castani) oppure &capelli=no per non nominarli mai
 const HAIR = { biondi: 0x8c7440, rossi: 0x6a1708, castani: 0x3a2412, neri: 0x14100c, grigi: 0x777777 };
 function generic() {
-  const f = (qs.get('g') || 'f').toLowerCase() !== 'm', hk = (qs.get('capelli') || '').toLowerCase(), hair = HAIR[hk] ? hk : 'castani', name = raw.charAt(0).toUpperCase() + raw.slice(1);
-  return { name, f, hair, hairHex: HAIR[hair], joke: 'capelli ' + hair + '. ' + (f ? 'molto carina' : 'un bel ragazzo') + ', annota l\'infermiere, e lo sottolinea due volte.', detail: 'quella faccia non è la sua', sister: 'quella con i capelli ' + hair + ' come i suoi' };
+  const f = (qs.get('g') || 'f').toLowerCase() !== 'm', hk = (qs.get('capelli') || '').toLowerCase(), none = /^(no|nessuno|calvo|calva|senza)$/.test(hk), hair = none ? '' : HAIR[hk] ? hk : 'castani', name = raw.charAt(0).toUpperCase() + raw.slice(1);
+  return { name, f, hair, hairHex: HAIR[hair || 'castani'], joke: (hair ? 'capelli ' + hair + '. ' : '') + (f ? 'molto carina' : 'un bel ragazzo') + ', annota l\'infermiere, e lo sottolinea due volte.', detail: 'quella faccia non è la sua', sister: hair ? 'quella con i capelli ' + hair + ' come i suoi' : 'quella con la sua stessa faccia' };
 }
 export const P = PRESETS[key] || (/^[a-zàèéìòù' -]{2,14}$/i.test(raw) ? generic() : null);
 export const PKEY = P ? key : '';   // 'elisa' | 'yana' | altro nome | ''
