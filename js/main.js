@@ -192,6 +192,11 @@ async function enter() {
     { const hz = Z_END - 0.35, hs = fit(hz, hz - 3.15, 'h', 0, WR.h[2] + 1); writingDecals(hall.group, [{ img: im('h'), aspect: asp('h'), p: [-5.99, 1.7, hs.z], wall: '+x', w: hs.w }, { img: im('h'), aspect: asp('h'), p: [5.99, 1.7, hs.z], wall: '-x', w: hs.w }]); }
     // magazzino: muro sinistro, tra due pilastri (sotto la lampada a muro, lontano dagli scaffali)
     { const ws = fit(WZ - 21.6, WZ - 27.6, 'm', 0.9, WR.m[2]); writingDecals(wh.group, [{ img: im('m'), aspect: asp('m'), p: [-5.96, 1.3, ws.z], wall: '+x', w: ws.w }]); }
+    // simbolo (occhio) a sangue, riempitivo: 3 volte lungo il percorso, in punti vuoti (tunnel muro destro, cantina muro sinistro, magazzino muro destro)
+    { const sg = 'assets/tex/wr_sigil.png', A = 0.844, tz = (RIBS[2] + RIBS[3]) / 2;
+      writingDecals(scene, [{ img: sg, aspect: A, p: [1.38, 1.45, tz], wall: '-x', w: 1.1 }]);
+      writingDecals(cellar.group, [{ img: sg, aspect: A, p: [-3.96, 1.6, CZ - 20.5], wall: '+x', w: 1.6 }]);
+      writingDecals(wh.group, [{ img: sg, aspect: A, p: [5.96, 1.9, WZ - 12.6], wall: '-x', w: 1.7 }]); }
     writingDecals(tower.group, [{ img: im('w4'), aspect: asp('w4'), p: [0, 3.7, TZ - 0.05], wall: '-z', w: WR.w4[2] }]);   // torre: muro d'ingresso, sopra la porta: la vedi quando ti giri
   }
   doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar'); } });
