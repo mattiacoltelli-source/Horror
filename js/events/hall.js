@@ -56,6 +56,13 @@ export function createHall({ scene, mats, lights }) {
           float topF = clamp(normalize(vNormal).y * 0.5 + 0.55, 0.0, 1.0);
           totalEmissiveRadiance += vec3(1.0, 0.58, 0.26) * rimF * topF * uRim * (0.16 * (1.0 - uNear) + 0.05 * uNear);`); };
     m.customProgramCacheKey = () => 'crowdrim4'; return m; };
+  const ecv = document.createElement('canvas'); ecv.width = ecv.height = 64; { const g = ecv.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,225,160,1)'); r.addColorStop(.2, 'rgba(255,130,45,.9)'); r.addColorStop(.55, 'rgba(255,60,12,.22)'); r.addColorStop(1, 'rgba(255,50,10,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); }
+  const eyeTex = new THREE.CanvasTexture(ecv), eyeCache = [];
+  const eyeInfo = (t, ge) => (eyeCache[t] ??= (() => {   // altezza, profondità e distanza degli occhi dalla fascia della testa del modello (davanti = +z)
+    const pos = ge.attributes.position, h = TYPES[t][1]; let zmax = -1e9, xmin = 1e9, xmax = -1e9;
+    for (let i = 0; i < pos.count; i++) { const y = pos.getY(i); if (y > 0.84 * h && y < 0.96 * h) { zmax = Math.max(zmax, pos.getZ(i)); xmin = Math.min(xmin, pos.getX(i)); xmax = Math.max(xmax, pos.getX(i)); } }
+    return { y: 0.9 * h, z: zmax > -1e8 ? zmax : 0.1, dx: Math.max(0.03, Math.min(0.07 * h, (xmax - xmin) * 0.2)) };
+  })());
   const loader = new GLTFLoader();
   Promise.all(TYPES.map(([n, h]) => new Promise((res) => loader.load(`assets/models/m_${n}.glb`, (gl) => {
     const geos = []; gl.scene.updateMatrixWorld(true);
@@ -70,6 +77,9 @@ export function createHall({ scene, mats, lights }) {
       const ge = geos[t]; if (!ge) return;
       const m = new THREE.Mesh(ge, mkLit()); m.userData.crowd = true; m.position.set(x * 0.6 + Math.sin(i * 7.3) * 0.3, 0, z + Math.cos(i * 3.1) * 0.4);
       m.rotation.y = Math.sin(i * 5.7) * 0.28; m.matrixAutoUpdate = true; crowd.add(m);
+      // occhi: due braci che brillano nel buio (additive, visibili anche nella nebbia), all'altezza della testa e sul lato davanti
+      const ei = eyeInfo(t, ge), sc = 0.12 + 0.05 * TYPES[t][1] / 2;
+      m.userData.eyes = [-1, 1].map((sx) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: eyeTex, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true, opacity: 0 })); sp.scale.setScalar(sc); sp.position.set(sx * ei.dx, ei.y, ei.z + 0.02); m.add(sp); return sp; });
     });
     H.geos = geos; H.ready = true; pending.forEach(([m, i]) => { if (geos[i]) m.geometry = geos[i]; });
   });
@@ -94,7 +104,7 @@ export function createHall({ scene, mats, lights }) {
   H.lightOn = () => { H.target = 1; H.flick = 1.1; [0, 1, 2].forEach((i) => lights?.lamp(i, 'flicker', 0.8 + i * 0.3)); setTimeout(() => { if (H.target) [0, 1, 2].forEach((i) => lights?.lamp(i, 'pulse')); }, 1500); };
   H.lightOff = () => { H.target = 0; H.flick = 0; H.glow = 0; [0, 1, 2].forEach((i) => lights?.lamp(i, 'off')); };
 
-  const wp = new THREE.Vector3(), camPos = new THREE.Vector3(); let lampPulseV = 1;
+  const wp = new THREE.Vector3(), camPos = new THREE.Vector3(); let lampPulseV = 1, time2 = 0;
   const lampPulse = () => lampPulseV;
   H.update = (dt, cam) => {
     if (cam) camPos.copy(cam.position);
@@ -103,12 +113,13 @@ export function createHall({ scene, mats, lights }) {
     if (H.flick > 0) H.flick -= dt;
     const k = H.target * (H.flick > 0 ? (Math.random() > 0.5 ? 1 : 0.08) : 1);
     H.glow += (k - H.glow) * Math.min(1, dt * (k > H.glow ? 14 : 30));
-    const v = H.glow;
+    const v = H.glow; time2 += dt;
     glowMat.opacity = Math.min(1, v) * 0.38;
     rimU.value = Math.min(1, v) * (0.5 + 0.5 * lampPulse());
     crowd.children.forEach((m) => { if (!m.userData.crowd) return; const d = Math.hypot(m.getWorldPosition(wp).x - camPos.x, wp.z - camPos.z), near = Math.min(1, Math.max(0, (15 - d) / 8));
       m.material.color.setScalar(0.06 * (1 - 0.9 * near));   // da vicino: sagoma quasi nera, niente dettaglio
-      if (m.material.userData.sh) m.material.userData.sh.uniforms.uNear.value = near; });
+      if (m.material.userData.sh) m.material.userData.sh.uniforms.uNear.value = near;
+      if (m.userData.eyes) { const eo = (0.4 + 0.45 * Math.min(1, v)) * (0.85 + 0.15 * Math.sin(time2 * 2.3 + m.id)); m.userData.eyes.forEach((s) => { s.material.opacity = eo; }); } });
     crowd.visible = true;                                     // la visibilità la decide la luce, non un interruttore
     lights?.lamps?.forEach((L, i) => { const lv = L.level ?? 0; if (lampGlows[i]) { lampGlows[i].material.opacity = Math.min(1, lv) * 0.85; lampBulbs[i].material.color.setRGB(1, 0.78 + 0.1 * lv, 0.45 + 0.3 * lv).multiplyScalar(0.25 + 0.9 * lv); } });
     scene.fog.density += (0.026 - scene.fog.density) * Math.min(1, dt * 2);   // nebbia più rada: si deve vedere in fondo alla sala
