@@ -294,6 +294,14 @@ export function createAudio() {
       if (!ok) return; const t = ctx.currentTime, s = ctx.createBufferSource(); s.buffer = noiseBuf; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.setValueAtTime(2600, t); bp.frequency.linearRampToValueAtTime(1500, t + 0.35); bp.Q.value = 0.8; const g = ctx.createGain();
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.1, t + 0.04); g.gain.linearRampToValueAtTime(0.05, t + 0.14); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.4); s.connect(bp); bp.connect(g); g.connect(master); s.start(t);
     },
+    // topo che scappa: un breve trillo, poi raffica di unghiette sul pavimento (clic acuti a ~20 Hz) con posizione 3D
+    scurry(pos, dur = 0.9) {
+      if (!ok) return; const t = ctx.currentTime, out = ctx.createGain(); out.gain.value = 1;
+      const pn = ctx.createPanner(); pn.panningModel = 'HRTF'; pn.refDistance = 1.2; pn.positionX.value = pos.x; pn.positionY.value = 0.15; pn.positionZ.value = pos.z; out.connect(pn); pn.connect(master); pn.connect(verbSend);
+      const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(5200, t); o.frequency.exponentialRampToValueAtTime(3300, t + 0.11); og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(0.05, t + 0.01); og.gain.exponentialRampToValueAtTime(0.0008, t + 0.12); o.connect(og); og.connect(out); o.start(t); o.stop(t + 0.14);
+      for (let k = 0; k < Math.round(dur * 20); k++) { const tt = t + 0.05 + k * 0.05 + Math.random() * 0.012, s = ctx.createBufferSource(); s.buffer = noiseBuf; const hp = ctx.createBiquadFilter(); hp.type = 'bandpass'; hp.frequency.value = 3800 + Math.random() * 1800; hp.Q.value = 1.8; const g = ctx.createGain();
+        g.gain.setValueAtTime(0, tt); g.gain.linearRampToValueAtTime(0.05 * (1 - k / (dur * 24)), tt + 0.002); g.gain.exponentialRampToValueAtTime(0.0008, tt + 0.016); s.connect(hp); hp.connect(g); g.connect(out); s.start(tt, Math.random()); s.stop(tt + 0.02); }
+    },
     // statica di una TV che si accende: click, poi rumore bianco filtrato (con posizione 3D), poi click di spegnimento
     tvStatic(dur = 3, pos = null, level = 1) {
       vib([20, 40, 20]);

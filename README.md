@@ -18,6 +18,7 @@ Storia: il paziente. Due righe per stanza, tre finali (negazione, accettazione, 
 - **Magazzino più leggero**: oggetti decimati con gltpack e piano lontano per stanza (da ~420k a ~185k triangoli, da 158 a ~60 draw call).
 - **Checkpoint**: a ogni stanza si salva (`localStorage`, chiave `ng_ckpt`); dalla schermata iniziale compare «riparti dalla…».
 - **Oggetti che reagiscono**: i busti (cantina, torre) si voltano verso di te quando non li guardi; la TV del magazzino si accende da sola con la statica e una sagoma.
+- **Topi** (`js/events/rats.js`, modello Poly Haven CC0): 9 in tutto, nel tunnel e nelle stanze, fermi vicino ai muri; se ti avvicini scappano di scatto verso uno scaffale o un mobile e spariscono (una volta sola ciascuno), con un trillo e un rumore di unghiette.
 - **Vibrazione** su porte, vetro, passi pesanti, note e TV (solo Android).
 - Il service worker non scarica più tutti gli asset in anticipo: si caricano e si mettono in cache quando servono.
 

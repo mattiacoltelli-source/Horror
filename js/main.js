@@ -6,6 +6,7 @@ import { createLights } from './world/lights.js';
 import { createControls } from './player/controls.js';
 import { createPlayer } from './player/player.js';
 import { createAudio } from './audio/audio.js';
+import { createRats } from './events/rats.js';
 import { createInstability } from './ui/instability.js';
 import { createGlassEvent } from './events/glass.js';
 import { createDoorEvent } from './events/door.js';
@@ -68,6 +69,7 @@ const dust = createDust(camera);
 const audio = createAudio();
 const controls = createControls();
 const player = createPlayer(camera, controls, audio);
+const rats = createRats({ camera, player, audio });
 const instab = createInstability(audio);
 
 // ---------- oggetti di scena ----------
@@ -144,6 +146,18 @@ async function enter() {
   wh ??= createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, flags, actBtn: $('act') });
   cellar ??= createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash });
   tower ??= createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish: (m, f, l) => (dawn ? dawn.start(m) : finish(m, f, l)), warm, actBtn: $('act'), combat });
+  // topi: vicino ai muri e alle cose, scappano di scatto quando ti avvicini (una volta sola ciascuno)
+  if (!window.__ratsDone) { window.__ratsDone = true;
+    rats.add(scene, { x: 1.0, z: -9.5, ry: 0.4, hide: [[1.12, -13], [1.2, -16.5]] });                                                  // tunnel, lungo il muro destro
+    rats.add(cellar.group, { x: 2.2, z: -204.5, ry: 2.2, hide: [[3.6, -205.6], [3.75, -208]] });                                         // cantina, vicino ai rottami
+    rats.add(cellar.group, { x: -2.4, z: -215.0, ry: 0.9, hide: [[-3.7, -218], [-3.65, -222.8]] });                                      // cantina, lato dello specchio
+    rats.add(morgue.group, { x: -2.5, z: -510.5, ry: 1.4, hide: [[-4.05, -512.7], [-4.05, -513.9]] });                                   // obitorio, vicino al cesto
+    rats.add(morgue.group, { x: 2.4, z: -507.8, ry: 4.0, hide: [[4.0, -508.6], [4.1, -511.6]] });                                        // obitorio, dietro il tavolo
+    rats.add(wh.group, { x: -2.6, z: -416.0, ry: 5.0, hide: [[-5.0, -417.2], [-5.4, -421]] });                                           // magazzino, sotto uno scaffale
+    rats.add(wh.group, { x: 2.8, z: -420.0, ry: 1.0, hide: [[5.0, -421.5], [5.3, -424.4]] });
+    rats.add(wh.group, { x: -1.2, z: -428.0, ry: 3.3, hide: [[-4.2, -430.5], [-5.2, -431.4]] });
+    rats.add(tower.group, { x: -2.6, z: -309.0, ry: 2.6, hide: [[-6.0, -309.6], [-6.4, -312]] });                                        // torre, vicino alla stufa
+  }
   combat.actBtn = $('act');
   const WZ = -400, CZ = -200, MZ = -500, TZ = -300;   // z0 delle stanze (vedi i moduli)
   notes ??= createNotes({ camera, player, audio, story, say, instab, flags, defs: [
@@ -209,7 +223,7 @@ function tick(dt) {
   dawn?.update(dt);
   cellar?.update(dt);
   tower?.update(dt, time);
-  wh?.update(dt); morgue?.update(dt); ambient?.update(dt); notes?.update(dt);
+  wh?.update(dt); morgue?.update(dt); ambient?.update(dt); notes?.update(dt); rats.update(dt);
   combat?.update(dt, time);
   time += dt;
   player.update(dt, time);
@@ -240,7 +254,7 @@ requestAnimationFrame((n) => { last = n; frame(n); });
 
 // debug/test: ?debug=1 espone il gioco e permette di saltare avanti
 if (q.has('debug')) {
-  window.__g = { say, get notes() { return notes; }, get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
+  window.__g = { rats, say, get notes() { return notes; }, get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
     sim(sec, dt = 0.05) { for (let t = 0; t < sec; t += dt) tick(dt); },
     tp(z, yaw = 0) { player.pos.set(0.1, 1.62, z); player.yaw = yaw; player.pitch = 0; } };
 }
