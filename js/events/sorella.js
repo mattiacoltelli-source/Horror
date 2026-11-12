@@ -13,7 +13,7 @@ export function createSorella({ group, camera, player, audio, lights, instab, sa
     const m = g.scene; m.visible = false;
     m.traverse((o) => {
       if (!o.isMesh) return; o.frustumCulled = false; o.material.envMapIntensity = 0.12;
-      if (o.material.name === 'skin_game') { o.material.color.multiplyScalar(0.45); o.material.roughness = 0.85; o.material.metalness = 0; }
+      if (o.material.name === 'skin_game') { S.skin = o.material; o.material.color.multiplyScalar(0.45); o.material.roughness = 0.85; o.material.metalness = 0; }
       if (o.material.name === 'cloth_game') o.material.color.multiplyScalar(0.5);
       if (o.material.name === 'ember') { o.material.emissiveIntensity = 3.2; S.eyes = o; }
     });
@@ -28,7 +28,7 @@ export function createSorella({ group, camera, player, audio, lights, instab, sa
   S.reset = () => { S.behindUsed = false; S.pending = false; S.state = 'idle'; S.t = 0; S.seen = 0; S.n = 0; S.wait = 0; hide(); };
   const f = new THREE.Vector3(), d = new THREE.Vector3(), p = new THREE.Vector3(), q = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3();
   const face = () => { const m = S.model; m.rotation.y = Math.atan2(player.pos.x - m.position.x, player.pos.z - m.position.z); };
-  const place = (x, z) => { const m = S.model; m.position.set(Math.max(-xMax, Math.min(xMax, x)), 0, Math.max(zMin, Math.min(zMax, z))); face(); m.visible = true; S.seen = 0; S.t = 0; S.eyeV = 0; play('Idle', 0.01); S.state = 'show'; S.n++; };
+  const place = (x, z) => { const m = S.model; m.position.set(Math.max(-xMax, Math.min(xMax, x)), 0, Math.max(zMin, Math.min(zMax, z))); face(); m.visible = true; S.seen = 0; S.t = 0; S.eyeV = 0; S.retreats = 0; S.revealed = false; S.rv = 0; play('Idle', 0.01); S.state = 'show'; S.n++; };
   // occhi: le braci del modello + un alone additivo (visibile anche nella nebbia), seguono la testa
   const updateEyes = (op) => {
     if (!S.eyes || !S.eyes.isSkinnedMesh) return; const pos = S.eyes.geometry.attributes.position, n = pos.count, h = n >> 1; a.set(0, 0, 0); b.set(0, 0, 0);
@@ -88,13 +88,19 @@ export function createSorella({ group, camera, player, audio, lights, instab, sa
     camera.getWorldDirection(f); d.copy(m.position).setY(1.4).sub(camera.position); const dist = d.length(); d.normalize();
     const inView = d.dot(f) > 0.6;
     if (S.state === 'show') {
-      S.eyeV = Math.min(1, S.eyeV + dt * 1.6); updateEyes(S.eyeV * (0.85 + 0.15 * Math.sin(S.t * 3.1)));
+      S.eyeV = Math.min(1, S.eyeV + dt * 1.6); if (S.blink > 0) S.blink -= dt;
+      // per farla intravedere: appena la guardi, la lampadina più vicina sfarfalla e per ~0,5 s la sagoma si illumina di taglio; i riflessi sul corpo restano lontano dagli occhi
+      if (inView && S.seen > 0.35 && !S.revealed) { S.revealed = true; S.rv = 0.55; const L = lights.lamps; if (L && L.length) { let bi = 0, bd = 1e9; L.forEach((l, i) => { const dd = Math.hypot(l.x - m.position.x, l.z - m.position.z); if (dd < bd) { bd = dd; bi = i; } }); lights.lamp(bi, 'flicker', 0.7); } }
+      if (S.rv > 0) { S.rv -= dt; S.skin.color.setScalar(0.45 + 0.9 * Math.sin(Math.min(1, S.rv / 0.55) * Math.PI)); } else if (S.skin) S.skin.color.setScalar(0.45);
+      updateEyes(S.blink > 0 ? 0 : S.eyeV * (0.85 + 0.15 * Math.sin(S.t * 3.1)));
       if (inView) S.seen += dt;
       if (S.n >= 3 && inView && S.seen > 0.9) {                                  // il lampo: da lontano ti viene addosso, velocissima
         S.state = 'dash'; S.t = 0; S.fromP.copy(m.position); camera.getWorldDirection(f); p.set(f.x, 0, f.z).normalize();
         S.toP.set(camera.position.x + p.x * 1.15, 0, camera.position.z + p.z * 1.15); play('Lunge', 0.03); S.act.Lunge.timeScale = 2.4;
         audio.scare(); player.addShake(1.5); lights.torchStutter?.(0.4); instab.set(1, 6); try { navigator.vibrate?.([110, 30, 170]); } catch (_) {}
-      } else if (dist < 10 || S.seen > 4.2) { S.state = 'fade'; S.t = 0; }
+      } else if (dist < 9 && (S.retreats ?? 0) < 2 && m.position.z - 6 >= zMin - 0.01 + 0.0 && inView) {   // ti avvicini: si ritira nell'angolo (gli occhi si spengono un attimo) invece di svanire
+        S.retreats = (S.retreats ?? 0) + 1; S.blink = 0.22; m.position.z = Math.max(zMin, m.position.z - 6.5); face(); S.seen = Math.max(0, S.seen - 1.5);
+      } else if (dist < 6.5 || S.seen > 7) { S.state = 'fade'; S.t = 0; }
     } else if (S.state === 'fade') {                                             // gli occhi si spengono a scatti e sparisce
       updateEyes(Math.random() < 0.5 ? 0 : 0.6 * (1 - S.t / 0.3));
       if (S.t > 0.3) { hide(); S.state = 'wait'; S.wait = 6 + Math.random() * 6; if (S.n >= 3) S.state = 'done'; }
