@@ -2,6 +2,7 @@
 // la stanza per un istante. Il mostro si vede solo nei lampi e nel cono della torcia e avanza a scatti. I primi colpi lo
 // fanno arretrare; finiti i 4 colpi (o dopo ~20 s di teletrasporti) scatta il jump scare finale e il combattimento è perso: è scritto così, ma non si capisce subito.
 import * as THREE from 'three';
+import { grimeNun } from '../world/nun.js';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 
 const keepSingle = (root) => root.traverse((o) => { if (o.isMesh && /(_b$|magazine_empty|bullet)/.test(o.name)) o.visible = false; });   // il modello ha due versioni sovrapposte: ne tengo una
@@ -33,7 +34,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
   const mon = new THREE.Group(); mon.visible = false; scene.add(mon); let monModel = null;
   K.setMonster = (kind) => new Promise((res) => new GLTFLoader().load('assets/models/c_nurse.glb', (g) => {
     if (monModel) mon.remove(monModel); const m = g.scene;
-    m.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.material.roughness = 0.9; o.material.metalness = 0; o.material.color?.multiplyScalar(0.6); o.material.emissive?.setRGB(0, 0, 0); } });
+    m.traverse((o) => { if (o.isMesh) o.frustumCulled = false; }); grimeNun(m);
     const b = new THREE.Box3().setFromObject(m), sz = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3());
     m.scale.setScalar(1.95 / sz.y);   // sempre la stessa suora, qualunque scelta tu abbia fatto
      b.setFromObject(m); m.position.set(-c.x, -b.min.y, -c.z); mon.add(m); monModel = m; res();

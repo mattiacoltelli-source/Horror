@@ -3,6 +3,7 @@
 //  'ahead'  = sei entrato nel buio senza girarti → poi la figura compare davanti.
 // Dura meno di mezzo secondo di "esposizione": breve, luce instabile, mai a figura intera e ferma.
 import * as THREE from 'three';
+import { grimeNun } from '../world/nun.js';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 
 export function createScare({ scene, camera, player, audio, lights, instab, finish }) {
@@ -12,7 +13,7 @@ export function createScare({ scene, camera, player, audio, lights, instab, fini
   const figs = {};
   const loader = new GLTFLoader();
   const loadFig = (key, url, h) => loader.load(url, (g) => {
-    const m = g.scene; m.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.material.roughness = 0.9; o.material.metalness = 0; o.material.color?.multiplyScalar(0.62); o.material.emissive?.setRGB(0, 0, 0); } });
+    const m = g.scene; m.traverse((o) => { if (o.isMesh) o.frustumCulled = false; }); if (/c_nurse/.test(url)) grimeNun(m); else m.traverse((o) => { if (o.isMesh) { o.material.roughness = 0.9; o.material.metalness = 0; o.material.color?.multiplyScalar(0.62); o.material.emissive?.setRGB(0, 0, 0); } });
     m.updateMatrixWorld(true); const box = new THREE.Box3().setFromObject(m), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
     m.scale.setScalar(h / size.y); box.setFromObject(m); m.position.set(-c.x, -box.min.y, -c.z);
     const holder = new THREE.Group(); holder.add(m); holder.visible = false; ent.add(holder); figs[key] = holder; S.ready = true;

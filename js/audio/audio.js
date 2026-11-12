@@ -2,6 +2,8 @@
 // Ambiente: rumore a bassa frequenza + ronzio elettrico + gocce; eventi: passi, battito, impatto sul vetro.
 import * as THREE from 'three';
 
+const vib = (p) => { try { navigator.vibrate?.(p); } catch (_) {} };   // solo Android; altrove non fa nulla
+
 export function createAudio() {
   let ctx = null, master, amb, hum, verb, verbSend, drips = null, noiseBuf, ok = false;
   const A = {
@@ -90,6 +92,7 @@ export function createAudio() {
     },
     // impatto sul vetro (pos: THREE.Vector3). 2 colpi ravvicinati.
     glassHit(pos, power = 1) {
+      vib([50, 20, 70 * Math.min(1.5, power)]);
       if (!ok) return; const t = ctx.currentTime;
       const pan = ctx.createPanner(); pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 2.5; pan.rolloffFactor = 0.8;
       pan.positionX.value = pos.x; pan.positionY.value = pos.y; pan.positionZ.value = pos.z;
@@ -118,6 +121,7 @@ export function createAudio() {
     },
     // portone di ferro che sbatte contro i muri
     doorBang(pos, power = 1) {
+      vib([Math.round(70 * power), 40, Math.round(110 * power)]);
       if (!ok) return; const t = ctx.currentTime;
       const pan = ctx.createPanner(); pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 3; pan.rolloffFactor = 0.7;
       pan.positionX.value = pos.x; pan.positionY.value = pos.y; pan.positionZ.value = pos.z;
@@ -286,8 +290,19 @@ export function createAudio() {
     },
     // fruscio di carta (un foglio che viene letto): rumore filtrato, breve
     rustle() {
+      vib(18);
       if (!ok) return; const t = ctx.currentTime, s = ctx.createBufferSource(); s.buffer = noiseBuf; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.setValueAtTime(2600, t); bp.frequency.linearRampToValueAtTime(1500, t + 0.35); bp.Q.value = 0.8; const g = ctx.createGain();
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.1, t + 0.04); g.gain.linearRampToValueAtTime(0.05, t + 0.14); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.4); s.connect(bp); bp.connect(g); g.connect(master); s.start(t);
+    },
+    // statica di una TV che si accende: click, poi rumore bianco filtrato (con posizione 3D), poi click di spegnimento
+    tvStatic(dur = 3, pos = null, level = 1) {
+      vib([20, 40, 20]);
+      if (!ok) return; const t = ctx.currentTime, out = ctx.createGain(); out.gain.value = 1;
+      if (pos) { const pn = ctx.createPanner(); pn.panningModel = 'HRTF'; pn.refDistance = 1.5; pn.positionX.value = pos.x; pn.positionY.value = pos.y ?? 0.5; pn.positionZ.value = pos.z; out.connect(pn); pn.connect(master); pn.connect(verbSend); } else out.connect(master);
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3200; bp.Q.value = 0.6; const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.11 * level, t + 0.05); g.gain.setValueAtTime(0.11 * level, t + dur - 0.1); g.gain.linearRampToValueAtTime(0, t + dur); s.connect(bp); bp.connect(g); g.connect(out); s.start(t); s.stop(t + dur + 0.05);
+      const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sine'; o.frequency.value = 15734; og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(0.012 * level, t + 0.2); og.gain.setValueAtTime(0.012 * level, t + dur - 0.1); og.gain.linearRampToValueAtTime(0, t + dur); o.connect(og); og.connect(out); o.start(t); o.stop(t + dur + 0.05);   // ronzio da tubo catodico
+      for (const tt of [0, dur - 0.04]) { const c = ctx.createOscillator(), cg = ctx.createGain(); c.type = 'square'; c.frequency.value = 180; cg.gain.setValueAtTime(0.09 * level, t + tt); cg.gain.exponentialRampToValueAtTime(0.0008, t + tt + 0.05); c.connect(cg); cg.connect(out); c.start(t + tt); c.stop(t + tt + 0.06); }
     },
     // oggetto piccolo di metallo che cade su piastrelle: 3 tintinnii acuti, sempre piu' brevi e deboli
     tinkle() {
@@ -301,6 +316,7 @@ export function createAudio() {
     },
     // passo pesante e lento (il mostro): tonfo + sfregamento, con posizione 3D
     heavyStep(pos, power = 1) {
+      if (power >= 0.9) vib(26);
       if (!ok) return; const t = ctx.currentTime;
       const pan = ctx.createPanner(); pan.panningModel = 'HRTF'; pan.refDistance = 2; pan.positionX.value = pos.x; pan.positionY.value = 0.3; pan.positionZ.value = pos.z; pan.connect(master); const rs = ctx.createGain(); rs.gain.value = 0.7; pan.connect(rs); rs.connect(verbSend);
       const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(85, t); o.frequency.exponentialRampToValueAtTime(38, t + 0.2); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.8 * power, t + 0.004); g.gain.exponentialRampToValueAtTime(0.001, t + 0.28); o.connect(g); g.connect(pan); o.start(t); o.stop(t + 0.3);

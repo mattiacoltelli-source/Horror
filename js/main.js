@@ -113,6 +113,12 @@ try {
 // ---------- flusso ----------
 let dawn = null, doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null, wh = null, morgue = null, ambient = null, notes = null, combat = null;
 const flags = { turned: false, mirror: false, door: null, notes: 0 };
+// CHECKPOINT: a ogni stanza si salva dove sei e le scelte fatte. Dalla schermata iniziale puoi ripartire da lì.
+const CK = 'ng_ckpt', CK_ST = { cellar: 'cantina', morgue: 'obitorio', warehouse: 'magazzino', tower: 'torre' }, CK_NAME = { cellar: 'dalla cantina', morgue: "dall'obitorio", warehouse: 'dal magazzino', tower: 'dalla torre' };
+const loadCkpt = () => { try { const c = JSON.parse(localStorage.getItem(CK) || 'null'); return c && CK_ST[c.room] ? c : null; } catch (_) { return null; } };
+function saveCkpt(room) { if (!CK_ST[room]) return; try { localStorage.setItem(CK, JSON.stringify({ room, turned: !!flags.turned, door: flags.door || null, weapon: flags.weapon || null, noGun: !!flags.noGun, notes: [...(notes?.found || [])] })); } catch (_) {} }
+let restoreCk = false;
+{ const ck = loadCkpt(), b = document.getElementById('ckpt'); if (ck && b) { b.textContent = 'riparti ' + CK_NAME[ck.room]; b.classList.remove('hidden'); b.addEventListener('click', () => { restoreCk = true; document.getElementById('enter').click(); }); } }
 const warm = new THREE.PointLight(0xff9a50, 0, 15, 1.7); scene.add(warm);
 const flash = new THREE.PointLight(0xffd9a0, 0, 28, 1.6); scene.add(flash);   // lampo dello sparo
 let state = 'loading', last = 0, time = 0, paused = false, fpsAcc = 0, fpsN = 0, ended = false;
@@ -131,7 +137,7 @@ async function enter() {
   scare ??= createScare({ scene, camera, player, audio, lights, instab, finish: (m, f) => (dawn ? dawn.start(m) : finish(m, f)) });
   hall ??= createHall({ scene, mats, lights });
   dawn ??= createDawn({ scene, camera, player, audio, lights, instab, say, finish, onStart: () => combat?.hideAll(), hall });
-  story ??= createStory({ scene, camera, controls, player, audio, hall, getCellar: () => cellar, getTower: () => tower, getWh: () => wh, getMorgue: () => morgue, say, lights, instab });
+  story ??= createStory({ scene, camera, controls, player, audio, hall, getCellar: () => cellar, getTower: () => tower, getWh: () => wh, getMorgue: () => morgue, say, lights, instab, onRoom: (name) => saveCkpt(name) });
   combat ??= createCombat({ scene, camera, player, audio, lights, instab, say, flash, scare, ui: { aimAll: (b) => { controls.aimAll = b; if (b) { controls.move.x = controls.move.y = 0; $('stick').style.opacity = 0; } }, label: (t) => ($('fire').textContent = t), cool: (b) => $('fire').classList.toggle('cool', b), show: (b) => { $('fire').classList.toggle('hidden', !b); $('dot').classList.toggle('hidden', !b); } } });
   morgue ??= createMorgue({ scene, mats, player, camera, audio, lights, instab, say, hall, story, flags, actBtn: $('act') });
   ambient ??= createAmbient({ player, audio, story, combat });
@@ -156,7 +162,8 @@ async function enter() {
   // ?start=porta → salta il tunnel e parte a ~8 m dal portone (per provare solo la parte finale)
   if (q.get('start') === 'porta') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, -46); }
   // scorciatoie di prova: ?start=cantina | torre  (&turned=1 / &mirror=1 per simulare le scelte)
-  { const st = q.get('start'); flags.turned = q.get('turned') === '1'; flags.mirror = q.get('mirror') === '1'; flags.noGun = q.get('nogun') === '1'; flags.weapon = q.get('weapon') === 'axe' ? 'axe' : null; flags.door = q.get('door') === 'red' ? 'red' : q.get('door') === 'breath' ? 'breath' : null;
+  { const ck = restoreCk ? loadCkpt() : null, st = ck ? CK_ST[ck.room] : q.get('start'); flags.turned = ck ? ck.turned : q.get('turned') === '1'; flags.mirror = q.get('mirror') === '1'; flags.noGun = ck ? ck.noGun : q.get('nogun') === '1'; flags.weapon = ck ? ck.weapon : (q.get('weapon') === 'axe' ? 'axe' : null); flags.door = ck ? ck.door : (q.get('door') === 'red' ? 'red' : q.get('door') === 'breath' ? 'breath' : null);
+    if (ck) { ck.notes.forEach((i) => notes.found.add(i)); flags.notes = notes.found.size; }
     if (st === 'epilogo') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; dawn.start(q.get('turned') === '1' ? 'ti sei girato.\nlei non se n\'è mai andata.\nl\'incendio l\'hai acceso tu.' : 'non ti sei girato.\nera già davanti a te.\nnon volevi ricordare.'); }
     if (st === 'cantina' || st === 'torre' || st === 'magazzino' || st === 'obitorio') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; if (st === 'torre' && flags.weapon === 'axe') combat.giveAxe(); story.goto(st === 'cantina' ? 'cellar' : st === 'obitorio' ? 'morgue' : st === 'magazzino' ? 'warehouse' : 'tower'); } }
   controls.enabled = true; started = true; state = 'play';
