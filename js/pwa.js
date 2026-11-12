@@ -1,7 +1,5 @@
 // PWA: registrazione del service worker, banner di aggiornamento e pulsante «installa».
-import { VERSION } from './version.js';
 const $ = (id) => document.getElementById(id);
-{ const v = $('ver'); if (v) v.textContent = 'v ' + VERSION; }   // quale versione sta girando sul telefono
 let reg = null, reloading = false;
 
 function showBanner(worker) {
