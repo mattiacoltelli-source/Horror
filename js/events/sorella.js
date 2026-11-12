@@ -1,7 +1,7 @@
 // LA SORELLA (mostro nuovo, modellato per il gioco: ~20k triangoli, 42 ossa, animazioni Idle/Walk/Lunge).
-// Nel magazzino non si vede mai bene: resta nel buio, lontana, e di lei si notano soprattutto gli occhi, due braci. Se ti avvicini (< 10 m) o la guardi
-// troppo a lungo sparisce, e dopo un po' ricompare altrove, sempre lontana (anche alle tue spalle). Alla terza volta, se la guardi, ti viene addosso
-// in un lampo (0,3 s) e sparisce: l'unica volta in cui si vede da vicino, per un istante. Una volta sola per partita.
+// Sequenza SEMPRE uguale, prima della pistola: (1) entri nel magazzino e in fondo, nel buio, si accendono i suoi occhi e la si intravede;
+// (2) ti avvicini e, quando c'è ancora poca luce, sparisce a scatti; (3) un attimo dopo ti viene incontro da davanti in un lampo (0,3 s): jump scare.
+// Se arrivi al carrello senza che sia successo, scatta comunque. Una volta sola per partita.
 import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 
@@ -25,10 +25,9 @@ export function createSorella({ group, camera, player, audio, lights, instab, sa
   }, undefined, () => res(null))));
   const play = (name, fade = 0.2) => { const a = S.act[name]; if (!a) return; for (const k in S.act) if (S.act[k] !== a && S.act[k].isRunning()) S.act[k].fadeOut(fade); a.reset().fadeIn(fade).play(); };
   const hide = () => { if (S.model) S.model.visible = false; S.sp.forEach((s) => { s.visible = false; }); };
-  S.reset = () => { S.behindUsed = false; S.pending = false; S.state = 'idle'; S.t = 0; S.seen = 0; S.n = 0; S.wait = 0; hide(); };
+  S.reset = () => { S.pending = false; S.state = 'idle'; S.t = 0; S.seen = 0; hide(); };
   const f = new THREE.Vector3(), d = new THREE.Vector3(), p = new THREE.Vector3(), q = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3();
   const face = () => { const m = S.model; m.rotation.y = Math.atan2(player.pos.x - m.position.x, player.pos.z - m.position.z); };
-  const place = (x, z) => { const m = S.model; m.position.set(Math.max(-xMax, Math.min(xMax, x)), 0, Math.max(zMin, Math.min(zMax, z))); face(); m.visible = true; S.seen = 0; S.t = 0; S.eyeV = 0; S.retreats = 0; S.revealed = false; S.rv = 0; play('Idle', 0.01); S.state = 'show'; S.n++; };
   // occhi: le braci del modello + un alone additivo (visibile anche nella nebbia), seguono la testa
   const updateEyes = (op) => {
     if (!S.eyes || !S.eyes.isSkinnedMesh) return; const pos = S.eyes.geometry.attributes.position, n = pos.count, h = n >> 1; a.set(0, 0, 0); b.set(0, 0, 0);
@@ -36,77 +35,41 @@ export function createSorella({ group, camera, player, audio, lights, instab, sa
     a.multiplyScalar(1 / h); b.multiplyScalar(1 / (n - h));
     S.sp[0].position.copy(a); S.sp[1].position.copy(b); S.sp.forEach((s) => { s.visible = op > 0.01; s.material.opacity = op; });
   };
-  const nextSpawn = () => {                                                      // sempre lontana (> 10 m): davanti nel fondo, oppure alle spalle
-    const side = (S.n % 2 ? 1 : -1) * (3.0 + Math.random() * 1.2), za = Math.max(zMin, player.pos.z - 14 - Math.random() * 3), zb = Math.min(zMax, player.pos.z + 13 + Math.random() * 2);
-    if (player.pos.z - za > 10.5) return [side, za];
-    if (zb - player.pos.z > 10.5) return [side, zb];
-    return null;
+  // il lampo da davanti: parte nel buio a ~9 m nella direzione in cui guardi e ti arriva addosso in 0,3 s
+  const dashFront = () => {
+    const m = S.model; camera.getWorldDirection(f); p.set(f.x, 0, f.z).normalize();
+    S.fromP.set(camera.position.x + p.x * 9, 0, camera.position.z + p.z * 9); S.fromP.x = Math.max(-xMax - 0.5, Math.min(xMax + 0.5, S.fromP.x));
+    S.toP.set(camera.position.x + p.x * 1.15, 0, camera.position.z + p.z * 1.15);
+    m.position.copy(S.fromP); face(); m.visible = true; S.eyeV = 1; S.t = 0; S.state = 'dash'; play('Lunge', 0.03); S.act.Lunge.timeScale = 2.4;
+    audio.scare(); player.addShake(1.5); lights.torchStutter?.(0.4); instab.set(1, 6); try { navigator.vibrate?.([110, 30, 170]); } catch (_) {}
   };
-  // IMBOSCATA: quando prendi l'arma, se non l'hai ancora vista fare il lampo, arriva da dietro (non serve guardarla): ~1,2 s dopo, 0,3 s di corsa
-  S.ambush = () => {
-    if (S.state === 'done' || S.state === 'dash' || S.state === 'off') return;
-    if (S.behindUsed) return;               // da dietro ne succede una sola: o l'avviso nel buio, o l'imboscata
-    S.behindUsed = true; S.load(); S.pending = true;
-  };
+  S.ambush = () => { if (S.state === 'done' || S.state === 'dash' || S.state === 'off') return; S.load(); S.pending = true; };   // presa l'arma senza che sia successo: scatta ora
   S.update = (dt, enabled = true) => {
     if (S.state === 'off' || S.state === 'done' || !enabled) return;
-    if (S.pending && S.model && S.state !== 'dash') { S.pending = false; hide(); S.n = 3; S.state = 'ambushWait'; S.t = 0; }
+    if (S.pending && S.model && S.state !== 'dash') { S.pending = false; hide(); S.state = 'gap'; S.t = 0; S.gap = 0.6; }
     if (S.state === 'idle') {
       if (!S.model) { S.load(); return; }
-      if (player.pos.z < zMax - 7) place(-3.4, Math.max(zMin, player.pos.z - 19));
+      if (player.pos.z < zMax - 6) { const m = S.model; m.position.set(-3.4, 0, Math.max(zMin, player.pos.z - 19)); face(); m.visible = true; S.seen = 0; S.t = 0; S.eyeV = 0; S.revealed = false; S.rv = 0; play('Idle', 0.01); S.state = 'show'; }
       return;
     }
-    // AVVISO NEGLI ANGOLI BUI (a circa tre quarti della sala): una scritta ti dice di girarti, e alle spalle, lontano, due occhi nel buio
-    if (!S.behindUsed && S.model && ['idle', 'show', 'wait', 'fade'].includes(S.state) && S.n < 3 && player.pos.z < zMax - 24) {
-      S.behindUsed = true; hide(); S.state = 'warn'; S.t = 0; say?.('abbi paura degli angoli bui.\ngirati.', 5000);
-    }
-    if (S.state === 'warn') {
-      S.t += dt; if (S.t < 2.4) return;
-      camera.getWorldDirection(f); p.set(f.x, 0, f.z).normalize(); const m = S.model, sd = (Math.random() < 0.5 ? -1 : 1) * 3.0;
-      m.position.set(Math.max(-xMax, Math.min(xMax, sd)), 0, Math.min(zMax, camera.position.z - p.z * 13)); face(); m.visible = true; S.eyeV = 0; S.seen = 0; S.t = 0; play('Idle', 0.01); S.state = 'behind'; return;
-    }
-    if (S.state === 'behind') {
-      S.mixer.update(dt); S.t += dt; const m = S.model; camera.getWorldDirection(f); d.copy(m.position).setY(1.4).sub(camera.position); const dist = d.length(); d.normalize();
-      S.eyeV = Math.min(1, S.eyeV + dt * 2.2); updateEyes(S.eyeV * (0.85 + 0.15 * Math.sin(S.t * 3.1)));
-      if (d.dot(f) > 0.6) S.seen += dt;
-      if (S.seen > 1.6 || S.t > 9 || dist < 7) { S.state = 'behindFade'; S.t = 0; }
-      return;
-    }
-    if (S.state === 'behindFade') {
-      S.t += dt; updateEyes(Math.random() < 0.5 ? 0 : 0.6 * (1 - S.t / 0.3)); if (S.t > 0.3) { hide(); S.state = 'done'; } return;
-    }
-    if (S.state === 'ambushWait') {
-      S.t += dt; if (S.t < 1.2) return;
-      const m = S.model; camera.getWorldDirection(f); p.set(f.x, 0, f.z).normalize();
-      m.position.set(camera.position.x - p.x * 9, 0, camera.position.z - p.z * 9); m.visible = true; S.fromP.copy(m.position);
-      S.toP.set(camera.position.x - p.x * 0.9, 0, camera.position.z - p.z * 0.9); face(); play('Lunge', 0.03); S.act.Lunge.timeScale = 2.4; S.state = 'dash'; S.t = 0; S.eyeV = 1;
-      audio.scare(); player.addShake(1.5); lights.torchStutter?.(0.4); instab.set(1, 6); try { navigator.vibrate?.([110, 30, 170]); } catch (_) {}
-      return;
-    }
-    if (S.state === 'wait') { S.wait -= dt + Math.abs(player.pos.z - (S.lastZ ?? player.pos.z)) * 0.5; S.lastZ = player.pos.z; if (S.wait <= 0) { const s = nextSpawn(); if (s) place(s[0], s[1]); else S.state = 'done'; } return; }
     S.mixer.update(dt); const m = S.model; S.t += dt;
     camera.getWorldDirection(f); d.copy(m.position).setY(1.4).sub(camera.position); const dist = d.length(); d.normalize();
-    const inView = d.dot(f) > 0.6;
+    const inView = d.dot(f) > 0.6, late = player.pos.z < zMax - 22;                 // late: sei quasi al carrello, ora basta aspettare
     if (S.state === 'show') {
-      S.eyeV = Math.min(1, S.eyeV + dt * 1.6); if (S.blink > 0) S.blink -= dt;
-      // per farla intravedere: appena la guardi, la lampadina più vicina sfarfalla e per ~0,5 s la sagoma si illumina di taglio; i riflessi sul corpo restano lontano dagli occhi
+      S.eyeV = Math.min(1, S.eyeV + dt * 1.6); if (inView) S.seen += dt;
+      // per farla intravedere: appena la guardi, la lampadina più vicina sfarfalla e per ~0,5 s la sagoma si illumina di taglio
       if (inView && S.seen > 0.35 && !S.revealed) { S.revealed = true; S.rv = 0.55; const L = lights.lamps; if (L && L.length) { let bi = 0, bd = 1e9; L.forEach((l, i) => { const dd = Math.hypot(l.x - m.position.x, l.z - m.position.z); if (dd < bd) { bd = dd; bi = i; } }); lights.lamp(bi, 'flicker', 0.7); } }
       if (S.rv > 0) { S.rv -= dt; S.skin.color.setScalar(0.45 + 0.9 * Math.sin(Math.min(1, S.rv / 0.55) * Math.PI)); } else if (S.skin) S.skin.color.setScalar(0.45);
-      updateEyes(S.blink > 0 ? 0 : S.eyeV * (0.85 + 0.15 * Math.sin(S.t * 3.1)));
-      if (inView) S.seen += dt;
-      if (S.n >= 3 && inView && S.seen > 0.9) {                                  // il lampo: da lontano ti viene addosso, velocissima
-        S.state = 'dash'; S.t = 0; S.fromP.copy(m.position); camera.getWorldDirection(f); p.set(f.x, 0, f.z).normalize();
-        S.toP.set(camera.position.x + p.x * 1.15, 0, camera.position.z + p.z * 1.15); play('Lunge', 0.03); S.act.Lunge.timeScale = 2.4;
-        audio.scare(); player.addShake(1.5); lights.torchStutter?.(0.4); instab.set(1, 6); try { navigator.vibrate?.([110, 30, 170]); } catch (_) {}
-      } else if (dist < 9 && (S.retreats ?? 0) < 2 && m.position.z - 6 >= zMin - 0.01 + 0.0 && inView) {   // ti avvicini: si ritira nell'angolo (gli occhi si spengono un attimo) invece di svanire
-        S.retreats = (S.retreats ?? 0) + 1; S.blink = 0.22; m.position.z = Math.max(zMin, m.position.z - 6.5); face(); S.seen = Math.max(0, S.seen - 1.5);
-      } else if (dist < 6.5 || S.seen > 7) { S.state = 'fade'; S.t = 0; }
-    } else if (S.state === 'fade') {                                             // gli occhi si spengono a scatti e sparisce
-      updateEyes(Math.random() < 0.5 ? 0 : 0.6 * (1 - S.t / 0.3));
-      if (S.t > 0.3) { hide(); S.state = 'wait'; S.wait = 6 + Math.random() * 6; if (S.n >= 3) S.state = 'done'; }
+      updateEyes(S.eyeV * (0.85 + 0.15 * Math.sin(S.t * 3.1)));
+      if (late || (S.seen > 0.8 && dist < 9) || S.seen > 6 || dist < 6.5) { S.state = 'fade'; S.t = 0; }   // ti avvicini (o la guardi a lungo): sparisce
+    } else if (S.state === 'fade') {                                                 // gli occhi si spengono a scatti
+      updateEyes(Math.random() < 0.5 ? 0 : 0.6 * (1 - S.t / 0.35));
+      if (S.t > 0.35) { hide(); S.state = 'gap'; S.t = 0; S.gap = late ? 0.5 : 1.6 + Math.random() * 1.4; }
+    } else if (S.state === 'gap') {                                                  // silenzio, buio: poi il lampo
+      if (S.t > S.gap) dashFront();
     } else if (S.state === 'dash') {
       const k = Math.min(1, S.t / 0.3); m.position.lerpVectors(S.fromP, S.toP, k * k); face(); updateEyes(1);
-      lights.override = S.t < 0.14 ? 22 : null;                                  // lampo di luce all'impatto
+      lights.override = S.t < 0.14 ? 22 : null;                                      // lampo di luce all'impatto
       if (S.t > 0.52) { lights.override = null; hide(); S.state = 'done'; lights.lamp?.(0, 'flicker', 0.8); }
     }
   };

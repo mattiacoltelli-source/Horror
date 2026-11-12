@@ -19,7 +19,7 @@ Storia: il paziente. Due righe per stanza, tre finali (negazione, accettazione, 
 - **Checkpoint**: a ogni stanza si salva (`localStorage`, chiave `ng_ckpt`); dalla schermata iniziale compare «riparti dalla…».
 - **Oggetti che reagiscono**: i busti (cantina, torre) si voltano verso di te quando non li guardi; la TV del magazzino si accende da sola con la statica e una sagoma.
 - **Topi** (`js/events/rats.js`, modello Poly Haven CC0): 9 in tutto, nel tunnel e nelle stanze, fermi vicino ai muri; se ti avvicini scappano di scatto verso uno scaffale o un mobile e spariscono (una volta sola ciascuno), con un trillo e un rumore di unghiette.
-- **La sorella** (`js/events/sorella.js`, modello `assets/models/sorella.glb`, creato da script Blender in `tools/monster/`): nel magazzino compare in fondo, ferma nel buio; si muove solo quando distogli lo sguardo (3 volte, sempre più vicina); una sola delle tre possibilità si avvera: (1) l'incontro da davanti con il lampo finale, (2) a 3/4 della sala una scritta («abbi paura degli angoli bui. girati.») e due occhi nel buio alle spalle, (3) l'imboscata da dietro quando prendi l'arma. Da dietro ne succede una sola.
+- **La sorella** (`js/events/sorella.js`, modello `assets/models/sorella.glb`, script Blender in `tools/monster/`): nel magazzino, sempre uguale e prima della pistola: in fondo, nel buio, si accendono i suoi occhi e la si intravede; se ti avvicini sparisce a scatti; un attimo dopo ti viene incontro da davanti in un lampo (jump scare). Se arrivi al carrello senza che sia successo, scatta comunque.
 - **Vibrazione** su porte, vetro, passi pesanti, note e TV (solo Android).
 - Il service worker non scarica più tutti gli asset in anticipo: si caricano e si mettono in cache quando servono.
 
