@@ -27,7 +27,9 @@ const shaftMat = (color, opacity) => new THREE.ShaderMaterial({
 export function addAtmosphere(group, o) {
   const r = rnd0(o.seed || 1), cz = (o.z0 + o.z1) / 2, len = Math.abs(o.z0 - o.z1), inset = o.wallInset ?? 0.03;
   const avoidHit = (side, z) => (o.avoid || []).some((a) => a.side === side && z < a.z0 + 0.8 && z > a.z1 - 0.8);
-  const add = (m) => { m.userData.decor = true; group.add(m); return m; };
+  // Nel riflesso dello specchio (render target a bassa precisione di profondità) i piani sottili sovrapposti al pavimento/muro
+  // sfarfallano a trattini neri: lì vengono resi invisibili (opacità 0), nella vista normale restano come sono.
+  const add = (m) => { m.userData.decor = true; if (m.material.transparent && !m.material.isShaderMaterial) { const base = m.material.opacity; m.onBeforeRender = (renderer, scene, cam, geo, mat) => { mat.opacity = renderer.getRenderTarget() ? 0 : mat.userData.base ?? base; }; m.material.userData.base = base; } group.add(m); return m; };
   // fasci di luce sotto le lampade
   if (o.shaft != null) for (const [x, y, z] of o.lamps || []) {
     const rad = Math.min(1.7, y * 0.36), cone = new THREE.Mesh(new THREE.CylinderGeometry(0.05, rad, y - 0.02, 28, 1, true), shaftMat(o.shaft, o.shaftOpacity ?? 0.085));
