@@ -96,6 +96,7 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
     if (T.opened) return; T.opened = true; T.near = false; actBtn.classList.add('hidden');
     // (il vecchio finale segreto dello specchio non c'è più: la suora arriva sempre, qualunque cosa tu abbia guardato)
     // la porta è chiusa a chiave: dietro di te, nel buio, qualcosa entra nella stanza. Devi girarti.
+    setTimeout(() => say('girati' + (P ? ' ' + P.name : '') + '.', 3200, 'urgent'), 1100);   // la porta non si apre: dietro di te c'è qualcosa, devi girarti
     st = 'fight'; actBtn.classList.add('hidden'); audio.doorBang(new THREE.Vector3(0, 1.4, zFar), 0.7); player.addShake(0.5); lights.lamp(0, 'off'); lights.lamp(1, 'off'); audio.duck(0.15, 0.2);
     setTimeout(() => combat.begin('ahead', flags.turned ? TEXT.B : TEXT.A, new THREE.Vector3(0, 0, TOWER.z0 - 1), flags.noGun ? 9.2 : (flags.turned ? 16 : 21) + ((flags.notes ?? 0) >= 5 ? 6 : 0), null, !!flags.noGun), 1600);   // senza pistola: 2 teletrasporti (4.5 s e 9 s) e poi il jump scare
   };

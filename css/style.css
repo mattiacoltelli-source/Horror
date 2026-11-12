@@ -80,3 +80,20 @@ h1.tglitch{animation:tglitch .22s steps(1,end)}
 /* la luce in alto a destra: ferma e piu' tenue (niente sfarfallio) */
 #intro::after{animation:none;opacity:.5}
 
+
+/* come si gioca: due anelli, uno per metà schermo, con un puntino che si trascina */
+#subtitle.urgent{bottom:auto;top:42%;font-size:clamp(24px,8vw,38px);letter-spacing:.2em;color:#ece6dc;text-transform:uppercase;font-style:normal;text-shadow:0 0 12px #000,0 0 26px rgba(0,0,0,.9);transition:opacity .25s}
+#howto{position:fixed;inset:0;z-index:5;pointer-events:none;display:flex;opacity:0;transition:opacity 1s}
+#howto.on{opacity:1}
+#howto.hidden{display:none}
+#howto .ht{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 16%);text-align:center;transition:opacity .8s}
+#howto .ht.gone{opacity:0}
+#howto .ring{position:relative;display:block;width:84px;height:84px;border-radius:50%;border:1px solid rgba(210,220,210,.38);margin-bottom:14px}
+#howto .ring b{position:absolute;left:50%;top:50%;width:30px;height:30px;margin:-15px;border-radius:50%;background:rgba(210,220,210,.28)}
+#howto .l .ring b{animation:dragl 2.8s ease-in-out infinite}
+#howto .r .ring b{animation:dragr 2.8s ease-in-out infinite}
+@keyframes dragl{0%,12%{transform:translate(0,0)}45%,60%{transform:translate(0,-26px)}100%{transform:translate(0,0)}}
+@keyframes dragr{0%,12%{transform:translate(0,0)}45%,60%{transform:translate(28px,0)}100%{transform:translate(0,0)}}
+#howto p{margin:0 0 6px;font-size:15px;letter-spacing:.32em;color:#d4d8d2;text-shadow:0 0 8px #000}
+#howto small{font-size:12px;letter-spacing:.08em;line-height:1.45;color:#9aa09a;text-shadow:0 0 6px #000}
+@media (prefers-reduced-motion:reduce){#howto .ring b{animation:none}}

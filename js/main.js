@@ -130,10 +130,18 @@ const hint = $('subtitle');
 // Le note hanno la precedenza: finché una nota è a schermo, gli altri messaggi aspettano (resta in coda solo l'ultimo) e compaiono subito dopo.
 function say(txt, ms = 4000, style = '') {
   const now = performance.now();
-  if (style !== 'note' && now < (say.noteUntil || 0)) { clearTimeout(say.q); say.q = setTimeout(() => say(txt, ms, style), say.noteUntil - now + 400); return; }
+  if (style !== 'note' && style !== 'urgent' && now < (say.noteUntil || 0)) { clearTimeout(say.q); say.q = setTimeout(() => say(txt, ms, style), say.noteUntil - now + 400); return; }
   if (style === 'note') { say.noteUntil = now + ms; clearTimeout(say.q); }
-  hint.classList.toggle('note', style === 'note'); hint.textContent = txt; hint.style.opacity = 1;
+  hint.classList.toggle('note', style === 'note'); hint.classList.toggle('urgent', style === 'urgent'); hint.textContent = txt; hint.style.opacity = 1;
   clearTimeout(say.t); say.t = setTimeout(() => (hint.style.opacity = 0), ms);
+}
+
+// COME SI GIOCA: due anelli con un puntino che si trascina, uno per metà schermo; ognuno sparisce quando tocchi quella metà (o dopo 14 s)
+function showHowto() {
+  const h = $('howto'); if (!h) return; h.classList.remove('hidden'); requestAnimationFrame(() => h.classList.add('on'));
+  const used = { l: false, r: false }, hide = (k) => { if (used[k]) return; used[k] = true; h.querySelector('.ht.' + k)?.classList.add('gone'); if (used.l && used.r) setTimeout(() => h.classList.add('hidden'), 900); };
+  const onDown = (e) => { if (e.clientX < innerWidth * 0.5) setTimeout(() => hide('l'), 500); else setTimeout(() => hide('r'), 500); };
+  addEventListener('pointerdown', onDown); setTimeout(() => { hide('l'); hide('r'); removeEventListener('pointerdown', onDown); }, 14000);
 }
 
 async function enter() {
@@ -184,7 +192,7 @@ async function enter() {
   controls.enabled = true; started = true; state = 'play';
   $('fade').style.opacity = 0;
   setTimeout(() => instab.show(), 4000);
-  setTimeout(() => say('sinistra: muoviti   ·   destra: guarda', 5000), 1800);
+  if (!q.get('start')) setTimeout(showHowto, 1800);
   if (!q.get('start')) { setTimeout(() => { if (story?.current() === 'tunnel') say(P ? P.name + '. non fermarti, dicevano.' : 'corridoio di servizio. non fermarti, dicevano.', 5200); }, 9500); setTimeout(() => { if (story?.current() === 'tunnel') say('qualcuno ti segue da prima che entrassi.', 5200); }, 17500); }
   last = performance.now();
 }

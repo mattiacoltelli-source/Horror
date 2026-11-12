@@ -3,6 +3,7 @@
 // fanno arretrare; finiti i 4 colpi (o dopo ~20 s di teletrasporti) scatta il jump scare finale e il combattimento è perso: è scritto così, ma non si capisce subito.
 import * as THREE from 'three';
 import { grimeNun } from '../world/nun.js';
+import { P } from '../personal.js';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 
 const keepSingle = (root) => root.traverse((o) => { if (o.isMesh && /(_b$|magazine_empty|bullet)/.test(o.name)) o.visible = false; });   // il modello ha due versioni sovrapposte: ne tengo una
@@ -56,7 +57,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
 
   K.mon = mon;
   K.begin = async (kind, text, from, limit = 20, calm = null, unarmed = false) => {
-    K.limit = limit; K.calm = calm; K.unarmed = unarmed;   // unarmed: niente pistola, e dopo 1-2 teletrasporti scatta il jump scare K.canLower = false; K.lowered = false;   // secondi di teletrasporti prima del jump scare (dipende dalle scelte)
+    K.limit = limit; K.calm = calm; K.unarmed = unarmed; K.gi = 0;   // unarmed: niente pistola, e dopo 1-2 teletrasporti scatta il jump scare K.canLower = false; K.lowered = false;   // secondi di teletrasporti prima del jump scare (dipende dalle scelte)
     K.kind = kind; K.text = text; K.active = true; K.state = 'fight'; K.t = 0; K.hits = 0; K.shots = 0; K.cool = 0; K.hide = 0; K.lat = 0; K.ammo = K.weapon === 'axe' ? 2 : 4; K.D = 13; K.stepT = 1.5; K.said = false; K.turnedOnce = false;
     if (!K.armed && !unarmed) K.give();
     await K.setMonster(kind); K.from = from.clone(); K.M = { x: from.x, z: from.z }; K.Dt = null; K.wi = 1; K.sched = 0; K.walked = false; K.fin = false; K.finT = 0; K.side = 1;
@@ -201,9 +202,10 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
         }
       }
       // se non ti sei ancora girato
-      fwd.set(player.forward.x, 0, player.forward.z); const facing = fwd.dot(K.axis ?? fwd) > 0.3;   // (K.axis = dal giocatore verso la creatura)
+      fwd.set(player.forward.x, 0, player.forward.z); const facing = K.axis ? fwd.dot(K.axis) > 0.3 : false;   // (K.axis = dal giocatore verso la creatura)
       K.turnedOnce ||= facing;
-      if (!K.turnedOnce && K.t > 5 && !K.said) { K.said = true; say('girati.', 4500); }
+      // se non ti giri (chi gioca per la prima volta continua a provare la porta): un invito sempre piu' chiaro, col nome nella versione personalizzata
+      if (!K.turnedOnce) { const nm = P ? ' ' + P.name : '', GI = [[2.5, 'girati' + nm + '.'], [6.5, 'girati' + nm + '.'], [10.5, 'dietro di te' + nm + '.'], [14.5, 'GIRATI' + nm + '.']]; K.gi ??= 0; if (K.gi < GI.length && K.t > GI[K.gi][0]) { say(GI[K.gi][1], 3000, 'urgent'); if (K.gi >= 2) { try { navigator.vibrate?.(80); } catch (_) {} } K.gi++; } }
       if (K.D <= 1.5 && !(K.hide > 0)) { K.state = 'over'; K.hideAll(); ui.cool?.(false); player.speedMul = 1; player.lookMul = 1; lights.override = null; scare.trigger(K.kind, K.text); }
     } else if (K.state === 'disarm') {
       // ti afferra la mano e ti strappa la pistola: l'arma vola via
