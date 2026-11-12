@@ -11,6 +11,8 @@ import { redLight } from '../world/redlight.js';
 import { addExtras, pedestal, turnToward } from '../world/extra.js';
 import { unseenMover } from './ambient.js';
 import { addAtmosphere } from '../world/atmos.js';
+import { P as PROF, whisperName } from '../personal.js';
+import { createFingerWriter } from '../world/fingerwrite.js';
 
 export const CELLAR = { z0: -200, w: 8, l: 24, h: 4.4 };
 const MIRROR = new THREE.Vector3(-3.98, 1.45, -210);
@@ -74,14 +76,15 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   shFar.material.uniforms.uS.value.set(0.12, 0.24); shFar.material.uniforms.uHz.value = 0;   // l'occhiata di sbieco: solo ombra, senza velo chiaro shNear.material.uniforms.uS.value.set(0.2, 0.36);
   // CONDENSA + SEGNI: qualcuno respira sul vetro dall'altra parte (chiazza di vapore che pulsa) e poi lo attraversa con le dita
   // (tre solchi che puliscono il vapore dall'alto in basso).
+  const blankTex = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1); blankTex.needsUpdate = true;   // versione personalizzata: il nome scritto col dito (js/world/fingerwrite.js) arriva qui come maschera
   const fogMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5,
-    uniforms: { uT: { value: 0 }, uM: { value: 0 }, uW: { value: 0 }, uB: { value: new THREE.Vector2(0.47, 0.52) } },
+    uniforms: { uT: { value: 0 }, uM: { value: 0 }, uW: { value: 0 }, uB: { value: new THREE.Vector2(0.47, 0.52) }, uMask: { value: blankTex }, uR: { value: 0.36 }, uTip: { value: new THREE.Vector3() } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: `precision highp float; varying vec2 vUv; uniform float uT, uM, uW; uniform vec2 uB;\n${NOISE}
+    fragmentShader: `precision highp float; varying vec2 vUv; uniform float uT, uM, uW; uniform vec2 uB; uniform sampler2D uMask; uniform vec3 uTip; uniform float uR;\n${NOISE}
       void main(){
         vec2 d = (vUv - uB) * vec2(1.0, 1.35);
         float edge = fbm(vUv * 6.0 + vec2(0.0, uT * 0.05)) - 0.5;
-        float m = smoothstep(0.36 + edge * 0.18, 0.02, length(d)) * uM;
+        float m = smoothstep(uR + edge * 0.18, 0.02, length(d)) * uM;
         float lines = 0.0;
         for (int i = 0; i < 3; i++) {
           float fi = float(i);
@@ -94,9 +97,13 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
         }
         float lip = 0.0;                                                               // bordo più chiaro dove il vapore è stato spinto
         for (int i = 0; i < 3; i++) { float fi = float(i); float x = uB.x + (fi - 1.0) * 0.085 + 0.016 * sin(vUv.y * 9.0 + fi * 2.1) + 0.02 * (fbm(vec2(vUv.y * 3.0, fi * 4.0)) - 0.5); lip = max(lip, smoothstep(0.03, 0.012, abs(abs(vUv.x - x) - 0.026)) * step(0.16, vUv.y)); }
+        float mk = texture2D(uMask, vUv).r, mb = texture2D(uMask, vUv, 2.2).r;       // scritta ditata: vapore pulito dove il dito e' passato, bordo piu' chiaro dove e' stato spinto
+        lines = max(lines, mk); float lipM = clamp((mb - mk) * 1.8, 0.0, 1.0);
         float a = m * (1.0 - lines * 0.95) * (0.55 + 0.45 * fbm(vUv * 14.0));
         vec3 col = vec3(0.74, 0.8, 0.78);
-        gl_FragColor = vec4(col, clamp(a * 0.34 + lip * m * uW * 0.16, 0.0, 0.5));
+        float tip = smoothstep(0.045, 0.0, length((vUv - uTip.xy) * vec2(1.7, 2.4))) * uTip.z;   // la punta del dito dall'altra parte del vetro: macchia scura e morbida
+        col = mix(col, vec3(0.03, 0.04, 0.045), tip);
+        gl_FragColor = vec4(col, clamp(max(a * 0.34 + lip * m * uW * 0.16 + lipM * m * 0.22, tip * 0.5 * uM), 0.0, 0.55));
       }` });
   const fogM = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), fogMat); fogM.rotation.y = Math.PI / 2; fogM.position.set(MIRROR.x + 0.019, MIRROR.y, MIRROR.z); C.group.add(fogM);
   // UOMO NELL'ANGOLO: dopo lo specchio, in fondo alla cantina, un uomo grosso di spalle fissa l'angolo. Lo vedi solo nel guizzo della luce;
@@ -139,7 +146,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   let ap = -1;
 
   C.enter = () => {
-    C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; cornerDone = false; cornerT = -1; corner.visible = false; runDone = false; runT = -1; runM.visible = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.uniforms.uA.value = 0; mist.material.opacity = 0; shNear.material.uniforms.uA.value = 0; fogMat.uniforms.uM.value = 0; fogMat.uniforms.uW.value = 0; C.b1 = C.b2 = C.sw = C.sw2 = C.clean = false; C.farT = -1; C.farN = 0; far1.visible = false;
+    C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; cornerDone = false; cornerT = -1; corner.visible = false; runDone = false; runT = -1; runM.visible = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.uniforms.uA.value = 0; mist.material.opacity = 0; shNear.material.uniforms.uA.value = 0; fogMat.uniforms.uM.value = 0; fogMat.uniforms.uW.value = 0; fogMat.uniforms.uMask.value = blankTex; fogMat.uniforms.uTip.value.set(0, 0, 0); fogMat.uniforms.uR.value = 0.36; C.wr = null; C.wName = false; C.b1 = C.b2 = C.sw = C.sw2 = C.clean = false; C.farT = -1; C.farN = 0; far1.visible = false;
     player.box = C.bounds; player.pos.set(0.4, 1.62, CELLAR.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     lights.setLamps(lampPos, 2.1, 0x9db8ff); lights.grade({ fog: 0x03050c, hemi: [0x22336a, 0x0a0a14, 0.42] }); scene.fog.density = 0.04; audio.duck(1, 1); instab.set(0.1, 6);
   };
@@ -213,10 +220,13 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
       let mt = 0;
       if (C.b1) { C.b1t += dt; mt = Math.max(mt, 0.8 * Math.sin(Math.min(1, C.b1t / 2.4) * Math.PI) ** 0.8); }
       if (C.b2) { C.b2t += dt; mt = Math.max(mt, 1.0 * Math.min(1, C.b2t / 1.2) * (C.sw ? 1 : 1)); }
-      if (C.sw && C.swt > 2.4) { mt = 0; if (!C.clean) { C.clean = true; C.farT = 0; } }          // finita la scena: via vapore, solchi e massa. Resta solo la mano.
+      if (C.sw && (PROF ? (C.wr && C.wr.done && C.wr.hold > 4.5) : C.swt > 2.4)) { mt = 0; if (!C.clean) { C.clean = true; C.farT = 0; } }          // finita la scena: via vapore, solchi e massa. Resta solo la mano.
       F.uM.value += (mt - F.uM.value) * Math.min(1, dt * (mt === 0 ? 1.1 : 3));
       if (C.b2 && C.b2t > 1.5 && !C.sw) { C.sw = true; C.swt = 0; audio.squeak(1.6); lights.lamp(0, 'flicker', 0.7); }
-      if (C.sw) { C.swt += dt; F.uW.value = Math.min(1, C.swt / 1.6); if (C.swt > 0.3 && !C.sw2) { C.sw2 = true; audio.whisper(1.4, 0.2); } }
+      if (C.sw) { C.swt += dt; F.uW.value = PROF ? 0 : Math.min(1, C.swt / 1.6); if (C.swt > 0.3 && !C.sw2) { C.sw2 = true; audio.whisper(1.4, 0.2); } }
+      // versione personalizzata: invece dei tre solchi, qualcuno scrive il suo nome nel vapore (il tempo avanza solo mentre guardi)
+      if (PROF && C.sw && C.swt > 0.8 && !C.wr) { C.wr = createFingerWriter(PROF.name, 384, 542, { cx: 0.47, cy: 0.63, onStroke: (s) => { if (s.first) audio.squeak(Math.min(0.42, 0.2 + s.dur * 0.5), MIRROR); } }); F.uMask.value = C.wr.tex; F.uR.value = 0.52; }
+      if (C.wr) { const r = C.wr.update(dt, shadowOn); F.uTip.value.set(r.tipU, r.tipV, r.on); if (r.done && !C.wName) { C.wName = true; whisperName(); lights.lamp(0, 'flicker', 0.8); instab.push(0.9, 6); } }
     }
     if (C.farT >= 0 && shadowOn) {
       C.farT += dt; const cyc = 7.5, ph = C.farT % cyc, n = Math.floor(C.farT / cyc);
