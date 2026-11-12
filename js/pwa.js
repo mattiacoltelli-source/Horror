@@ -1,5 +1,7 @@
 // PWA: registrazione del service worker, banner di aggiornamento e pulsante «installa».
+import { VERSION } from './version.js';
 const $ = (id) => document.getElementById(id);
+{ const v = $('ver'); if (v) v.textContent = 'v ' + VERSION; }   // quale versione sta girando sul telefono
 let reg = null, reloading = false;
 
 function showBanner(worker) {
@@ -11,6 +13,8 @@ if ('serviceWorker' in navigator) {
     try {
       reg = await navigator.serviceWorker.register('sw.js');
       if (reg.waiting && navigator.serviceWorker.controller) showBanner(reg.waiting);
+      // se il nuovo worker si sta già installando mentre la pagina carica, 'updatefound' è già passato: lo seguiamo da qui
+      if (reg.installing && navigator.serviceWorker.controller) { const w0 = reg.installing; w0.addEventListener('statechange', () => { if (w0.state === 'installed') showBanner(w0); }); }
       reg.addEventListener('updatefound', () => {
         const w = reg.installing; if (!w) return;
         w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) showBanner(w); });
