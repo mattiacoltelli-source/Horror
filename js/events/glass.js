@@ -23,7 +23,7 @@ void main(){
   float b = uBlur;
   for(int i=-2;i<=2;i++) for(int j=-2;j<=2;j++) r += texture2D(tRoom, sc+vec2(float(i),float(j))*uTexel*b).rgb;
   r /= 25.;
-  r *= uLight*.95;
+  r *= uLight*1.12;                  // controluce più forte: la sagoma si stacca meglio
   r += r*r*0.9;                      // alone: la luce si espande oltre il suo bordo, come in un vetro smerigliato vero
   vec3 tint = vec3(.30,.36,.34);
   vec3 col = r*.82 + tint*(.07+.13*n)*(.35+uLight*.65);
@@ -127,9 +127,9 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
   const black = new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false });
   // parete luminosa dietro la sagoma: controluce freddo con gradiente (è ciò che rende leggibile la silhouette)
   const gc = document.createElement('canvas'); gc.width = 256; gc.height = 256; const gg = gc.getContext('2d');
-  const grd = gg.createRadialGradient(128, 128, 2, 128, 128, 128); grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(.12, 'rgba(255,255,255,.85)'); grd.addColorStop(.35, 'rgba(255,255,255,.28)'); grd.addColorStop(.65, 'rgba(255,255,255,.06)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
-  gg.fillStyle = grd; gg.fillRect(0, 0, 256, 256);
-  const wall = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gc), color: new THREE.Color(1.0, 0.86, 0.62), transparent: true, toneMapped: false, depthWrite: false }));
+  const grd = gg.createRadialGradient(0, 0, 2, 0, 0, 128); grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(.3, 'rgba(255,255,255,.8)'); grd.addColorStop(.55, 'rgba(255,255,255,.34)'); grd.addColorStop(.8, 'rgba(255,255,255,.08)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+  gg.save(); gg.translate(128, 150); gg.scale(0.62, 1.0); gg.fillStyle = grd; gg.fillRect(-128, -150, 256, 256); gg.restore();   // ovale alto: illumina la figura dalla testa ai piedi
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 5.2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gc), color: new THREE.Color(1.1, 0.9, 0.64), transparent: true, toneMapped: false, depthWrite: false }));
   wall.position.set(CX + 6.6, 1.5, CZ); wall.rotation.y = -Math.PI / 2; room.add(wall); E.wall = wall;
   setLayer(room);
 
@@ -151,13 +151,13 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
   E.entity = ent;
 
   // --- vetro ---
-  const rt = new THREE.WebGLRenderTarget(160, 284, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: true });
+  const rt = new THREE.WebGLRenderTarget(256, 448, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: true });
   const frost = frostTexture(), hands = handsTexture();
   const mat = new THREE.ShaderMaterial({
     vertexShader: vert, fragmentShader: frag,
     uniforms: {
       tRoom: { value: rt.texture }, tFrost: { value: frost }, tHands: { value: hands },
-      uRes: { value: new THREE.Vector2(1, 1) }, uTexel: { value: new THREE.Vector2(1 / 160, 1 / 284) },
+      uRes: { value: new THREE.Vector2(1, 1) }, uTexel: { value: new THREE.Vector2(1 / 256, 1 / 448) },
       uTime: { value: 0 }, uShake: { value: 0 }, uHand: { value: 0 }, uHandZ: { value: CZ }, uLight: { value: 0 }, uBlur: { value: 1.6 }, uAmb: { value: 1 },
       uCam: { value: new THREE.Vector3() }, uDir: { value: new THREE.Vector3(0, 0, -1) },
     },
@@ -280,7 +280,7 @@ export function createGlassEvent({ scene, renderer, camera, player, audio, light
     const size = renderer.getSize(new THREE.Vector2());
     mat.uniforms.uRes.value.set(size.x * renderer.getPixelRatio(), size.y * renderer.getPixelRatio());
     // la RT ha lo stesso aspetto dello schermo (sampling in coordinate schermo)
-    const w = 160, h = Math.max(64, Math.round(160 * size.y / size.x));
+    const w = 256, h = Math.max(64, Math.round(256 * size.y / size.x));
     if (rt.width !== w || rt.height !== h) { rt.setSize(w, h); mat.uniforms.uTexel.value.set(1 / w, 1 / h); }
     const prevMask = camera.layers.mask, prevBg = scene.background, prevFog = scene.fog;
     camera.layers.set(ROOM_LAYER); scene.background = null; scene.fog = null;
