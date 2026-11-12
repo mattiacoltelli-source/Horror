@@ -137,7 +137,7 @@ async function enter() {
   ambient ??= createAmbient({ player, audio, story, combat });
   wh ??= createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, flags, actBtn: $('act') });
   cellar ??= createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash });
-  tower ??= createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn: $('act'), combat });
+  tower ??= createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish: (m, f, l) => (dawn ? dawn.start(m) : finish(m, f, l)), warm, actBtn: $('act'), combat });
   combat.actBtn = $('act');
   const WZ = -400, CZ = -200, MZ = -500, TZ = -300;   // z0 delle stanze (vedi i moduli)
   notes ??= createNotes({ camera, player, audio, story, say, instab, flags, defs: [
