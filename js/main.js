@@ -177,11 +177,12 @@ async function enter() {
     { room: 'warehouse', parent: wh.group, p: [-5.96, 1.5, WZ - 17], ry: Math.PI / 2 },
     { room: 'tower', parent: tower.group, p: [-6.96, 1.5, TZ - 5], ry: Math.PI / 2 },
   ] });
-  // SCRITTE DI SANGUE per la versione di Yana (frasi in italiano e in ucraino), grandi sui muri
-  if (PKEY === 'yana' && !window.__writ) { window.__writ = true;
-    writingDecals(scene, [{ img: 'assets/tex/wr_yana_1.png', aspect: 5.09, p: [-1.38, 1.35, -13.4], wall: '+x', w: 4.4 }, { img: 'assets/tex/wr_yana_3.png', aspect: 4.34, p: [-1.38, 1.3, -31], wall: '+x', w: 4.2 }]);
-    writingDecals(cellar.group, [{ img: 'assets/tex/wr_yana_2.png', aspect: 2.42, p: [-3.96, 1.7, CZ - 15.2], wall: '+x', w: 3.6 }]);
-    writingDecals(tower.group, [{ img: 'assets/tex/wr_yana_4.png', aspect: 4.26, p: [0, 3.7, TZ - 0.05], wall: '-z', w: 5.4 }]);   // sul muro d'ingresso, sopra la porta: lo vedi quando ti giri
+  // SCRITTE DI SANGUE per le versioni personalizzate (frasi con il suo nome; per Yana anche in ucraino), grandi sui muri
+  const WR = { yana: { t1: ['yana_1', 5.09, 4.4], t3: ['yana_3', 4.34, 4.2], c2: ['yana_2', 2.42, 3.6], w4: ['yana_4', 4.26, 5.4] }, elisa: { t1: ['elisa_1', 4.89, 4.4], t3: ['elisa_3', 3.89, 4.0], c2: ['elisa_2', 2.63, 3.6], w4: ['elisa_4', 4.78, 5.4] } }[PKEY];
+  if (WR && !window.__writ) { window.__writ = true; const im = (k) => 'assets/tex/wr_' + WR[k][0] + '.png', asp = (k) => WR[k][1], wd = (k) => WR[k][2];
+    writingDecals(scene, [{ img: im('t1'), aspect: asp('t1'), p: [-1.38, 1.35, -13.4], wall: '+x', w: wd('t1') }, { img: im('t3'), aspect: asp('t3'), p: [-1.38, 1.3, -31], wall: '+x', w: wd('t3') }]);   // tunnel: prima e dopo il vetro
+    writingDecals(cellar.group, [{ img: im('c2'), aspect: asp('c2'), p: [-3.96, 1.7, CZ - 15.2], wall: '+x', w: wd('c2') }]);   // cantina: dopo lo specchio, tra due pilastri
+    writingDecals(tower.group, [{ img: im('w4'), aspect: asp('w4'), p: [0, 3.7, TZ - 0.05], wall: '-z', w: wd('w4') }]);   // torre: sul muro d'ingresso, sopra la porta: la vedi quando ti giri
   }
   doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar'); } });
   $('enter').disabled = true;
