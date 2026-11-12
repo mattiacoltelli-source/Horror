@@ -129,7 +129,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   W.take = () => {
     if (W.taken || W.state === 'open') return; W.taken = true; W.near = false; actBtn.classList.add('hidden'); W.leaving = false;
     const pick = pickWeapon();   // quella che stai guardando (pistola o ascia)
-    flags.weapon = pick; if (pistol) pistol.visible = false; if (ammo) ammo.visible = false; if (axe) axe.visible = false; if (pick === 'axe') combat.giveAxe(); else combat.give(); audio.clatter(); instab.set(0.9, 12);
+    sorella.ambush(); flags.weapon = pick; if (pistol) pistol.visible = false; if (ammo) ammo.visible = false; if (axe) axe.visible = false; if (pick === 'axe') combat.giveAxe(); else combat.give(); audio.clatter(); instab.set(0.9, 12);
     // la luce se ne va; ti accorgi che non sei solo
     lights.lamp(0, 'off'); lights.lamp(1, 'off'); lights.lamp(2, 'flicker', 2.5); audio.duck(0.05, 0.4); steps = 0; stepT = 2.0; W.state = 'taken';
     setTimeout(() => lights.lamp(2, 'off'), 2500);

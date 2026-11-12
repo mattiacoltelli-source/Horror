@@ -25,7 +25,7 @@ export function createSorella({ group, camera, player, audio, lights, instab, zM
   }, undefined, () => res(null))));
   const play = (name, fade = 0.2) => { const a = S.act[name]; if (!a) return; for (const k in S.act) if (S.act[k] !== a && S.act[k].isRunning()) S.act[k].fadeOut(fade); a.reset().fadeIn(fade).play(); };
   const hide = () => { if (S.model) S.model.visible = false; S.sp.forEach((s) => { s.visible = false; }); };
-  S.reset = () => { S.state = 'idle'; S.t = 0; S.seen = 0; S.n = 0; S.wait = 0; hide(); };
+  S.reset = () => { S.pending = false; S.state = 'idle'; S.t = 0; S.seen = 0; S.n = 0; S.wait = 0; hide(); };
   const f = new THREE.Vector3(), d = new THREE.Vector3(), p = new THREE.Vector3(), q = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3();
   const face = () => { const m = S.model; m.rotation.y = Math.atan2(player.pos.x - m.position.x, player.pos.z - m.position.z); };
   const place = (x, z) => { const m = S.model; m.position.set(Math.max(-xMax, Math.min(xMax, x)), 0, Math.max(zMin, Math.min(zMax, z))); face(); m.visible = true; S.seen = 0; S.t = 0; S.eyeV = 0; play('Idle', 0.01); S.state = 'show'; S.n++; };
@@ -42,14 +42,28 @@ export function createSorella({ group, camera, player, audio, lights, instab, zM
     if (zb - player.pos.z > 10.5) return [side, zb];
     return null;
   };
+  // IMBOSCATA: quando prendi l'arma, se non l'hai ancora vista fare il lampo, arriva da dietro (non serve guardarla): ~1,2 s dopo, 0,3 s di corsa
+  S.ambush = () => {
+    if (S.state === 'done' || S.state === 'dash' || S.state === 'off') return;
+    S.load(); S.pending = true;
+  };
   S.update = (dt, enabled = true) => {
     if (S.state === 'off' || S.state === 'done' || !enabled) return;
+    if (S.pending && S.model && S.state !== 'dash') { S.pending = false; hide(); S.n = 3; S.state = 'ambushWait'; S.t = 0; }
     if (S.state === 'idle') {
       if (!S.model) { S.load(); return; }
       if (player.pos.z < zMax - 7) place(-3.4, Math.max(zMin, player.pos.z - 19));
       return;
     }
-    if (S.state === 'wait') { S.wait -= dt; if (S.wait <= 0) { const s = nextSpawn(); if (s) place(s[0], s[1]); else S.state = 'done'; } return; }
+    if (S.state === 'ambushWait') {
+      S.t += dt; if (S.t < 1.2) return;
+      const m = S.model; camera.getWorldDirection(f); p.set(f.x, 0, f.z).normalize();
+      m.position.set(camera.position.x - p.x * 9, 0, camera.position.z - p.z * 9); m.visible = true; S.fromP.copy(m.position);
+      S.toP.set(camera.position.x - p.x * 0.9, 0, camera.position.z - p.z * 0.9); face(); play('Lunge', 0.03); S.act.Lunge.timeScale = 2.4; S.state = 'dash'; S.t = 0; S.eyeV = 1;
+      audio.scare(); player.addShake(1.5); lights.torchStutter?.(0.4); instab.set(1, 6); try { navigator.vibrate?.([110, 30, 170]); } catch (_) {}
+      return;
+    }
+    if (S.state === 'wait') { S.wait -= dt + Math.abs(player.pos.z - (S.lastZ ?? player.pos.z)) * 0.5; S.lastZ = player.pos.z; if (S.wait <= 0) { const s = nextSpawn(); if (s) place(s[0], s[1]); else S.state = 'done'; } return; }
     S.mixer.update(dt); const m = S.model; S.t += dt;
     camera.getWorldDirection(f); d.copy(m.position).setY(1.4).sub(camera.position); const dist = d.length(); d.normalize();
     const inView = d.dot(f) > 0.6;
