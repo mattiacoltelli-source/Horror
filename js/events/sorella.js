@@ -16,7 +16,7 @@ export function createSorella({ group, camera, player, audio, lights, instab, sa
       if (!o.isMesh) return; o.frustumCulled = false; o.material.envMapIntensity = 0.12;
       if (o.material.name === 'skin_game') { S.skin = o.material; o.material.color.multiplyScalar(0.45); o.material.roughness = 0.85; o.material.metalness = 0; }
       if (o.material.name === 'cloth_game') o.material.color.multiplyScalar(0.5);
-      if (P && o.material.name === 'hair') { o.material.color.setHex(0x6a1708); o.material.roughness = 0.6; }   // versione per Elisa: i capelli della sorella sono rossi, come i suoi
+      if (P && o.material.name === 'hair') { o.material.color.setHex(P.hairHex); o.material.roughness = 0.6; }   // versione personalizzata: i capelli della sorella hanno il suo colore (bruciati)
       if (o.material.name === 'ember') { o.material.emissiveIntensity = 3.2; S.eyes = o; }
     });
     for (let i = 0; i < 2; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true, opacity: 0 })); sp.scale.setScalar(0.26); sp.visible = false; group.add(sp); S.sp.push(sp); }

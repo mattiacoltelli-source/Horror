@@ -12,11 +12,11 @@ const NOTE_STD = [
   'incendio partito dal magazzino.\ninnesco volontario. benzina sui registri.\nun solo sopravvissuto: paziente n. 17.',
   'non l\'ho mai lasciato solo.\nl\'ho tirato fuori io, dal fuoco.\nnon lo lascerò nemmeno ora.',
 ];
-// versione per Elisa: stessa storia, ma la paziente n. 17 è lei e la sorella ha i suoi capelli rossi
+// versione personalizzata (profili in personal.js): stessa storia, ma la paziente n. 17 è lei e la sorella ha i suoi capelli
 const NOTE_PER = [
-  'paziente n. 17: ' + (P?.name ?? '') + '.\ningresso: notte del 3 novembre.\ncapelli rossi. molto carina, annota l\'infermiere, e lo sottolinea due volte.',
-  'ha rotto lo specchio ogni mattina.\nogni mattina lo rimettiamo.\ndice che quei capelli rossi non sono i suoi.',
-  'terapia della sedia: sospesa.\nchiede ogni giorno di sua sorella, quella con i capelli come i suoi.\nsorella: deceduta. ' + (P?.name ?? '') + ' era in casa, quando è bruciata.',
+  'paziente n. 17: ' + (P?.name ?? '') + '.\ningresso: notte del 3 novembre.\n' + (P?.joke ?? ''),
+  'ha rotto lo specchio ogni mattina.\nogni mattina lo rimettiamo.\ndice che ' + (P?.detail ?? '') + '.',
+  'terapia della sedia: sospesa.\nchiede ogni giorno di sua sorella, ' + (P?.sister ?? '') + '.\nsorella: deceduta. ' + (P?.name ?? '') + ' era in casa, quando è bruciata.',
   'incendio partito dal magazzino.\ninnesco volontario. benzina sui registri.\nun solo sopravvissuto: ' + (P?.name ?? '') + '.',
   'non l\'ho mai lasciata sola.\nl\'ho tirata fuori io, dal fuoco.\nnon la lascerò nemmeno ora.',
 ];
