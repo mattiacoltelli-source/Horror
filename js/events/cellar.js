@@ -220,12 +220,12 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
       let mt = 0;
       if (C.b1) { C.b1t += dt; mt = Math.max(mt, 0.8 * Math.sin(Math.min(1, C.b1t / 2.4) * Math.PI) ** 0.8); }
       if (C.b2) { C.b2t += dt; mt = Math.max(mt, 1.0 * Math.min(1, C.b2t / 1.2) * (C.sw ? 1 : 1)); }
-      if (C.sw && (PROF ? (C.wr && C.wr.done && C.wr.hold > 4.5) : C.swt > 2.4)) { mt = 0; if (!C.clean) { C.clean = true; C.farT = 0; } }          // finita la scena: via vapore, solchi e massa. Resta solo la mano.
+      if (C.sw && (C.wr && C.wr.done && C.wr.hold > 4.5)) { mt = 0; if (!C.clean) { C.clean = true; C.farT = 0; } }          // finita la scena: via vapore, solchi e massa. Resta solo la mano.
       F.uM.value += (mt - F.uM.value) * Math.min(1, dt * (mt === 0 ? 1.1 : 3));
       if (C.b2 && C.b2t > 1.5 && !C.sw) { C.sw = true; C.swt = 0; audio.squeak(1.6); lights.lamp(0, 'flicker', 0.7); }
-      if (C.sw) { C.swt += dt; F.uW.value = PROF ? 0 : Math.min(1, C.swt / 1.6); if (C.swt > 0.3 && !C.sw2) { C.sw2 = true; audio.whisper(1.4, 0.2); } }
+      if (C.sw) { C.swt += dt; F.uW.value = 0; if (C.swt > 0.3 && !C.sw2) { C.sw2 = true; audio.whisper(1.4, 0.2); } }
       // versione personalizzata: invece dei tre solchi, qualcuno scrive il suo nome nel vapore (il tempo avanza solo mentre guardi)
-      if (PROF && C.sw && C.swt > 0.8 && !C.wr) { C.wr = createFingerWriter(PROF.name, 384, 542, { cx: 0.47, cy: 0.76, onStroke: (s) => { if (s.first) audio.squeak(Math.min(0.42, 0.2 + s.dur * 0.5), MIRROR); } }); F.uMask.value = C.wr.tex; F.uR.value = 0.5; F.uB.value.set(0.47, 0.64); }   // la scritta sta ad altezza d'occhi, sopra l'impronta della mano
+      if (C.sw && C.swt > 0.8 && !C.wr) { C.wr = createFingerWriter(PROF ? PROF.name : 'TI VEDO', 384, 542, { cx: 0.47, cy: 0.76, onStroke: (s) => { if (s.first) audio.squeak(Math.min(0.42, 0.2 + s.dur * 0.5), MIRROR); } }); F.uMask.value = C.wr.tex; F.uR.value = 0.5; F.uB.value.set(0.47, 0.64); }   // la scritta sta ad altezza d'occhi, sopra l'impronta della mano
       if (C.wr) { const r = C.wr.update(dt, shadowOn); F.uTip.value.set(r.tipU, r.tipV, 0); if (r.done && !C.wName) { C.wName = true; whisperName(); lights.lamp(0, 'flicker', 0.8); instab.push(0.9, 6); } }
     }
     if (C.farT >= 0 && shadowOn) {
