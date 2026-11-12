@@ -4,10 +4,6 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 shell_files=$(find index.html manifest.webmanifest css js vendor icons -type f | LC_ALL=C sort)
-# versione mostrata nella schermata iniziale (js/version.js): hash di tutto lo shell escluso il file stesso
-vh=$(for f in $(echo "$shell_files" | grep -v '^js/version.js$'); do sha1sum "$f"; done | sha1sum | cut -c1-7)
-printf "export const VERSION = '%s';\n" "$vh" > js/version.js
-shell_files=$(find index.html manifest.webmanifest css js vendor icons -type f | LC_ALL=C sort)
 asset_files=$(find assets -type f | LC_ALL=C sort)
 sh=$(for f in $shell_files; do sha1sum "$f"; done | sha1sum | cut -c1-10)
 as=$(for f in $asset_files; do sha1sum "$f"; done | sha1sum | cut -c1-10)
