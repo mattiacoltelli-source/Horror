@@ -15,7 +15,7 @@ export function bloodText(text) {
   const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
   const draw = () => {
-    const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, cw, ch);
+    const out = cv.getContext('2d'), tc = document.createElement('canvas'); tc.width = cw; tc.height = ch; const ctx = tc.getContext('2d');   // si disegna su un canvas di lavoro, poi si ammorbidiscono i contorni (sangue che si e' un po' sparso, non vettoriale)
     pl.forEach((l, li) => {
       const ox = PAD + (maxW - l.w) * S / 2, by = (TOPPAD + CAP + li * LH) * S;   // by: linea di base
       for (const o of l.g) {
@@ -32,6 +32,9 @@ export function bloodText(text) {
       ctx.fillStyle = '#4f0707'; ctx.beginPath(); ctx.moveTo(x - wd / 2, ly); ctx.lineTo(x + wd / 2, ly); ctx.lineTo(x + wd * 0.4, ly + len); ctx.lineTo(x - wd * 0.4, ly + len); ctx.fill();
       ctx.beginPath(); ctx.arc(x, ly + len, wd * 0.8, 0, 6.3); ctx.fill();
     }
+    out.clearRect(0, 0, cw, ch); out.globalAlpha = 0.2;
+    for (const [dx, dy] of [[1.3, 0], [-1.3, 0], [0, 1.3], [0, -1.3], [1, 1], [-1, -1], [1, -1], [-1, 1], [2.2, 0.6], [-2.2, -0.6]]) out.drawImage(tc, dx, dy);   // alone sfumato
+    out.globalAlpha = 0.78; out.drawImage(tc, 0, 0); out.globalAlpha = 1;
     tex.needsUpdate = true;
   };
   if (atlas) draw(); else waiting.push(draw);
