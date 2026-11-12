@@ -187,8 +187,12 @@ async function enter() {
   // SCRITTE DI SANGUE per le versioni personalizzate (frasi con il suo nome; per Yana anche in ucraino), grandi sui muri
   const WRI = { yana: { t1: ['yana_1', 5.09, 4.4], t3: ['yana_3', 4.34, 4.2], c2: ['yana_2', 2.42, 3.6], w4: ['yana_4', 4.26, 5.4], o: ['yana_o', 7.05, 4.2], h: ['yana_h', 3.87, 2.65], m: ['yana_m', 6.67, 4.0] }, elisa: { t1: ['elisa_1', 4.89, 4.4], t3: ['elisa_3', 3.89, 4.0], c2: ['elisa_2', 2.63, 3.6], w4: ['elisa_4', 4.78, 5.4], o: ['elisa_o', 6.88, 4.2], h: ['elisa_h', 4.15, 2.65], m: ['elisa_m', 6.83, 4.0] } }[PKEY];
   // chiunque altro: stesse posizioni, frasi scritte al volo con il font di sangue (js/world/bloodfont.js); [testo, _, larghezza massima]
-  const GN = P ? P.name.toUpperCase() : '', GF = P?.f !== false, WR = WRI || (P ? { t1: [GN + ',\nNON FERMARTI', 0, 4.4], t3: ['NON È LA TUA\nFACCIA, ' + GN, 0, 4.2], c2: [GN + ',\nGIRATI', 0, 3.6], w4: ['NON SEI ' + (GF ? 'SOLA' : 'SOLO') + ',\n' + GN, 0, 5.4], o: [GN + ',\nQUI TI HANNO ' + (GF ? 'LEGATA' : 'LEGATO'), 0, 4.2], h: ['TI STAVANO\nASPETTANDO,\n' + GN, 0, 3.65], m: ['NON C\'È USCITA,\n' + GN, 0, 4.0] } : null);
-  const spec = (k) => WRI ? { img: 'assets/tex/wr_' + WR[k][0] + '.png', aspect: WR[k][1] } : { text: WR[k][0], aspect: bloodText(WR[k][0]).aspect, maxH: 1.0 };
+  const GN = P ? P.name.toUpperCase() : '', GF = P?.f !== false;
+  // altezza (m) che hanno le scritte di Elisa in ogni punto: le frasi nuove hanno la stessa altezza (la larghezza segue il testo ed e' comunque limitata allo spazio libero, vedi fit)
+  const HGT = { t1: 0.90, t3: 1.03, c2: 1.37, w4: 1.13, o: 0.87, h: 0.64, m: 0.59 };
+  const GT = P ? { t1: GN + ',\nNON FERMARTI', t3: 'NON È LA TUA\nFACCIA, ' + GN, c2: GN + ',\nGIRATI', w4: 'NON SEI ' + (GF ? 'SOLA' : 'SOLO') + ',\n' + GN, o: GN + ',\nQUI TI HANNO ' + (GF ? 'LEGATA' : 'LEGATO'), h: 'TI STAVANO\nASPETTANDO, ' + GN, m: 'NON C\'È USCITA,\n' + GN } : null;
+  const WR = WRI || (P ? Object.fromEntries(Object.entries(GT).map(([k, t]) => [k, [t, 0, HGT[k] * bloodText(t).aspect]])) : null);   // chiunque altro: stesse posizioni, frasi scritte al volo con il font di sangue (js/world/bloodfont.js)
+  const spec = (k) => WRI ? { img: 'assets/tex/wr_' + WR[k][0] + '.png', aspect: WR[k][1] } : { text: WR[k][0], aspect: bloodText(WR[k][0]).aspect };
   if (WR && !window.__writ) { window.__writ = true;
     // CRITERIO: ogni scritta sta al CENTRO dello spazio libero tra due elementi fissi (costoloni del tunnel, pilastri della cantina) e la sua larghezza e' limitata allo spazio, cosi' niente la taglia
     const fit = (a, b, k, thick, maxW) => ({ z: (a + b) / 2, w: Math.min(maxW ?? WR[k][2], Math.abs(a - b) - thick - 0.5) });
@@ -196,7 +200,7 @@ async function enter() {
     writingDecals(scene, [{ ...spec('t1'), p: [-1.38, 1.0, t1.z], wall: '+x', w: t1.w }, { ...spec('t3'), p: [-1.38, 1.0, t3.z], wall: '+x', w: t3.w }]);   // sotto il tubo sottile (y 1.62)
     writingDecals(cellar.group, [{ ...spec('c2'), p: [-3.96, 1.7, c2.z], wall: '+x', w: c2.w }]);
     // obitorio: muro sinistro (parte verde, sopra le piastrelle), al centro della sala
-    writingDecals(morgue.group, [{ ...spec('o'), p: [-4.22, 2.1, MZ - 6.6], wall: '+x', w: WRI ? 6.0 : 4.6 }]);
+    writingDecals(morgue.group, [{ ...spec('o'), p: [-4.22, 2.1, MZ - 6.6], wall: '+x', w: WRI ? 6.0 : Math.min(WR.o[2], 6.0) }]);
     // sala dei mostri: sui due muri laterali, tra la porta chiusa e il primo pilastro (e' li' che guardi mentre ti giri); stesso centro, larghezza limitata allo spazio
     { const hz = Z_END - 0.35, hs = fit(hz, hz - 3.15, 'h', 0, WR.h[2] + 1); writingDecals(hall.group, [{ ...spec('h'), p: [-5.99, 1.7, hs.z], wall: '+x', w: hs.w }, { ...spec('h'), p: [5.99, 1.7, hs.z], wall: '-x', w: hs.w }]); }
     // magazzino: muro sinistro, tra due pilastri (sotto la lampada a muro, lontano dagli scaffali)
