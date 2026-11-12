@@ -4,7 +4,9 @@ import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { buildRoom } from '../world/rooms.js';
 import { decorTower } from '../world/decor.js';
-import { addExtras, pedestal } from '../world/extra.js';
+import { addExtras, pedestal, turnToward } from '../world/extra.js';
+import { unseenMover } from './ambient.js';
+import { addAtmosphere } from '../world/atmos.js';
 
 export const TOWER = { z0: -300, w: 14, l: 18, h: 8.5 };
 const TEXT = { A: 'non ti sei girato.\nera già davanti a te.\nnon volevi ricordare.', B: 'ti sei girato.\nlei non se n\'è mai andata.\nl\'incendio l\'hai acceso tu.', D: 'ricordi tutto.\nl\'incendio l\'hai acceso tu.\nresti con lei. l\'hai scelto tu.' };
@@ -25,7 +27,8 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   prop('assets/models/can.glb', 0.12, 2.8, TOWER.z0 - 4, 0.9);
   prop('assets/models/chair.glb', 1.0, 2.2, TOWER.z0 - 10.5, Math.PI, (o) => { T.chair = o; });
   pedestal(T.group, -6.1, TOWER.z0 - 15.5);
-  addExtras(T.group, [['x_clock', 2.3, -6.6, 0, TOWER.z0 - 4.5, Math.PI / 2], ['x_lion', 0.44, 6.3, 1.15, TOWER.z0 - 9, -Math.PI / 2], ['x_bust', 0.52, -6.1, 0.95, TOWER.z0 - 15.5, Math.PI / 2 + 0.4]]);
+  addAtmosphere(T.group, { xl: -TOWER.w / 2, xr: TOWER.w / 2, z0: TOWER.z0, z1: TOWER.z0 - TOWER.l, h: TOWER.h, seed: 31, lamps: [[0, 5.4, TOWER.z0 - 7], [0, 5.4, TOWER.z0 - 13]], shaft: 0xffd9a8, shaftOpacity: 0.075, stains: 10, puddles: 5, stainColor: 0x0c0603 });
+  addExtras(T.group, [['x_clock', 2.3, -6.6, 0, TOWER.z0 - 4.5, Math.PI / 2], ['x_lion', 0.44, 6.3, 1.15, TOWER.z0 - 9, -Math.PI / 2], ['x_bust', 0.52, -6.1, 0.95, TOWER.z0 - 15.5, Math.PI / 2 + 0.4, 1, 0, (g) => { T.bust = g; }]]);
 
   // porta d'uscita con bagliore sotto
   const door = new THREE.Group(); door.position.set(0, 0, zFar + 0.15); T.group.add(door);
@@ -57,14 +60,16 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
 
   T.enter = () => {
     T.group.visible = true; T.opened = false; player.box = T.bounds; player.pos.set(0.3, 1.62, TOWER.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
-    lights.setLamps([[0, 5.4, TOWER.z0 - 7], [0, 5.4, TOWER.z0 - 13]], 2.4); scene.fog.density = 0.04; audio.duck(1, 1.5); instab.set(0.05, 6);
+    lights.setLamps([[0, 5.4, TOWER.z0 - 7], [0, 5.4, TOWER.z0 - 13]], 2.4, 0xffd4a0); lights.grade({ fog: 0x0a0503, hemi: [0x6a3e22, 0x120804, 0.42] }); scene.fog.density = 0.04; audio.duck(1, 1.5); instab.set(0.05, 6);
     warm.position.set(stovePos.x + 0.1, 1.0, stovePos.z + 0.2); warm.intensity = 36;
   };
   T.leave = () => { T.group.visible = false; warm.intensity = 0; };
 
   const dv = new THREE.Vector3(), fw = new THREE.Vector3(), ep = new THREE.Vector3(); let wt = 0, open = 0, st = 'idle';
+  const bustMove = unseenMover({ camera, getObj: () => T.bust, max: 3, gap: 7, move: (n) => { turnToward(T.bust, player.pos, n); audio.shuffle?.(0.5, 0.22); } });
   T.update = (dt, time) => {
     if (!T.group.visible) return;
+    if (st === 'idle') bustMove(dt);
     wt += dt; warm.intensity = (36 + Math.sin(time * 9) * 3 + Math.sin(time * 23) * 1.6) * (st === 'idle' ? 1 : st === 'opening' ? 0.5 : 0.04);
     // CARROZZINA: quando non la guardi si gira verso di te; quando la guardi (dopo averla persa di vista) può avanzare di ~40 cm
     // piano, per circa un secondo, e si blocca con un cigolio. Al massimo 3 volte, con pause: resta un dubbio, non uno scherzo.

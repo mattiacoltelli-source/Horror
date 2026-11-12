@@ -1,5 +1,5 @@
 // Regia del gioco: stanze, scelte (flags) e passaggi tra una stanza e l'altra (dissolvenza nel buio).
-export function createStory({ scene, camera, controls, player, audio, hall, getCellar, getTower, getWh, getMorgue, say, lights, instab }) {
+export function createStory({ scene, camera, controls, player, audio, hall, getCellar, getTower, getWh, getMorgue, say, lights, instab, onRoom }) {
   let busy = false, current = 'tunnel';
   const fade = document.getElementById('fade');
   const hideLegacy = (keep) => scene.children.forEach((o) => { if (!o.isLight && o !== camera && !o.userData.keep && !keep.includes(o)) o.visible = false; });
@@ -24,7 +24,8 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
         if (name === 'morgue') { hideLegacy([morgue.group]); cellar.leave(); morgue.enter(); }
         if (name === 'warehouse') { hideLegacy([wh.group]); cellar.leave(); morgue.leave(); wh.enter(); }
         if (name === 'tower') { hideLegacy([tower.group]); cellar.leave(); wh.leave(); tower.enter(); }
-        current = name; lights.torchKill(0.01, 0); tell(name);
+        camera.far = { cellar: 42, morgue: 34, warehouse: 36, tower: 46 }[name] ?? 60; camera.updateProjectionMatrix();   // oltre la nebbia non serve disegnare
+        current = name; lights.torchKill(0.01, 0); tell(name); onRoom?.(name);
         setTimeout(() => { fade.style.transition = 'opacity 2s'; fade.style.opacity = 0; controls.enabled = true; busy = false; audio.duck(1, 2); }, 350);
       }, 1500);
     },

@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { LAMPS } from './tunnel.js';
 
 export function createLights(scene, camera) {
-  scene.add(new THREE.HemisphereLight(0x1a2230, 0x0a0806, 0.35));
+  const hemi = new THREE.HemisphereLight(0x1a2230, 0x0a0806, 0.35); scene.add(hemi);
 
   const torch = new THREE.SpotLight(0xfff1d6, 34, 26, 0.5, 0.9, 1.8);
   torch.position.set(0.12, -0.1, 0);
@@ -28,6 +28,8 @@ export function createLights(scene, camera) {
     torch,
     lamps,
     setTorch(v) { flashlightOn = v; },
+    // tinta della stanza: colore di nebbia/fondo e luce ambiente (ogni stanza ha il suo colore)
+    grade({ fog, hemi: h }) { if (fog != null) { scene.fog.color.setHex(fog); if (scene.background?.isColor) scene.background.setHex(fog); } if (h) { hemi.color.setHex(h[0]); hemi.groundColor.setHex(h[1]); hemi.intensity = h[2]; } },
     // cambia stanza: nuove posizioni delle lampade [[x,y,z],...]
     setLamps(list, gain = 1, color = 0xaec8ff) { lamps = list.map(([x, y, z], i) => mk(x, y, z, i)); api.lamps = lamps; poolGain = gain; pool.forEach((l) => l.color.setHex(color)); },
     // la torcia si spegne per `dur` secondi (poi torna, un po' più debole)

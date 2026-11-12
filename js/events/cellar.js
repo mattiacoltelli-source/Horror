@@ -8,7 +8,9 @@ import { buildRoom } from '../world/rooms.js';
 import { bloodDecals } from '../world/blood.js';
 import { decorCellar } from '../world/decor.js';
 import { redLight } from '../world/redlight.js';
-import { addExtras, pedestal } from '../world/extra.js';
+import { addExtras, pedestal, turnToward } from '../world/extra.js';
+import { unseenMover } from './ambient.js';
+import { addAtmosphere } from '../world/atmos.js';
 
 export const CELLAR = { z0: -200, w: 8, l: 24, h: 4.4 };
 const MIRROR = new THREE.Vector3(-3.98, 1.45, -210);
@@ -117,8 +119,10 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const prop = (url, h, x, z, ry) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y, c.z - z)); o.rotation.y = ry; C.group.add(o); });
   prop('assets/models/can.glb', 0.12, -2.6, CELLAR.z0 - 3, 0.5); prop('assets/models/tank.glb', 0.55, 3.1, CELLAR.z0 - 12.5, 0.4); prop('assets/models/rim.glb', 0.5, 2.4, CELLAR.z0 - 4.2, 1.2);
   prop('assets/models/stool.glb', 0.46, -2.2, CELLAR.z0 - 8.4, 0.3); prop('assets/models/cabinet.glb', 1.1, 3.4, CELLAR.z0 - 17, -Math.PI / 2);
+  // atmosfera: fasci freddi sotto le lampade, pozzanghere, colature (non sul muro dello specchio)
+  addAtmosphere(C.group, { xl: -CELLAR.w / 2, xr: CELLAR.w / 2, z0: CELLAR.z0, z1: CELLAR.z0 - CELLAR.l, h: CELLAR.h, seed: 3, lamps: lampPos, shaft: 0x9db8ff, shaftOpacity: 0.07, stains: 8, puddles: 5, avoid: [{ side: -1, z0: CELLAR.z0 - 8, z1: CELLAR.z0 - 12 }] });
   // extra: l'orologio di fronte allo specchio (si vede nel riflesso), il busto sul mobile, un gnomo fuori posto vicino all'ingresso
-  addExtras(C.group, [['x_clock', 2.15, 3.7, 0, CELLAR.z0 - 7.5, -Math.PI / 2], ['x_bust', 0.52, 3.4, 1.1, CELLAR.z0 - 17, -Math.PI / 2 - 0.5], ['x_gnome', 0.6, -3.4, 0, CELLAR.z0 - 2.2, 0.7, 0.07]]);
+  addExtras(C.group, [['x_clock', 2.15, 3.7, 0, CELLAR.z0 - 7.5, -Math.PI / 2], ['x_bust', 0.52, 3.4, 1.1, CELLAR.z0 - 17, -Math.PI / 2 - 0.5, 1, 0, (g) => { C.bust = g; }], ['x_gnome', 0.6, -3.4, 0, CELLAR.z0 - 2.2, 0.7, 0.07]]);
 
   // porta d'uscita in fondo
   const exitDoor = new THREE.Group(); exitDoor.position.set(0, 0, CELLAR.z0 - CELLAR.l + 0.15); C.group.add(exitDoor);
@@ -137,12 +141,14 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   C.enter = () => {
     C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; cornerDone = false; cornerT = -1; corner.visible = false; runDone = false; runT = -1; runM.visible = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.uniforms.uA.value = 0; mist.material.opacity = 0; shNear.material.uniforms.uA.value = 0; fogMat.uniforms.uM.value = 0; fogMat.uniforms.uW.value = 0; C.b1 = C.b2 = C.sw = C.sw2 = C.clean = false; C.farT = -1; C.farN = 0; far1.visible = false;
     player.box = C.bounds; player.pos.set(0.4, 1.62, CELLAR.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
-    lights.setLamps(lampPos, 2.1); scene.fog.density = 0.04; audio.duck(1, 1); instab.set(0.1, 6);
+    lights.setLamps(lampPos, 2.1, 0x9db8ff); lights.grade({ fog: 0x03050c, hemi: [0x22336a, 0x0a0a14, 0.42] }); scene.fog.density = 0.04; audio.duck(1, 1); instab.set(0.1, 6);
   };
 
   const mc = new THREE.Vector3(), fw = new THREE.Vector3(), tmp = new THREE.Vector3(), d = new THREE.Vector3();
+  // il busto sul mobile, quando non lo guardi, si volta verso di te
+  const bustMove = unseenMover({ camera, getObj: () => C.bust, max: 3, gap: 7, move: (n) => { turnToward(C.bust, player.pos, n); audio.shuffle?.(0.5, 0.22); } });
   C.update = (dt) => {
-    if (C.group.visible) red.update(dt);
+    if (C.group.visible) { red.update(dt); bustMove(dt); }
     if (!C.group.visible) return;
     const P = player.pos;
     // --- specchio ---
