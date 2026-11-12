@@ -8,6 +8,7 @@ import { buildRoom } from '../world/rooms.js';
 import { bloodDecals } from '../world/blood.js';
 import { decorCellar } from '../world/decor.js';
 import { redLight } from '../world/redlight.js';
+import { addExtras, pedestal } from '../world/extra.js';
 
 export const CELLAR = { z0: -200, w: 8, l: 24, h: 4.4 };
 const MIRROR = new THREE.Vector3(-3.98, 1.45, -210);
@@ -116,6 +117,8 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const prop = (url, h, x, z, ry) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y, c.z - z)); o.rotation.y = ry; C.group.add(o); });
   prop('assets/models/can.glb', 0.12, -2.6, CELLAR.z0 - 3, 0.5); prop('assets/models/tank.glb', 0.55, 3.1, CELLAR.z0 - 12.5, 0.4); prop('assets/models/rim.glb', 0.5, 2.4, CELLAR.z0 - 4.2, 1.2);
   prop('assets/models/stool.glb', 0.46, -2.2, CELLAR.z0 - 8.4, 0.3); prop('assets/models/cabinet.glb', 1.1, 3.4, CELLAR.z0 - 17, -Math.PI / 2);
+  // extra: l'orologio di fronte allo specchio (si vede nel riflesso), il busto sul mobile, un gnomo fuori posto vicino all'ingresso
+  addExtras(C.group, [['x_clock', 2.15, 3.7, 0, CELLAR.z0 - 7.5, -Math.PI / 2], ['x_bust', 0.52, 3.4, 1.1, CELLAR.z0 - 17, -Math.PI / 2 - 0.5], ['x_gnome', 0.6, -3.4, 0, CELLAR.z0 - 2.2, 0.7]]);
 
   // porta d'uscita in fondo
   const exitDoor = new THREE.Group(); exitDoor.position.set(0, 0, CELLAR.z0 - CELLAR.l + 0.15); C.group.add(exitDoor);
