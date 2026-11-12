@@ -101,7 +101,7 @@ export function createFingerWriter(name, W, H, opts = {}) {
       if (t < s.t0) break;
       const u = Math.min(1, (t - s.t0) / s.dur), e = u * u * (3 - 2 * u) * 0.65 + u * 0.35;   // parte e si ferma piano, ma non e' un'onda perfetta
       const prev = W_.last.get(s), np = pos(s, e);
-      if (!prev) { g.beginPath(); g.arc(np[0], np[1], s.lw * 0.6, 0, 6.3); g.fill(); W_.dirty = true; if (opts.onStroke) opts.onStroke(s); }
+      if (!prev) { if (opts.onStroke) opts.onStroke(s); }
       else if (Math.hypot(np[0] - prev[0], np[1] - prev[1]) > 0.4) { g.lineWidth = s.lw * (0.9 + 0.2 * Math.sin(e * 9)); g.beginPath(); g.moveTo(prev[0], prev[1]); g.lineTo(np[0], np[1]); g.stroke(); W_.dirty = true; }
       if (!prev || Math.hypot(np[0] - prev[0], np[1] - prev[1]) > 0.4) W_.last.set(s, np);
       if (u < 1) active = np;
@@ -112,7 +112,6 @@ export function createFingerWriter(name, W, H, opts = {}) {
       if (t < d.t || d.run >= d.max) continue;
       d.v += dt * lh * 0.08; const step = d.v * dt, ny = d.y + step; d.run += step;
       g.lineWidth = d.w; g.beginPath(); g.moveTo(d.x, d.y); d.x += (R() - 0.5) * 0.35; g.lineTo(d.x, ny); g.stroke(); d.y = ny;
-      if (d.run >= d.max) { g.beginPath(); g.arc(d.x, d.y, d.w * 0.85, 0, 6.3); g.fill(); }
       W_.dirty = true;
     }
     if (W_.dirty && (++W_.frame & 1) === 0) { tex.needsUpdate = true; W_.dirty = false; }
