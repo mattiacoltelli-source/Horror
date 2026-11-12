@@ -97,27 +97,18 @@ export function createAudio() {
       const pan = ctx.createPanner(); pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 2.5; pan.rolloffFactor = 0.8;
       pan.positionX.value = pos.x; pan.positionY.value = pos.y; pan.positionZ.value = pos.z;
       const out = ctx.createGain(); out.gain.value = 1; out.connect(pan); pan.connect(master); pan.connect(verbSend);
+      // DUE PALME PIATTE sul vetro: tonfo sordo + schiocco della pelle (niente gong, niente note metalliche) + un filo di vibrazione della lastra
+      const sn = (f, q, t0, dur, amp, dec) => { const s = ctx.createBufferSource(); s.buffer = noiseBuf; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q; const g = ctx.createGain();
+        g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(amp, t0 + 0.001); g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur); s.connect(bp); bp.connect(g); g.connect(out); s.start(t0, Math.random(), dur + 0.05); };
       const hit = (t0, p) => {
-        // corpo: thump sub
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = 'sine'; o.frequency.setValueAtTime(130, t0); o.frequency.exponentialRampToValueAtTime(34, t0 + 0.28);
-        g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.95 * p, t0 + 0.004); g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.7);
-        o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.75);
-        // schiocco: rumore filtrato sul vetro
-        const s = ctx.createBufferSource(); s.buffer = noiseBuf;
-        const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1900; f.Q.value = 0.7;
-        const g2 = ctx.createGain();
-        g2.gain.setValueAtTime(0, t0); g2.gain.linearRampToValueAtTime(0.8 * p, t0 + 0.002); g2.gain.exponentialRampToValueAtTime(0.001, t0 + 0.22);
-        s.connect(f); f.connect(g2); g2.connect(out); s.start(t0, Math.random(), 0.3);
-        // risonanza del vetro (modi inarmonici)
-        for (const fr of [310, 487, 733, 1140]) {
-          const oo = ctx.createOscillator(), gg = ctx.createGain();
-          oo.type = 'sine'; oo.frequency.value = fr * (0.98 + Math.random() * 0.04);
-          gg.gain.setValueAtTime(0, t0); gg.gain.linearRampToValueAtTime(0.06 * p, t0 + 0.003); gg.gain.exponentialRampToValueAtTime(0.0004, t0 + 0.9);
-          oo.connect(gg); gg.connect(out); oo.start(t0); oo.stop(t0 + 1);
-        }
+        const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(150, t0); o.frequency.exponentialRampToValueAtTime(70, t0 + 0.14);
+        g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.9 * p, t0 + 0.003); g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.45); o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.5);
+        sn(1300, 0.9, t0, 0.11, 0.55 * p, 0.012); sn(380, 0.8, t0, 0.2, 0.5 * p, 0.04);
+        for (const [fr, a] of [[262, 1], [417, 0.6], [655, 0.35]]) { const oo = ctx.createOscillator(), gg = ctx.createGain(); oo.type = 'sine'; oo.frequency.value = fr * (0.99 + Math.random() * 0.02); gg.gain.setValueAtTime(0, t0); gg.gain.linearRampToValueAtTime(0.03 * a * p, t0 + 0.003); gg.gain.exponentialRampToValueAtTime(0.0004, t0 + 0.9); oo.connect(gg); gg.connect(out); oo.start(t0); oo.stop(t0 + 0.95); }
       };
-      hit(t, power); hit(t + 0.11, power * 0.85);
+      hit(t, power); hit(t + 0.08, power * 0.8);
+      // il filo di vibrazione: la lastra "risponde" per un secondo e mezzo, molto piano
+      for (const [fr, a] of [[186, 1], [231, 0.8], [372, 0.5], [468, 0.45], [702, 0.25], [935, 0.15]]) { const oo = ctx.createOscillator(), gg = ctx.createGain(); oo.type = 'sine'; oo.frequency.value = fr * (0.995 + Math.random() * 0.01); gg.gain.setValueAtTime(0, t + 0.05); gg.gain.linearRampToValueAtTime(0.022 * a * power, t + 0.08); gg.gain.exponentialRampToValueAtTime(0.0003, t + 1.7); oo.connect(gg); gg.connect(out); oo.start(t + 0.05); oo.stop(t + 1.75); }
     },
     // portone di ferro che sbatte contro i muri
     doorBang(pos, power = 1) {
