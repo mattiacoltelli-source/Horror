@@ -18,7 +18,7 @@ const NOTE_PER = [
   'ha rotto lo specchio ogni mattina.\nogni mattina lo rimettiamo.\ndice che ' + (P?.detail ?? '') + '.',
   'terapia della sedia: sospesa.\nchiede ogni giorno di sua sorella, ' + (P?.sister ?? '') + '.\nsorella: deceduta. ' + (P?.name ?? '') + ' era in casa, quando è bruciata.',
   'incendio partito dal magazzino.\ninnesco volontario. benzina sui registri.\nun solo sopravvissuto: ' + (P?.name ?? '') + '.',
-  'non l\'ho mai lasciata sola.\nl\'ho tirata fuori io, dal fuoco.\nnon la lascerò nemmeno ora.',
+  'non l\'ho mai lasciata sola.\nl\'ho tirata fuori io, dal fuoco.\nnon la lascerò nemmeno ora.' + (P?.nurse ? '\n' + P.nurse : ''),
 ];
 export const NOTE_TEXT = P ? NOTE_PER : NOTE_STD;
 
