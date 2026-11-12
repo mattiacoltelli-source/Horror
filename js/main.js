@@ -178,6 +178,10 @@ async function enter() {
     { room: 'warehouse', parent: wh.group, p: [-5.96, 1.5, WZ - 17], ry: Math.PI / 2 },
     { room: 'tower', parent: tower.group, p: [-6.96, 1.5, TZ - 5], ry: Math.PI / 2 },
   ] });
+  // disegno da bambino (tutte le versioni) in cantina, e foto di Elisa col volto bruciato (solo Elisa) in obitorio: fogli appesi al muro, senza luce propria
+  if (!window.__pics) { window.__pics = true;
+    writingDecals(cellar.group, [{ img: 'assets/tex/pic_drawing.jpg', aspect: 1.004, p: [3.96, 1.5, CZ - 9.7], wall: '-x', w: 0.9, rot: 0.04, a: 1, plain: true }]);
+    if (PKEY === 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_elisa.jpg', aspect: 0.545, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]); }
   // SCRITTE DI SANGUE per le versioni personalizzate (frasi con il suo nome; per Yana anche in ucraino), grandi sui muri
   const WR = { yana: { t1: ['yana_1', 5.09, 4.4], t3: ['yana_3', 4.34, 4.2], c2: ['yana_2', 2.42, 3.6], w4: ['yana_4', 4.26, 5.4], o: ['yana_o', 7.05, 4.2], h: ['yana_h', 3.87, 2.65], m: ['yana_m', 6.67, 4.0] }, elisa: { t1: ['elisa_1', 4.89, 4.4], t3: ['elisa_3', 3.89, 4.0], c2: ['elisa_2', 2.63, 3.6], w4: ['elisa_4', 4.78, 5.4], o: ['elisa_o', 6.88, 4.2], h: ['elisa_h', 4.15, 2.65], m: ['elisa_m', 6.83, 4.0] } }[PKEY];
   if (WR && !window.__writ) { window.__writ = true; const im = (k) => 'assets/tex/wr_' + WR[k][0] + '.png', asp = (k) => WR[k][1];
