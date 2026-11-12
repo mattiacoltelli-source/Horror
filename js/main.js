@@ -190,8 +190,8 @@ async function enter() {
   const WRI = { yana: { t1: ['yana_1', 5.09, 4.4], t3: ['yana_3', 4.34, 4.2], c2: ['yana_2', 2.42, 3.6], w4: ['yana_4', 4.26, 5.4], o: ['yana_o', 7.05, 4.2], h: ['yana_h', 3.87, 2.65], m: ['yana_m', 6.67, 4.0] }, elisa: { t1: ['elisa_1', 4.89, 4.4], t3: ['elisa_3', 3.89, 4.0], c2: ['elisa_2', 2.63, 3.6], w4: ['elisa_4', 4.78, 5.4], o: ['elisa_o', 6.88, 4.2], h: ['elisa_h', 4.15, 2.65], m: ['elisa_m', 6.83, 4.0] } }[PKEY];
   // chiunque altro: stesse posizioni, frasi scritte al volo con il font di sangue (js/world/bloodfont.js); [testo, _, larghezza massima]
   const GN = P ? P.name.toUpperCase() : '', GF = P?.f !== false;
-  // altezza (m) che hanno le scritte di Elisa in ogni punto: le frasi nuove hanno la stessa altezza (la larghezza segue il testo ed e' comunque limitata allo spazio libero, vedi fit)
-  const HGT = { t1: 0.90, t3: 1.03, c2: 1.37, w4: 1.13, o: 0.87, h: 0.64, m: P ? 0.59 : 0.85 };
+  // altezza (m) delle scritte al volo in ogni punto: le frasi nuove (la larghezza segue il testo ed e' comunque limitata allo spazio libero, vedi fit)
+  const HGT = { t1: 1.2, t3: 1.3, c2: 1.8, w4: 1.5, o: 1.15, h: 0.9, m: 1.5 };   // altezza massima della scritta (lettere come quelle di Yana: ~35% piu' grandi di prima), larghezza = testo, limitata allo spazio libero
   // versione standard: stesse scritte, senza nome (generiche); le altre: con il nome
   const GT = P ? { t1: GN + ',\nNON FERMARTI', t3: 'NON È LA TUA\nFACCIA, ' + GN, c2: GN + ',\nGIRATI', w4: 'NON SEI ' + (GF ? 'SOLA' : 'SOLO') + ',\n' + GN, o: GN + ',\nQUI TI HANNO ' + (GF ? 'LEGATA' : 'LEGATO'), h: 'TI STAVANO\nASPETTANDO, ' + GN, m: 'NON C\'È USCITA,\n' + GN }
     : { t1: 'NON\nFERMARTI', t3: 'NON È LA TUA\nFACCIA', c2: 'DIETRO\nDI TE', w4: 'NON SEI\nSOLO', o: 'QUI TI HANNO\nLEGATO', h: 'TI STAVANO\nASPETTANDO', m: 'NON C\'È\nUSCITA' };
