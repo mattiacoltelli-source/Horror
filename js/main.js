@@ -197,6 +197,8 @@ async function enter() {
       writingDecals(scene, [{ img: sg, aspect: A, p: [1.38, 1.45, tz], wall: '-x', w: 1.1 }]);
       writingDecals(cellar.group, [{ img: sg, aspect: A, p: [-3.96, 1.6, CZ - 20.5], wall: '+x', w: 1.6 }]);
       writingDecals(wh.group, [{ img: sg, aspect: A, p: [5.96, 1.9, WZ - 12.6], wall: '-x', w: 1.7 }]); }
+    // solo Yana: frase piccola e bassa, quasi nascosta, sul muro destro del tunnel (poco in vista)
+    if (PKEY === 'yana') writingDecals(scene, [{ img: 'assets/tex/wr_yana_soul.png', aspect: 1.164, p: [1.38, 0.95, (RIBS[5] + RIBS[6]) / 2], wall: '-x', w: 1.5, a: 0.8 }]);
     writingDecals(tower.group, [{ img: im('w4'), aspect: asp('w4'), p: [0, 3.7, TZ - 0.05], wall: '-z', w: WR.w4[2] }]);   // torre: muro d'ingresso, sopra la porta: la vedi quando ti giri
   }
   doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar'); } });
