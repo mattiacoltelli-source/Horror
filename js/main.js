@@ -190,8 +190,8 @@ $('resume').addEventListener('click', () => setPaused(false));
 function finish(msg, fast = false, light = false) {
   if (ended) return; ended = true; controls.enabled = false; instab.hide();
   $('endtext').innerText = msg || 'fine';
-  const n = /^non ti sei girato/.test(msg || '') ? 1 : /^ti sei girato/.test(msg || '') ? 2 : /^ricordi tutto/.test(msg || '') ? 3 : 0;
-  $('endsub').textContent = (n ? (n === 3 ? 'finale · 3 di 3 · condanna' : `finale ${n} di 3`) : '') + (n && notes ? `\nricordi: ${flags.notes ?? 0} di 5` : '');
+  const n = /^non ti sei girato/.test(msg || '') ? 1 : /^ti sei girato/.test(msg || '') ? 2 : 0;
+  $('endsub').textContent = (n ? `finale ${n} di 2` : '') + (n && notes ? `\nricordi: ${flags.notes ?? 0} di 5` : '');
   setTimeout(() => audio.duck(0, 1.5), 400);
   $('fade').style.background = light ? '#dfe8e2' : '#000'; $('fade').style.transition = fast ? 'opacity .25s' : 'opacity 3s'; $('fade').style.opacity = 1;
   setTimeout(() => $('end').classList.remove('hidden'), fast ? 1800 : 3200);

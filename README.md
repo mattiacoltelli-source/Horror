@@ -2,9 +2,9 @@
 
 Horror psicologico in prima persona, verticale (9:16), per browser mobile. Sito statico: HTML + CSS + JavaScript + Three.js, nessun build.
 
-**Stato: gioco completo.** Tunnel → vetro con la sagoma → portone → sala della folla (+ scelta «non guardare dietro») → cantina (specchio impossibile, apparizione) → magazzino (pistola) → torre (combattimento perso + 3 finali).
+**Stato: gioco completo.** Tunnel → vetro con la sagoma → portone → sala della folla (+ scelta «non guardare dietro») → cantina (specchio impossibile, apparizione) → magazzino (pistola) → torre (combattimento perso + 2 finali).
 
-Finali: **A** non ti sei girato · **B** ti sei girato · **D** condanna (tutte e 5 le note, abbassi la pistola). Tutti passano dalla scena all aperto prima della scritta. In ogni caso arriva la suora: non c'è più il finale segreto dello specchio.
+Finali: **A** non ti sei girato · **B** ti sei girato. La suora arriva sempre da davanti e tutti i finali passano dalla scena all'aperto prima della scritta. Tutte e 5 le note = qualche secondo in più nel combattimento. In ogni caso arriva la suora: non c'è più il finale segreto dello specchio.
 
 Combattimento: pistola a 4 colpi; trascini per guardare, joystick per camminare piano, ma per sparare devi fermarti (SPARA); il mostro ti disarma sempre.
 

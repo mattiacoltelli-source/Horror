@@ -1,6 +1,6 @@
 // NOTE DA TROVARE (la trama a pezzi): fogli bruciati attaccati ai muri, uno per stanza. Bastano un'occhiata e mezzo secondo per leggerli:
 // compare il testo, in corsivo, per qualche secondo. Non c'è nessun contatore: alla fine una riga discreta dice quante ne hai trovate.
-// Chi le trova tutte e 5 sblocca la scelta finale (ABBASSA LA PISTOLA) e il quarto finale.
+// Le note raccontano la storia; chi le trova tutte e 5 ha qualche secondo in più nel combattimento della torre.
 import * as THREE from 'three';
 import { W as TUNNEL_W } from '../world/tunnel.js';
 
