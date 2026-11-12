@@ -69,6 +69,28 @@ export function createHall({ scene, mats, lights }) {
     for (let i = 0; i < pos.count; i++) { const y = pos.getY(i); if (y > 0.84 * h && y < 0.96 * h) { zmax = Math.max(zmax, pos.getZ(i)); xmin = Math.min(xmin, pos.getX(i)); xmax = Math.max(xmax, pos.getX(i)); } }
     return { y: 0.9 * h, z: zmax > -1e8 ? zmax : 0.1, dx: Math.max(0.03, Math.min(0.07 * h, (xmax - xmin) * 0.2)) };
   })());
+  // OCCHI SOLO DOVE SONO SICURI: i modelli sono a colori per vertice; gli occhi veri (bianchi, iride, o gialli) si riconoscono dal colore. Si cercano nella fascia
+  // della testa, si divide a meta' in sinistro/destro e si prende il centro di ciascuno: cosi' la luce cade esattamente sugli occhi del modello.
+  // Senza occhi veri (whisperer, palombaro, campana, occ a 6 occhi) niente luce.
+  const near = (c, r, e = 0.035) => Math.abs(c[0] - r[0]) < e && Math.abs(c[1] - r[1]) < e && Math.abs(c[2] - r[2]) < e;
+  const EYE_RULES = {
+    pirate: { test: (c) => near(c, [0.79, 0.82, 0.74]), w: 0.05 },        // occhi bianchi
+    nurse: { test: (c) => near(c, [0.43, 0.12, 0.14]), w: 0.045 },        // iridi rosso-brune
+    varka: { test: (c) => near(c, [1.0, 0.76, 0.19]), test2: (c) => near(c, [0.39, 0.34, 0.29]), w: 0.045 },   // occhio acceso + l'altro
+  };
+  const EYES = {};
+  const findEyes = (geo, rule, h, s, miny, cx, cz) => {
+    const P = geo.attributes.position, C = geo.attributes.color; if (!C) return null; const A = [], Bc = [];
+    for (let i = 0; i < P.count; i++) {
+      const y = (P.getY(i) - miny) * s; if (y < 0.78 * h) continue; const c = [C.getX(i), C.getY(i), C.getZ(i)], q = [(P.getX(i) - cx) * s, y, (P.getZ(i) - cz) * s];
+      if (rule.test(c)) A.push(q); else if (rule.test2 && rule.test2(c)) Bc.push(q);
+    }
+    const mean = (L) => L.length ? L.reduce((a, q) => [a[0] + q[0] / L.length, a[1] + q[1] / L.length, a[2] + q[2] / L.length], [0, 0, 0]) : null;
+    let out;
+    if (rule.test2) out = [mean(A), mean(Bc)];
+    else { if (A.length < 2) return null; const mx = mean(A)[0]; out = [mean(A.filter((q) => q[0] < mx)), mean(A.filter((q) => q[0] >= mx))]; }
+    if (!out[0] || !out[1]) return null; return { p: out, w: rule.w };
+  };
   const loader = new GLTFLoader();
   Promise.all(TYPES.map(([n, h]) => new Promise((res) => loader.load(`assets/models/m_${n}.glb`, (gl) => {
     const geos = []; gl.scene.updateMatrixWorld(true);
@@ -76,16 +98,18 @@ export function createHall({ scene, mats, lights }) {
     const merged = geos[0]; // un solo mesh per modello
     merged.deleteAttribute('uv'); merged.deleteAttribute('color_0'); merged.deleteAttribute('COLOR_0');
     merged.computeBoundingBox(); const b = merged.boundingBox, s = h / (b.max.y - b.min.y);
-    merged.translate(-(b.max.x + b.min.x) / 2, -b.min.y, -(b.max.z + b.min.z) / 2); merged.scale(s, s, s); merged.computeVertexNormals();
+    const cxm = (b.max.x + b.min.x) / 2, czm = (b.max.z + b.min.z) / 2, rule = EYE_RULES[n];
+    if (rule) EYES[n] = findEyes(merged, rule, h, s, b.min.y, cxm, czm);
+    merged.translate(-cxm, -b.min.y, -czm); merged.scale(s, s, s); merged.computeVertexNormals();
     res(merged);
   }, undefined, () => res(null))))).then((geos) => {
     LAYOUT.forEach(([x, z, t], i) => {
       const ge = geos[t]; if (!ge) return;
       const m = new THREE.Mesh(ge, mkLit()); m.userData.crowd = true; m.position.set(x * 0.6 + Math.sin(i * 7.3) * 0.3, 0, z + Math.cos(i * 3.1) * 0.4);
       m.rotation.y = Math.sin(i * 5.7) * 0.28; m.matrixAutoUpdate = true; crowd.add(m);
-      // occhi: due braci che brillano nel buio (additive, visibili anche nella nebbia), all'altezza della testa e sul lato davanti
-      const ei = eyeInfo(t, ge), sc = 0.085 + 0.035 * TYPES[t][1] / 2;
-      m.userData.eyes = [-1, 1].map((sx) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: eyeTex, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true, opacity: 0 })); sp.scale.set(sc * 2.1, sc, 1); sp.material.rotation = (sx * 0.1) + Math.sin(i * 3.7 + sx) * 0.12; sp.position.set(sx * ei.dx, ei.y + Math.sin(i * 5.1 + sx) * 0.012, ei.z + 0.02); m.add(sp); return sp; });
+      // occhi: solo sui tipi dove li abbiamo trovati con sicurezza (vedi EYE_RULES): sprite tenue sul punto esatto
+      const E = EYES[TYPES[t][0]];
+      if (E) m.userData.eyes = E.p.map((q, k) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: eyeTex, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true, opacity: 0 })); sp.scale.set(E.w * 1.9, E.w * 0.9, 1); sp.material.rotation = (k ? 0.06 : -0.06) + Math.sin(i * 3.7 + k) * 0.08; sp.position.set(q[0], q[1], q[2] + 0.012); m.add(sp); return sp; });
     });
     H.geos = geos; H.ready = true; pending.forEach(([m, i]) => { if (geos[i]) m.geometry = geos[i]; });
   });
