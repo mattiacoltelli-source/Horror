@@ -7,6 +7,7 @@ import { kitMesh, kitObject } from '../world/props.js';
 import { decorWarehouse } from '../world/decor.js';
 import { unseenMover } from './ambient.js';
 import { createTv } from './tv.js';
+import { createSorella } from './sorella.js';
 import { redLight, doorGlow } from '../world/redlight.js';
 import { addExtras, pedestal } from '../world/extra.js';
 import { addAtmosphere } from '../world/atmos.js';
@@ -26,6 +27,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   prop('assets/models/bin.glb', 0.9, -4.2, 0, WH.z0 - 5, 0.4); prop('assets/models/bin.glb', 0.9, 4.4, 0, WH.z0 - 21, 1.9); prop('assets/models/tank.glb', 0.55, -4.6, 0, WH.z0 - 28, 0.3);
   prop('assets/models/rim.glb', 0.5, 3.4, 0, WH.z0 - 12, 0.7); prop('assets/models/can.glb', 0.12, -2.1, 0, WH.z0 - 15, 1.1); prop('assets/models/stool.glb', 0.46, 1.8, 0, WH.z0 - 7.5, 0.2, (o) => { W.stool = o; });
   const tv = createTv({ camera, audio });
+  const sorella = createSorella({ group: W.group, camera, player, audio, lights, instab, zMin: WH.z0 - 34, zMax: WH.z0 - 1.5 }); W.sorella = sorella;
   addExtras(W.group, [['x_spray', 0.24, -3.0, 0, WH.z0 - 26, 0.9, 0.12], ['x_gnome', 0.6, 4.5, 0, WH.z0 - 16.3, -2.2, 0.07], ['x_tv', 0.42, -3.6, 0, WH.z0 - 9.5, 0.5, 0.4, 0, (g) => tv.attach(g)], ['x_basket', 0.3, 4.4, 0, WH.z0 - 27, 1.2, 0.12]]);
   // lo sgabello, quando non lo guardi, si sposta verso il centro della sala (al massimo 2 volte)
   const stoolMove = unseenMover({ camera, getObj: () => W.stool, max: 2, gap: 8, move: () => { W.stool.position.x -= 0.5; W.stool.position.z -= 0.45; W.stool.rotation.y += 0.7; audio.squeak?.(0.4, W.stool.position.clone()); } });
@@ -83,7 +85,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   const shade = hall.silhouette(5); shade.visible = false; W.group.add(shade);
 
   W.enter = () => {
-    tv.reset(); W.group.visible = true; W.taken = false; W.state = 'walk'; W.t = 0; W.beat = false; gateT = 0; if (leaf) leaf.rotation.y = 0;
+    tv.reset(); sorella.reset(); sorella.load(); W.group.visible = true; W.taken = false; W.state = 'walk'; W.t = 0; W.beat = false; gateT = 0; if (leaf) leaf.rotation.y = 0;
     player.box = W.box; player.pos.set(0.3, 1.62, WH.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     const red = flags.door === 'red'; lights.setLamps(lampPos, red ? 1.7 : 2.2, red ? 0xff5a44 : 0xffc57a); lights.grade(red ? { fog: 0x0c0302, hemi: [0x6a2418, 0x140604, 0.42] } : { fog: 0x0a0802, hemi: [0x6a5426, 0x120c04, 0.42] }); reds.forEach((r) => (r.root.visible = red)); W.nearGate = false; W.hinted = false; flags.noGun = false; flags.weapon = null; W.red = red; entry.visible = !red; gateIn.visible = red; W.br = 6 + Math.random() * 4; W.brN = 0; lights.lamp(3, 'off'); W.sec = 0; scene.fog.density = 0.032; audio.duck(1, 1.5); instab.set(0.08, 6);
   };
@@ -91,7 +93,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
 
   const dv = new THREE.Vector3(), fw = new THREE.Vector3(), tmp = new THREE.Vector3(); let steps = 0, stepT = 0, doorT = 0; const STEPS = flags.turned ? 5.6 : 7.4;   // chi si e' girato ha meno tempo prima che arrivi
   W.update = (dt) => {
-    if (!W.group.visible) return; const P = player.pos; W.t += dt; tv.update(dt, !combat?.active);
+    if (!W.group.visible) return; const P = player.pos; W.t += dt; tv.update(dt, !combat?.active); sorella.update(dt, !combat?.active);
     // faro con sensore: passi nel suo raggio e si accende con un tonfo; qualcuno è già lì, fermo, nella luce. Poi si spegne.
     if (W.sec === 0 && P.z < WH.z0 - 12) { W.sec = 1; W.secT = 0; lights.lamp(3, 'flicker', 0.5); shade.position.set(flags.turned ? 2.5 : 3.6, 0, WH.z0 - 22.5); shade.rotation.y = Math.PI / 2 + 0.2; shade.visible = true; audio.lightOn(); audio.whisper(1.6, 0.12); instab.push(0.7, 5); player.addShake(0.15); }
     if (W.sec === 1) { W.secT += dt; secMats.forEach((m) => (m.emissiveIntensity = 2.2 * (lights.lamps[3]?.level ?? 0)));
