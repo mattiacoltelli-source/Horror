@@ -27,7 +27,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   prop('assets/models/bin.glb', 0.9, -4.2, 0, WH.z0 - 5, 0.4); prop('assets/models/bin.glb', 0.9, 4.4, 0, WH.z0 - 21, 1.9); prop('assets/models/tank.glb', 0.55, -4.6, 0, WH.z0 - 28, 0.3);
   prop('assets/models/rim.glb', 0.5, 3.4, 0, WH.z0 - 12, 0.7); prop('assets/models/can.glb', 0.12, -2.1, 0, WH.z0 - 15, 1.1); prop('assets/models/stool.glb', 0.46, 1.8, 0, WH.z0 - 7.5, 0.2, (o) => { W.stool = o; });
   const tv = createTv({ camera, audio });
-  const sorella = createSorella({ group: W.group, camera, player, audio, lights, instab, zMin: WH.z0 - 34, zMax: WH.z0 - 1.5 }); W.sorella = sorella;
+  const sorella = createSorella({ group: W.group, camera, player, audio, lights, instab, zMin: WH.z0 - 27.5, zMax: WH.z0 - 1.5 }); W.sorella = sorella;
   addExtras(W.group, [['x_spray', 0.24, -3.0, 0, WH.z0 - 26, 0.9, 0.12], ['x_gnome', 0.6, 4.5, 0, WH.z0 - 16.3, -2.2, 0.07], ['x_tv', 0.42, -3.6, 0, WH.z0 - 9.5, 0.5, 0.4, 0, (g) => tv.attach(g)], ['x_basket', 0.3, 4.4, 0, WH.z0 - 27, 1.2, 0.12]]);
   // lo sgabello, quando non lo guardi, si sposta verso il centro della sala (al massimo 2 volte)
   const stoolMove = unseenMover({ camera, getObj: () => W.stool, max: 2, gap: 8, move: () => { W.stool.position.x -= 0.5; W.stool.position.z -= 0.45; W.stool.rotation.y += 0.7; audio.squeak?.(0.4, W.stool.position.clone()); } });
