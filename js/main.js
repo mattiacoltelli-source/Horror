@@ -165,8 +165,8 @@ async function enter() {
     rats.add(scene, { x: 1.0, z: -9.5, ry: 0.4, hide: [[1.12, -13], [1.2, -16.5]] });                                                  // tunnel, lungo il muro destro
     rats.add(cellar.group, { x: 2.2, z: -204.5, ry: 2.2, hide: [[3.6, -205.6], [3.75, -208]] });                                         // cantina, vicino ai rottami
     rats.add(cellar.group, { x: -2.4, z: -215.0, ry: 0.9, hide: [[-3.7, -218], [-3.65, -222.8]] });                                      // cantina, lato dello specchio
-    rats.add(morgue.group, { x: -2.5, z: -510.5, ry: 1.4, hide: [[-4.05, -512.7], [-4.05, -513.9]] });                                   // obitorio, vicino al cesto
-    rats.add(morgue.group, { x: 2.4, z: -507.8, ry: 4.0, hide: [[4.0, -508.6], [4.1, -511.6]] });                                        // obitorio, dietro il tavolo
+    rats.add(morgue.group, { x: -3.95, z: -509.5, ry: -1.9, hide: [[-4.05, -511.6], [-4.05, -513.9]] });                                   // obitorio, contro il muro sinistro
+    rats.add(morgue.group, { x: 3.95, z: -509.8, ry: 1.9, hide: [[4.05, -511.4], [4.1, -513.2]] });                                        // obitorio, contro il muro destro
     rats.add(wh.group, { x: -2.6, z: -416.0, ry: 5.0, hide: [[-5.0, -417.2], [-5.4, -421]] });                                           // magazzino, sotto uno scaffale
     rats.add(wh.group, { x: 2.8, z: -420.0, ry: 1.0, hide: [[5.0, -421.5], [5.3, -424.4]] });
     rats.add(wh.group, { x: -1.2, z: -428.0, ry: 3.3, hide: [[-4.2, -430.5], [-5.2, -431.4]] });
