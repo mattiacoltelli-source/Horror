@@ -133,7 +133,7 @@ export function createHall({ scene, mats, lights }) {
   H.enable = () => { H.active = true; grp.visible = true; H.setDist(H.dist); lights?.setLamps(lampAnchors.map(([x, y, z]) => [x, y - 0.1, z]), 3.4, 0xffc27a); [0, 1, 2].forEach((i) => lights?.lamp(i, 'off')); };
   H.lightOn = () => { H.target = 1; H.dark = false; H.flick = 1.1; [0, 1, 2].forEach((i) => lights?.lamp(i, 'flicker', 0.8 + i * 0.3)); setTimeout(() => { if (H.target === 1 && !H.dark) [0, 1, 2].forEach((i) => lights?.lamp(i, 'pulse')); }, 1500); };
   // fase del teletrasporto: i lampioni si spengono per ~1 secondo, buio totale; la folla si sposta dentro quel buio
-  H.lightDim = () => { H.target = 0.33; H.flick = 0; H.dark = false; [0, 1, 2].forEach((i) => lights?.lamp(i, 'dim')); };   // fase finale (mostri vicini, «non guardare dietro»): lampioni a un terzo
+  H.lightDim = () => { H.target = 0.66; H.flick = 0; H.dark = false; [0, 1, 2].forEach((i) => lights?.lamp(i, 'dim')); };   // fase finale (mostri vicini, «non guardare dietro»): lampioni a due terzi
   H.lightOff = () => { H.target = 0; H.flick = 0; H.glow = 0; H.dark = true; [0, 1, 2].forEach((i) => lights?.lamp(i, 'off')); };
 
   const wp = new THREE.Vector3(), camPos = new THREE.Vector3(); let lampPulseV = 1, time2 = 0;

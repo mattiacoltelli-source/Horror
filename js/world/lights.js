@@ -59,7 +59,7 @@ export function createLights(scene, camera) {
           k = (Math.sin(L.t * 60) > 0.2 ? 1 : 0.05) * (Math.random() > 0.15 ? 1 : 0);
           if (L.modeT <= 0) L.mode = 'on';
         } else if (L.mode === 'dim') {
-          k = 0.33 + 0.03 * Math.sin(L.t * 2.3 + L.i * 1.7);   // un terzo della luce: lampioni accesi ma deboli
+          k = 0.66 + 0.04 * Math.sin(L.t * 2.3 + L.i * 1.7);   // due terzi della luce: lampioni accesi ma deboli
         } else if (L.mode === 'pulse') {
           // lampadina che respira: onda lenta + tremolio, ogni tanto un calo breve (filamento che cede)
           if (L.dip > 0) { L.dip -= dt; k = 0.12 + Math.random() * 0.1; }
