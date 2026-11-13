@@ -64,7 +64,7 @@ export function writingDecals(group, list) {
   for (const d of list) {
     const T = d.text ? bloodText(d.text) : null;   // { text } = frase scritta al volo con il font di sangue
     const t = T ? T.tex : (wtex[d.img] ??= (() => { const x = loader.load(d.img, (tt) => { d.__asp = tt.image.width / tt.image.height; }); x.colorSpace = THREE.SRGBColorSpace; x.anisotropy = 4; return x; })());
-    const asp = T ? T.aspect : (d.aspect ?? 4.5), mat = new THREE.MeshStandardMaterial({ map: t, transparent: true, color: d.plain ? new THREE.Color(0.8, 0.78, 0.74) : new THREE.Color(0.95, 0.62, 0.62), emissive: d.plain ? 0x000000 : 0x300606, emissiveIntensity: 1.0, roughness: d.plain ? 0.85 : 0.32, metalness: 0, opacity: d.a ?? 0.96, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    const asp = T ? T.aspect : (d.aspect ?? 4.5), mat = new THREE.MeshStandardMaterial({ map: t, transparent: true, color: d.plain ? new THREE.Color(0.8, 0.78, 0.74) : T ? new THREE.Color(0.78, 0.5, 0.5) : new THREE.Color(0.95, 0.62, 0.62), emissive: d.plain ? 0x000000 : T ? 0x120202 : 0x300606, emissiveIntensity: 1.0, roughness: d.plain ? 0.85 : T ? 0.85 : 0.32, metalness: 0, opacity: d.a ?? 0.96, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     const ww = d.maxH ? Math.min(d.w, d.maxH * asp) : d.w, m = new THREE.Mesh(new THREE.PlaneGeometry(ww, ww / asp), mat); m.rotation.set(0, rotY[d.wall], d.rot ?? 0); m.rotation.order = 'YXZ'; m.position.set(...d.p); m.userData.writing = true; group.add(m); made.push(m);
   }
   return made;

@@ -25,16 +25,37 @@ export function bloodText(text) {
         ctx.drawImage(atlas, m[0], m[1], m[2], m[3], -m[2] * S / 2, dy * S, m[2] * S, m[3] * S); ctx.restore();
       }
     });
-    // qualche colatura in piu' sotto l'ultima riga
-    const last = pl[pl.length - 1], ly = (TOPPAD + CAP + (pl.length - 1) * LH) * S + 6, n = Math.min(3, Math.max(1, Math.round(last.g.length / 7)));
-    for (let k = 0; k < n && last.g.length; k++) {
-      const o = last.g[Math.floor(R() * last.g.length)], x = PAD + (maxW - last.w) * S / 2 + (o.x + A[o.c][2] * 0.5) * S + (R() - 0.5) * 10 * S, len = (36 + R() * 80) * S, wd = (5 + R() * 3) * S;
-      ctx.fillStyle = '#4f0707'; ctx.beginPath(); ctx.moveTo(x - wd / 2, ly); ctx.lineTo(x + wd / 2, ly); ctx.lineTo(x + wd * 0.4, ly + len); ctx.lineTo(x - wd * 0.4, ly + len); ctx.fill();
-      ctx.beginPath(); ctx.arc(x, ly + len, wd * 0.8, 0, 6.3); ctx.fill();
+    // --- aspetto sangue: forma morbida, spessore (piu' scuro dove e' denso), riflesso umido sul bordo, grumi, schizzi e colature irregolari ---
+    const mkc = () => { const c = document.createElement('canvas'); c.width = cw; c.height = ch; return c; };
+    const base = mkc(), bx = base.getContext('2d'); bx.globalAlpha = 0.2;
+    for (const [dx, dy] of [[1.3, 0], [-1.3, 0], [0, 1.3], [0, -1.3], [1, 1], [-1, -1], [1, -1], [-1, 1], [2.2, 0.6], [-2.2, -0.6]]) bx.drawImage(tc, dx, dy);   // alone sfumato
+    bx.globalAlpha = 0.8; bx.drawImage(tc, 0, 0); bx.globalAlpha = 1;
+    out.clearRect(0, 0, cw, ch); out.drawImage(base, 0, 0); out.globalCompositeOperation = 'source-atop';
+    const th = mkc(), tx = th.getContext('2d'); tx.globalAlpha = 0.07;   // densita': le zone spesse (centro del tratto, incroci) sono piu' scure
+    for (let k = 0; k < 16; k++) { const an = k * 0.39, r = 4 + (k % 3) * 3; tx.drawImage(tc, Math.cos(an) * r, Math.sin(an) * r); }
+    tx.globalAlpha = 1; tx.globalCompositeOperation = 'source-in'; tx.fillStyle = '#1c0000'; tx.fillRect(0, 0, cw, ch);
+    out.globalAlpha = 0.75; out.drawImage(th, 0, 0); out.globalAlpha = 1;
+    out.fillStyle = 'rgba(64, 4, 6, 0.4)'; out.fillRect(0, 0, cw, ch);   // meno vivo: un cremisi scuro, non rosso da vernice
+    const hl = mkc(), hx = hl.getContext('2d'); hx.drawImage(tc, 0, 0); hx.globalCompositeOperation = 'destination-out'; hx.drawImage(tc, 2.2, 2.4);   // bordo in alto a sinistra: riflesso del sangue ancora umido
+    hx.globalCompositeOperation = 'source-in'; hx.fillStyle = 'rgba(255, 150, 140, 1)'; hx.fillRect(0, 0, cw, ch);
+    out.globalAlpha = 0.4; out.drawImage(hl, 0, 0); out.globalAlpha = 1;
+    out.globalCompositeOperation = 'destination-out';   // piccoli vuoti: sangue che si e' seccato a scaglie
+    for (let k = 0; k < Math.round(cw / 14); k++) { out.globalAlpha = 0.5 + R() * 0.4; out.beginPath(); out.arc(R() * cw, PAD + R() * (ch - 2 * PAD), 0.5 + R() * 1.1, 0, 6.3); out.fill(); }
+    out.globalAlpha = 1; out.globalCompositeOperation = 'source-over';
+    for (let k = 0; k < Math.round(cw / 22); k++) {   // schizzi vicino alle lettere
+      const li = Math.floor(R() * pl.length), l = pl[li], by = (TOPPAD + CAP + li * LH) * S, x0 = PAD + (maxW - l.w) * S / 2;
+      out.fillStyle = 'rgba(' + (62 + Math.round(R() * 26)) + ', 5, 7, ' + (0.45 + R() * 0.4).toFixed(2) + ')'; out.beginPath(); out.arc(x0 + R() * l.w * S, by - CAP * S * (R() * 1.25 - 0.1), 0.7 + R() * 1.9, 0, 6.3); out.fill();
     }
-    out.clearRect(0, 0, cw, ch); out.globalAlpha = 0.2;
-    for (const [dx, dy] of [[1.3, 0], [-1.3, 0], [0, 1.3], [0, -1.3], [1, 1], [-1, -1], [1, -1], [-1, 1], [2.2, 0.6], [-2.2, -0.6]]) out.drawImage(tc, dx, dy);   // alone sfumato
-    out.globalAlpha = 0.78; out.drawImage(tc, 0, 0); out.globalAlpha = 1;
+    pl.forEach((l, li) => {   // colature: spesse in alto, che si assottigliano, con una goccia in fondo; a volte da piu' lettere
+      const lastLine = li === pl.length - 1, n = lastLine ? Math.min(4, Math.max(1, Math.round(l.g.length / 5))) : Math.min(2, Math.round(l.g.length / 8)), ly = (TOPPAD + CAP + li * LH) * S + 4;
+      for (let k = 0; k < n && l.g.length; k++) {
+        const o = l.g[Math.floor(R() * l.g.length)], m = A[o.c], x = PAD + (maxW - l.w) * S / 2 + (o.x + m[2] * (0.25 + R() * 0.5)) * S, wd = (7 + R() * 5) * S, len = (lastLine ? 50 + R() * 120 : 12 + R() * 22) * S;
+        const g2 = out.createLinearGradient(0, ly, 0, ly + len); g2.addColorStop(0, 'rgba(78,6,8,0.95)'); g2.addColorStop(1, 'rgba(48,3,5,0.95)');
+        out.fillStyle = g2; out.beginPath(); out.moveTo(x - wd * 0.55, ly); out.quadraticCurveTo(x - wd * 0.5 + (R() - 0.5) * 2, ly + len * 0.5, x - wd * 0.28, ly + len); out.lineTo(x + wd * 0.28, ly + len); out.quadraticCurveTo(x + wd * 0.5 + (R() - 0.5) * 2, ly + len * 0.5, x + wd * 0.55, ly); out.fill();
+        out.beginPath(); out.ellipse(x, ly + len + wd * 0.35, wd * 0.62, wd * 0.8, 0, 0, 6.3); out.fill();   // goccia in fondo
+        out.fillStyle = 'rgba(255,150,140,0.13)'; out.fillRect(x - wd * 0.28, ly + 1, Math.max(1, wd * 0.14), len * 0.85);   // riflesso sulla colatura
+      }
+    });
     tex.needsUpdate = true;
   };
   if (atlas) draw(); else waiting.push(draw);
