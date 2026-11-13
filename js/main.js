@@ -281,6 +281,9 @@ function setPaused(p) {
 }
 document.addEventListener('visibilitychange', () => document.hidden && setPaused(true));
 $('resume').addEventListener('click', () => setPaused(false));
+// il telefono puo' togliere la GPU all'app (memoria bassa, schermo bloccato): invece di restare nero/bloccato, mette in pausa e riprende quando il contesto torna
+canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); setPaused(true); });
+canvas.addEventListener('webglcontextrestored', () => { last = performance.now(); });
 
 function finish(msg, fast = false, light = false) {
   if (ended) return; ended = true; controls.enabled = false; instab.hide();
