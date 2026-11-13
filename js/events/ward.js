@@ -17,12 +17,12 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
   R.group.visible = false; scene.add(R.group);
   const { z0, w, l, h } = WARD, zFar = z0 - l, hw = w / 2;
   let atlas = null;
-  const lampPos = [[0, h - 0.12, z0 - 3], [0, h - 0.12, z0 - 9], [0, h - 0.12, z0 - 15]];
+  const lampPos = [[0, h - 0.12, z0 - 10]];   // una sola lampada, a meta' corridoio
   // un pezzo del kit: base a terra, centrato; material = atlante condiviso (uno solo in memoria), scurito e sporcato
   const place = async (name, x, y, z, ry = 0, opt = {}) => {
     const src = await get(name); if (!src) return null; const o = src.clone(true);
     o.traverse((m) => { if (!m.isMesh) return; if (opt.atlas) m.material = atlas; else { m.material = m.material.clone(); { const c = m.material.color; c.multiplyScalar(opt.dark ?? 0.5); const gr = (c.r + c.g + c.b) / 3; c.r += (gr - c.r) * 0.55; c.g += (gr - c.g) * 0.55; c.b += (gr - c.b) * 0.55; } m.material.roughness = Math.max(0.55, m.material.roughness ?? 0.7); if (opt.desat) desat(m.material, opt.desat); } });
-    const g = new THREE.Group(); g.add(o); g.position.set(x, y, z); g.rotation.y = ry; R.group.add(g); return g;
+    if (opt.scale) o.scale.setScalar(opt.scale); const g = new THREE.Group(); g.add(o); g.position.set(x, y, z); g.rotation.y = ry; R.group.add(g); return g;
   };
   // guscio: pavimento e pareti piastrellate come l'obitorio (le texture di pareti e pavimento del kit non erano nel pacchetto ricevuto); soffitto e arredo: pezzi del kit
   const room = buildRoom(mats, { z0, w, l, h, wall: 'stone', floor: 'mfloor', ceil: 'stone', dark: 0.5, seed: 61 }); R.group.add(room.group);
@@ -47,7 +47,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
     const open = await place('door_1', hw - 0.13, 0, z0 - 12.5, -Math.PI / 2 + 1.1, { dark: 0.6 });
     await place('Exit_sign', 0, 2.15, zFar + 0.12, Math.PI, { dark: 1 });
     { const lp = await get('../wlamp'); if (lp) for (const [x, , z] of lampPos) { const o = lp.clone(true), b = new THREE.Box3().setFromObject(o), g = new THREE.Group(); const sc = 0.5 / Math.max(b.max.x - b.min.x, b.max.y - b.min.y); o.scale.setScalar(sc); o.rotation.x = Math.PI / 2; o.updateMatrixWorld(true); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.set(-c.x, -b.max.y, -c.z); g.add(o); g.position.set(x, h - 0.02, z); R.group.add(g); } }
-    R.chair = await place('wheel_chair', 0.9, 0.5, z0 - 11, 2.6, { dark: 0.7, desat: 0.85 });
+    R.chair = await place('wheel_chair', 0.9, 0.43 * 0.68, z0 - 11, 2.6, { dark: 0.7, desat: 0.85, scale: 0.68 });
     { const bd = await get('../hs_bed'); if (bd) { const o = bd.clone(true), b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()), g = new THREE.Group(); o.traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); m.material.color.multiplyScalar(0.55); desat(m.material, 0.6); } }); const sc = 2.0 / Math.max(b.max.x - b.min.x, b.max.z - b.min.z); o.scale.setScalar(sc); b.setFromObject(o); o.position.set(-c.x * sc, -b.min.y, -c.z * sc); g.add(o); g.position.set(-1.2, 0, z0 - 15.2); g.rotation.y = 0.04; R.group.add(g); } }
   })();
   // sporco sui muri e sangue vecchio
@@ -59,19 +59,19 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
     R.group.visible = true; R.state = 'walk'; R.t = 0; R.hit = false;
     player.box = R.bounds; player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false;
     lights.setLamps(lampPos, 2.1, 0xcfeadc); lights.grade({ fog: 0x050a08, hemi: [0x2c4a44, 0x08100e, 0.4] }); scene.fog.density = 0.05; audio.duck(1, 1.5); instab.set(0.15, 6);
-    lights.lamp(0, 'pulse'); lights.lamp(1, 'on'); lights.lamp(2, 'on');
+    lights.lamp(0, 'pulse');
   };
   R.leave = () => { R.group.visible = false; };
   R.update = (dt) => {
     if (!R.group.visible) return; R.t += dt; const P = player.pos;
     // sfarfallio a caso di una lampada, ogni tanto
-    if (R.state !== 'beat' && Math.random() < dt * 0.25) lights.lamp(Math.floor(Math.random() * 3), 'flicker', 0.3 + Math.random() * 0.4);
+    if (R.state !== 'beat' && Math.random() < dt * 0.25) lights.lamp(0, 'flicker', 0.3 + Math.random() * 0.4);
     if (R.state === 'walk' && P.z < z0 - 8.5) {   // a meta' corridoio: tutte le luci spente per un secondo; la sedia, nel buio, si avvicina
-      R.state = 'beat'; R.bt = 0; [0, 1, 2].forEach((i) => lights.lamp(i, 'off')); audio.lightOff?.(); instab.push(0.8, 5);
+      R.state = 'beat'; R.bt = 0; lights.lamp(0, 'off'); audio.lightOff?.(); instab.push(0.8, 5);
     }
     if (R.state === 'beat') { R.bt += dt;
       if (R.bt > 0.6 && !R.hit) { R.hit = true; if (R.chair) { R.chair.position.set(0.5, 0.5, P.z - 2.6); R.chair.rotation.y = 3.4; } }
-      if (R.bt > 1.2) { R.state = 'after'; lights.lamp(0, 'flicker', 0.8); lights.lamp(1, 'flicker', 1.0); lights.lamp(2, 'flicker', 0.6); setTimeout(() => [0, 1, 2].forEach((i) => lights.lamp(i, 'pulse')), 1100); audio.lightOn?.(); } }
+      if (R.bt > 1.2) { R.state = 'after'; lights.lamp(0, 'flicker', 0.9); setTimeout(() => lights.lamp(0, 'pulse'), 1100); audio.lightOn?.(); } }
   };
   return R;
 }
