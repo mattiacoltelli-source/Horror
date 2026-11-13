@@ -197,10 +197,10 @@ async function enter() {
     writingDecals(cellar.group, [pic('drawing2', 1.442, 3.96, 1.5, CZ - 10.9, '-x', 1.0, -0.03)]);
     writingDecals(morgue.group, [pic('anatomy', 0.755, 4.22, 1.5, MZ - 5.8, '-x', 0.6, 0.02), pic('charcoal', 0.756, 4.22, 1.5, MZ - 7.0, '-x', 0.55, -0.02), pic('family', 1.287, 4.22, 1.5, MZ - 8.4, '-x', 0.75, 0.02)]);
     // MURALES GIGANTI (affreschi scrostati), uno per ambiente grande, a riempire una campata intera tra due pilastri (sempre uguali in tutte le versioni)
-    writingDecals(scene, [{ ...pic('mural_wide', 3.043, 1.38, 1.1, -28.5, '-x', 5.0, 0), rot: 0 }]);                    // tunnel, parete destra
-    writingDecals(hall.group, [{ ...pic('mural_eyes', 2.368, -5.97, 2.8, -74.95, '+x', 4.7, 0), rot: 0 }]);               // sala della folla, parete sinistra
-    writingDecals(wh.group, [{ ...pic('mural_angel', 1.808, 5.94, 3.0, WZ - 24.6, '-x', 4.7, 0), rot: 0 }]);              // magazzino, parete destra
-    writingDecals(tower.group, [{ ...pic('mural_cathedral', 1.351, 6.94, 3.2, TZ - 12.6, '-x', 4.7, 0), rot: 0 }]);       // torre, parete destra
+    writingDecals(scene, [{ ...pic('mural_wide', 3.043, 1.38, 1.1, -28.5, '-x', 5.0, 0), rot: 0, a: 0.94 }]);                    // tunnel, parete destra
+    writingDecals(hall.group, [{ ...pic('mural_eyes', 2.368, -5.97, 2.8, -74.95, '+x', 4.7, 0), rot: 0, a: 0.94 }]);               // sala della folla, parete sinistra
+    writingDecals(wh.group, [{ ...pic('mural_angel', 1.808, 5.94, 3.0, WZ - 24.6, '-x', 4.7, 0), rot: 0, a: 0.94 }]);              // magazzino, parete destra
+    writingDecals(tower.group, [{ ...pic('mural_cathedral', 1.351, 6.94, 3.2, TZ - 12.6, '-x', 4.7, 0), rot: 0, a: 0.94 }]);       // torre, parete destra
     writingDecals(wh.group, [pic('corridor', 1.369, -5.96, 1.5, WZ - 11.4, '+x', 0.85, 0.02), pic('window', 1.233, -5.96, 1.5, WZ - 12.55, '+x', 0.85, -0.02), pic('saint', 0.789, -5.96, 1.5, WZ - 13.65, '+x', 0.62, 0.02)])
     if (PKEY === 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_elisa.jpg', aspect: 0.545, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
     if (PKEY !== 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_yana.jpg', aspect: 0.741, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.6, rot: -0.03, a: 1, plain: true }]); }
