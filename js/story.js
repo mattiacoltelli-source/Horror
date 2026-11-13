@@ -14,12 +14,21 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
   const tell = (name) => { const l = LINES[name]; if (!l) return; [[2800, l[0]], [10500, l[1]]].forEach(([ms, t]) => setTimeout(() => { if (current === name && !busy) say?.(t, 5200); }, ms)); };
   const S = {
     tell,
+    // PASSAGGIO SENZA STACCO tra due stanze contigue. preview: la stanza successiva si vede oltre il varco (spostata di d); cross: appena attraversi la soglia il giocatore
+    // viene riportato nelle coordinate della nuova stanza (invisibile: stessa posizione relativa) e la vecchia resta visibile alle spalle, spostata di -d, finche' non sei lontano.
+    preview(to, d) { const t = ({ ward: getWard(), tower: getTower() })[to]; t.group.position.z = d; t.group.visible = true; t.preview = true; t.onPreview?.(); },
+    cross(from, to, d) {
+      const f = ({ cellar: getCellar(), warehouse: getWh() })[from], t = ({ ward: getWard(), tower: getTower() })[to];
+      player.pos.z -= d; f.group.position.z = -d; t.group.position.z = 0; t.preview = false; f.gone = true;
+      t.enter(true); current = to; camera.far = { ward: 40, tower: 46 }[to] ?? 40; camera.updateProjectionMatrix(); tell(to); onRoom?.(to); personalRoom(to);
+      setTimeout(() => { f.leave(); f.group.position.z = 0; }, 7000);
+    },
     // passaggio senza dissolvenza (soglia aperta tra due stanze): cambia solo la stanza corrente e i suoi testi
     seamless(name) { current = name; tell(name); onRoom?.(name); personalRoom(name); },
     current: () => current, busy: () => busy,
-    goto(name) {
+    goto(name, quick = false) {
       if (busy) return; busy = true; controls.enabled = false;
-      fade.style.transition = 'opacity 1.3s'; fade.style.opacity = 1; audio.duck(0, 0.6);
+      fade.style.transition = quick ? 'opacity 0.25s' : 'opacity 1.3s'; fade.style.opacity = 1; audio.duck(0, quick ? 0.2 : 0.6);
       setTimeout(() => {
         const cellar = getCellar(), tower = getTower(), wh = getWh(), morgue = getMorgue(), ward = getWard?.();
         player.box = null; player.frozen = false;
@@ -30,8 +39,8 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
         if (name === 'tower') { hideLegacy([tower.group]); cellar.leave(); wh.leave(); tower.enter(); }
         camera.far = { cellar: 42, morgue: 34, warehouse: 36, tower: 46, ward: 40 }[name] ?? 60; camera.updateProjectionMatrix();   // oltre la nebbia non serve disegnare
         current = name; lights.torchKill(0.01, 0); tell(name); onRoom?.(name); personalRoom(name);
-        setTimeout(() => { fade.style.transition = 'opacity 2s'; fade.style.opacity = 0; controls.enabled = true; busy = false; audio.duck(1, 2); }, 350);
-      }, 1500);
+        setTimeout(() => { fade.style.transition = quick ? 'opacity 0.9s' : 'opacity 2s'; fade.style.opacity = 0; controls.enabled = true; busy = false; audio.duck(1, 2); }, 350);
+      }, quick ? 320 : 1500);
     },
   };
   return S;

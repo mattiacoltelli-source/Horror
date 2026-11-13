@@ -15,8 +15,8 @@ const TEXT = P ? { A: 'non ti sei girat' + (P.f === false ? 'o' : 'a') + ', ' + 
 export function createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn, combat }) {
   const T = { group: new THREE.Group(), opened: false, near: false };
   T.group.visible = false; scene.add(T.group);
-  const room = buildRoom(mats, { z0: TOWER.z0, w: TOWER.w, l: TOWER.l, h: TOWER.h, wall: 'stone', floor: 'floorA', ceil: 'brick', pillarEvery: 6, dark: 0.95, seed: 31 });
-  T.group.add(room.group); decorTower(T.group, TOWER.z0); T.bounds = [room.bounds[0], room.bounds[1], TOWER.z0 - TOWER.l + 1.6, TOWER.z0 - 0.6];
+  const room = buildRoom(mats, { z0: TOWER.z0, w: TOWER.w, l: TOWER.l, h: TOWER.h, wall: 'stone', floor: 'floorA', ceil: 'brick', pillarEvery: 6, dark: 0.95, seed: 31, door: { w: 2, h: 2.6 } });
+  T.group.add(room.group); T.entry = decorTower(T.group, TOWER.z0); T.bounds = [room.bounds[0], room.bounds[1], TOWER.z0 - TOWER.l + 1.6, TOWER.z0 - 0.6];
   const zFar = TOWER.z0 - TOWER.l, loader = new GLTFLoader();
   const stovePos = new THREE.Vector3(-2.4, 0, TOWER.z0 - 6.5);
 
@@ -59,8 +59,9 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   const white = new THREE.Mesh(new THREE.PlaneGeometry(4, 4.2), new THREE.MeshBasicMaterial({ color: new THREE.Color(2, 2, 1.95), toneMapped: false, fog: false, transparent: true, opacity: 0 }));
   white.position.set(0, 2.1, zFar - 0.4); T.group.add(white);
 
-  T.enter = () => {
-    T.group.visible = true; T.opened = false; player.box = T.bounds; player.pos.set(0.3, 1.62, TOWER.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
+  T.onPreview = () => { if (T.entry) T.entry.visible = false; };   // dal magazzino la soglia e' aperta finche' non entri
+  T.enter = (seamless = false) => {
+    T.group.visible = true; T.opened = false; player.box = T.bounds; if (T.entry) T.entry.visible = true; if (seamless) audio.doorBang?.(new THREE.Vector3(0, 1.3, TOWER.z0 + 0.5), 0.8); else { player.pos.set(0.3, 1.62, TOWER.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false; }   // seamless: la porta si chiude alle tue spalle
     lights.setLamps([[0, 5.4, TOWER.z0 - 7], [0, 5.4, TOWER.z0 - 13]], 2.4, 0xffd4a0); lights.grade({ fog: 0x0a0503, hemi: [0x6a3e22, 0x120804, 0.42] }); scene.fog.density = 0.04; audio.duck(1, 1.5); instab.set(0.05, 6);
     warm.position.set(stovePos.x + 0.1, 1.0, stovePos.z + 0.2); warm.intensity = 36;
   };
@@ -69,6 +70,7 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   const dv = new THREE.Vector3(), fw = new THREE.Vector3(), ep = new THREE.Vector3(); let wt = 0, open = 0, st = 'idle';
   const bustMove = unseenMover({ camera, getObj: () => T.bust, max: 3, gap: 7, move: (n) => { turnToward(T.bust, player.pos, n); audio.shuffle?.(0.5, 0.22); } });
   T.update = (dt, time) => {
+    if (T.preview) return;
     if (!T.group.visible) return;
     if (st === 'idle') bustMove(dt);
     wt += dt; warm.intensity = (36 + Math.sin(time * 9) * 3 + Math.sin(time * 23) * 1.6) * (st === 'idle' ? 1 : st === 'opening' ? 0.5 : 0.04);

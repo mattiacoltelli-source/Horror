@@ -25,7 +25,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
     if (opt.scale) o.scale.setScalar(opt.scale); const g = new THREE.Group(); g.add(o); g.position.set(x, y, z); g.rotation.y = ry; R.group.add(g); return g;
   };
   // guscio: pavimento e pareti piastrellate come l'obitorio (le texture di pareti e pavimento del kit non erano nel pacchetto ricevuto); soffitto e arredo: pezzi del kit
-  const room = buildRoom(mats, { z0, w, l, h, wall: 'stone', floor: 'mfloor', ceil: 'stone', dark: 0.5, seed: 61, openEnd: true }); R.group.add(room.group);
+  const room = buildRoom(mats, { z0, w, l, h, wall: 'stone', floor: 'mfloor', ceil: 'stone', dark: 0.5, seed: 61, openEnd: true, door: { w: 2, h: 2.6 } }); R.group.add(room.group);
   (async () => {
     const mg = await get('../mg_wall'); // (percorso relativo: assets/models/mg_wall.glb)
     if (mg) {
@@ -55,15 +55,15 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
   bloodDecals(R.group, [{ k: 'A', p: [-hw + 0.012, 1.1, z0 - 12.2], wall: '+x', h: 0.3, rot: 0.1 }, { k: 'C', p: [-hw + 0.012, 0.85, z0 - 12.7], wall: '+x', h: 0.3, rot: -0.2, flip: true }]);
 
   R.bounds = [-hw + 0.45, hw - 0.45, zFar - 14, z0 - 0.6];   // il limite in fondo (l'obitorio) e' aggiornato a ogni fotogramma
-  R.enter = () => {
+  R.enter = (seamless = false) => {
     R.group.visible = true; R.state = 'walk'; R.t = 0; R.hit = false; R.crossed = false; { const m = getMorgue(); m.group.visible = true; if (m.back) m.back.visible = false; if (m.entry) m.entry.visible = false; m.cones.forEach((c) => (c.visible = false)); }
-    player.box = R.bounds; player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false;
+    player.box = R.bounds; if (!seamless) { player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false; }   // arrivando dalla cantina il giocatore e' gia' qui
     lights.setLamps(lampPos, 2.1, 0xcfeadc); lights.grade({ fog: 0x050a08, hemi: [0x2c4a44, 0x08100e, 0.4] }); scene.fog.density = 0.05; audio.duck(1, 1.5); instab.set(0.15, 6);
     lights.lamp(0, 'pulse');
   };
   R.leave = () => { R.group.visible = false; };
   R.update = (dt) => {
-    if (!R.group.visible) return; R.t += dt; const P = player.pos;
+    if (!R.group.visible || R.preview) return; R.t += dt; const P = player.pos;
     { // movimento: corridoio, poi la soglia (varco largo 1,9 m) e infine l'obitorio, senza dissolvenza
       const m = getMorgue(), B = player.box;
       if (B === R.bounds) { if (P.z > zFar + 0.8) { B[0] = -hw + 0.45; B[1] = hw - 0.45; } else if (P.z > zFar - 0.7) { B[0] = -0.8; B[1] = 0.8; } else { B[0] = m.bounds[0]; B[1] = m.bounds[1]; } B[2] = m.bounds[2]; }

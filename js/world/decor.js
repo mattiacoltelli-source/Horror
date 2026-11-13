@@ -68,11 +68,12 @@ export function decorWarehouse(group, z0) {
   return entry;
 }
 export function decorTower(group, z0) {
-  entryDoor(group, z0);
+  const entry = entryDoor(group, z0);
   add(group, 'ind', [...runZ('modular_industrial_pipes_01_pipe02', 1.95, -6.8, 6.5, z0 - 1, z0 - 16), ...runZ('modular_industrial_pipes_01_pipe02', 1.95, 6.8, 7.2, z0 - 1, z0 - 16)]);
   add(group, 'pipes', [{ n: 'pipe_valve_large_metal', p: [-6.7, 5.5, z0 - 8], r: [0, 0, 0] }]);
   add(group, 'cables', cableRun(6.97, 3.0, z0 - 3, z0 - 6));
   add(group, 'manhole', manhole(2.2, z0 - 5, 0.9));
+  return entry;
 }
 
 // porta chiusa alle spalle: la stanza da cui sei arrivato non si riapre (muro d'ingresso a z0, la stanza va verso -z)

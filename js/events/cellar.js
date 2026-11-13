@@ -11,6 +11,7 @@ import { redLight } from '../world/redlight.js';
 import { addExtras, pedestal, turnToward } from '../world/extra.js';
 import { unseenMover } from './ambient.js';
 import { addAtmosphere } from '../world/atmos.js';
+import { WARD } from './ward.js';
 import { P as PROF, whisperName } from '../personal.js';
 import { createFingerWriter } from '../world/fingerwrite.js';
 import { rgbPulse } from '../ui/rgbshift.js';
@@ -22,7 +23,7 @@ const DIST = [7, 4.6, 2.6, 1.3, 0.7];
 export function createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash }) {
   const C = { group: new THREE.Group(), state: 'idle', step: -1, gaze: 0, away: 0, started: false, apDone: false };
   C.group.visible = false; scene.add(C.group);
-  const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23 });
+  const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23, exit: { w: 2, h: 2.6 } });
   C.group.add(room.group); decorCellar(C.group, CELLAR.z0); C.bounds = [room.bounds[0], room.bounds[1], CELLAR.z0 - CELLAR.l + 1.4, CELLAR.z0 - 0.6];
 
   const red = redLight(C.group, { x: CELLAR.w / 2 - 0.1, y: 2.5, z: CELLAR.z0 - 19.5, dir: 1 });   // luce rossa d'emergenza vicino all'uscita
@@ -134,11 +135,12 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
 
   // porta d'uscita in fondo
   const exitDoor = new THREE.Group(); exitDoor.position.set(0, 0, CELLAR.z0 - CELLAR.l + 0.15); C.group.add(exitDoor);
-  loader.load('assets/models/door.glb', (g) => { const m = g.scene; m.getObjectByName('large_castle_door_left')?.rotation.set(0, 0, 0); m.getObjectByName('large_castle_door_right')?.rotation.set(0, 0, 0); m.rotation.y = Math.PI; exitDoor.add(m); });
+  let exL = null, exR = null, exCap = null, exT = 0;
+  loader.load('assets/models/door.glb', (g) => { const m = g.scene; exL = m.getObjectByName('large_castle_door_left'); exR = m.getObjectByName('large_castle_door_right'); exL?.rotation.set(0, 0, 0); exR?.rotation.set(0, 0, 0); m.rotation.y = Math.PI; exitDoor.add(m); });
   { // l'oltre-porta è buio: sagoma ad arco nera davanti al muro, dietro i battenti (si vede solo oscurità, mai il muro)
     const sh = new THREE.Shape(); sh.moveTo(-0.95, 0); sh.lineTo(0.95, 0); sh.lineTo(0.95, 1.92); sh.absarc(0, 1.92, 0.95, 0, Math.PI, false); sh.lineTo(-0.95, 0);
     const cap = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
-    cap.position.set(0, 0, CELLAR.z0 - CELLAR.l + 0.05); cap.rotation.y = 0; C.group.add(cap);
+    cap.position.set(0, 0, CELLAR.z0 - CELLAR.l + 0.05); cap.rotation.y = 0; C.group.add(cap); exCap = cap;
   }
 
 
@@ -147,6 +149,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   let ap = -1;
 
   C.enter = () => {
+    C.gone = false; C.exitStarted = false; if (exCap) exCap.visible = true; if (exL) { exL.rotation.y = 0; exR.rotation.y = 0; } C.group.position.z = 0; C.bounds[2] = CELLAR.z0 - CELLAR.l + 1.4; if (C.bx) { C.bounds[0] = C.bx[0]; C.bounds[1] = C.bx[1]; }
     C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; cornerDone = false; cornerT = -1; corner.visible = false; runDone = false; runT = -1; runM.visible = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.uniforms.uA.value = 0; mist.material.opacity = 0; shNear.material.uniforms.uA.value = 0; fogMat.uniforms.uM.value = 0; fogMat.uniforms.uW.value = 0; fogMat.uniforms.uMask.value = blankTex; fogMat.uniforms.uTip.value.set(0, 0, 0); fogMat.uniforms.uR.value = 0.36; fogMat.uniforms.uB.value.set(0.47, 0.52); C.wr = null; C.wName = false; C.b1 = C.b2 = C.sw = C.sw2 = C.clean = false; C.farT = -1; C.farN = 0; far1.visible = false;
     player.box = C.bounds; player.pos.set(0.4, 1.62, CELLAR.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     lights.setLamps(lampPos, 2.1, 0x9db8ff); lights.grade({ fog: 0x03050c, hemi: [0x22336a, 0x0a0a14, 0.42] }); scene.fog.density = 0.04; audio.duck(1, 1); instab.set(0.1, 6);
@@ -157,7 +160,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const bustMove = unseenMover({ camera, getObj: () => C.bust, max: 3, gap: 7, move: (n) => { turnToward(C.bust, player.pos, n); audio.shuffle?.(0.5, 0.22); } });
   C.update = (dt) => {
     if (C.group.visible) { red.update(dt); bustMove(dt); }
-    if (!C.group.visible) return;
+    if (!C.group.visible || C.gone) return;
     const P = player.pos;
     // --- specchio ---
     d.set(MIRROR.x - P.x, 0, MIRROR.z - P.z); const dm = d.length(); d.normalize();
@@ -256,7 +259,13 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
       if (ap > 0.5) { shade.visible = false; ap = -1; }
     }
     // --- uscita ---
-    if (C.apDone && P.z < CELLAR.z0 - CELLAR.l + 2.4 && C.state === 'play') { C.state = 'leaving'; story.goto('ward'); }
+    // uscita senza stacco: la porta si apre da sola mentre ti avvicini e oltre si vede il reparto; attraversata la soglia sei nel corridoio
+    if (C.apDone && P.z < CELLAR.z0 - CELLAR.l + 9 && C.state === 'play') {
+      if (!C.exitStarted) { C.exitStarted = true; exT = 0; if (exCap) exCap.visible = false; C.bx = [C.bounds[0], C.bounds[1]]; story.preview('ward', (CELLAR.z0 - CELLAR.l) - WARD.z0); audio.squeak?.(1.4, new THREE.Vector3(0, 1, CELLAR.z0 - CELLAR.l)); }
+      { const B = C.bounds, zf = CELLAR.z0 - CELLAR.l; B[2] = Math.abs(P.x) < 0.75 ? zf - 3 : zf + 1.4; if (P.z < zf + 0.3) { B[0] = -0.8; B[1] = 0.8; } else if (C.bx) { B[0] = C.bx[0]; B[1] = C.bx[1]; } }   // si passa solo dal varco (largo 2 m)
+      exT += dt; const a = Math.min(1.5, exT * 0.55); if (exL) exL.rotation.y = a; if (exR) exR.rotation.y = -a;
+    }
+    if (C.exitStarted && P.z < CELLAR.z0 - CELLAR.l - 0.7 && C.state === 'play') { C.state = 'leaving'; story.cross('cellar', 'ward', (CELLAR.z0 - CELLAR.l) - WARD.z0); }
   };
   C.leave = () => { C.group.visible = false; mirror.visible = false; };
   return C;

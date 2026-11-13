@@ -7,6 +7,7 @@ import { kitMesh, kitObject } from '../world/props.js';
 import { decorWarehouse } from '../world/decor.js';
 import { unseenMover } from './ambient.js';
 import { createTv } from './tv.js';
+import { TOWER } from './tower.js';
 import { createSorella } from './sorella.js';
 import { redLight, doorGlow } from '../world/redlight.js';
 import { addExtras, pedestal } from '../world/extra.js';
@@ -17,7 +18,7 @@ export const WH = { z0: -400, w: 12, l: 36, h: 6.5 };
 export function createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, flags = {}, actBtn }) {
   const W = { group: new THREE.Group(), taken: false, state: 'idle', t: 0, near: false };
   W.group.visible = false; scene.add(W.group);
-  const room = buildRoom(mats, { z0: WH.z0, w: WH.w, l: WH.l, h: WH.h, wall: 'brick', floor: 'floorB', ceil: 'stone', pillarEvery: 6, dark: 0.8, seed: 41 });
+  const room = buildRoom(mats, { z0: WH.z0, w: WH.w, l: WH.l, h: WH.h, wall: 'brick', floor: 'floorB', ceil: 'stone', pillarEvery: 6, dark: 0.8, seed: 41, exit: { w: 2, h: 2.6 } });
   W.group.add(room.group); const entry = decorWarehouse(W.group, WH.z0); W.bounds = [room.bounds[0], room.bounds[1], WH.z0 - WH.l + 1.5, WH.z0 - 0.6];
   const zFar = WH.z0 - WH.l, loader = new GLTFLoader();
   const prop = (url, h, x, y, z, ry, cb) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y - y, c.z - z)); o.rotation.y = ry; W.group.add(o); cb?.(o); });
@@ -56,7 +57,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   { // l'oltre-porta è buio: sagoma ad arco nera davanti al muro, dietro i battenti (si vede solo oscurità, mai il muro)
     const sh = new THREE.Shape(); sh.moveTo(-0.95, 0); sh.lineTo(0.95, 0); sh.lineTo(0.95, 1.92); sh.absarc(0, 1.92, 0.95, 0, Math.PI, false); sh.lineTo(-0.95, 0);
     const cap = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
-    cap.position.set(0, 0, zFar + 0.05); cap.rotation.y = 0; W.group.add(cap);
+    cap.position.set(0, 0, zFar + 0.05); cap.rotation.y = 0; W.group.add(cap); W.cap = cap;
   }
 
   // cancello a rete con chiavistello: sbarra la sala prima della porta; si sblocca quando hai preso la pistola
@@ -87,7 +88,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   const shade = hall.silhouette(5); shade.visible = false; W.group.add(shade);
 
   W.enter = () => {
-    tv.reset(); sorella.reset(); sorella.load(); W.group.visible = true; W.taken = false; W.state = 'walk'; W.t = 0; W.beat = false; gateT = 0; if (leaf) leaf.rotation.y = 0;
+    W.gone = false; W.prev = false; if (W.bx) { W.bounds[0] = W.bx[0]; W.bounds[1] = W.bx[1]; } W.bounds[2] = WH.z0 - WH.l + 1.5; if (W.cap) W.cap.visible = true; W.group.position.z = 0; tv.reset(); sorella.reset(); sorella.load(); W.group.visible = true; W.taken = false; W.state = 'walk'; W.t = 0; W.beat = false; gateT = 0; if (leaf) leaf.rotation.y = 0;
     player.box = W.box; player.pos.set(0.3, 1.62, WH.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     const red = flags.door === 'red'; lights.setLamps(lampPos, red ? 1.7 : 2.2, red ? 0xff5a44 : 0xffc57a); lights.grade(red ? { fog: 0x0c0302, hemi: [0x6a2418, 0x140604, 0.42] } : { fog: 0x0a0802, hemi: [0x6a5426, 0x120c04, 0.42] }); reds.forEach((r) => (r.root.visible = red)); W.nearGate = false; W.hinted = false; flags.noGun = false; flags.weapon = null; W.red = red; entry.visible = !red; gateIn.visible = red; W.br = 6 + Math.random() * 4; W.brN = 0; lights.lamp(3, 'off'); W.sec = 0; scene.fog.density = 0.032; audio.duck(1, 1.5); instab.set(0.08, 6);
   };
@@ -95,7 +96,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
 
   const dv = new THREE.Vector3(), fw = new THREE.Vector3(), tmp = new THREE.Vector3(); let steps = 0, stepT = 0, doorT = 0; const STEPS = flags.turned ? 5.6 : 7.4;   // chi si e' girato ha meno tempo prima che arrivi
   W.update = (dt) => {
-    if (!W.group.visible) return; const P = player.pos; W.t += dt; tv.update(dt, !combat?.active); sorella.update(dt, !combat?.active);
+    if (!W.group.visible || W.gone) return; const P = player.pos; W.t += dt; tv.update(dt, !combat?.active); sorella.update(dt, !combat?.active);
     // faro con sensore: passi nel suo raggio e si accende con un tonfo; qualcuno è già lì, fermo, nella luce. Poi si spegne.
     if (W.sec === 0 && P.z < WH.z0 - 12) { W.sec = 1; W.secT = 0; lights.lamp(3, 'flicker', 0.5); shade.position.set(flags.turned ? 2.5 : 3.6, 0, WH.z0 - 22.5); shade.rotation.y = Math.PI / 2 + 0.2; shade.visible = true; audio.lightOn(); audio.whisper(1.6, 0.12); instab.push(0.7, 5); player.addShake(0.15); }
     if (W.sec === 1) { W.secT += dt; secMats.forEach((m) => (m.emissiveIntensity = 2.2 * (lights.lamps[3]?.level ?? 0)));
@@ -117,7 +118,10 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
       const ng = Math.abs(P.x) < 1.7 && Math.abs(P.z - gz) < 2.8 && player.forward.z < -0.35; if (ng !== W.nearGate) { W.nearGate = ng; actBtn.textContent = 'APRI'; actBtn.classList.toggle('hidden', !ng); }
     }
     if (W.state === 'open') { if (gateT === 0) { audio.clatter(); player.box = W.bounds; } gateT += dt; if (leaf) leaf.rotation.y = -Math.min(1.7, gateT * 1.1); doorT += dt; const a = Math.min(1.5, doorT * 0.5); if (L) L.rotation.y = a; if (R) R.rotation.y = -a; }
-    if (W.state === 'open' && P.z < zFar + 2.4 && !W.leaving) { W.leaving = true; story.goto('tower'); }
+    // uscita senza stacco: con la porta aperta si vede la torre oltre il varco; attraversata la soglia sei dentro
+    if (W.state === 'open' && P.z < zFar + 9 && !W.leaving && !W.prev) { W.prev = true; if (W.cap) W.cap.visible = false; W.bx = [W.bounds[0], W.bounds[1]]; story.preview('tower', zFar - TOWER.z0); }
+    if (W.prev && !W.leaving) { const B = W.bounds; B[2] = Math.abs(P.x) < 0.75 ? zFar - 3 : zFar + 1.5; if (P.z < zFar + 0.3) { B[0] = -0.8; B[1] = 0.8; } else { B[0] = W.bx[0]; B[1] = W.bx[1]; } }   // si passa solo dal varco
+    if (W.prev && P.z < zFar - 0.7 && !W.leaving) { W.leaving = true; story.cross('warehouse', 'tower', zFar - TOWER.z0); }
   };
 
   const _fv = new THREE.Vector3(), _a = new THREE.Vector3(), _b2 = new THREE.Vector3();

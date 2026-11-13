@@ -227,7 +227,7 @@ async function enter() {
     if (PKEY === 'yana') writingDecals(scene, [{ img: 'assets/tex/wr_yana_soul.png', aspect: 1.164, p: [1.38, 0.95, (RIBS[5] + RIBS[6]) / 2], wall: '-x', w: 1.5, a: 0.8 }]);
     writingDecals(tower.group, [{ ...spec('w4'), p: [0, 3.7, TZ - 0.05], wall: '-z', w: WR.w4[2] }]);   // torre: muro d'ingresso, sopra la porta: la vedi quando ti giri
   }
-  doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar'); } });
+  doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar', true); } });
   $('enter').disabled = true;
   try { await audio.start(); audio.heartbeat?.(); navigator.vibrate?.(30); } catch (_) {}
   try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el, { navigationUI: 'hide' })?.catch?.(() => {}); } catch (_) {}
