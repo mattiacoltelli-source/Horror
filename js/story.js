@@ -4,14 +4,25 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
   let busy = false, current = 'tunnel';
   const fade = document.getElementById('fade');
   const hideLegacy = (keep) => scene.children.forEach((o) => { if (!o.isLight && o !== camera && !o.userData.keep && !keep.includes(o)) o.visible = false; });
-  // LA TRAMA, due righe per stanza (il paziente: un incendio, una cura, una colpa). Compaiono come i suggerimenti, senza schermate di testo.
-  const LINES = {
-    cellar: ['lo specchio non c\'era, prima.', P ? 'ricordi la tua faccia, ' + P.name + '?' : 'ricordi la tua faccia?'],
-    morgue: ['sedia, cinghie, tre strumenti.', P ? 'qui ti hanno cura' + (P.f === false ? 'to' : 'ta') + ', ' + P.name + '.' : 'qui ti hanno curato.'],
-    warehouse: ['tutto ciò che è bruciato è passato da qui.', 'qualcuno ha lasciato la pistola dove l\'avresti trovata.'],
-    tower: ['l\'ultima stanza era la sua.', 'non si arrabbia. aspetta.'],
+  // LA TRAMA: il registro notturno dell'infermiera. All'ingresso di ogni stanza compaiono 3 righe (come le note, in corsivo, ~7 s), senza fermarti ne' coprire i pulsanti.
+  // Racconta in ordine: l'ingresso la notte del 3 novembre, la folla, lo specchio, la sorella, l'incendio partito dal magazzino, e alla fine la voce dell'infermiera che ti ha tirato fuori dal fuoco.
+  // Versione personalizzata: nome e genere dal profilo; la standard dice "paziente n. 17" e usa il maschile (come le note).
+  const N = P ? P.name : '', m = !P || P.f === false, o = m ? 'o' : 'a', lui = m ? 'lo' : 'la';
+  const LINES = {   // righe corte (max ~34 caratteri): ognuna sta su una riga dello schermo del telefono
+    tunnel: ['registro notturno, 3 novembre.', 'nuovo ingresso: ' + (N || 'paziente n. 17') + '.', lui + ' fanno passare dal tunnel.'],
+    hall: ['erano qui tutti, quella notte.', 'nessuno di loro è uscito.', 'non guardarli in faccia.'],
+    cellar: ['lo specchio l\'hanno rimesso.', 'dice che non è la sua faccia.', 'non sa più chi è.'],
+    ward: ['la sedia si muove da sola.', 'chiede ogni giorno di sua sorella.', 'nessuno osa dirglielo.'],
+    morgue: ['qui ti hanno curat' + o + (N ? ', ' + N : '') + '.', 'sedia, cinghie, tre strumenti.', 'sua sorella è qui sotto, dal fuoco.', 'giura di non averla vista.'],
+    warehouse: ['il fuoco è partito da qui.', 'benzina sui registri.', 'cancello chiuso da dentro.'],
+    tower: ['l\'ultima stanza era la sua.', 'l\'ho tirat' + o + ' fuori io, dal fuoco.', 'non l' + o + ' lascerò nemmeno ora.' + (N ? '\nsali, ' + N + '.' : '')],
   };
-  const tell = (name) => { const l = LINES[name]; if (!l) return; [[2800, l[0]], [10500, l[1]]].forEach(([ms, t]) => setTimeout(() => { if (current === name && !busy) say?.(t, 5200); }, ms)); };
+  const EXTRA = { warehouse: 'qualcuno ha lasciato la pistola dove l\'avresti trovata.', tower: 'non si arrabbia. aspetta.' };   // seconda riga, piu' tardi
+  const tell = (name) => {
+    const l = LINES[name]; if (!l) return;
+    setTimeout(() => { if (current === name && !busy) say?.(l.join('\n'), 7000, 'note'); }, 3000);
+    if (EXTRA[name]) setTimeout(() => { if (current === name && !busy) say?.(EXTRA[name], 5200); }, 13500);
+  };
   const S = {
     tell,
     // PASSAGGIO SENZA STACCO tra due stanze contigue. preview: la stanza successiva si vede oltre il varco (spostata di d); cross: appena attraversi la soglia il giocatore

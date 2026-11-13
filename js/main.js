@@ -197,6 +197,7 @@ async function enter() {
     writingDecals(cellar.group, [pic('drawing2', 1.442, 3.96, 1.5, CZ - 5.9, '-x', 1.0, -0.03)]);
     writingDecals(morgue.group, [pic('anatomy', 0.755, 4.22, 1.5, MZ - 5.8, '-x', 0.6, 0.02), pic('charcoal', 0.756, 4.22, 1.5, MZ - 7.0, '-x', 0.55, -0.02), pic('family', 1.287, 4.22, 1.5, MZ - 8.4, '-x', 0.75, 0.02)]);
     // MURALES GIGANTI (affreschi scrostati), uno per ambiente grande, a riempire una campata intera tra due pilastri (sempre uguali in tutte le versioni)
+    writingDecals(scene, [{ ...pic('mural_ritual', 1.8534, 1.38, 1.1, -16.8, '-x', 3.3, 0), rot: 0, a: 0.94 }]);              // tunnel, parete destra: rito con i simboli esoterici di sangue
     writingDecals(scene, [{ ...pic('mural_wide', 3.043, 1.38, 1.1, -28.5, '-x', 5.0, 0), rot: 0, a: 0.94 }]);                    // tunnel, parete destra
     writingDecals(hall.group, [{ ...pic('mural_eyes', 2.368, -5.97, 2.8, -74.95, '+x', 4.7, 0), rot: 0, a: 0.94 }]);               // sala della folla, parete sinistra
     writingDecals(hall.group, [{ ...pic('mural_faces', 1.2526, 5.97, 3.0, -80.95, '-x', 4.7, 0), rot: 0, a: 0.94 }]);              // sala della folla, parete destra (sfalsato rispetto all'altro)
@@ -269,6 +270,7 @@ async function enter() {
   $('fade').style.opacity = 0;
   setTimeout(() => instab.show(), 4000);
   if (!q.get('start')) setTimeout(showHowto, 1800);
+  if (!q.get('start') && !restoreCk) setTimeout(() => story?.tell('tunnel'), 13500);   // il registro dell'infermiera comincia dal tunnel
   if (!q.get('start')) { setTimeout(() => { if (story?.current() === 'tunnel') say(P ? P.name + '. non fermarti, dicevano.' : 'corridoio di servizio. non fermarti, dicevano.', 5200); }, 9500); setTimeout(() => { if (story?.current() === 'tunnel') say('qualcuno ti segue da prima che entrassi.', 5200); }, 17500); }
   last = performance.now();
 }
