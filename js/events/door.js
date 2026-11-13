@@ -73,7 +73,7 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
         // mentre sei al buio si avvicinano (non lo vedi: lo senti)
         if (E.t > P.dark) {
           ph++;
-          if (ph >= PHASES.length) { go('choice'); startBreath(); }
+          if (ph >= PHASES.length) { go('choice'); hall?.lightDim?.(); startBreath(); }
           else { hall?.setDist(PHASES[ph].d); go('lit'); lightOn(); }
         }
         break;
