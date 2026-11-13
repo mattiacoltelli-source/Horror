@@ -117,7 +117,8 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
       if (steps > STEPS + 0.2 && W.state === 'taken') { W.state = 'ready'; doorT = 0; lights.lamp(2, 'on'); lights.lamp(0, 'off'); lights.lamp(1, 'off'); }   // il cancello ora si apre con APRI
     }
     if (W.state === 'ready' || (W.state === 'walk' && !W.taken)) {   // vicino al cancello: APRI (come le altre porte); anche senza aver preso la pistola
-      const ng = Math.abs(P.x) < 2.2 && Math.abs(P.z - gz) < 3.6 && player.forward.z < -0.2;   // il pulsante APRI compare appena ti avvicini, senza ritardo if (ng !== W.nearGate) { W.nearGate = ng; actBtn.textContent = 'APRI'; actBtn.classList.toggle('hidden', !ng); }
+      const ng = Math.abs(P.x) < 2.2 && Math.abs(P.z - gz) < 3.6 && player.forward.z < -0.2; if (ng !== W.nearGate) {   // il pulsante APRI compare appena ti avvicini, senza ritardo
+         W.nearGate = ng; actBtn.textContent = 'APRI'; actBtn.classList.toggle('hidden', !ng); }
     }
     if (W.state === 'open') { if (gateT === 0) { audio.clatter(); player.box = W.bounds; } gateT += dt; if (leaf) leaf.rotation.y = -Math.min(1.7, gateT * 1.1); doorT += dt; const a = Math.min(1.5, doorT * 0.5); if (L) L.rotation.y = a; if (R) R.rotation.y = -a; }
     // uscita senza stacco: con la porta aperta si vede la torre oltre il varco; attraversata la soglia sei dentro

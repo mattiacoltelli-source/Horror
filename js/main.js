@@ -276,7 +276,7 @@ function finish(msg, fast = false, light = false) {
   setTimeout(() => $('end').classList.remove('hidden'), fast ? 1800 : 3200);
 }
 $('again').addEventListener('click', () => location.reload());
-$('act').addEventListener('click', () => { if (wh && wh.near) wh.take(); else if (wh && wh.nearGate) wh.openGate(); else if (tower && tower.near) tower.open(); else if (morgue && morgue.near) morgue.open(); else if (combat && combat.canLower) combat.lower(); });
+$('act').addEventListener('click', () => { if (wh && wh.nearGate) wh.openGate(); else if (wh && wh.near) wh.take(); else if (tower && tower.near) tower.open(); else if (morgue && morgue.near) morgue.open(); else if (combat && combat.canLower) combat.lower(); });
 $('fire').addEventListener('pointerdown', (e) => { e.preventDefault(); combat?.fire(); });
 addEventListener('keydown', (e) => { if (e.code === 'Space') combat?.fire(); });
 
