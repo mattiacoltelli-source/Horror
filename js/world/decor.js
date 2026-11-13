@@ -16,7 +16,7 @@ export function decorTunnel(group) {
   bloodDecals(group, [
     { k: 'C', p: [-1.397, 1.45, -45.2], wall: '+x', h: 0.3, rot: 0.2 }, { k: 'A', p: [-1.397, 1.22, -47.2], wall: '+x', h: 0.31, rot: -0.15, flip: true },
     { k: 'C', p: [-1.397, 1.05, -49.0], wall: '+x', h: 0.29, rot: 0.3 }, { k: 'A', p: [-1.397, 0.82, -50.6], wall: '+x', h: 0.3, rot: 0.1, a: 0.7 },
-    { k: 'A', p: [1.397, 1.6, -28.5], wall: '-x', h: 0.3, rot: -0.1 },
+    // (tolta la mano a z -28.5: li' c'e' il murale)
     { k: 'X', p: [1.397, 1.55, -40.5], wall: '-x', h: 0.62, rot: 0.2 }, { k: 'X', p: [-1.397, 1.7, -35.0], wall: '+x', h: 0.55, rot: -0.15, flip: true },
   ]);
   add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -1.27, 2.0, 2.4, -54.4));
