@@ -56,7 +56,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
 
   R.bounds = [-hw + 0.45, hw - 0.45, zFar - 14, z0 - 0.6];   // il limite in fondo (l'obitorio) e' aggiornato a ogni fotogramma
   R.enter = () => {
-    R.group.visible = true; R.state = 'walk'; R.t = 0; R.hit = false; R.crossed = false; { const m = getMorgue(); m.group.visible = true; if (m.back) m.back.visible = false; if (m.entry) m.entry.visible = false; }
+    R.group.visible = true; R.state = 'walk'; R.t = 0; R.hit = false; R.crossed = false; { const m = getMorgue(); m.group.visible = true; if (m.back) m.back.visible = false; if (m.entry) m.entry.visible = false; m.cones.forEach((c) => (c.visible = false)); }
     player.box = R.bounds; player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false;
     lights.setLamps(lampPos, 2.1, 0xcfeadc); lights.grade({ fog: 0x050a08, hemi: [0x2c4a44, 0x08100e, 0.4] }); scene.fog.density = 0.05; audio.duck(1, 1.5); instab.set(0.15, 6);
     lights.lamp(0, 'pulse');
@@ -70,7 +70,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
       if (!R.crossed && P.z < zFar + 1.5) { R.crossed = true; m.enter(true); story?.seamless('morgue'); camera.far = 34; camera.updateProjectionMatrix(); }
     }
     // sfarfallio a caso di una lampada, ogni tanto
-    if (R.state !== 'beat' && Math.random() < dt * 0.25) lights.lamp(0, 'flicker', 0.3 + Math.random() * 0.4);
+    if (!R.crossed && R.state !== 'beat' && Math.random() < dt * 0.25) lights.lamp(0, 'flicker', 0.3 + Math.random() * 0.4);
     if (R.state === 'walk' && P.z < z0 - 8.5) {   // a meta' corridoio: tutte le luci spente per un secondo; la sedia, nel buio, si avvicina
       R.state = 'beat'; R.bt = 0; lights.lamp(0, 'off'); audio.lightOff?.(); instab.push(0.8, 5);
     }

@@ -49,6 +49,7 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
   const lampPos = [[0, 2.8, chairZ]];   // una sola lampada, sopra la sedia: gli angoli restano bui
   load('assets/models/hlamp.glb').then((o) => { if (!o) return; for (const [x, , z] of lampPos) { const c = o.clone(true); c.position.set(x, h, z); M.group.add(c); } });
   addAtmosphere(M.group, { xl: -w / 2, xr: w / 2, z0, z1: zFar, h, seed: 11, lamps: lampPos, shaft: 0xcfe8dc, shaftOpacity: 0.09, stains: 6, puddles: 4, wallInset: 0.3, stainColor: 0x070a06 });
+  M.cones = M.group.children.filter((c) => c.isMesh && c.geometry.type === 'CylinderGeometry' && c.material.isShaderMaterial);   // i fasci di luce sotto la lampada: spenti finche' non entri dal reparto
   // DUE PORTE in fondo: a sinistra filtra una luce rossa, a destra si sente un respiro. Quella che scegli cambia il magazzino (flags.door).
   const doors = []; M.doors = doors;
   for (const sx of [-1, 1]) { const cap = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 2.95), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); cap.position.set(sx * 2.2, 1.5, zFar + 0.36); M.group.add(cap); }
@@ -81,6 +82,7 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
   M.enter = (seamless = false) => {
     M.trig = chairZ + 3.5 + Math.random() * 2; M.variant = flags.turned ? 'near' : (Math.random() < 0.5 ? 'far' : 'breath');   // l'evento cambia a ogni partita e in base a cosa hai scelto
     M.group.visible = true; M.state = 'walk'; M.t = 0; M.leaving = false; prints.visible = false; M.fall = null; M.dropped = false; M.near = null; M.br = 0; doors.forEach((d) => { d.open = 0; d.target = 0; d.set(0); });
+    M.cones.forEach((c) => (c.visible = true));
     if (M.back) M.back.visible = !seamless; if (M.entry) M.entry.visible = !seamless;   // dal reparto la soglia e' aperta: niente tappo nero
     if (!seamless) { player.box = M.bounds; player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false; }   // arrivando dal reparto non si sposta il giocatore
     lights.setLamps(lampPos, 1.9, 0xb8e8c8); lights.grade({ fog: 0x030a06, hemi: [0x2a5a40, 0x08100a, 0.42] }); scene.fog.density = 0.042; audio.duck(1, 1.5); instab.set(0.1, 6);
