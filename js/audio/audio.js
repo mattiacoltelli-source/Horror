@@ -350,18 +350,23 @@ export function createAudio() {
     },
     // CAMPANA LONTANA: i parziali di una campana vera (rapporti ~ 0,5 · 1 · 1,2 · 1,5 · 2 · 2,5 · 3 · 4), ognuno con la sua durata (i bassi durano, gli acuti svaniscono subito),
     // ogni parziale doppio e appena scordato (il "battito" tipico del bronzo), colpo iniziale smorzato. Filtrata e con molto riverbero: sembra fuori, lontano, non nella stanza.
-    bell(level = 0.5, base = 233) {
-      if (!ok) return; const t = ctx.currentTime + 0.02, out = ctx.createGain(); out.gain.value = 0.16 * level;
-      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1500; lp.Q.value = 0.4; const pn = ctx.createStereoPanner(); pn.pan.value = (Math.random() - 0.5) * 1.2;
-      out.connect(lp); lp.connect(pn); pn.connect(master); const vs = ctx.createGain(); vs.gain.value = 1.9; lp.connect(vs); vs.connect(verbSend);
-      const P = [[0.5, 1.0, 9], [1, 0.9, 7.5], [1.2, 0.55, 5.5], [1.5, 0.45, 4.2], [2, 0.5, 3.4], [2.5, 0.22, 2.2], [3, 0.18, 1.7], [4, 0.1, 1.1]];
-      let end = 0; for (const [r, a2, d] of P) for (const dt of [0, 1]) {
-        const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = base * r * (dt ? 1.0035 : 1);
-        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a2 * 0.5, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0008, t + d);
-        o.connect(g); g.connect(out); o.start(t); o.stop(t + d + 0.1); end = Math.max(end, d);
+    bell(level = 0.5, base = 196) {
+      if (!ok) return; const t = ctx.currentTime + 0.02, out = ctx.createGain(); out.gain.value = 0.17 * level;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1050; lp.Q.value = 0.3; const lp2 = ctx.createBiquadFilter(); lp2.type = 'lowpass'; lp2.frequency.value = 2200; const pn = ctx.createStereoPanner(); pn.pan.value = (Math.random() - 0.5) * 1.2;
+      out.connect(lp); lp.connect(lp2); lp2.connect(pn); pn.connect(master); const vs = ctx.createGain(); vs.gain.value = 2.2; lp2.connect(vs); vs.connect(verbSend);
+      // rapporti di una campana vera (non armonici), attacco leggermente morbido, ogni parziale con un suo piccolo vibrato/battimento e una sua durata
+      const P = [[0.5, 1.0, 11, 0.5], [1, 0.85, 9, 0.7], [1.183, 0.6, 7, 0.9], [1.506, 0.4, 5.2, 1.1], [2, 0.42, 4.2, 0.8], [2.514, 0.2, 3, 1.3], [2.662, 0.16, 2.6, 0.6], [3.011, 0.14, 2.0, 1.0], [4.166, 0.07, 1.2, 1.5]];
+      for (const [r, a2, d, bt] of P) for (const k of [0, 1]) {
+        const o = ctx.createOscillator(), g = ctx.createGain(), f = base * r * (1 + (Math.random() - 0.5) * 0.002) * (k ? 1.0027 + Math.random() * 0.002 : 1); o.type = 'sine'; o.frequency.value = f;
+        const at = 0.006 + 0.012 * r; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a2 * 0.5, t + at); g.gain.exponentialRampToValueAtTime(0.0008, t + d * (0.85 + Math.random() * 0.3));
+        const lf = ctx.createOscillator(), lg = ctx.createGain(); lf.frequency.value = bt * (0.8 + Math.random() * 0.4); lg.gain.value = a2 * 0.5 * 0.28; lf.connect(lg); lg.connect(g.gain); lf.start(t); lf.stop(t + d + 0.1);   // il suono "respira"
+        o.connect(g); g.connect(out); o.start(t); o.stop(t + d + 0.1);
       }
-      const nb = ctx.createBufferSource(); nb.buffer = noiseBuf; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = base * 5; bp.Q.value = 1.2; const ng = ctx.createGain();   // colpo del batacchio
-      ng.gain.setValueAtTime(0.5, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.09); nb.connect(bp); bp.connect(ng); ng.connect(out); nb.start(t); nb.stop(t + 0.2);
+      // colpo del batacchio: rumore scuro, breve, con un po' di corpo; piu' un velo di bronzo che vibra (rumore stretto che svanisce piano)
+      const nb = ctx.createBufferSource(); nb.buffer = noiseBuf; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = base * 3.2; bp.Q.value = 0.9; const ng = ctx.createGain();
+      ng.gain.setValueAtTime(0.38, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.11); nb.connect(bp); bp.connect(ng); ng.connect(out); nb.start(t); nb.stop(t + 0.25);
+      const wb = ctx.createBufferSource(); wb.buffer = noiseBuf; wb.playbackRate.value = 0.5; const wf = ctx.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = base * 2.0; wf.Q.value = 14; const wg = ctx.createGain();
+      wg.gain.setValueAtTime(0.0, t); wg.gain.linearRampToValueAtTime(0.05, t + 0.05); wg.gain.exponentialRampToValueAtTime(0.0005, t + 3.2); wb.connect(wf); wf.connect(wg); wg.connect(out); wb.start(t); wb.stop(t + 3.4);
     },
     // SOTTOFONDO DELLA SALA DELLA FOLLA: un bordone basso e dissonante (due toni quasi uguali che battono), un velo di rumore scuro e un sibilo acuto lontano;
     // il livello lo decide chi lo usa (setLevel) e ogni tanto cade da solo nel silenzio per un paio di secondi, cosi' i vuoti pesano.
