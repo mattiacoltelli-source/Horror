@@ -29,7 +29,7 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
   };
   const go = (st) => { E.state = st; E.t = 0; };
   // fasi della folla: [distanza, durata luce accesa, durata buio dopo]
-  const PHASES = [{ d: 26, hold: 7.5, dark: 3.4 }, { d: 14, hold: 5.5, dark: 3.4 }, { d: 7.5, hold: 4.2, dark: 2.2 }];
+  const PHASES = [{ d: 26, hold: 7.5, dark: 1.2 }, { d: 14, hold: 5.5, dark: 1.2 }, { d: 7.5, hold: 4.2, dark: 1.2 }];   // buio totale di ~1 s: la folla si sposta dentro il buio
   let ph = 0;
 
   E.update = (dt) => {
