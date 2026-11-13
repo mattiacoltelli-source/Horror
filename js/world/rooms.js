@@ -32,7 +32,7 @@ export function buildRoom(mats, o) {
     const yb = ins ? opening.h : 0;
     B.quad(wall, [[x, yb, z], [xe, yb, z], [xe, h, z], [x, h, z]], [[U(x), yb / wv], [U(xe), yb / wv], [U(xe), h / wv], [U(x), h / wv]], [col(yb, k), col(yb, k), col(h, k), col(h, k)], [0, 0, nz]);
   } };
-  endWall(z0, -1, door); endWall(z1, 1, null);
+  endWall(z0, -1, door); if (!o.openEnd) endWall(z1, 1, null);   // openEnd: niente parete di fondo (si continua in un'altra stanza)
   // pilastri in pietra lungo i muri
   const pillars = [];
   if (pillarEvery) for (let z = z0 - pillarEvery * 0.6; z > z1 + 1; z -= pillarEvery) for (const sx of [-1, 1]) {

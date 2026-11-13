@@ -16,7 +16,7 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
   const M = { group: new THREE.Group(), state: 'idle', t: 0, near: null };
   M.group.visible = false; scene.add(M.group);
   const { z0, w, l, h } = MORGUE, zFar = z0 - l;
-  const room = buildRoom(mats, { z0, w, l, h, wall: 'stone', floor: 'mfloor', ceil: 'stone', dark: 0.5, seed: 57 });
+  const room = buildRoom(mats, { z0, w, l, h, wall: 'stone', floor: 'mfloor', ceil: 'stone', dark: 0.5, seed: 57, door: { w: 2, h: 2.6 } });   // vano d'ingresso aperto (si arriva dal reparto senza dissolvenza)
   M.group.add(room.group); M.bounds = [room.bounds[0], room.bounds[1], zFar + 1.4, z0 - 0.6];
   const loader = new GLTFLoader();
   const load = (u) => new Promise((res) => loader.load(u, (g) => res(g.scene), undefined, () => res(null)));
@@ -74,14 +74,15 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
   }
   // la sedia, quando non la guardi, si gira un po' verso di te (come la sedia a rotelle della torre): al massimo 3 volte
   const chairMove = unseenMover({ camera, getObj: () => M.chair, max: 3, gap: 7, move: (n) => { M.chair.rotation.y += 0.3; audio.squeak?.(0.5, M.chair.position.clone()); } });
-  entryDoor(M.group, z0);   // la porta si è chiusa alle tue spalle
-  const back = new THREE.Mesh(new THREE.PlaneGeometry(2.1, h), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); back.position.set(0, h / 2, z0 + 0.06); back.rotation.y = Math.PI; M.group.add(back);
+  M.entry = entryDoor(M.group, z0);   // la porta si è chiusa alle tue spalle (dal reparto invece la soglia e' aperta: vedi enter)
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(2.1, h), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); back.position.set(0, h / 2, z0 + 0.06); back.rotation.y = Math.PI; M.group.add(back); M.back = back;
   const shade = hall.silhouette(5); shade.visible = false; M.group.add(shade);
 
-  M.enter = () => {
+  M.enter = (seamless = false) => {
     M.trig = chairZ + 3.5 + Math.random() * 2; M.variant = flags.turned ? 'near' : (Math.random() < 0.5 ? 'far' : 'breath');   // l'evento cambia a ogni partita e in base a cosa hai scelto
     M.group.visible = true; M.state = 'walk'; M.t = 0; M.leaving = false; prints.visible = false; M.fall = null; M.dropped = false; M.near = null; M.br = 0; doors.forEach((d) => { d.open = 0; d.target = 0; d.set(0); });
-    player.box = M.bounds; player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false;
+    if (M.back) M.back.visible = !seamless; if (M.entry) M.entry.visible = !seamless;   // dal reparto la soglia e' aperta: niente tappo nero
+    if (!seamless) { player.box = M.bounds; player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false; }   // arrivando dal reparto non si sposta il giocatore
     lights.setLamps(lampPos, 1.9, 0xb8e8c8); lights.grade({ fog: 0x030a06, hemi: [0x2a5a40, 0x08100a, 0.42] }); scene.fog.density = 0.042; audio.duck(1, 1.5); instab.set(0.1, 6);
   };
   M.leave = () => { M.group.visible = false; if (actBtn) actBtn.classList.add('hidden'); };
