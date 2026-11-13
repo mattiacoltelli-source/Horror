@@ -208,7 +208,8 @@ async function enter() {
     // CRITERIO: ogni scritta sta al CENTRO dello spazio libero tra due elementi fissi (costoloni del tunnel, pilastri della cantina) e la sua larghezza e' limitata allo spazio, cosi' niente la taglia
     const fit = (a, b, k, thick, maxW) => ({ z: (a + b) / 2, w: Math.min(maxW ?? WR[k][2], Math.abs(a - b) - thick - 0.5) });
     const t1 = fit(RIBS[1], RIBS[2], 't1', 0.5), t3 = fit(RIBS[4], RIBS[5], 't3', 0.5), c2 = fit(CZ - 13, CZ - 18, 'c2', 0.9);   // tunnel: prima e dopo il vetro; cantina: dopo lo specchio
-    writingDecals(scene, [{ ...spec('t1'), p: [-1.38, 1.0, t1.z], wall: '+x', w: t1.w }, { ...spec('t3'), p: [-1.38, 1.0, t3.z], wall: '+x', w: t3.w }]);   // sotto il tubo sottile (y 1.62)
+    { const lo = !WRI, ty = lo ? 0.84 : 1.0, mh = lo ? 1.1 : undefined;   // frasi generate: bassa e al massimo 1,1 m d'altezza, cosi' stanno sotto i tubi (sottile a 1,62 m)
+      writingDecals(scene, [{ ...spec('t1'), p: [-1.38, ty, t1.z], wall: '+x', w: t1.w, maxH: mh }, { ...spec('t3'), p: [-1.38, ty, t3.z], wall: '+x', w: t3.w, maxH: mh }]); }
     writingDecals(cellar.group, [{ ...spec('c2'), p: [-3.96, 1.7, c2.z], wall: '+x', w: c2.w }]);
     // obitorio: muro sinistro (parte verde, sopra le piastrelle), al centro della sala
     writingDecals(morgue.group, [{ ...spec('o'), p: [-4.22, 2.1, MZ - 6.6], wall: '+x', w: (PKEY === 'elisa' || PKEY === 'yana') ? 6.0 : Math.min(WR.o[2], 6.0) }]);

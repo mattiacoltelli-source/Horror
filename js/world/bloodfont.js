@@ -16,6 +16,7 @@ export function bloodText(text) {
   let prev = null;
   const pl = lines.map((l) => { let x = 0; const g = l.map((c) => {
     if (c === ' ') { x += SPACE; return null; }
+    if (c === ',') { const a = REAL["'"][0]; const o = { c, v: null, x, w: a[2] * 1.4, h: a[3], base: 0, rot: 0, dy: 0, sc: 1 }; x += a[2] * 1.4 + 10; return o; }
     let v = null, w, h, base; if (REAL[c]) { const L = REAL[c]; let k = Math.floor(R() * L.length); if (L.length > 1 && prev === c + k) k = (k + 1) % L.length; prev = c + k; v = L[k]; w = v[2]; h = v[3]; base = v[4]; } else { const m = A[c]; w = m[2]; h = m[3]; base = m[5]; }
     const o = { c, v, x, w, h, base, rot: (R() - 0.5) * 0.07, dy: (R() - 0.5) * 6, sc: 0.96 + R() * 0.08 }; x += w * (v ? 0.8 : 0.86) + (R() - 0.3) * 6; return o; });
     return { g: g.filter(Boolean), w: x }; });
@@ -28,7 +29,8 @@ export function bloodText(text) {
       const ox = PAD + (maxW - l.w) * S / 2, by = (TOPPAD + CAP + li * LH) * S;   // by: linea di base
       for (const o of l.g) {
         ctx.save(); ctx.translate(ox + o.x * S + o.w * S / 2, by + o.dy * S); ctx.rotate(o.rot); ctx.scale(o.sc, o.sc);
-        if (o.v) ctx.drawImage(real, o.v[0], o.v[1], o.w, o.h, -o.w * S / 2, -o.base * S, o.w * S, o.h * S);
+        if (o.c === ',') { const a = REAL["'"][0]; ctx.rotate(0.1); ctx.drawImage(real, a[0], a[1], a[2], a[3], -a[2] * S * 0.6, -3 * S, a[2] * S * 1.2, a[3] * S * 1.15); }   // virgola: l'apostrofo vero, abbassato sulla linea
+        else if (o.v) ctx.drawImage(real, o.v[0], o.v[1], o.w, o.h, -o.w * S / 2, -o.base * S, o.w * S, o.h * S);
         else { const m = A[o.c]; let dy = -m[5]; if (o.c === '.') dy = 2 - m[3]; else if (o.c === ',') dy = -22; else if (o.c === "'") dy = -CAP; else if (o.c === '-') dy = -38 - m[3] / 2; ctx.drawImage(atlas, m[0], m[1], m[2], m[3], -m[2] * S / 2, dy * S, m[2] * S, m[3] * S); }
         ctx.restore();
       }
