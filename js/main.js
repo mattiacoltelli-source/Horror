@@ -190,6 +190,11 @@ async function enter() {
       const h = new THREE.Group(); h.add(o); h.position.set(-5.3, 0, WZ - 12.6); h.rotation.y = (sz.x > sz.z ? Math.PI / 2 : 0) + 0.03; wh.group.add(h); window.__bedObj = h; }); }
   if (!window.__pics) { window.__pics = true;
     writingDecals(cellar.group, [{ img: 'assets/tex/pic_drawing.jpg', aspect: 1.004, p: [3.96, 1.5, CZ - 15.2], wall: '-x', w: 0.9, rot: 0.04, a: 1, plain: true }]);
+    // quadri e foto inquietanti (Gemini), uguali in tutte le versioni: ad altezza sguardo, su tratti di muro liberi (aspect = larghezza/altezza dell'immagine)
+    const pic = (n, asp, x, y, z, wall, w, rot) => ({ img: 'assets/tex/pic_' + n + '.webp', aspect: asp, p: [x, y, z], wall, w, rot, a: 1, plain: true });
+    writingDecals(cellar.group, [pic('drawing2', 1.442, 3.96, 1.5, CZ - 10.4, '-x', 1.0, -0.03), pic('saint', 0.789, -3.96, 1.5, CZ - 5.5, '+x', 0.62, 0.02)]);
+    writingDecals(morgue.group, [pic('anatomy', 0.755, 4.22, 1.5, MZ - 5.8, '-x', 0.6, 0.02), pic('family', 1.287, 4.22, 1.5, MZ - 8.4, '-x', 0.75, -0.02)]);
+    writingDecals(wh.group, [pic('window', 1.233, 5.96, 1.5, WZ - 11.7, '-x', 0.9, 0.02), pic('corridor', 1.369, 5.96, 1.5, WZ - 26.0, '-x', 0.9, -0.02), pic('charcoal', 0.756, 5.96, 1.5, WZ - 20.0, '-x', 0.55, 0.03)])
     if (PKEY === 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_elisa.jpg', aspect: 0.545, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
     if (PKEY !== 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_yana.jpg', aspect: 0.741, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.6, rot: -0.03, a: 1, plain: true }]); }
   // SCRITTE DI SANGUE per le versioni personalizzate (frasi con il suo nome; per Yana anche in ucraino), grandi sui muri
