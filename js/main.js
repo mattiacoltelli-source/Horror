@@ -198,11 +198,11 @@ async function enter() {
   // chiunque altro: stesse posizioni, frasi scritte al volo con il font di sangue (js/world/bloodfont.js); [testo, _, larghezza massima]
   const GN = P ? P.name.toUpperCase() : '', GF = P?.f !== false;
   // altezza (m) delle scritte al volo in ogni punto: le frasi nuove (la larghezza segue il testo ed e' comunque limitata allo spazio libero, vedi fit)
-  const HGT = { t1: 1.2, t3: 1.3, c2: 1.8, w4: 1.5, o: 1.15, h: 0.9, m: 1.5 };   // altezza massima della scritta (lettere come quelle di Yana: ~35% piu' grandi di prima), larghezza = testo, limitata allo spazio libero
+  const HGT = { t1: 1.2, t3: 1.3, c2: 1.8, w4: 1.5, o: 1.15, h: 1.6, m: 1.5 };   // altezza massima della scritta (lettere come quelle di Yana: ~35% piu' grandi di prima), larghezza = testo, limitata allo spazio libero
   // versione standard: stesse scritte, senza nome (generiche); le altre: con il nome
-  const GT = P ? { t1: GN + ',\nTI HANNO VISTO', t3: 'NON È LA TUA\nFACCIA, ' + GN, c2: GN + ',\nGIRATI', w4: 'NON SEI ' + (GF ? 'SOLA' : 'SOLO') + ',\n' + GN, o: GN + ',\nQUI TI HANNO ' + (GF ? 'LEGATA' : 'LEGATO'), h: 'TI STAVANO\nASPETTANDO, ' + GN, m: 'NON C\'È VIA\nD\'USCITA, ' + GN }
+  const GT = P ? { t1: GN + ',\nTI HANNO VISTO', t3: 'NON È LA TUA\nFACCIA, ' + GN, c2: GN + ',\nGIRATI', w4: 'NON SEI ' + (GF ? 'SOLA' : 'SOLO') + ',\n' + GN, o: GN + ',\nQUI TI HANNO ' + (GF ? 'LEGATA' : 'LEGATO'), h: 'TI STAVANO\nASPETTANDO,\n' + GN, m: 'NON C\'È VIA\nD\'USCITA, ' + GN }
     : { t1: 'NON\nFERMARTI', t3: 'NON È LA TUA\nFACCIA', c2: 'DIETRO\nDI TE', w4: 'NON SEI\nSOLO', o: 'QUI TI HANNO\nLEGATO', h: 'TI STAVANO\nASPETTANDO', m: 'NON C\'È\nUSCITA' };
-  if (PKEY === 'yana') { GT.c2 = 'ОБЕРНИСЬ,\nЯНО'; GT.h = 'ТЕБЕ\nЧЕКАЛИ, ЯНО'; GT.m = 'НЕМАЄ\nВИХОДУ, ЯНО'; }   // Yana e' ucraina: alcune frasi in ucraino (lettere cirilliche vere)
+  if (PKEY === 'yana') { GT.c2 = 'ОБЕРНИСЬ,\nЯНО'; GT.h = 'ТЕБЕ\nЧЕКАЛИ,\nЯНО'; GT.m = 'НЕМАЄ\nВИХОДУ, ЯНО'; }   // Yana e' ucraina: alcune frasi in ucraino (lettere cirilliche vere)
   const WR = WRI || Object.fromEntries(Object.entries(GT).map(([k, t]) => [k, [t, 0, HGT[k] * (P ? 1.35 : 1) * bloodText(t).aspect]]));   // chiunque altro (e la versione standard): stesse posizioni, frasi scritte al volo con il font di sangue (js/world/bloodfont.js)
   { const T1 = P ? GN + ',\nMORIRAI QUI' : 'MORIRAI\nQUI'; WR.t1 = [T1, 0, HGT.t1 * (P ? 1.35 : 1.15) * bloodText(T1).aspect]; }   // prima scritta del tunnel, per tutte le versioni (nome o no): lettere vere di sangue
   const spec = (k) => (WRI && k !== 't1') ? { img: 'assets/tex/wr_' + WR[k][0] + '.png', aspect: WR[k][1] } : { text: WR[k][0], aspect: bloodText(WR[k][0]).aspect };
