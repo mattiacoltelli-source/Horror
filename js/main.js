@@ -198,15 +198,13 @@ async function enter() {
     writingDecals(morgue.group, [pic('anatomy', 0.755, 4.22, 1.5, MZ - 5.8, '-x', 0.6, 0.02), pic('charcoal', 0.756, 4.22, 1.5, MZ - 7.0, '-x', 0.55, -0.02), pic('family', 1.287, 4.22, 1.5, MZ - 8.4, '-x', 0.75, 0.02)]);
     // MURALES GIGANTI (affreschi scrostati), uno per ambiente grande, a riempire una campata intera tra due pilastri (sempre uguali in tutte le versioni)
     writingDecals(scene, [{ ...pic('mural_wide', 3.043, 1.38, 1.1, -28.5, '-x', 5.0, 0), rot: 0, a: 0.94 }]);                    // tunnel, parete destra
-    writingDecals(hall.group, [{ ...pic('mural_eyes', 2.368, -5.97, 2.8, -74.95, '+x', 4.7, 0), rot: 0, a: 0.94 }]);               // sala della folla, parete sinistra
-    writingDecals(hall.group, [{ ...pic('mural_faces', 1.2526, 5.97, 3.0, -80.95, '-x', 4.7, 0), rot: 0, a: 0.94 }]);              // sala della folla, parete destra (sfalsato rispetto all'altro)
     writingDecals(wh.group, [{ ...pic('mural_corridor', 1.2959, -5.96, 3.0, WZ - 18.6, '+x', 4.7, 0), rot: 0, a: 0.94 }]);              // magazzino, parete sinistra
     writingDecals(wh.group, [{ ...pic('mural_demon', 1.1765, 5.94, 3.2, WZ - 12.6, '-x', 4.7, 0), rot: 0, a: 0.94 }]);              // magazzino, parete destra (di fronte al gruppo sopra il letto)
-    writingDecals(hall.group, [{ ...pic('mural_fire', 1.2373, 5.97, 3.0, -86.95, '-x', 4.7, 0), rot: 0, a: 0.94 }]);              // sala della folla, parete destra, accanto ai volti
-    writingDecals(hall.group, [{ ...pic('mural_throne', 1.012, 5.97, 3.1, -62.95, '-x', 4.7, 0), rot: 0, a: 0.94 }, { ...pic('mural_angels', 1.0, -5.97, 2.35, -86.95, '+x', 4.7, 0), rot: 0, a: 0.94 }]);              // sala della folla: il trono con la folla in ginocchio (appena entri, a destra) e gli angeli senza volto (a sinistra, piu' in fondo)
-    writingDecals(hall.group, [{ ...pic('mural_skull', 1.0, -5.97, 2.35, -80.95, '+x', 4.7, 0), rot: 0, a: 0.94 }]);              // sala della folla, parete sinistra, tra occhi e angeli
-    writingDecals(hall.group, [{ ...pic('mural_inferno', 0.9049, 5.97, 3.0, -74.95, '-x', 4.2, 0), rot: 0, a: 0.94 }]);              // sala della folla, parete destra, di fronte agli occhi
-    writingDecals(hall.group, [{ ...pic('mural_ritual', 1.8534, -5.97, 2.6, -68.95, '+x', 4.7, 0), rot: 0, a: 0.94 }]);              // sala della folla, parete sinistra, parete libera: rito con i simboli esoterici di sangue
+    writingDecals(hall.group, [{ ...pic('mural_throne', 1.012, 5.97, 3.1, -62.95, '-x', 4.7, 0), rot: 0, a: 0.94, glow: 0.2 }]);              // sala della folla: un solo murale, vicino all'ingresso (il resto e' troppo buio per vederli)
+    // Torre: due murali ai lati della porta in fondo (gli ultimi che vedi) e tre in alto sui muri lunghi, sopra la stufa. Magazzino: due in alto (sopra scaffali e tubi).
+    writingDecals(tower.group, [{ ...pic('mural_angels', 1.0, -3.85, 3.6, TZ - 17.97, '+z', 3.8, 0), rot: 0, a: 0.94, glow: 0.2 }, { ...pic('mural_skull', 1.0, 3.85, 3.6, TZ - 17.97, '+z', 3.8, 0), rot: 0, a: 0.94, glow: 0.2 },
+      { ...pic('mural_inferno', 0.9049, -6.94, 5.0, TZ - 12.6, '+x', 3.07, 0), rot: 0, a: 0.94, glow: 0.2 }, { ...pic('mural_eyes', 2.368, -6.94, 5.0, TZ - 6.6, '+x', 4.7, 0), rot: 0, a: 0.94, glow: 0.2 }, { ...pic('mural_faces', 1.2526, 6.94, 5.0, TZ - 6.6, '-x', 4.2, 0), rot: 0, a: 0.94, glow: 0.2 }]);
+    writingDecals(wh.group, [{ ...pic('mural_ritual', 1.8534, 5.94, 4.4, WZ - 18.6, '-x', 4.7, 0), rot: 0, a: 0.94, glow: 0.2 }, { ...pic('mural_fire', 1.2373, -5.94, 4.4, WZ - 24.6, '+x', 3.2, 0), rot: 0, a: 0.94, glow: 0.2 }]);
     writingDecals(wh.group, [{ ...pic('mural_angel', 1.808, 5.94, 3.0, WZ - 24.6, '-x', 4.7, 0), rot: 0, a: 0.94 }]);              // magazzino, parete destra
     writingDecals(tower.group, [{ ...pic('mural_cathedral', 1.351, 6.94, 3.2, TZ - 12.6, '-x', 4.7, 0), rot: 0, a: 0.94 }]);       // torre, parete destra
     writingDecals(wh.group, [pic('corridor', 1.369, -5.96, 1.5, WZ - 11.4, '+x', 0.85, 0.02), pic('window', 1.233, -5.96, 1.5, WZ - 12.55, '+x', 0.85, -0.02), pic('saint', 0.789, -5.96, 1.5, WZ - 13.65, '+x', 0.62, 0.02)])
