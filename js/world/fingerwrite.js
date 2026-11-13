@@ -74,7 +74,7 @@ export function createFingerWriter(name, W, H, opts = {}) {
     x += (adv[li]) * lh;
   });
   // tempi: velocita' ~ 4.2 altezze di lettera al secondo, variabile; pause piu' lunghe tra lettere, ogni tanto un'esitazione
-  let t0 = 0.5;
+  let t0 = opts.start ?? 0.5;
   for (const s of strokes) {
     s.t0 = t0; s.dur = Math.max(0.22, s.L / (lh * (3.2 + R() * 1.6)));
     t0 += s.dur + (s.first ? 0.22 + R() * 0.3 + (R() < 0.12 ? 0.55 : 0) : 0.1 + R() * 0.14);

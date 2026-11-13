@@ -18,7 +18,8 @@ export function bloodText(text) {
     if (c === ' ') { x += SPACE; return null; }
     if (c === ',') { const a = REAL["'"][0]; const o = { c, v: null, x, w: a[2] * 1.4, h: a[3], base: 0, rot: 0, dy: 0, sc: 1 }; x += a[2] * 1.4 + 10; return o; }
     let v = null, w, h, base; if (REAL[c]) { const L = REAL[c]; let k = Math.floor(R() * L.length); if (L.length > 1 && prev === c + k) k = (k + 1) % L.length; prev = c + k; v = L[k]; w = v[2]; h = v[3]; base = v[4]; } else { const m = A[c]; w = m[2]; h = m[3]; base = m[5]; }
-    const o = { c, v, x, w, h, base, rot: (R() - 0.5) * 0.07, dy: (R() - 0.5) * 6, sc: 0.96 + R() * 0.08 }; x += w * (v ? 0.8 : 0.86) + (R() - 0.3) * 6; return o; });
+    if (c === 'I') x += 9;   // la I e' sottile: un po' di spazio prima e dopo, cosi' non si perde tra le altre lettere
+    const o = { c, v, x, w, h, base, rot: (R() - 0.5) * 0.07, dy: (R() - 0.5) * 6, sc: 0.96 + R() * 0.08 }; x += w * (v ? 0.8 : 0.86) + (R() - 0.3) * 6 + (c === 'I' ? 12 : 0); return o; });
     return { g: g.filter(Boolean), w: x }; });
   const maxW = Math.max(...pl.map((l) => l.w), 1), cw = Math.ceil(maxW * S + PAD * 2), ch = Math.ceil(TOPPAD * S + pl.length * LH * S + BOT * S);
   const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;

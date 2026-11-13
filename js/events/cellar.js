@@ -31,6 +31,12 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const mw = 1.7, mh = 2.4;
   const mirror = new Reflector(new THREE.PlaneGeometry(mw, mh), { textureWidth: 256, textureHeight: 384, color: new THREE.Color(0xffffff), clipBias: 0.003 });
   mirror.position.copy(MIRROR); mirror.rotation.y = Math.PI / 2; C.group.add(mirror);
+  // nel riflesso lo z-fighting del pavimento (pozzanghere, veli di luce, tombini incassati) fa comparire "quadratini" neri: durante il render dello specchio quegli oggetti sono nascosti
+  { const orig = mirror.onBeforeRender; let flat = null;
+    mirror.onBeforeRender = function (...a) {
+      flat ??= (() => { const L = []; C.group.traverse((o) => { if (o.isMesh && o !== mirror && o.position.y < 0.035 && ((o.geometry.type === 'PlaneGeometry' && o.position.y > 0.001) || (o.material && /manhole/.test(o.material.name || '')))) L.push(o); }); return L; })();
+      const vis = flat.map((o) => o.visible); flat.forEach((o) => (o.visible = false)); orig.apply(this, a); flat.forEach((o, i) => (o.visible = vis[i]));
+    }; }
   const dc = document.createElement('canvas'); dc.width = 256; dc.height = 384; const dg = dc.getContext('2d');
   for (let i = 0; i < 700; i++) { dg.fillStyle = `rgba(18,20,19,${Math.random() * 0.25})`; dg.beginPath(); dg.arc(Math.random() * 256, Math.random() * 384, 0.5 + Math.random() * 2.2, 0, 7); dg.fill(); }
   for (let i = 0; i < 14; i++) { const x = Math.random() * 256, y = Math.random() * 200, g2 = dg.createLinearGradient(0, y, 0, y + 150 + Math.random() * 150); g2.addColorStop(0, 'rgba(15,18,16,.28)'); g2.addColorStop(1, 'rgba(15,18,16,0)'); dg.fillStyle = g2; dg.fillRect(x, y, 1.5 + Math.random() * 3, 330); }
@@ -228,10 +234,10 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
       if (C.b2) { C.b2t += dt; mt = Math.max(mt, 1.0 * Math.min(1, C.b2t / 1.2) * (C.sw ? 1 : 1)); }
       if (C.sw && (C.wr && C.wr.done && C.wr.hold > 4.5)) { mt = 0; if (!C.clean) { C.clean = true; C.farT = 0; } }          // finita la scena: via vapore, solchi e massa. Resta solo la mano.
       F.uM.value += (mt - F.uM.value) * Math.min(1, dt * (mt === 0 ? 1.1 : 3));
-      if (C.b2 && C.b2t > 1.5 && !C.sw) { C.sw = true; C.swt = 0; audio.squeak(1.6); lights.lamp(0, 'flicker', 0.7); }
+      if (C.b2 && C.b2t > 1.0 && !C.sw) { C.sw = true; C.swt = 0; audio.squeak(1.6); lights.lamp(0, 'flicker', 0.7); }
       if (C.sw) { C.swt += dt; F.uW.value = 0; if (C.swt > 0.3 && !C.sw2) { C.sw2 = true; audio.whisper(1.4, 0.2); } }
       // versione personalizzata: invece dei tre solchi, qualcuno scrive il suo nome nel vapore (il tempo avanza solo mentre guardi)
-      if (C.sw && C.swt > 0.8 && !C.wr) { C.wr = createFingerWriter(PROF ? PROF.name : 'TI VEDO', 384, 542, { cx: 0.47, cy: 0.76, onStroke: (s) => { if (s.first) audio.squeak(Math.min(0.42, 0.2 + s.dur * 0.5), MIRROR); } }); F.uMask.value = C.wr.tex; F.uR.value = 0.5; F.uB.value.set(0.47, 0.64); }   // la scritta sta ad altezza d'occhi, sopra l'impronta della mano
+      if (C.sw && C.swt > 0.05 && !C.wr) { C.wr = createFingerWriter(PROF ? PROF.name : 'TI VEDO', 384, 542, { cx: 0.47, cy: 0.76, start: 0.3, onStroke: (s) => { if (s.first) audio.squeak(Math.min(0.42, 0.2 + s.dur * 0.5), MIRROR); } }); F.uMask.value = C.wr.tex; F.uR.value = 0.5; F.uB.value.set(0.47, 0.64); }   // la scritta sta ad altezza d'occhi, sopra l'impronta della mano
       if (C.wr) { const r = C.wr.update(dt, shadowOn); F.uTip.value.set(r.tipU, r.tipV, 0); if (r.done && !C.wName) { C.wName = true; whisperName(); lights.lamp(0, 'flicker', 0.8); instab.push(0.9, 6); } }
     }
     if (C.farT >= 0 && shadowOn) {
