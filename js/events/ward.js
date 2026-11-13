@@ -45,7 +45,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
     hole(-hw + 0.12, z0 - 7.5, Math.PI / 2); hole(hw - 0.12, z0 - 13, -Math.PI / 2);
     await place('door_1', -hw + 0.13, 0, z0 - 7.0, Math.PI / 2, { dark: 0.6 });
     const open = await place('door_1', hw - 0.13, 0, z0 - 12.5, -Math.PI / 2 + 1.1, { dark: 0.6 });
-    await place('Exit_sign', hw - 0.12, 2.1, zFar + 1.6, -Math.PI / 2, { dark: 1 });
+    // (nessun cartello EXIT: restava visibile e luminoso anche dall'obitorio)
     { const lp = await get('../wlamp'); if (lp) for (const [x, , z] of lampPos) { const o = lp.clone(true), b = new THREE.Box3().setFromObject(o), g = new THREE.Group(); const sc = 0.5 / Math.max(b.max.x - b.min.x, b.max.y - b.min.y); o.scale.setScalar(sc); o.rotation.x = Math.PI / 2; o.updateMatrixWorld(true); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.set(-c.x, -b.max.y, -c.z); g.add(o); g.position.set(x, h - 0.02, z); R.group.add(g); } }
     R.chair = await place('wheel_chair', 0.9, 0.43 * 0.68, z0 - 11, 2.6, { dark: 0.7, desat: 0.85, scale: 0.68 });
     { const bd = await get('../hs_bed'); if (bd) { const o = bd.clone(true), b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()), g = new THREE.Group(); o.traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); m.material.color.multiplyScalar(0.55); desat(m.material, 0.6); } }); const sc = 2.0 / Math.max(b.max.x - b.min.x, b.max.z - b.min.z); o.scale.setScalar(sc); b.setFromObject(o); o.position.set(-c.x * sc, -b.min.y, -c.z * sc); g.add(o); g.position.set(-1.2, 0, z0 - 15.2); g.rotation.y = 0.04; R.group.add(g); } }

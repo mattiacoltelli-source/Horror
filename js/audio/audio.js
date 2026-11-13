@@ -348,6 +348,24 @@ export function createAudio() {
       s.connect(lp); lp.connect(bp); bp.connect(g); g.connect(master); g.connect(verbSend); s.start(t); lf.start(t); lf2.start(t);
       return { stop(tc = 1.2) { const n = ctx.currentTime; g.gain.cancelScheduledValues(n); g.gain.setTargetAtTime(0, n, tc); setTimeout(() => { try { s.stop(); lf.stop(); lf2.stop(); } catch (_) {} }, 6000); } };
     },
+    // SOTTOFONDO DELLA SALA DELLA FOLLA: un bordone basso e dissonante (due toni quasi uguali che battono), un velo di rumore scuro e un sibilo acuto lontano;
+    // il livello lo decide chi lo usa (setLevel) e ogni tanto cade da solo nel silenzio per un paio di secondi, cosi' i vuoti pesano.
+    crowdDrone(level = 0.5) {
+      if (!ok) return null; const t = ctx.currentTime, out = ctx.createGain(); out.gain.setValueAtTime(0, t); out.connect(master); out.connect(verbSend);
+      const mk = (type, f, g) => { const o = ctx.createOscillator(), gn = ctx.createGain(); o.type = type; o.frequency.value = f; gn.gain.value = g; o.connect(gn); gn.connect(out); o.start(t); return { o, gn }; };
+      const A = mk('sine', 46, 0.5), B = mk('sine', 48.7, 0.45), C = mk('triangle', 92.4, 0.12), D = mk('sine', 1830, 0.0035), E = mk('sine', 1871, 0.003);
+      const lf = ctx.createOscillator(), lg = ctx.createGain(); lf.frequency.value = 0.09; lg.gain.value = 3; lf.connect(lg); lg.connect(C.o.frequency); lf.start(t);   // il tono medio vacilla piano
+      const ns = ctx.createBufferSource(); ns.buffer = noiseBuf; ns.loop = true; ns.playbackRate.value = 0.4; const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 210; lp.Q.value = 0.8; const ng = ctx.createGain(); ng.gain.value = 0.22;
+      ns.connect(lp); lp.connect(ng); ng.connect(out); ns.start(t);
+      let lv = 0, gap = false, alive = true;
+      const apply = (tc = 1.5) => { const n = ctx.currentTime; out.gain.cancelScheduledValues(n); out.gain.setTargetAtTime(gap ? 0 : lv * level * 0.5, n, tc); };
+      const loop = () => { if (!alive) return; setTimeout(() => { if (!alive) return; gap = true; apply(0.35); setTimeout(() => { gap = false; apply(1.6); loop(); }, 1400 + Math.random() * 1800); }, 5000 + Math.random() * 6000); };
+      loop();
+      return {
+        setLevel(l, tc = 1.5) { lv = l; apply(tc); },
+        stop(tc = 1) { alive = false; const n = ctx.currentTime; out.gain.cancelScheduledValues(n); out.gain.setTargetAtTime(0, n, tc); setTimeout(() => { try { [A, B, C, D, E].forEach((x) => x.o.stop()); lf.stop(); ns.stop(); } catch (_) {} }, tc * 5000 + 500); },
+      };
+    },
     // gocce
     _drip(pan = 0) {
       if (!ok) return; const t = ctx.currentTime;

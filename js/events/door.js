@@ -8,7 +8,7 @@ import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { Z_END, DOOR } from '../world/tunnel.js';
 
 export function createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone }) {
-  const E = { state: 'idle', t: 0, ended: false, loaded: false };
+  const E = { state: 'idle', t: 0, ended: false, loaded: false }; let drone = null;   // sottofondo inquietante e dissonante, a livelli (vedi crowdDrone)
   const grp = new THREE.Group(); grp.position.set(0, 0, Z_END + 0.06); scene.add(grp);
   let left = null, right = null;
 
@@ -60,12 +60,12 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
       }
       case 'void':
         // buio e silenzio: ti aspetti qualcosa
-        if (E.t > 3.2) { ph = 0; go('lit'); lightOn(); say('erano qui tutti, quella notte.', 4800); rgbPulse(1); }
+        if (E.t > 3.2) { ph = 0; go('lit'); lightOn(); say('erano qui tutti, quella notte.', 4800); rgbPulse(1); drone ??= audio.crowdDrone(); drone?.setLevel(0.45, 2.5); }
         break;
       case 'lit': {
         // la sala è illuminata: in fondo, file di sagome ferme che ti fissano
         const P = PHASES[ph];
-        if (E.t > P.hold) { go('dark'); hall?.lightOff(); lights.torchKill(P.dark - 0.4, 0.04); audio.duck(0, 0.05); audio.shuffle(P.dark, 0.55); instab.push(0.9, 4); }
+        if (E.t > P.hold) { go('dark'); drone?.setLevel(1, 0.6); hall?.lightOff(); lights.torchKill(P.dark - 0.4, 0.04); audio.duck(0, 0.05); audio.shuffle(P.dark, 0.55); instab.push(0.9, 4); }
         break;
       }
       case 'dark': {
@@ -73,8 +73,8 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
         // mentre sei al buio si avvicinano (non lo vedi: lo senti)
         if (E.t > P.dark) {
           ph++;
-          if (ph >= PHASES.length) { go('choice'); hall?.lightDim?.(); startBreath(); }
-          else { hall?.setDist(PHASES[ph].d); go('lit'); lightOn(); }
+          if (ph >= PHASES.length) { go('choice'); drone?.setLevel(0.3, 3); hall?.lightDim?.(); startBreath(); }
+          else { hall?.setDist(PHASES[ph].d); go('lit'); drone?.setLevel(0.55 + 0.15 * ph, 1.5); lightOn(); }
         }
         break;
       }
@@ -87,8 +87,8 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
         }
         if (E.t > 1.2 && !E.said) { E.said = true; say(P ? 'non guardare dietro, ' + P.name + '.' : 'non guardare dietro.', 5500); instab.push(1, 10); }
         if (E.t > 5 && !E.torch) { E.torch = true; lights.torchKill(1.2, 0.08); }
-        if (E.t > 1.4 && E.said && player.forward.z > 0.1) { E.turnT = (E.turnT || 0) + dt; if (E.turnT > 0.12) { go('turned'); breath?.stop(); breath = null; audio.duck(0, 0.05); showShade(); } } else E.turnT = 0;
-        if (E.t > 17) { go('ignored'); }
+        if (E.t > 1.4 && E.said && player.forward.z > 0.1) { E.turnT = (E.turnT || 0) + dt; if (E.turnT > 0.12) { go('turned'); drone?.stop(0.5); drone = null; breath?.stop(); breath = null; audio.duck(0, 0.05); showShade(); } } else E.turnT = 0;
+        if (E.t > 17) { go('ignored'); drone?.stop(0.5); drone = null; }
         break;
       }
       case 'turned':
