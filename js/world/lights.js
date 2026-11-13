@@ -35,7 +35,7 @@ export function createLights(scene, camera) {
     // la torcia si spegne per `dur` secondi (poi torna, un po' più debole)
     torchKill(dur, drain = 0.12) { killT = dur; battery = Math.max(0.45, battery - drain); },
     torchStutter(dur = 0.4) { stutterT = dur; },
-    // sfarfallio/spegnimento di una lampada: mode 'off' | 'flicker' | 'on' | 'dim' | 'pulse'
+    // sfarfallio/spegnimento di una lampada: mode 'off' | 'flicker' | 'on' | 'pulse'
     lamp(i, mode, dur = 1) { const L = lamps[i]; if (!L) return; L.mode = mode; L.modeT = dur; L.modeT0 = dur; },
     update(dt, t, playerZ, px = 0) {
       // batteria: cala lentamente (mai sotto 0.45: non si resta al buio per sempre) e dà rari singhiozzi
@@ -58,8 +58,6 @@ export function createLights(scene, camera) {
           L.modeT -= dt;
           k = (Math.sin(L.t * 60) > 0.2 ? 1 : 0.05) * (Math.random() > 0.15 ? 1 : 0);
           if (L.modeT <= 0) L.mode = 'on';
-        } else if (L.mode === 'dim') {
-          k = 0.3 + 0.05 * Math.sin(L.t * 2.3 + L.i * 1.7);   // penombra: lampione acceso ma debole
         } else if (L.mode === 'pulse') {
           // lampadina che respira: onda lenta + tremolio, ogni tanto un calo breve (filamento che cede)
           if (L.dip > 0) { L.dip -= dt; k = 0.12 + Math.random() * 0.1; }

@@ -131,9 +131,9 @@ export function createHall({ scene, mats, lights }) {
   }));
   H.setDist = (d) => { H.dist = d; crowd.position.z = Z_END - d; };
   H.enable = () => { H.active = true; grp.visible = true; H.setDist(H.dist); lights?.setLamps(lampAnchors.map(([x, y, z]) => [x, y - 0.1, z]), 3.4, 0xffc27a); [0, 1, 2].forEach((i) => lights?.lamp(i, 'off')); };
-  H.lightOn = () => { H.target = 1; H.flick = 1.1; [0, 1, 2].forEach((i) => lights?.lamp(i, 'flicker', 0.8 + i * 0.3)); setTimeout(() => { if (H.target === 1) [0, 1, 2].forEach((i) => lights?.lamp(i, 'pulse')); }, 1500); };
-  // i lampioni restano SEMPRE accesi: quando "si spegne la luce" (e i mostri si avvicinano) scendono in penombra, e le sagome si vedono appena
-  H.lightOff = () => { H.target = 0.3; H.flick = 0; [0, 1, 2].forEach((i) => lights?.lamp(i, 'dim')); };
+  H.lightOn = () => { H.target = 1; H.dark = false; H.flick = 1.1; [0, 1, 2].forEach((i) => lights?.lamp(i, 'flicker', 0.8 + i * 0.3)); setTimeout(() => { if (H.target === 1 && !H.dark) [0, 1, 2].forEach((i) => lights?.lamp(i, 'pulse')); }, 1500); };
+  // i lampioni alle spalle dei mostri restano SEMPRE accesi (luce piena, come nella fase "illuminata"); nella fase "buia" si spegne solo la torcia e ogni tanto un lampione sfarfalla o salta per un secondo, con effetti delicati
+  H.lightOff = () => { H.target = 1; H.flick = 0; H.dark = true; H.fxT = 1.2 + Math.random() * 1.2; [0, 1, 2].forEach((i) => lights?.lamp(i, 'pulse')); };
 
   const wp = new THREE.Vector3(), camPos = new THREE.Vector3(); let lampPulseV = 1, time2 = 0;
   const lampPulse = () => lampPulseV;
@@ -142,6 +142,14 @@ export function createHall({ scene, mats, lights }) {
     { const L = lights?.lamps; lampPulseV = L && L.length ? Math.min(1, L.reduce((a, l) => a + (l.level ?? 0), 0) / L.length) : 1; }
     if (!H.active || !grp.visible) return;
     if (H.flick > 0) H.flick -= dt;
+    if (H.dark) {   // effetti delicati sui lampioni durante la fase buia: sfarfallio breve, o un lampione che salta per un attimo e torna
+      H.fxT -= dt;
+      if (H.fxT <= 0) {
+        H.fxT = 1.8 + Math.random() * 2.6; const i = Math.floor(Math.random() * 3), back = () => { if (H.dark) lights?.lamp(i, 'pulse'); };
+        if (Math.random() < 0.35) { lights?.lamp(i, 'off'); setTimeout(() => { if (H.dark) lights?.lamp(i, 'flicker', 0.5); setTimeout(back, 650); }, 800 + Math.random() * 700); }
+        else { lights?.lamp(i, 'flicker', 0.35 + Math.random() * 0.45); setTimeout(back, 800); }
+      }
+    }
     const k = H.target * (H.flick > 0 ? (Math.random() > 0.5 ? 1 : 0.08) : 1);
     H.glow += (k - H.glow) * Math.min(1, dt * (k > H.glow ? 14 : 30));
     const v = H.glow; time2 += dt;
