@@ -21,7 +21,7 @@ export function decorTunnel(group) {
   ]);
   add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -1.27, 2.0, 2.4, -54.4));
   add(group, 'pipes', [...runZ('pipe_thin_200cm_metal', 2.0, -1.33, 1.62, 2.4, -54.4).map((p) => ({ ...p, r: [0, P2, 0] }))]);
-  add(group, 'cables', [...cableRun(1.38, 2.0, -3, -7), ...cableRun(1.38, 2.0, -28, -31.5), { n: 'cable_lightswitch', p: [1.38, 1.3, -33], r: [0, 0, 0] }]);
+  add(group, 'cables', [...cableRun(1.38, 2.0, -3, -7), ...cableRun(1.38, 2.0, -28, -31.5)]);
   add(group, 'manhole', [...manhole(-0.15, -14.5), ...manhole(0.3, -45, 0.7)]);
   sideGate(group, 1.4, -11);
 }

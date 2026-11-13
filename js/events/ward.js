@@ -77,7 +77,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
       R.state = 'beat'; R.bt = 0; lights.lamp(0, 'off'); audio.lightOff?.(); instab.push(0.8, 5);
     }
     if (R.state === 'beat') { R.bt += dt;
-      if (R.bt > 0.6 && !R.hit) { R.hit = true; if (R.chair) { R.chair.position.set(0.5, 0.5, P.z - 2.6); R.chair.rotation.y = 3.4; } }
+      if (R.bt > 0.6 && !R.hit) R.hit = true;   // la sedia a rotelle resta ferma dov'e'
       if (R.bt > 1.2) { R.state = 'after'; lights.lamp(0, 'flicker', 0.9); setTimeout(() => lights.lamp(0, 'pulse'), 1100); audio.lightOn?.(); } }
   };
   return R;

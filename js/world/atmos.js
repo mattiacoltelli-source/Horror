@@ -46,7 +46,7 @@ export function addAtmosphere(group, o) {
   const pm = new THREE.MeshStandardMaterial({ color: 0x3a4148, roughness: 0.06, metalness: 0.9, alphaMap: blobTex(), transparent: true, opacity: 0.85, depthWrite: false, envMapIntensity: 1.4, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
   for (let i = 0; i < (o.puddles ?? 4); i++) {
     const s = 0.9 + r() * 1.6, m = new THREE.Mesh(new THREE.PlaneGeometry(s, s * (0.6 + r() * 0.6)), pm);
-    m.rotation.x = -Math.PI / 2; m.rotation.z = r() * 6.28; m.position.set(o.xl + 1.2 + r() * (o.xr - o.xl - 2.4), 0.012, o.z0 - 2 - r() * (len - 4)); add(m);
+    m.rotation.x = -Math.PI / 2; m.rotation.z = r() * 6.28; m.position.set(o.xl + 1.2 + r() * (o.xr - o.xl - 2.4), 0.012, o.z0 - 2 - r() * (len - 4)); if (o.noPuddleNearEnd && m.position.z < o.z1 + o.noPuddleNearEnd) continue; add(m);   // noPuddleNearEnd: niente pozzanghere nei metri vicino alla porta d'uscita
     // un velo chiaro additivo sopra: finge il riflesso della luce, così non sembra un buco nero
     const gl = new THREE.Mesh(m.geometry, new THREE.MeshBasicMaterial({ color: o.shaft ?? 0x8899aa, alphaMap: blobTex(), transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
     gl.rotation.copy(m.rotation); gl.position.copy(m.position); gl.position.y += 0.002; add(gl);
