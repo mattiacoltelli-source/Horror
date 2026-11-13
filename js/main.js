@@ -183,7 +183,7 @@ async function enter() {
   ] });
   // disegno da bambino (tutte le versioni) in cantina, e foto di Elisa col volto bruciato (solo Elisa) in obitorio: fogli appesi al muro, senza luce propria
   // sagoma di gesso sul pavimento dell'obitorio (una volta sola), con schizzi di sangue: tutte le versioni
-  if (!window.__outline) { window.__outline = true; const t = new THREE.TextureLoader().load('assets/tex/floor_outline.png'); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  if (!window.__outline) { window.__outline = true; const t = new THREE.TextureLoader().load('assets/tex/floor_outline.png?v=2'); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9 / 0.92), new THREE.MeshStandardMaterial({ map: t, transparent: true, roughness: 0.9, metalness: 0, opacity: 0.92, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
     m.rotation.set(-Math.PI / 2, 0, 0.55); m.position.set(-1.7, 0.012, MZ - 4.6); morgue.group.add(m); }
   if (!window.__pics) { window.__pics = true;
