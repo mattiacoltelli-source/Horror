@@ -29,14 +29,15 @@ export function decorTunnel(group) {
 function sideGate(group, wx, z) {
   const g = new THREE.Group(); g.position.set(wx - 0.004, 0, z); g.rotation.y = -Math.PI / 2; group.add(g);   // +z locale = verso l'interno del tunnel
   const black = new THREE.MeshBasicMaterial({ color: 0x000000, fog: false }), stone = new THREE.MeshStandardMaterial({ color: 0x2c2724, roughness: 0.9 });
-  const hole = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 2.35), black); hole.position.set(0, 1.18, 0); g.add(hole);
+  // il varco sta sotto l'inizio della volta (y < 2.1): piu' in alto il muro si curva e la sagoma finirebbe dentro i mattoni
+  const hole = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.9), black); hole.position.set(0, 0.95, 0); g.add(hole);
   const post = (x, w, h, y) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.14), stone); m.position.set(x, y, 0.07); g.add(m); };
-  post(-1.0, 0.16, 2.45, 1.225); post(1.0, 0.16, 2.45, 1.225); post(0, 2.16, 0.16, 2.43);
+  post(-0.82, 0.16, 2.03, 1.015); post(0.82, 0.16, 2.03, 1.015); post(0, 1.8, 0.14, 1.96);
   // un filo di luce lontana nel buio dietro il cancello
   const c = document.createElement('canvas'); c.width = 64; c.height = 128; { const x = c.getContext('2d'), gr = x.createRadialGradient(32, 70, 2, 32, 70, 60); gr.addColorStop(0, 'rgba(255,170,90,.35)'); gr.addColorStop(1, 'rgba(255,170,90,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 128); }
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.9), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, opacity: 0.55, depthWrite: false, fog: false, blending: THREE.AdditiveBlending })); glow.position.set(0.35, 1.0, 0.004); g.add(glow);
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.6), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, opacity: 0.55, depthWrite: false, fog: false, blending: THREE.AdditiveBlending })); glow.position.set(0.3, 0.9, 0.004); g.add(glow);
   // il cancello e' una recinzione a rete (come quella del magazzino), appena davanti al buio
-  add(group, 'fence', fenceZ(wx - 0.12, z + 1.0, z - 1.0));
+  add(group, 'fence', [{ n: 'Plane020', p: [wx - 0.12, 0.925, z], r: [0, P2, 0], s: 0.78 }]);
   // nessuna maniglia ne' chiavistello: e' chiuso, non si capisce nemmeno come aprirlo
 }
 export function decorHall(group, z0) {
