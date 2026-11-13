@@ -8,7 +8,7 @@ const add = async (group, kit, pl) => { try { const m = await kitMesh(kit, pl); 
 const manhole = (x, z, rot = 0) => [{ n: 'water_manhole_cover_frame', p: [x, -0.033, z], r: [0, rot, 0] }, { n: 'water_manhole_cover', p: [x, -0.007, z], r: [0, rot, 0] }]   // incassati: il bordo sporge di ~2 mm;
 // pezzo di recinzione lungo l'asse z (altezza 2.37): n pannelli da 0.93 + paletti
 const fenceZ = (x, z0, z1) => { const out = []; for (let z = z0 - 0.955; z > z1 - 0.5; z -= 1.91) { out.push({ n: 'Plane020', p: [x, 1.19, z], r: [0, P2, 0] }); out.push({ n: 'post', p: [x, 1.26, z + 0.955], r: [0, 0, 0] }); } out.push({ n: 'post', p: [x, 1.26, z0 - 1.91 * Math.ceil((z0 - z1) / 1.91)], r: [0, 0, 0] }); return out; };
-const cableRun = (x, y, z0, z1) => [...runZ('cable_straight_long', 0.61, x, y, z0, Math.max(z1, z0 - 1.9)), { n: 'cable_box_turn', p: [x, y - 0.1, z0 + 0.1], r: [0, 0, 0] }];   // y - 0.1: lo spuntone della scatola (a 0.1 dal suo fondo) si allinea al cavo
+const cableRun = (x, y, z0, z1) => [...runZ('cable_straight_long', 0.61, x, y, z0, Math.max(z1, z0 - 1.9)), { n: 'cable_box_turn', p: [x, y - 0.034, z0 + 0.051], r: [0, 0, 0] }];   // misurato sui vertici reali: lo spuntone della scatola entra di ~1 cm nel capo del cavo, alla stessa altezza
 
 export function decorTunnel(group) {
   stainDecals(group, [{ p: [-1.395, 1.2, -7.5], wall: '+x', w: 2.2, h: 2.6 }, { p: [1.395, 1.4, -19], wall: '-x', w: 2.0, h: 2.8, flip: true }, { p: [-1.395, 1.0, -30], wall: '+x', w: 2.4, h: 2.6, a: 0.8 }, { p: [1.395, 1.2, -45], wall: '-x', w: 2.2, h: 2.6 }]);
