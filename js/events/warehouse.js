@@ -119,7 +119,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
     if (W.state === 'ready' || (W.state === 'walk' && !W.taken)) {   // vicino al cancello: APRI (come le altre porte); anche senza aver preso la pistola
       const ng = Math.abs(P.x) < 2.2 && P.z - gz < 2.6 && P.z - gz > -3;   // APRI compare solo quando sei attaccato al cancello (2,6 m), senza guardare in una direzione precisa
        if (ng !== W.nearGate) {   // il pulsante APRI compare appena ti avvicini, senza ritardo
-         W.nearGate = ng; actBtn.textContent = 'APRI'; actBtn.classList.toggle('hidden', !ng); }
+         W.nearGate = ng; actBtn.textContent = 'APRI'; actBtn.style.bottom = ng ? 'calc(env(safe-area-inset-bottom,0px) + 44%)' : ''; actBtn.classList.toggle('hidden', !ng); }   // sopra PISTOLA/ASCIA: mai coperto (senza :has, per i browser vecchi)
     }
     if (W.state === 'open') { if (gateT === 0) { audio.clatter(); player.box = W.bounds; } gateT += dt; if (leaf) leaf.rotation.y = -Math.min(1.7, gateT * 1.1); doorT += dt; const a = Math.min(1.5, doorT * 0.5); if (L) L.rotation.y = a; if (R) R.rotation.y = -a; }
     // uscita senza stacco: con la porta aperta si vede la torre oltre il varco; attraversata la soglia sei dentro
@@ -133,7 +133,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   W.openGate = () => {
     if (W.state !== 'ready' && !(W.state === 'walk' && !W.taken)) return;
     if (!W.taken) { flags.noGun = true; lights.lamp(2, 'on'); lights.lamp(0, 'off'); lights.lamp(1, 'off'); audio.heavyStep?.(new THREE.Vector3(0, 0, WH.z0 - 6), 0.9); }   // senza pistola: vai oltre, e lei ti aspetta
-    W.state = 'open'; W.nearGate = false; actBtn.classList.add('hidden');
+    W.state = 'open'; W.nearGate = false; actBtn.style.bottom = ''; actBtn.classList.add('hidden');
   };
   W.take = (choice) => {
     if (W.taken || W.state === 'open') return; W.taken = true; W.near = false; actBtn.classList.add('hidden'); pickEl?.classList.add('hidden'); W.leaving = false;
