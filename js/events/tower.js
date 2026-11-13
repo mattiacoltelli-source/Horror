@@ -59,9 +59,13 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   const white = new THREE.Mesh(new THREE.PlaneGeometry(4, 4.2), new THREE.MeshBasicMaterial({ color: new THREE.Color(2, 2, 1.95), toneMapped: false, fog: false, transparent: true, opacity: 0 }));
   white.position.set(0, 2.1, zFar - 0.4); T.group.add(white);
 
-  T.onPreview = () => { if (T.entry) T.entry.visible = false; };   // dal magazzino la soglia e' aperta finche' non entri
+  T.floorGlow = null;
+  T.floorGlow = (() => { const c = document.createElement('canvas'); c.width = 32; c.height = 128; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 128);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(TOWER.w - 1.2, 16), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), color: 0x6f8c80, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.55, depthWrite: false, fog: false })); m.rotation.x = -Math.PI / 2; m.position.set(0, 0.03, TOWER.z0 - 8.5); m.visible = false; return m; })();
+  T.group.add(T.floorGlow);
+  T.onPreview = () => { if (T.entry) T.entry.visible = false; T.floorGlow.visible = true; };   // dal magazzino la soglia e' aperta finche' non entri
   T.enter = (seamless = false) => {
-    T.group.visible = true; T.opened = false; player.box = T.bounds; if (T.entry) T.entry.visible = true; if (seamless) audio.doorBang?.(new THREE.Vector3(0, 1.3, TOWER.z0 + 0.5), 0.8); else { player.pos.set(0.3, 1.62, TOWER.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false; }   // seamless: la porta si chiude alle tue spalle
+    T.floorGlow.visible = false; T.group.visible = true; T.opened = false; player.box = T.bounds; if (T.entry) T.entry.visible = true; if (seamless) audio.doorBang?.(new THREE.Vector3(0, 1.3, TOWER.z0 + 0.5), 0.8); else { player.pos.set(0.3, 1.62, TOWER.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false; }   // seamless: la porta si chiude alle tue spalle
     lights.setLamps([[0, 5.4, TOWER.z0 - 7], [0, 5.4, TOWER.z0 - 13]], 2.4, 0xffd4a0); lights.grade({ fog: 0x0a0503, hemi: [0x6a3e22, 0x120804, 0.42] }); scene.fog.density = 0.04; audio.duck(1, 1.5); instab.set(0.05, 6);
     warm.position.set(stovePos.x + 0.1, 1.0, stovePos.z + 0.2); warm.intensity = 36;
   };
