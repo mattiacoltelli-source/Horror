@@ -116,7 +116,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
       if (stepT <= 0 && steps < STEPS) { stepT = 1.15; const k = steps / STEPS; fw.set(player.forward.x, 0, player.forward.z); const back = tmp.set(P.x, 0, P.z).addScaledVector(fw, -(15 - 10 * k)); audio.heavyStep(back, 0.6 + 0.5 * k); player.addShake(0.08 * k); }
       if (steps > STEPS + 0.2 && W.state === 'taken') { W.state = 'ready'; doorT = 0; lights.lamp(2, 'on'); lights.lamp(0, 'off'); lights.lamp(1, 'off'); }   // il cancello ora si apre con APRI
     }
-    if (W.state === 'ready' || (W.state === 'walk' && !W.taken)) {   // vicino al cancello: APRI (come le altre porte); anche senza aver preso la pistola
+    if (W.state === 'ready' || W.state === 'taken' || (W.state === 'walk' && !W.taken)) {   // vicino al cancello (APRI subito anche mentre i passi si avvicinano: non devi aspettare): APRI (come le altre porte); anche senza aver preso la pistola
       const ng = Math.abs(P.x) < 2.2 && P.z - gz < 2.6 && P.z - gz > -3;   // APRI compare solo quando sei attaccato al cancello (2,6 m), senza guardare in una direzione precisa
        if (ng !== W.nearGate) {   // il pulsante APRI compare appena ti avvicini, senza ritardo
          W.nearGate = ng; actBtn.textContent = 'APRI'; actBtn.style.bottom = ng ? 'calc(env(safe-area-inset-bottom,0px) + 44%)' : ''; actBtn.classList.toggle('hidden', !ng); }   // sopra PISTOLA/ASCIA: mai coperto (senza :has, per i browser vecchi)
@@ -131,7 +131,8 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   const _fv = new THREE.Vector3(), _a = new THREE.Vector3(), _b2 = new THREE.Vector3();
   const pickWeapon = () => { if (!(pistol && axe)) return 'pistol'; _fv.set(player.forward.x, 0, player.forward.z).normalize(); pistol.getWorldPosition(_a); axe.getWorldPosition(_b2); _a.sub(player.pos).setY(0).normalize(); _b2.sub(player.pos).setY(0).normalize(); return _fv.dot(_b2) > _fv.dot(_a) ? 'axe' : 'pistol'; };
   W.openGate = () => {
-    if (W.state !== 'ready' && !(W.state === 'walk' && !W.taken)) return;
+    if (W.state !== 'ready' && W.state !== 'taken' && !(W.state === 'walk' && !W.taken)) return;
+    if (W.state === 'taken') { lights.lamp(2, 'on'); lights.lamp(0, 'off'); lights.lamp(1, 'off'); }   // aperto prima della fine dei passi: la luce del varco si accende subito
     if (!W.taken) { flags.noGun = true; lights.lamp(2, 'on'); lights.lamp(0, 'off'); lights.lamp(1, 'off'); audio.heavyStep?.(new THREE.Vector3(0, 0, WH.z0 - 6), 0.9); }   // senza pistola: vai oltre, e lei ti aspetta
     W.state = 'open'; W.nearGate = false; actBtn.style.bottom = ''; actBtn.classList.add('hidden');
   };
@@ -141,7 +142,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
     sorella.ambush(); flags.weapon = pick; if (pistol) pistol.visible = false; if (ammo) ammo.visible = false; if (axe) axe.visible = false; if (pick === 'axe') combat.giveAxe(); else combat.give(); audio.clatter(); instab.set(0.9, 12);
     // la luce se ne va; ti accorgi che non sei solo
     lights.lamp(0, 'off'); lights.lamp(1, 'off'); lights.lamp(2, 'flicker', 2.5); audio.duck(0.05, 0.4); steps = 0; stepT = 2.0; W.state = 'taken';
-    setTimeout(() => lights.lamp(2, 'off'), 2500);
+    setTimeout(() => { if (W.state === 'taken') lights.lamp(2, 'off'); }, 2500);
   };
   return W;
 }
