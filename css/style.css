@@ -25,6 +25,7 @@ button:disabled{opacity:.35}
 #endtext{white-space:pre-line;line-height:1.8}
 #act{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 30%);transform:translateX(-50%);z-index:5;background:rgba(0,0,0,.35);padding:14px 30px;transition:opacity .6s}
 #act.hidden{opacity:0;pointer-events:none}
+body:has(#pick:not(.hidden)) #act{bottom:calc(env(safe-area-inset-bottom,0px) + 44%)}   /* se ci sono PISTOLA/ASCIA, APRI sta sopra: mai sovrapposti */
 #act:not(.hidden),#pick:not(.hidden){transition:none}   /* appare subito (scompare con dissolvenza) */
 #pick{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 30%);transform:translateX(-50%);z-index:5;display:flex;gap:14px;transition:opacity .6s}
 #pick button{background:rgba(0,0,0,.45);padding:16px 22px;min-width:132px;border-color:rgba(210,214,208,.5);color:#e4e7e1}
