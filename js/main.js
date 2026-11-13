@@ -200,7 +200,7 @@ async function enter() {
   // altezza (m) delle scritte al volo in ogni punto: le frasi nuove (la larghezza segue il testo ed e' comunque limitata allo spazio libero, vedi fit)
   const HGT = { t1: 1.2, t3: 1.3, c2: 1.8, w4: 1.5, o: 1.15, h: 0.9, m: 1.5 };   // altezza massima della scritta (lettere come quelle di Yana: ~35% piu' grandi di prima), larghezza = testo, limitata allo spazio libero
   // versione standard: stesse scritte, senza nome (generiche); le altre: con il nome
-  const GT = P ? { t1: GN + ',\nNON FERMARTI', t3: 'NON È LA TUA\nFACCIA, ' + GN, c2: GN + ',\nGIRATI', w4: 'NON SEI ' + (GF ? 'SOLA' : 'SOLO') + ',\n' + GN, o: GN + ',\nQUI TI HANNO ' + (GF ? 'LEGATA' : 'LEGATO'), h: 'TI STAVANO\nASPETTANDO, ' + GN, m: 'NON C\'È USCITA,\n' + GN }
+  const GT = P ? { t1: GN + ',\nNON FERMARTI', t3: 'NON È LA TUA\nFACCIA, ' + GN, c2: GN + ',\nGIRATI', w4: 'NON SEI ' + (GF ? 'SOLA' : 'SOLO') + ',\n' + GN, o: GN + ',\nQUI TI HANNO ' + (GF ? 'LEGATA' : 'LEGATO'), h: 'TI STAVANO\nASPETTANDO, ' + GN, m: 'NON C\'È VIA\nD\'USCITA, ' + GN }
     : { t1: 'NON\nFERMARTI', t3: 'NON È LA TUA\nFACCIA', c2: 'DIETRO\nDI TE', w4: 'NON SEI\nSOLO', o: 'QUI TI HANNO\nLEGATO', h: 'TI STAVANO\nASPETTANDO', m: 'NON C\'È\nUSCITA' };
   const WR = WRI || Object.fromEntries(Object.entries(GT).map(([k, t]) => [k, [t, 0, HGT[k] * (P ? 1.35 : 1) * bloodText(t).aspect]]));   // chiunque altro (e la versione standard): stesse posizioni, frasi scritte al volo con il font di sangue (js/world/bloodfont.js)
   const spec = (k) => WRI ? { img: 'assets/tex/wr_' + WR[k][0] + '.png', aspect: WR[k][1] } : { text: WR[k][0], aspect: bloodText(WR[k][0]).aspect };
