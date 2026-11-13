@@ -135,6 +135,8 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
 
   // porta d'uscita in fondo
   const exitDoor = new THREE.Group(); exitDoor.position.set(0, 0, CELLAR.z0 - CELLAR.l + 0.15); C.group.add(exitDoor);
+  // soglia: copre i ~25 cm tra il pavimento di questa stanza e quello della successiva (altrimenti si vede il vuoto)
+  { const sl = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.02, 0.7), new THREE.MeshStandardMaterial({ color: 0x2c2a28, roughness: 0.95, metalness: 0 })); sl.position.set(0, 0.0, CELLAR.z0 - CELLAR.l - 0.05); C.group.add(sl); }
   let exL = null, exR = null, exCap = null, exT = 0;
   loader.load('assets/models/door.glb', (g) => { const m = g.scene; exL = m.getObjectByName('large_castle_door_left'); exR = m.getObjectByName('large_castle_door_right'); exL?.rotation.set(0, 0, 0); exR?.rotation.set(0, 0, 0); m.rotation.y = Math.PI; exitDoor.add(m); });
   { // l'oltre-porta è buio: sagoma ad arco nera davanti al muro, dietro i battenti (si vede solo oscurità, mai il muro)

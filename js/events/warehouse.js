@@ -52,6 +52,8 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   // lampade a muro industriali lungo le pareti
   [[-5.85, -8, Math.PI / 2], [5.85, -18, -Math.PI / 2], [-5.85, -24, Math.PI / 2], [5.85, -31, -Math.PI / 2]].forEach(([x, dz, ry]) => prop('assets/models/wlamp.glb', 0.43, x, 2.7, WH.z0 + dz, ry));
   // porta d'uscita
+  // soglia: copre i ~25 cm tra il pavimento di questa stanza e quello della successiva (altrimenti si vede il vuoto)
+  { const sl = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.02, 0.7), new THREE.MeshStandardMaterial({ color: 0x2c2a28, roughness: 0.95, metalness: 0 })); sl.position.set(0, 0.0, zFar - 0.05); W.group.add(sl); }
   const door = new THREE.Group(); door.position.set(0, 0, zFar + 0.15); W.group.add(door); let L = null, R = null;
   loader.load('assets/models/door.glb', (g) => { const m = g.scene; L = m.getObjectByName('large_castle_door_left'); R = m.getObjectByName('large_castle_door_right'); L?.rotation.set(0, 0, 0); R?.rotation.set(0, 0, 0); m.rotation.y = Math.PI; door.add(m); });
   { // l'oltre-porta è buio: sagoma ad arco nera davanti al muro, dietro i battenti (si vede solo oscurità, mai il muro)
