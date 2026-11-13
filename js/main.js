@@ -22,6 +22,7 @@ import { createDust } from './world/dust.js';
 import { decorTunnel } from './world/decor.js';
 import { createWarehouse } from './events/warehouse.js';
 import { createMorgue } from './events/morgue.js';
+import { createWard } from './events/ward.js';
 import { createAmbient } from './events/ambient.js';
 import { createNotes } from './events/notes.js';
 import { writingDecals } from './world/blood.js';
@@ -119,7 +120,7 @@ try {
   nx.putImageData(im, 0, 0); $('grain').style.backgroundImage = `url(${nc.toDataURL('image/png')})`;
 } catch (_) {}
 // ---------- flusso ----------
-let dawn = null, doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null, wh = null, morgue = null, ambient = null, notes = null, combat = null;
+let dawn = null, doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null, wh = null, morgue = null, ward = null, ambient = null, notes = null, combat = null;
 const flags = { turned: false, mirror: false, door: null, notes: 0 };
 // CHECKPOINT: a ogni stanza si salva dove sei e le scelte fatte. Dalla schermata iniziale puoi ripartire da lì.
 const CK = 'ng_ckpt', CK_ST = { cellar: 'cantina', morgue: 'obitorio', warehouse: 'magazzino', tower: 'torre' }, CK_NAME = { cellar: 'dalla cantina', morgue: "dall'obitorio", warehouse: 'dal magazzino', tower: 'dalla torre' };
@@ -153,8 +154,9 @@ async function enter() {
   scare ??= createScare({ scene, camera, player, audio, lights, instab, finish: (m, f) => (dawn ? dawn.start(m) : finish(m, f)) });
   hall ??= createHall({ scene, mats, lights });
   dawn ??= createDawn({ scene, camera, player, audio, lights, instab, say, finish, onStart: () => combat?.hideAll(), hall });
-  story ??= createStory({ scene, camera, controls, player, audio, hall, getCellar: () => cellar, getTower: () => tower, getWh: () => wh, getMorgue: () => morgue, say, lights, instab, onRoom: (name) => saveCkpt(name) });
+  story ??= createStory({ scene, camera, controls, player, audio, hall, getCellar: () => cellar, getTower: () => tower, getWh: () => wh, getMorgue: () => morgue, getWard: () => ward, say, lights, instab, onRoom: (name) => saveCkpt(name) });
   combat ??= createCombat({ scene, camera, player, audio, lights, instab, say, flash, scare, ui: { aimAll: (b) => { controls.aimAll = b; if (b) { controls.move.x = controls.move.y = 0; $('stick').style.opacity = 0; } }, label: (t) => ($('fire').textContent = t), cool: (b) => $('fire').classList.toggle('cool', b), show: (b) => { $('fire').classList.toggle('hidden', !b); $('dot').classList.toggle('hidden', !b); } } });
+  ward ??= createWard({ scene, mats, player, camera, audio, lights, instab, say });
   morgue ??= createMorgue({ scene, mats, player, camera, audio, lights, instab, say, hall, story, flags, actBtn: $('act') });
   ambient ??= createAmbient({ player, audio, story, combat });
   wh ??= createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, flags, actBtn: $('act') });
@@ -237,6 +239,7 @@ async function enter() {
   { const ck = restoreCk ? loadCkpt() : null, st = ck ? CK_ST[ck.room] : q.get('start'); flags.turned = ck ? ck.turned : q.get('turned') === '1'; flags.mirror = q.get('mirror') === '1'; flags.noGun = ck ? ck.noGun : q.get('nogun') === '1'; flags.weapon = ck ? ck.weapon : (q.get('weapon') === 'axe' ? 'axe' : null); flags.door = ck ? ck.door : (q.get('door') === 'red' ? 'red' : q.get('door') === 'breath' ? 'breath' : null);
     if (ck) { ck.notes.forEach((i) => notes.found.add(i)); flags.notes = notes.found.size; }
     if (st === 'epilogo') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; dawn.start(q.get('turned') === '1' ? 'ti sei girato.\nlei non se n\'è mai andata.\nl\'incendio l\'hai acceso tu.' : 'non ti sei girato.\nera già davanti a te.\nnon volevi ricordare.'); }
+    if (st === 'reparto') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; story.goto('ward'); }
     if (st === 'cantina' || st === 'torre' || st === 'magazzino' || st === 'obitorio') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; if (st === 'torre' && flags.weapon === 'axe') combat.giveAxe(); story.goto(st === 'cantina' ? 'cellar' : st === 'obitorio' ? 'morgue' : st === 'magazzino' ? 'warehouse' : 'tower'); if (st === 'cantina' && q.get('specchio')) setTimeout(() => { player.pos.set(-1.3, 1.62, -210); player.yaw = Math.PI / 2; player.pitch = 0.02; }, 4500); } }   // ?start=cantina&specchio=1: direttamente davanti allo specchio
 
   controls.enabled = true; started = true; state = 'play';
@@ -282,7 +285,7 @@ function tick(dt) {
   dawn?.update(dt);
   cellar?.update(dt);
   tower?.update(dt, time);
-  wh?.update(dt); morgue?.update(dt); ambient?.update(dt); notes?.update(dt); rats.update(dt);
+  wh?.update(dt); morgue?.update(dt); ward?.update(dt); ambient?.update(dt); notes?.update(dt); rats.update(dt);
   combat?.update(dt, time);
   time += dt;
   player.update(dt, time);
@@ -313,7 +316,7 @@ requestAnimationFrame((n) => { last = n; frame(n); });
 
 // debug/test: ?debug=1 espone il gioco e permette di saltare avanti
 if (q.has('debug')) {
-  window.__g = { rats, say, get notes() { return notes; }, get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
+  window.__g = { rats, say, get notes() { return notes; }, get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get ward() { return ward; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
     sim(sec, dt = 0.05) { for (let t = 0; t < sec; t += dt) tick(dt); },
     tp(z, yaw = 0) { player.pos.set(0.1, 1.62, z); player.yaw = yaw; player.pitch = 0; } };
 }
