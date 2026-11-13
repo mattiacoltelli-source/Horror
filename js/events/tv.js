@@ -28,7 +28,7 @@ export function createTv({ camera, audio }) {
     cx.putImageData(img, 0, 0); tex.needsUpdate = true;
   };
   // g: gruppo dell'oggetto (centrato su x,z con la base a terra, davanti = +z)
-  T.attach = (g, { sw = 0.285, sh = 0.292, x = -0.066, y = 0.241, z = 0.1825 } = {}) => {
+  T.attach = (g, { sw = 0.315, sh = 0.24, x = 0.006, y = 0.266, z = 0.1825 } = {}) => {
     T.g = g;
     T.plane = new THREE.Mesh(new THREE.PlaneGeometry(sw, sh), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false, fog: true })); T.plane.position.set(x, y, z); T.plane.visible = false; g.add(T.plane);
     const soft = (map, size, pos, rotX) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(size[0], size[1]), new THREE.MeshBasicMaterial({ map, color: 0x8fa8d8, blending: THREE.AdditiveBlending, transparent: true, opacity: 0, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 })); m.position.set(...pos); if (rotX) m.rotation.x = rotX; m.visible = false; g.add(m); return m; };

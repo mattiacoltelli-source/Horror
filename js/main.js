@@ -185,7 +185,7 @@ async function enter() {
   // Letto d'ospedale con le sue texture, nel magazzino contro il muro destro
   if (!window.__bed) { window.__bed = true; gl.load('assets/models/hs_bed.glb', (g) => { const o = g.scene, b = new THREE.Box3().setFromObject(o), sz = b.getSize(new THREE.Vector3()), long = Math.max(sz.x, sz.z), k = 2.0 / long; o.scale.setScalar(k); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x, b.min.y, c.z));
       o.traverse((m) => { if (m.isMesh) { m.material.color?.multiplyScalar(0.42).lerp(new THREE.Color(0.3, 0.22, 0.17), 0.15); m.material.roughness = Math.max(0.6, m.material.roughness ?? 0.7); } });
-      const h = new THREE.Group(); h.add(o); h.position.set(5.3, 0, WZ - 5.6); h.rotation.y = (sz.x > sz.z ? Math.PI / 2 : 0) - 0.06; wh.group.add(h); window.__bedObj = h; }); }
+      const h = new THREE.Group(); h.add(o); h.position.set(-5.3, 0, WZ - 12.6); h.rotation.y = (sz.x > sz.z ? Math.PI / 2 : 0) + 0.03; wh.group.add(h); window.__bedObj = h; }); }
   if (!window.__pics) { window.__pics = true;
     writingDecals(cellar.group, [{ img: 'assets/tex/pic_drawing.jpg', aspect: 1.004, p: [3.96, 1.5, CZ - 9.7], wall: '-x', w: 0.9, rot: 0.04, a: 1, plain: true }]);
     if (PKEY === 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_elisa.jpg', aspect: 0.545, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
