@@ -202,7 +202,7 @@ async function enter() {
   // versione standard: stesse scritte, senza nome (generiche); le altre: con il nome
   const GT = P ? { t1: GN + ',\nNON FERMARTI', t3: 'NON È LA TUA\nFACCIA, ' + GN, c2: GN + ',\nGIRATI', w4: 'NON SEI ' + (GF ? 'SOLA' : 'SOLO') + ',\n' + GN, o: GN + ',\nQUI TI HANNO ' + (GF ? 'LEGATA' : 'LEGATO'), h: 'TI STAVANO\nASPETTANDO, ' + GN, m: 'NON C\'È USCITA,\n' + GN }
     : { t1: 'NON\nFERMARTI', t3: 'NON È LA TUA\nFACCIA', c2: 'DIETRO\nDI TE', w4: 'NON SEI\nSOLO', o: 'QUI TI HANNO\nLEGATO', h: 'TI STAVANO\nASPETTANDO', m: 'NON C\'È\nUSCITA' };
-  const WR = WRI || Object.fromEntries(Object.entries(GT).map(([k, t]) => [k, [t, 0, HGT[k] * bloodText(t).aspect]]));   // chiunque altro (e la versione standard): stesse posizioni, frasi scritte al volo con il font di sangue (js/world/bloodfont.js)
+  const WR = WRI || Object.fromEntries(Object.entries(GT).map(([k, t]) => [k, [t, 0, HGT[k] * (P ? 1.35 : 1) * bloodText(t).aspect]]));   // chiunque altro (e la versione standard): stesse posizioni, frasi scritte al volo con il font di sangue (js/world/bloodfont.js)
   const spec = (k) => WRI ? { img: 'assets/tex/wr_' + WR[k][0] + '.png', aspect: WR[k][1] } : { text: WR[k][0], aspect: bloodText(WR[k][0]).aspect };
   if (WR && !window.__writ) { window.__writ = true;
     // CRITERIO: ogni scritta sta al CENTRO dello spazio libero tra due elementi fissi (costoloni del tunnel, pilastri della cantina) e la sua larghezza e' limitata allo spazio, cosi' niente la taglia
