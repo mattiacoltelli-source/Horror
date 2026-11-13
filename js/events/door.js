@@ -74,7 +74,7 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
         if (E.t > P.dark) {
           ph++;
           if (ph >= PHASES.length) { go('choice'); drone?.setLevel(0.3, 3); hall?.lightDim?.(); startBreath(); }
-          else { hall?.setDist(PHASES[ph].d); go('lit'); drone?.setLevel(0.55 + 0.15 * ph, 1.5); lightOn(); }
+          else { hall?.setDist(PHASES[ph].d); go('lit'); drone?.setLevel(0.55 + 0.15 * ph, 1.5); lightOn(); bells(); }
         }
         break;
       }
@@ -110,9 +110,9 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
   function lightOn() { hall?.lightOn(); audio.lightOn(); instab.set(0.3 + ph * 0.25, 8); }
   let shade = null;
   function showShade() { if (!shade) { shade = hall.silhouette(3); scene.add(shade); } const f = camera.position; shade.position.set(camera.position.x - 0.35, 0, Z_END - 0.45); shade.rotation.y = Math.PI - 0.15; shade.visible = true; }
-  // rintocco di campana lontana: rado (una volta ogni 22-45 s), a volte due colpi ravvicinati, mai ritmico; finisce con la sala
+  // rintocco di campana lontana, sempre pianino: uno ogni volta che la luce torna e i mostri riappaiono (3 volte nella sala)
   let bellT = null;
-  function bells(first = true) { clearTimeout(bellT); bellT = setTimeout(() => { if (!drone) return; const lv = 0.32 + Math.random() * 0.2; audio.bell(lv); if (Math.random() < 0.3) setTimeout(() => drone && audio.bell(lv * 0.8), 4200 + Math.random() * 1500); bells(false); }, first ? 1100 : 22000 + Math.random() * 23000); }   // il primo rintocco appena si vedono i mostri
+  function bells() { clearTimeout(bellT); bellT = setTimeout(() => { if (drone && E.state === 'lit') audio.bell(0.36); }, 1100); }
   function startBreath() { E.torch = false; E.said = false; E.k = false; E.fl = false; E.turnT = 0; breath = audio.breath(); breath?.setPos(0, 1.3, Z_END - 3); breath?.setLevel(0.5, 1.2); }
   E.getPh = () => ph;
   return E;
