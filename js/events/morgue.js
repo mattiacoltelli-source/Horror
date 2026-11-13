@@ -49,6 +49,7 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
   const lampPos = [[0, 2.8, chairZ]];   // una sola lampada, sopra la sedia: gli angoli restano bui
   load('assets/models/hlamp.glb').then((o) => { if (!o) return; for (const [x, , z] of lampPos) { const c = o.clone(true); c.position.set(x, h, z); M.group.add(c); } });
   addAtmosphere(M.group, { xl: -w / 2, xr: w / 2, z0, z1: zFar, h, seed: 11, lamps: lampPos, shaft: 0xcfe8dc, shaftOpacity: 0.09, stains: 6, puddles: 4, wallInset: 0.3, stainColor: 0x070a06 });
+  M.puddles = M.group.children.filter((c) => c.isMesh && c.geometry.type === 'PlaneGeometry' && c.position.y > 0.005 && c.position.y < 0.02 && c.material && (c.material.metalness > 0.8 || c.material.blending === THREE.AdditiveBlending));   // pozzanghere: visibili solo a lampada accesa (al buio sembrano macchie chiare innaturali)
   M.cones = M.group.children.filter((c) => c.isMesh && c.geometry.type === 'CylinderGeometry' && c.material.isShaderMaterial);   // i fasci di luce sotto la lampada: spenti finche' non entri dal reparto
   // DUE PORTE in fondo: a sinistra filtra una luce rossa, a destra si sente un respiro. Quella che scegli cambia il magazzino (flags.door).
   const doors = []; M.doors = doors;
@@ -82,7 +83,7 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
   M.enter = (seamless = false) => {
     M.trig = chairZ + 3.5 + Math.random() * 2; M.variant = flags.turned ? 'near' : (Math.random() < 0.5 ? 'far' : 'breath');   // l'evento cambia a ogni partita e in base a cosa hai scelto
     M.group.visible = true; M.state = 'walk'; M.t = 0; M.leaving = false; prints.visible = false; M.fall = null; M.dropped = false; M.near = null; M.br = 0; doors.forEach((d) => { d.open = 0; d.target = 0; d.set(0); });
-    M.cones.forEach((c) => (c.visible = true));
+    M.cones.forEach((c) => (c.visible = true)); M.puddles.forEach((c) => (c.visible = true));
     if (M.back) M.back.visible = !seamless; if (M.entry) M.entry.visible = !seamless;   // dal reparto la soglia e' aperta: niente tappo nero
     if (!seamless) { player.box = M.bounds; player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false; }   // arrivando dal reparto non si sposta il giocatore
     lights.setLamps(lampPos, 1.9, 0xb8e8c8); lights.grade({ fog: 0x030a06, hemi: [0x2a5a40, 0x08100a, 0.42] }); scene.fog.density = 0.042; audio.duck(1, 1.5); instab.set(0.1, 6);
@@ -101,9 +102,9 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
       M.state = 'beat'; M.bt = 0; lights.lamp(0, 'flicker', 1.1); audio.lightOn?.(); instab.push(0.6, 5);
       if (M.variant === 'breath') audio.breath?.(); else audio.whisper?.(1.6, 0.1);
       if (M.variant === 'near') shade.position.set(-1.5, 0, chairZ - 3.2); else shade.position.set(0.4, 0, zFar + 2.2);   // se ti sei girato nella sala della folla, ti sta vicino; altrimenti in fondo o solo il respiro
-      shade.rotation.y = 0; shade.visible = M.variant !== 'breath';
+      shade.rotation.y = 0; shade.visible = false;   // niente sagoma d'ombra in obitorio (stanza troppo piccola e illuminata): resta solo il suono
     }
-    if (M.state === 'beat') { M.bt += dt; shade.visible = M.variant !== 'breath' && M.bt < (M.variant === 'near' ? 1.25 : 0.95) && Math.sin(M.bt * 40) > -0.3; if (M.bt > 0.5) prints.visible = true;   // nel buio tra un guizzo e l'altro ci sono le impronte
+    if (M.state === 'beat') { M.bt += dt; shade.visible = false; if (M.bt > 0.5) prints.visible = true;   // nel buio tra un guizzo e l'altro ci sono le impronte
       if (M.bt > 1.3) { M.state = 'after'; shade.visible = false; } }
     chairMove(dt, M.state === 'after');
     glowRed.update(dt);
