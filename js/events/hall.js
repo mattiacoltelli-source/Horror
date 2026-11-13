@@ -131,8 +131,9 @@ export function createHall({ scene, mats, lights }) {
   }));
   H.setDist = (d) => { H.dist = d; crowd.position.z = Z_END - d; };
   H.enable = () => { H.active = true; grp.visible = true; H.setDist(H.dist); lights?.setLamps(lampAnchors.map(([x, y, z]) => [x, y - 0.1, z]), 3.4, 0xffc27a); [0, 1, 2].forEach((i) => lights?.lamp(i, 'off')); };
-  H.lightOn = () => { H.target = 1; H.flick = 1.1; [0, 1, 2].forEach((i) => lights?.lamp(i, 'flicker', 0.8 + i * 0.3)); setTimeout(() => { if (H.target) [0, 1, 2].forEach((i) => lights?.lamp(i, 'pulse')); }, 1500); };
-  H.lightOff = () => { H.target = 0; H.flick = 0; H.glow = 0; [0, 1, 2].forEach((i) => lights?.lamp(i, 'off')); };
+  H.lightOn = () => { H.target = 1; H.flick = 1.1; [0, 1, 2].forEach((i) => lights?.lamp(i, 'flicker', 0.8 + i * 0.3)); setTimeout(() => { if (H.target === 1) [0, 1, 2].forEach((i) => lights?.lamp(i, 'pulse')); }, 1500); };
+  // i lampioni restano SEMPRE accesi: quando "si spegne la luce" (e i mostri si avvicinano) scendono in penombra, e le sagome si vedono appena
+  H.lightOff = () => { H.target = 0.3; H.flick = 0; [0, 1, 2].forEach((i) => lights?.lamp(i, 'dim')); };
 
   const wp = new THREE.Vector3(), camPos = new THREE.Vector3(); let lampPulseV = 1, time2 = 0;
   const lampPulse = () => lampPulseV;
