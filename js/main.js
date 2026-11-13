@@ -187,7 +187,8 @@ async function enter() {
     if (PKEY === 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_elisa.jpg', aspect: 0.545, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
     if (PKEY !== 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_yana.jpg', aspect: 0.741, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.6, rot: -0.03, a: 1, plain: true }]); }
   // SCRITTE DI SANGUE per le versioni personalizzate (frasi con il suo nome; per Yana anche in ucraino), grandi sui muri
-  const WRI = { yana: { t1: ['yana_1', 5.09, 4.4], t3: ['yana_3', 4.34, 4.2], c2: ['yana_2', 2.42, 3.6], w4: ['yana_4', 4.26, 5.4], o: ['yana_o', 7.05, 4.2], h: ['yana_h', 3.87, 2.65], m: ['yana_m', 6.67, 4.0] }, elisa: { t1: ['elisa_1', 4.89, 4.4], t3: ['elisa_3', 3.89, 4.0], c2: ['elisa_2', 2.63, 3.6], w4: ['elisa_4', 4.78, 5.4], o: ['elisa_o', 6.88, 4.2], h: ['elisa_h', 4.15, 2.65], m: ['elisa_m', 6.83, 4.0] } }[PKEY];
+  const WRI = { yana: { t1: ['yana_1', 5.09, 4.4], t3: ['yana_3', 4.34, 4.2], c2: ['yana_2', 2.42, 3.6], w4: ['yana_4', 4.26, 5.4], o: ['yana_o', 7.05, 4.2], h: ['yana_h', 3.87, 2.65], m: ['yana_m', 6.67, 4.0] }, elisa: { t1: ['elisa_1', 4.89, 4.4], t3: ['elisa_3', 3.89, 4.0], c2: ['elisa_2', 2.63, 3.6], w4: ['elisa_4', 4.78, 5.4], o: ['elisa_o', 6.88, 4.2], h: ['elisa_h', 4.15, 2.65], m: ['elisa_m', 6.83, 4.0] } }[PKEY]
+    || (P ? null : { t1: ['std_t1', 3.385, 3.1], t3: ['std_t3', 2.872, 3.3], c2: ['std_c2', 1.398, 2.4], w4: ['std_w4', 3.293, 5.0], o: ['std_o', 3.86, 4.6], h: ['std_h', 1.877, 2.65], m: ['std_m', 2.174, 3.7] });   // versione standard: immagini di sangue (Gemini), senza nome
   // chiunque altro: stesse posizioni, frasi scritte al volo con il font di sangue (js/world/bloodfont.js); [testo, _, larghezza massima]
   const GN = P ? P.name.toUpperCase() : '', GF = P?.f !== false;
   // altezza (m) delle scritte al volo in ogni punto: le frasi nuove (la larghezza segue il testo ed e' comunque limitata allo spazio libero, vedi fit)
@@ -204,7 +205,7 @@ async function enter() {
     writingDecals(scene, [{ ...spec('t1'), p: [-1.38, 1.0, t1.z], wall: '+x', w: t1.w }, { ...spec('t3'), p: [-1.38, 1.0, t3.z], wall: '+x', w: t3.w }]);   // sotto il tubo sottile (y 1.62)
     writingDecals(cellar.group, [{ ...spec('c2'), p: [-3.96, 1.7, c2.z], wall: '+x', w: c2.w }]);
     // obitorio: muro sinistro (parte verde, sopra le piastrelle), al centro della sala
-    writingDecals(morgue.group, [{ ...spec('o'), p: [-4.22, 2.1, MZ - 6.6], wall: '+x', w: WRI ? 6.0 : Math.min(WR.o[2], 6.0) }]);
+    writingDecals(morgue.group, [{ ...spec('o'), p: [-4.22, 2.1, MZ - 6.6], wall: '+x', w: (PKEY === 'elisa' || PKEY === 'yana') ? 6.0 : Math.min(WR.o[2], 6.0) }]);
     // sala dei mostri: sui due muri laterali, tra la porta chiusa e il primo pilastro (e' li' che guardi mentre ti giri); stesso centro, larghezza limitata allo spazio
     { const hz = Z_END - 0.35, hs = fit(hz, hz - 3.15, 'h', 0, WR.h[2] + 1); writingDecals(hall.group, [{ ...spec('h'), p: [-5.99, 1.7, hs.z], wall: '+x', w: hs.w }, { ...spec('h'), p: [5.99, 1.7, hs.z], wall: '-x', w: hs.w }]); }
     // magazzino: muro sinistro, tra due pilastri (sotto la lampada a muro, lontano dagli scaffali)
