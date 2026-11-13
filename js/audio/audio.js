@@ -348,6 +348,21 @@ export function createAudio() {
       s.connect(lp); lp.connect(bp); bp.connect(g); g.connect(master); g.connect(verbSend); s.start(t); lf.start(t); lf2.start(t);
       return { stop(tc = 1.2) { const n = ctx.currentTime; g.gain.cancelScheduledValues(n); g.gain.setTargetAtTime(0, n, tc); setTimeout(() => { try { s.stop(); lf.stop(); lf2.stop(); } catch (_) {} }, 6000); } };
     },
+    // CAMPANA LONTANA: i parziali di una campana vera (rapporti ~ 0,5 · 1 · 1,2 · 1,5 · 2 · 2,5 · 3 · 4), ognuno con la sua durata (i bassi durano, gli acuti svaniscono subito),
+    // ogni parziale doppio e appena scordato (il "battito" tipico del bronzo), colpo iniziale smorzato. Filtrata e con molto riverbero: sembra fuori, lontano, non nella stanza.
+    bell(level = 0.5, base = 233) {
+      if (!ok) return; const t = ctx.currentTime + 0.02, out = ctx.createGain(); out.gain.value = 0.16 * level;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1500; lp.Q.value = 0.4; const pn = ctx.createStereoPanner(); pn.pan.value = (Math.random() - 0.5) * 1.2;
+      out.connect(lp); lp.connect(pn); pn.connect(master); const vs = ctx.createGain(); vs.gain.value = 1.9; lp.connect(vs); vs.connect(verbSend);
+      const P = [[0.5, 1.0, 9], [1, 0.9, 7.5], [1.2, 0.55, 5.5], [1.5, 0.45, 4.2], [2, 0.5, 3.4], [2.5, 0.22, 2.2], [3, 0.18, 1.7], [4, 0.1, 1.1]];
+      let end = 0; for (const [r, a2, d] of P) for (const dt of [0, 1]) {
+        const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = base * r * (dt ? 1.0035 : 1);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a2 * 0.5, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0008, t + d);
+        o.connect(g); g.connect(out); o.start(t); o.stop(t + d + 0.1); end = Math.max(end, d);
+      }
+      const nb = ctx.createBufferSource(); nb.buffer = noiseBuf; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = base * 5; bp.Q.value = 1.2; const ng = ctx.createGain();   // colpo del batacchio
+      ng.gain.setValueAtTime(0.5, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.09); nb.connect(bp); bp.connect(ng); ng.connect(out); nb.start(t); nb.stop(t + 0.2);
+    },
     // SOTTOFONDO DELLA SALA DELLA FOLLA: un bordone basso e dissonante (due toni quasi uguali che battono), un velo di rumore scuro e un sibilo acuto lontano;
     // il livello lo decide chi lo usa (setLevel) e ogni tanto cade da solo nel silenzio per un paio di secondi, cosi' i vuoti pesano.
     crowdDrone(level = 0.5) {

@@ -60,7 +60,7 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
       }
       case 'void':
         // buio e silenzio: ti aspetti qualcosa
-        if (E.t > 3.2) { ph = 0; go('lit'); lightOn(); say('erano qui tutti, quella notte.', 4800); rgbPulse(1); drone ??= audio.crowdDrone(); drone?.setLevel(0.45, 2.5); }
+        if (E.t > 3.2) { ph = 0; go('lit'); lightOn(); say('erano qui tutti, quella notte.', 4800); rgbPulse(1); drone ??= audio.crowdDrone(); drone?.setLevel(0.45, 2.5); bells(); }
         break;
       case 'lit': {
         // la sala è illuminata: in fondo, file di sagome ferme che ti fissano
@@ -87,8 +87,8 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
         }
         if (E.t > 1.2 && !E.said) { E.said = true; say(P ? 'non guardare dietro, ' + P.name + '.' : 'non guardare dietro.', 5500); instab.push(1, 10); }
         if (E.t > 5 && !E.torch) { E.torch = true; lights.torchKill(1.2, 0.08); }
-        if (E.t > 1.4 && E.said && player.forward.z > 0.1) { E.turnT = (E.turnT || 0) + dt; if (E.turnT > 0.12) { go('turned'); drone?.stop(0.5); drone = null; breath?.stop(); breath = null; audio.duck(0, 0.05); showShade(); } } else E.turnT = 0;
-        if (E.t > 17) { go('ignored'); drone?.stop(0.5); drone = null; }
+        if (E.t > 1.4 && E.said && player.forward.z > 0.1) { E.turnT = (E.turnT || 0) + dt; if (E.turnT > 0.12) { go('turned'); drone?.stop(0.5); drone = null; clearTimeout(bellT); breath?.stop(); breath = null; audio.duck(0, 0.05); showShade(); } } else E.turnT = 0;
+        if (E.t > 17) { go('ignored'); drone?.stop(0.5); drone = null; clearTimeout(bellT); }
         break;
       }
       case 'turned':
@@ -110,6 +110,9 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
   function lightOn() { hall?.lightOn(); audio.lightOn(); instab.set(0.3 + ph * 0.25, 8); }
   let shade = null;
   function showShade() { if (!shade) { shade = hall.silhouette(3); scene.add(shade); } const f = camera.position; shade.position.set(camera.position.x - 0.35, 0, Z_END - 0.45); shade.rotation.y = Math.PI - 0.15; shade.visible = true; }
+  // rintocco di campana lontana: rado (una volta ogni 22-45 s), a volte due colpi ravvicinati, mai ritmico; finisce con la sala
+  let bellT = null;
+  function bells(first = true) { clearTimeout(bellT); bellT = setTimeout(() => { if (!drone) return; const lv = 0.32 + Math.random() * 0.2; audio.bell(lv); if (Math.random() < 0.3) setTimeout(() => drone && audio.bell(lv * 0.8), 4200 + Math.random() * 1500); bells(false); }, first ? 7000 + Math.random() * 6000 : 22000 + Math.random() * 23000); }
   function startBreath() { E.torch = false; E.said = false; E.k = false; E.fl = false; E.turnT = 0; breath = audio.breath(); breath?.setPos(0, 1.3, Z_END - 3); breath?.setLevel(0.5, 1.2); }
   E.getPh = () => ph;
   return E;
