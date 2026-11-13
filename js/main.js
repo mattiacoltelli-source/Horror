@@ -208,8 +208,9 @@ async function enter() {
     // CRITERIO: ogni scritta sta al CENTRO dello spazio libero tra due elementi fissi (costoloni del tunnel, pilastri della cantina) e la sua larghezza e' limitata allo spazio, cosi' niente la taglia
     const fit = (a, b, k, thick, maxW) => ({ z: (a + b) / 2, w: Math.min(maxW ?? WR[k][2], Math.abs(a - b) - thick - 0.5) });
     const t1 = fit(RIBS[1], RIBS[2], 't1', 0.5), t3 = fit(RIBS[4], RIBS[5], 't3', 0.5), c2 = fit(CZ - 13, CZ - 18, 'c2', 0.9);   // tunnel: prima e dopo il vetro; cantina: dopo lo specchio
-    { const lo = !WRI, ty = lo ? 0.84 : 1.0, mh = lo ? 1.1 : undefined;   // frasi generate: bassa e al massimo 1,1 m d'altezza, cosi' stanno sotto i tubi (sottile a 1,62 m)
-      writingDecals(scene, [{ ...spec('t1'), p: [-1.38, ty, t1.z], wall: '+x', w: t1.w, maxH: mh }, { ...spec('t3'), p: [-1.38, ty, t3.z], wall: '+x', w: t3.w, maxH: mh }]); }
+    { const gem = PKEY === 'elisa' || PKEY === 'yana';   // frasi generate (standard e nomi): stessa dimensione di prima, ma piu' in basso: la cima della scritta sta sotto il tubo sottile (1,62 m) e le colature scendono fino a terra
+      const ty = (w, k) => (gem ? 1.0 : 1.5 - (w / spec(k).aspect) / 2);
+      writingDecals(scene, [{ ...spec('t1'), p: [-1.38, ty(t1.w, 't1'), t1.z], wall: '+x', w: t1.w }, { ...spec('t3'), p: [-1.38, ty(t3.w, 't3'), t3.z], wall: '+x', w: t3.w }]); }
     writingDecals(cellar.group, [{ ...spec('c2'), p: [-3.96, 1.7, c2.z], wall: '+x', w: c2.w }]);
     // obitorio: muro sinistro (parte verde, sopra le piastrelle), al centro della sala
     writingDecals(morgue.group, [{ ...spec('o'), p: [-4.22, 2.1, MZ - 6.6], wall: '+x', w: (PKEY === 'elisa' || PKEY === 'yana') ? 6.0 : Math.min(WR.o[2], 6.0) }]);
@@ -218,15 +219,15 @@ async function enter() {
     // magazzino: muro sinistro, tra due pilastri (sotto la lampada a muro, lontano dagli scaffali)
     { const ws = fit(WZ - 21.6, WZ - 27.6, 'm', 0.9, WR.m[2]); writingDecals(wh.group, [{ ...spec('m'), p: [-5.96, 1.3, ws.z], wall: '+x', w: ws.w }]); }
     // simbolo (occhio) a sangue, riempitivo: 3 volte lungo il percorso, in punti vuoti (tunnel muro destro, cantina muro sinistro, magazzino muro destro)
-    { const sg = 'assets/tex/wr_sigil.png', A = 0.844, tz = (RIBS[6] + RIBS[7]) / 2;   // muro destro, tra due costoloni, lontano da lampade e cavi
-      writingDecals(scene, [{ img: sg, aspect: A, p: [1.38, 1.45, tz], wall: '-x', w: 1.1 }]);
+    { const sg = 'assets/tex/wr_sigil.png', A = 0.844, tz = (RIBS[5] + RIBS[6]) / 2;   // muro destro, tra due costoloni, lontano da lampade e cavi
+      writingDecals(scene, [{ img: sg, aspect: A, p: [1.38, 0.78, tz], wall: '-x', w: 1.1 }]);
       writingDecals(cellar.group, [{ img: sg, aspect: A, p: [-3.96, 1.6, CZ - 20.5], wall: '+x', w: 1.6 }]);
-      writingDecals(wh.group, [{ img: sg, aspect: A, p: [5.96, 1.9, WZ - 3.6], wall: '-x', w: 1.7 }]); }
+      writingDecals(wh.group, [{ img: sg, aspect: A, p: [5.96, 1.9, WZ - 6.6], wall: '-x', w: 1.7 }]); }
     // solo Elisa: scherzo, sul muro destro del tunnel tra due costoloni
     if (PKEY === 'elisa') { const pz = (RIBS[6] + RIBS[7]) / 2, T = 'PAGLIACCINA\nSEXY', ta = bloodText(T).aspect; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.0, pz], wall: '-x', w: Math.min(0.75 * ta, Math.abs(RIBS[6] - RIBS[7]) - 1.0) }]); }
     // solo Yana: frase piccola e bassa, quasi nascosta, sul muro destro del tunnel (poco in vista)
-    if (PKEY === 'yana') writingDecals(scene, [{ img: 'assets/tex/wr_yana_soul.png', aspect: 1.164, p: [1.38, 0.95, (RIBS[5] + RIBS[6]) / 2], wall: '-x', w: 1.5, a: 0.8 }]);
-    writingDecals(tower.group, [{ ...spec('w4'), p: [0, 3.7, TZ - 0.05], wall: '-z', w: WR.w4[2] }]);   // torre: muro d'ingresso, sopra la porta: la vedi quando ti giri
+    if (PKEY === 'yana') writingDecals(scene, [{ img: 'assets/tex/wr_yana_soul.png', aspect: 1.164, p: [1.38, 0.95, (RIBS[7] + RIBS[8]) / 2], wall: '-x', w: 1.5, a: 0.8 }]);
+    writingDecals(tower.group, [{ ...spec('w4'), p: [0, (PKEY === 'elisa' || PKEY === 'yana') ? 3.7 : 4.3, TZ - 0.05], wall: '-z', w: WR.w4[2] }]);   // torre: muro d'ingresso, sopra la porta: la vedi quando ti giri
   }
   doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar', true); } });
   $('enter').disabled = true;
