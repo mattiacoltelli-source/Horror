@@ -21,7 +21,7 @@ export function createLights(scene, camera) {
   const mk = (x, y, z, i) => ({ x, y, z, i, base: 1, flick: 0, kill: false, level: 1, t: Math.random() * 10 });
   let lamps = LAMPS.map((z, i) => mk(0, 2.95, z, i));
   const dummy = new THREE.Vector3();
-  let poolGain = 1, flashlightOn = true, torchLevel = 1, battery = 1, killT = 0, stutterT = 0, nextStutter = 25 + Math.random() * 25;
+  let curColor = 0xaec8ff, poolGain = 1, flashlightOn = true, torchLevel = 1, battery = 1, killT = 0, stutterT = 0, nextStutter = 25 + Math.random() * 25;
 
   const api = {
     override: null,
@@ -31,7 +31,10 @@ export function createLights(scene, camera) {
     // tinta della stanza: colore di nebbia/fondo e luce ambiente (ogni stanza ha il suo colore)
     grade({ fog, hemi: h }) { if (fog != null) { scene.fog.color.setHex(fog); if (scene.background?.isColor) scene.background.setHex(fog); } if (h) { hemi.color.setHex(h[0]); hemi.groundColor.setHex(h[1]); hemi.intensity = h[2]; } },
     // cambia stanza: nuove posizioni delle lampade [[x,y,z],...]
-    setLamps(list, gain = 1, color = 0xaec8ff) { lamps = list.map(([x, y, z], i) => mk(x, y, z, i)); api.lamps = lamps; poolGain = gain; pool.forEach((l) => l.color.setHex(color)); },
+    setLamps(list, gain = 1, color = 0xaec8ff) { lamps = list.map(([x, y, z], i) => mk(x, y, z, i)); api.lamps = lamps; poolGain = gain; curColor = color; pool.forEach((l) => l.color.setHex(color)); },
+    // lampada in piu' per l'anteprima di una stanza vista da un varco (la sua luce vera, prima di entrarci); sparisce al prossimo setLamps
+    addLamp(x, y, z, color = null) { const L = mk(x, y, z, lamps.length); L.mode = 'pulse'; L.col = color; lamps.push(L); return L; },
+    dropLamp(L) { const i = lamps.indexOf(L); if (i >= 0) lamps.splice(i, 1); },
     // la torcia si spegne per `dur` secondi (poi torna, un po' più debole)
     torchKill(dur, drain = 0.12) { killT = dur; battery = Math.max(0.45, battery - drain); },
     torchStutter(dur = 0.4) { stutterT = dur; },
@@ -75,7 +78,7 @@ export function createLights(scene, camera) {
       const order = [...lamps].sort((a, b) => Math.hypot(a.x - px, a.z - playerZ) - Math.hypot(b.x - px, b.z - playerZ));
       for (let i = 0; i < pool.length; i++) {
         const L = order[i];
-        if (L) { pool[i].position.set(L.x, L.y, L.z); pool[i].intensity = 14 * poolGain * L.level; } else pool[i].intensity = 0;
+        if (L) { pool[i].position.set(L.x, L.y, L.z); pool[i].intensity = 14 * poolGain * L.level; pool[i].color.setHex(L.col ?? curColor); } else pool[i].intensity = 0;
       }
       for (const L of lamps) if (L.mesh) { L.mesh.userData.setGlow?.(L.level); }
     },

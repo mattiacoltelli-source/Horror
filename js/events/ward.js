@@ -25,7 +25,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
     if (opt.scale) o.scale.setScalar(opt.scale); const g = new THREE.Group(); g.add(o); g.position.set(x, y, z); g.rotation.y = ry; R.group.add(g); return g;
   };
   // guscio: pavimento e pareti piastrellate come l'obitorio (le texture di pareti e pavimento del kit non erano nel pacchetto ricevuto); soffitto e arredo: pezzi del kit
-  const room = buildRoom(mats, { z0, w, l, h, wall: 'stone', floor: 'mfloor', ceil: 'stone', dark: 0.5, seed: 61, openEnd: true, door: { w: 2, h: 2.6 } }); R.group.add(room.group);
+  const room = buildRoom(mats, { z0, w, l, h, wall: 'stone', floor: 'mfloor', ceil: 'stone', dark: 0.5, seed: 61, openEnd: true, door: { w: 2, h: 2.5 } }); R.group.add(room.group);
   (async () => {
     const mg = await get('../mg_wall'); // (percorso relativo: assets/models/mg_wall.glb)
     if (mg) {
@@ -55,13 +55,10 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
   bloodDecals(R.group, [{ k: 'A', p: [-hw + 0.012, 1.1, z0 - 12.2], wall: '+x', h: 0.3, rot: 0.1 }, { k: 'C', p: [-hw + 0.012, 0.85, z0 - 12.7], wall: '+x', h: 0.3, rot: -0.2, flip: true }]);
 
   // anteprima dal varco: la luce della lampada non c'e' ancora, un velo chiaro sul pavimento lo fa vedere (sparisce appena entri)
-  R.floorGlow = null;
-  R.floorGlow = (() => { const c = document.createElement('canvas'); c.width = 32; c.height = 128; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 128);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.3, 16), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), color: 0x6f8c80, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.55, depthWrite: false, fog: false })); m.rotation.x = -Math.PI / 2; m.position.set(0, 0.03, z0 - 10); m.visible = false; return m; })();
-  R.group.add(R.floorGlow); R.onPreview = () => { R.floorGlow.visible = true; };
+  R.onPreview = () => { R.pl = lights.addLamp(0, h - 0.12, z0 - 10 + R.pdz, 0xcfeadc); };   // la lampada vera della stanza, accesa gia' dal varco
   R.bounds = [-hw + 0.45, hw - 0.45, zFar - 14, z0 - 0.6];   // il limite in fondo (l'obitorio) e' aggiornato a ogni fotogramma
   R.enter = (seamless = false) => {
-    R.floorGlow.visible = false; R.group.visible = true; R.state = 'walk'; R.t = 0; R.hit = false; R.crossed = false; { const m = getMorgue(); m.group.visible = true; if (m.back) m.back.visible = false; if (m.entry) m.entry.visible = false; m.cones.forEach((c) => (c.visible = false)); }
+    R.pl = null; R.group.visible = true; R.state = 'walk'; R.t = 0; R.hit = false; R.crossed = false; { const m = getMorgue(); m.group.visible = true; if (m.back) m.back.visible = false; if (m.entry) m.entry.visible = false; m.cones.forEach((c) => (c.visible = false)); }
     player.box = R.bounds; if (!seamless) { player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false; }   // arrivando dalla cantina il giocatore e' gia' qui
     lights.setLamps(lampPos, 2.1, 0xcfeadc); lights.grade({ fog: 0x050a08, hemi: [0x2c4a44, 0x08100e, 0.4] }); scene.fog.density = 0.05; audio.duck(1, 1.5); instab.set(0.15, 6);
     lights.lamp(0, 'pulse');

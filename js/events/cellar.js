@@ -23,7 +23,7 @@ const DIST = [7, 4.6, 2.6, 1.3, 0.7];
 export function createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash }) {
   const C = { group: new THREE.Group(), state: 'idle', step: -1, gaze: 0, away: 0, started: false, apDone: false };
   C.group.visible = false; scene.add(C.group);
-  const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23, exit: { w: 2, h: 2.6 } });
+  const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23, exit: { w: 2, h: 2.5 } });
   C.group.add(room.group); decorCellar(C.group, CELLAR.z0); C.bounds = [room.bounds[0], room.bounds[1], CELLAR.z0 - CELLAR.l + 1.4, CELLAR.z0 - 0.6];
 
   const red = redLight(C.group, { x: CELLAR.w / 2 - 0.1, y: 2.5, z: CELLAR.z0 - 19.5, dir: 1 });   // luce rossa d'emergenza vicino all'uscita
