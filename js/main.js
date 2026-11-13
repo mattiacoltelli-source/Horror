@@ -193,7 +193,7 @@ async function enter() {
     if (PKEY === 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_elisa.jpg', aspect: 0.545, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
     if (PKEY !== 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_yana.jpg', aspect: 0.741, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.6, rot: -0.03, a: 1, plain: true }]); }
   // SCRITTE DI SANGUE per le versioni personalizzate (frasi con il suo nome; per Yana anche in ucraino), grandi sui muri
-  const WRI = { yana: { t1: ['yana_1', 5.09, 4.4], t3: ['yana_3', 4.34, 4.2], c2: ['yana_2', 2.42, 3.6], w4: ['yana_4', 4.26, 5.4], o: ['yana_o', 7.05, 4.2], h: ['yana_h', 3.87, 2.65], m: ['yana_m', 6.67, 4.0] }, elisa: { t1: ['elisa_1', 4.89, 4.4], t3: ['elisa_3', 3.89, 4.0], c2: ['elisa_2', 2.63, 3.6], w4: ['elisa_4', 4.78, 5.4], o: ['elisa_o', 6.88, 4.2], h: ['elisa_h', 4.15, 2.65], m: ['elisa_m', 6.83, 4.0] } }[PKEY]
+  const WRI = {}[PKEY]
     || (P ? null : { t1: ['std_t1', 2.6, 3.1], t3: ['std_t3', 2.361, 3.3], c2: ['std_c2', 1.36, 2.4], w4: ['std_w4', 2.552, 5.0], o: ['std_o', 2.902, 4.6], h: ['std_h', 1.774, 2.65], m: ['std_m', 2.174, 3.7] });   // versione standard: immagini di sangue (Gemini), senza nome
   // chiunque altro: stesse posizioni, frasi scritte al volo con il font di sangue (js/world/bloodfont.js); [testo, _, larghezza massima]
   const GN = P ? P.name.toUpperCase() : '', GF = P?.f !== false;
@@ -202,6 +202,7 @@ async function enter() {
   // versione standard: stesse scritte, senza nome (generiche); le altre: con il nome
   const GT = P ? { t1: GN + ',\nTI HANNO VISTO', t3: 'NON È LA TUA\nFACCIA, ' + GN, c2: GN + ',\nGIRATI', w4: 'NON SEI ' + (GF ? 'SOLA' : 'SOLO') + ',\n' + GN, o: GN + ',\nQUI TI HANNO ' + (GF ? 'LEGATA' : 'LEGATO'), h: 'TI STAVANO\nASPETTANDO, ' + GN, m: 'NON C\'È VIA\nD\'USCITA, ' + GN }
     : { t1: 'NON\nFERMARTI', t3: 'NON È LA TUA\nFACCIA', c2: 'DIETRO\nDI TE', w4: 'NON SEI\nSOLO', o: 'QUI TI HANNO\nLEGATO', h: 'TI STAVANO\nASPETTANDO', m: 'NON C\'È\nUSCITA' };
+  if (PKEY === 'yana') { GT.c2 = 'ОБЕРНИСЬ,\nЯНО'; GT.h = 'ТЕБЕ\nЧЕКАЛИ, ЯНО'; GT.m = 'НЕМАЄ\nВИХОДУ, ЯНО'; }   // Yana e' ucraina: alcune frasi in ucraino (lettere cirilliche vere)
   const WR = WRI || Object.fromEntries(Object.entries(GT).map(([k, t]) => [k, [t, 0, HGT[k] * (P ? 1.35 : 1) * bloodText(t).aspect]]));   // chiunque altro (e la versione standard): stesse posizioni, frasi scritte al volo con il font di sangue (js/world/bloodfont.js)
   { const T1 = P ? GN + ',\nMORIRAI QUI' : 'MORIRAI\nQUI'; WR.t1 = [T1, 0, HGT.t1 * (P ? 1.35 : 1.15) * bloodText(T1).aspect]; }   // prima scritta del tunnel, per tutte le versioni (nome o no): lettere vere di sangue
   const spec = (k) => (WRI && k !== 't1') ? { img: 'assets/tex/wr_' + WR[k][0] + '.png', aspect: WR[k][1] } : { text: WR[k][0], aspect: bloodText(WR[k][0]).aspect };
@@ -209,12 +210,12 @@ async function enter() {
     // CRITERIO: ogni scritta sta al CENTRO dello spazio libero tra due elementi fissi (costoloni del tunnel, pilastri della cantina) e la sua larghezza e' limitata allo spazio, cosi' niente la taglia
     const fit = (a, b, k, thick, maxW) => ({ z: (a + b) / 2, w: Math.min(maxW ?? WR[k][2], Math.abs(a - b) - thick - 0.5) });
     const t1 = fit(RIBS[1], RIBS[2], 't1', 0.5), t3 = fit(RIBS[4], RIBS[5], 't3', 0.5), c2 = fit(CZ - 13, CZ - 18, 'c2', 0.9);   // tunnel: prima e dopo il vetro; cantina: dopo lo specchio
-    { const gem = PKEY === 'elisa' || PKEY === 'yana';   // frasi generate (standard e nomi): stessa dimensione di prima, ma piu' in basso: la cima della scritta sta sotto il tubo sottile (1,62 m) e le colature scendono fino a terra
+    { const gem = false;   // frasi generate (standard e nomi): stessa dimensione di prima, ma piu' in basso: la cima della scritta sta sotto il tubo sottile (1,62 m) e le colature scendono fino a terra
       const ty = (w, k) => (gem && k !== 't1' ? 1.0 : 1.5 - (w / spec(k).aspect) / 2);
       writingDecals(scene, [{ ...spec('t1'), p: [-1.38, ty(t1.w, 't1'), t1.z], wall: '+x', w: t1.w }, { ...spec('t3'), p: [-1.38, ty(t3.w, 't3'), t3.z], wall: '+x', w: t3.w }]); }
     writingDecals(cellar.group, [{ ...spec('c2'), p: [-3.96, 1.7, c2.z], wall: '+x', w: c2.w }]);
     // obitorio: muro sinistro (parte verde, sopra le piastrelle), al centro della sala
-    writingDecals(morgue.group, [{ ...spec('o'), p: [-4.22, 2.1, MZ - 6.6], wall: '+x', w: (PKEY === 'elisa' || PKEY === 'yana') ? 6.0 : Math.min(WR.o[2], 6.0) }]);
+    writingDecals(morgue.group, [{ ...spec('o'), p: [-4.22, 2.1, MZ - 6.6], wall: '+x', w: Math.min(WR.o[2], 6.0) }]);
     // sala dei mostri: sui due muri laterali, tra la porta chiusa e il primo pilastro (e' li' che guardi mentre ti giri); stesso centro, larghezza limitata allo spazio
     { const hz = Z_END - 0.35, hs = fit(hz, hz - 3.15, 'h', 0, WR.h[2] + 1); writingDecals(hall.group, [{ ...spec('h'), p: [-5.99, 1.7, hs.z], wall: '+x', w: hs.w }, { ...spec('h'), p: [5.99, 1.7, hs.z], wall: '-x', w: hs.w }]); }
     // magazzino: muro sinistro, tra due pilastri (sotto la lampada a muro, lontano dagli scaffali)
@@ -228,7 +229,7 @@ async function enter() {
     if (PKEY === 'elisa') { const pz = (RIBS[6] + RIBS[7]) / 2, T = 'PAGLIACCINA\nSEXY', ta = bloodText(T).aspect; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.6, pz], wall: '-x', w: Math.min(0.75 * ta, Math.abs(RIBS[6] - RIBS[7]) - 1.0) }]); }
     // solo Yana: frase piccola e bassa, quasi nascosta, sul muro destro del tunnel (poco in vista)
     if (PKEY === 'yana') writingDecals(scene, [{ img: 'assets/tex/wr_yana_soul.png', aspect: 1.164, p: [1.38, 1.4, (RIBS[7] + RIBS[8]) / 2], wall: '-x', w: 1.5, a: 0.8 }]);
-    writingDecals(tower.group, [{ ...spec('w4'), p: [0, (PKEY === 'elisa' || PKEY === 'yana') ? 3.7 : 4.3, TZ - 0.05], wall: '-z', w: WR.w4[2] }]);   // torre: muro d'ingresso, sopra la porta: la vedi quando ti giri
+    writingDecals(tower.group, [{ ...spec('w4'), p: [0, 4.3, TZ - 0.05], wall: '-z', w: WR.w4[2] }]);   // torre: muro d'ingresso, sopra la porta: la vedi quando ti giri
   }
   doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar', true); } });
   $('enter').disabled = true;

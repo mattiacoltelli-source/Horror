@@ -5,7 +5,7 @@ import json, sys, os, numpy as np
 from PIL import Image
 from scipy import ndimage as ndi
 META_OUT = os.environ.get('META_OUT', 'real_meta.json'); CAP = 100
-COLLAGE = sys.argv[1] if len(sys.argv) > 1 else None
+COLLAGE = next((a for a in sys.argv[1:] if not a.startswith('cyr:')), None); CYR = [a[4:].rsplit(':', 1) for a in sys.argv[1:] if a.startswith('cyr:')]   # cyr:percorso.jpg:TESTO -> lettere cirilliche (una riga per immagine, senza spazi)
 STD = {'t1': ['NONFERMARTI'], 't3': ['NONÈLATUAFACCIA'], 'c2': ['DIETRO', 'DITE'], 'w4': ['NONSEISOLO'], 'o': ['QUITIHANNOLEGATO'], 'h': ['TISTAVANO', 'ASPETTANDO'], 'm': ["NONC'ÈUSCITA"]}
 PANELS = [((8, 6, 700, 250), ['BEGH']), ((708, 6, 1400, 250), ['JKVWXYZ']), ((8, 258, 1400, 508), ['GABBIAHOTEL']), ((8, 518, 700, 765), ['KAYAKWAGGHI']), ((708, 518, 1400, 765), ['ZUBOXYZGHJ'])]
 TARGET = np.array([82., 29., 27.])
@@ -67,6 +67,12 @@ if COLLAGE:
         m = al > 0.3; mean = p[m].mean(0); rgb = np.clip(p * (TARGET / mean), 0, 255)   # colore uniformato alla versione standard
         rgb = np.where((al > 0)[..., None], rgb, 0)
         process(f'col{n}', np.dstack([rgb, al * 255]).astype('uint8'), lines, minarea=900)
+for path, text in CYR:
+    full = np.asarray(Image.open(path).convert('RGB')).astype(float); H, W = full.shape[:2]; p = full[int(H * 0.08):int(H * 0.92), int(W * 0.02):int(W * 0.98)]
+    bg = np.median(p.reshape(-1, 3), axis=0); lum = p.mean(2); red = p[:, :, 0] - (p[:, :, 1] + p[:, :, 2]) / 2
+    al = np.clip(np.maximum((bg.mean() - lum) / 70, (red - 25) / 60), 0, 1); al = np.clip((al - 0.12) / 0.88, 0, 1)
+    m = al > 0.3; mean = p[m].mean(0); rgb = np.clip(p * (TARGET / mean), 0, 255); rgb = np.where((al > 0)[..., None], rgb, 0)
+    process('cyr_' + os.path.basename(path), np.dstack([rgb, al * 255]).astype('uint8'), [text], minarea=int(os.environ.get('CYR_MIN', 900)))
 print(len(glyphs), 'glifi')
 DROP = {('A', 9), ('D', 2), ('T', 7), ('R', 2), ('F', 1), ('S', 3), ('N', 8)}; DROP_ALL = {'G', 'H'} if not COLLAGE else set()
 # i glifi di riserva sono scartati se vengono dalle sorgenti standard (G/H spezzati): con il collage si usano quelli del collage
