@@ -6,7 +6,7 @@ export function grimeNun(root) {
   const box = new THREE.Box3().setFromObject(root), uBox = new THREE.Vector2(box.min.y, Math.max(0.001, box.max.y - box.min.y));
   root.traverse((o) => {
     if (!o.isMesh) return;
-    const m = o.material; m.roughness = 0.6; m.metalness = 0; m.color?.multiplyScalar(0.62); m.emissive?.setRGB(0, 0, 0);
+    const m = o.material; m.roughness = 0.6; m.metalness = 0; m.color?.multiplyScalar(0.4); m.emissive?.setRGB(0, 0, 0);   // 0.62 -> 0.44: la suora resta piu' in penombra
     m.onBeforeCompile = (sh) => {
       sh.uniforms.uBox = { value: uBox };
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vOP;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvOP = position;');
@@ -25,7 +25,7 @@ float n3(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   float dr = smoothstep(0.78, 0.62, t) * smoothstep(0.82, 0.95, n3(vec3(q.x * 26.0, q.y * 2.0, q.z * 26.0)));   // colature sul petto
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.2, 0.012, 0.01), clamp(bl * 0.85 + dr * 0.8, 0.0, 0.9));`)
         .replace('#include <opaque_fragment>', `float fr = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 3.0);
-  outgoingLight += vec3(0.05, 0.065, 0.09) * fr;                                                  // bordo freddo: la stacca dal buio
+  outgoingLight *= 0.74; outgoingLight += vec3(0.03, 0.04, 0.055) * fr;                                                  // bordo freddo: la stacca dal buio
 #include <opaque_fragment>`);
     };
     m.needsUpdate = true;
