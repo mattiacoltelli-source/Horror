@@ -117,7 +117,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
       if (steps > STEPS + 0.2 && W.state === 'taken') { W.state = 'ready'; doorT = 0; lights.lamp(2, 'on'); lights.lamp(0, 'off'); lights.lamp(1, 'off'); }   // il cancello ora si apre con APRI
     }
     if (W.state === 'ready' || (W.state === 'walk' && !W.taken)) {   // vicino al cancello: APRI (come le altre porte); anche senza aver preso la pistola
-      const ng = Math.abs(P.x) < 3.5 && P.z - gz < 6.5 && P.z - gz > -3;   // APRI compare da lontano (6,5 m), senza guardare in una direzione precisa
+      const ng = Math.abs(P.x) < 2.2 && P.z - gz < 2.6 && P.z - gz > -3;   // APRI compare solo quando sei attaccato al cancello (2,6 m), senza guardare in una direzione precisa
        if (ng !== W.nearGate) {   // il pulsante APRI compare appena ti avvicini, senza ritardo
          W.nearGate = ng; actBtn.textContent = 'APRI'; actBtn.classList.toggle('hidden', !ng); }
     }
