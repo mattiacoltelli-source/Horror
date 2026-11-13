@@ -60,7 +60,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     K.limit = limit; K.calm = calm; K.unarmed = unarmed; K.gi = 0;   // unarmed: niente pistola, e dopo 1-2 teletrasporti scatta il jump scare K.canLower = false; K.lowered = false;   // secondi di teletrasporti prima del jump scare (dipende dalle scelte)
     K.kind = kind; K.text = text; K.active = true; K.state = 'fight'; K.t = 0; K.hits = 0; K.shots = 0; K.cool = 0; K.hide = 0; K.lat = 0; K.ammo = K.weapon === 'axe' ? 2 : 4; K.D = 13; K.stepT = 1.5; K.said = false; K.turnedOnce = false;
     if (!K.armed && !unarmed) K.give();
-    await K.setMonster(kind); K.from = from.clone(); K.M = { x: from.x, z: from.z }; K.Dt = null; K.wi = 1; K.sched = 0; K.walked = false; K.fin = false; K.finT = 0; K.side = 1;
+    await K.setMonster(kind); K.from = from.clone(); K.M = { x: from.x, z: from.z }; K.Dt = null; K.wi = 1; K.cornerDone = false; K.sched = 0; K.walked = false; K.fin = false; K.finT = 0; K.side = 1;
     // PERCORSO PRESTABILITO, nel mondo (non dipende da dove sei né da dove guardi): zig-zag dall'ingresso verso il fondo della stanza
     K.W = [[0, 0], [Math.random() < 0.5 ? -5.9 : 5.9, -1.4], [3.5, -5], [-3, -8], [2, -10.5], [-1, -12.5]].map(([dx, dz]) => ({ x: from.x + dx, z: from.z + dz }));           // punto da cui il mostro si avvicina (verso il giocatore)
     mon.visible = true; pose = 'ready'; player.speedMul = unarmed ? 1 : 0.55; player.lookMul = unarmed ? 1 : 0.8; if (!unarmed) { ui.show(true); ui.label?.(K.weapon === 'axe' ? 'COLPISCI' : 'SPARA'); }   // puoi camminare piano; per sparare devi fermarti instab.set(0.9, 60);
@@ -101,7 +101,9 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     return best;
   };
   // prossimo punto del percorso; finiti i punti prestabiliti, si sposta di lato a distanza (la chiusura finale avviene solo a colpi finiti)
-  K.nextSpot = () => K.wi < K.W.length ? K.W[K.wi++] : sidePoint(5.5);
+  // il PRIMO teletrasporto, comunque lo provochi (a tempo, o dopo il primo colpo), va nell'angolo buio K.W[1]; poi si prosegue come prima
+  const firstOr = (fn) => { if (!K.cornerDone && K.W) { K.cornerDone = true; K.wi = Math.max(K.wi, 2); return K.W[1]; } return fn(); };
+  K.nextSpot = () => firstOr(() => (K.wi < K.W.length ? K.W[K.wi++] : sidePoint(5.5)));
   K.startFlicker = (tgt) => { K.hide = HIDE; K.moved = false; K.tgt = tgt || K.nextSpot(); lights.torchStutter(HIDE); lights.lamp(0, 'flicker', HIDE); lights.lamp(1, 'flicker', HIDE); audio.lightOn?.(); };
   // JUMP SCARE FINALE: sfarfallio, compare davanti a te a ~5 m (nel buio), poi scatta addosso e sei morto. Nessuna fase intermedia.
   K.beginRush = () => {
@@ -118,13 +120,13 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     if (K.ammo <= 0) { audio.dry(); return; }
     if (K.weapon === 'axe') {   // fendente a vuoto: nel lampo lei non c'è già più
       K.ammo--; K.shots = (K.shots || 0) + 1; K.cool = 1.1; ui.cool?.(true); audio.swish?.(); swing = 0; player.addShake(0.18);
-      K.idle = 0; K.sched = 0; instab.push(0.9, 3); K.tx = null; if (K.ammo <= 0) K.beginRush(); else K.startFlicker(sidePoint(Math.max(5, Math.min(8.5, K.D)))); return;
+      K.idle = 0; K.sched = 0; instab.push(0.9, 3); K.tx = null; if (K.ammo <= 0) K.beginRush(); else K.startFlicker(firstOr(() => sidePoint(Math.max(5, Math.min(8.5, K.D))))); return;
     }
     K.ammo--; K.shots = (K.shots || 0) + 1; K.cool = 1.0; ui.cool?.(true); audio.shot(1); K.recoil += 0.055; K.kick = 1; player.pitch += 0.05; player.yaw += (Math.random() - 0.5) * 0.022; player.addShake(0.3);
     muzzle.material.opacity = 1; gunMats.forEach((m) => m.color.setRGB(0.55, 0.5, 0.45)); muzzle.rotation.z = Math.random() * 6; K.flashT = 0.07; flash.intensity = 160; flash.position.copy(camera.position).add(fwd.set(0, 0, -0.4).applyQuaternion(camera.quaternion));
     try { navigator.vibrate?.(30); } catch (_) {}
     // il colpo non la prende mai: nel lampo lei non c'è già più, e riappare più vicina in un altro punto
-    K.idle = 0; K.sched = 0; instab.push(0.9, 3); K.tx = null; if (K.ammo <= 0) K.beginRush(); else K.startFlicker(sidePoint(Math.max(5, Math.min(8.5, K.D))));
+    K.idle = 0; K.sched = 0; instab.push(0.9, 3); K.tx = null; if (K.ammo <= 0) K.beginRush(); else K.startFlicker(firstOr(() => sidePoint(Math.max(5, Math.min(8.5, K.D)))));
   };
   // SCELTA FINALE (solo chi ha trovato tutte le note): ABBASSA LA PISTOLA. Smetti di combattere; lei arriva, lenta, senza jump scare. Quarto finale.
   K.lower = () => {
