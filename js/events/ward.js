@@ -36,9 +36,14 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
       for (let i = 0; i < 7; i++) { const z = z0 - 1.5 - i * 3; put(-hw + t, z, Math.PI / 2); put(hw - t, z, -Math.PI / 2); }
       for (let i = -1; i <= 1; i++) put(i * 3, zFar + t, 0);
     }
-    const w0 = await get('ceiling_tile'); if (w0) w0.traverse((m) => { if (m.isMesh && !atlas) { atlas = m.material.clone(); atlas.color.setRGB(0.55, 0.55, 0.5); atlas.roughness = 1; } });
+    // soffitto: pannelli bianchi quadrati con fughe scure, sporchi (come le piastrelle delle pareti), invece del pannello a texture rumorosa del kit
+    { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); let sd = 11; const rnd = () => ((sd = (sd * 1664525 + 1013904223) >>> 0) / 4294967296);
+      g.fillStyle = '#c9c8c0'; g.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 700; i++) { g.fillStyle = `rgba(${40 + rnd() * 40},${38 + rnd() * 36},${30 + rnd() * 30},${0.04 + rnd() * 0.1})`; const r = 3 + rnd() * 18; g.beginPath(); g.arc(rnd() * 256, rnd() * 256, r, 0, 6.3); g.fill(); }
+      g.strokeStyle = '#4b4a44'; g.lineWidth = 4; g.strokeRect(0, 0, 256, 256); g.strokeStyle = 'rgba(30,30,26,.35)'; g.lineWidth = 2; g.strokeRect(5, 5, 246, 246);
+      const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(w / 0.6, l / 0.6); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, l), new THREE.MeshStandardMaterial({ map: t, roughness: 0.9, metalness: 0, color: new THREE.Color(0.8, 0.8, 0.78) })); m.rotation.x = Math.PI / 2; m.position.set(0, h - 0.02, z0 - l / 2); R.group.add(m); }
     const A = { atlas: true };
-    for (let i = 0; i < 10; i++) { const z = z0 - 1 - 2 * i; await place('ceiling_tile', -1, h - 0.01, z, 0, A); await place('ceiling_tile', 1, h - 0.01, z, 0, A); }
     // due porte sulle pareti: un'apertura nera sul muro e la porta (una chiusa, una socchiusa)
     const hole = (x, z, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 2.05), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); m.position.set(x, 1.02, z); m.rotation.y = ry; R.group.add(m); };
     hole(-hw + 0.12, z0 - 7.5, Math.PI / 2); hole(hw - 0.12, z0 - 13, -Math.PI / 2);
