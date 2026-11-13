@@ -62,7 +62,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     if (!K.armed && !unarmed) K.give();
     await K.setMonster(kind); K.from = from.clone(); K.M = { x: from.x, z: from.z }; K.Dt = null; K.wi = 1; K.sched = 0; K.walked = false; K.fin = false; K.finT = 0; K.side = 1;
     // PERCORSO PRESTABILITO, nel mondo (non dipende da dove sei né da dove guardi): zig-zag dall'ingresso verso il fondo della stanza
-    K.W = [[0, 0], [-4, -3], [3.5, -5], [-3, -8], [2, -10.5], [-1, -12.5]].map(([dx, dz]) => ({ x: from.x + dx, z: from.z + dz }));           // punto da cui il mostro si avvicina (verso il giocatore)
+    K.W = [[0, 0], [Math.random() < 0.5 ? -5.9 : 5.9, -1.4], [3.5, -5], [-3, -8], [2, -10.5], [-1, -12.5]].map(([dx, dz]) => ({ x: from.x + dx, z: from.z + dz }));           // punto da cui il mostro si avvicina (verso il giocatore)
     mon.visible = true; pose = 'ready'; player.speedMul = unarmed ? 1 : 0.55; player.lookMul = unarmed ? 1 : 0.8; if (!unarmed) { ui.show(true); ui.label?.(K.weapon === 'axe' ? 'COLPISCI' : 'SPARA'); }   // puoi camminare piano; per sparare devi fermarti instab.set(0.9, 60);
     audio.duck(0.3, 0.5);
   };
