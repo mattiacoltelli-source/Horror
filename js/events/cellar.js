@@ -130,7 +130,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   // atmosfera: fasci freddi sotto le lampade, pozzanghere, colature (non sul muro dello specchio)
   addAtmosphere(C.group, { xl: -CELLAR.w / 2, xr: CELLAR.w / 2, z0: CELLAR.z0, z1: CELLAR.z0 - CELLAR.l, h: CELLAR.h, seed: 3, lamps: lampPos, shaft: 0x9db8ff, shaftOpacity: 0.07, stains: 8, puddles: 5, avoid: [{ side: -1, z0: CELLAR.z0 - 8, z1: CELLAR.z0 - 12 }] });
   // extra: l'orologio di fronte allo specchio (si vede nel riflesso), il busto sul mobile, un gnomo fuori posto vicino all'ingresso
-  addExtras(C.group, [['x_clock', 2.15, 3.7, 0, CELLAR.z0 - 7.5, -Math.PI / 2], ['x_bust', 0.52, 3.4, 1.1, CELLAR.z0 - 17, -Math.PI / 2 - 0.5, 1, 0, (g) => { C.bust = g; }], ['x_gnome', 0.6, -3.4, 0, CELLAR.z0 - 2.2, 0.7, 0.07]]);
+  addExtras(C.group, [['x_clock', 2.15, 3.7, 0, CELLAR.z0 - 7.5, -Math.PI / 2], ['x_bust', 0.52, 3.4, 1.1, CELLAR.z0 - 17, -Math.PI / 2 - 0.5, 1, 0, (g) => { C.bust = g; }], ['x_gnome', 0.6, -3.4, 0, CELLAR.z0 - 2.2, 0.7, 0.07], ['bin', 0.85, -3.2, 0, CELLAR.z0 - 18.6, 0.4, 0.4], ['x_basket', 0.3, -3.2, 0, CELLAR.z0 - 21.2, 0.8, 0.12], ['rim', 0.5, 3.3, 0, CELLAR.z0 - 21.6, 0.3, 0.5], ['stool', 0.46, 1.1, 0, CELLAR.z0 - 14.9, 0.6, 0.5, -Math.PI / 2], ['can', 0.12, -1.6, 0, CELLAR.z0 - 4.6, 1.4, 0.5], ['x_gnome', 0.45, 3.4, 0, CELLAR.z0 - 9.4, -2.6, 0.07]]);
 
   // porta d'uscita in fondo
   const exitDoor = new THREE.Group(); exitDoor.position.set(0, 0, CELLAR.z0 - CELLAR.l + 0.15); C.group.add(exitDoor);

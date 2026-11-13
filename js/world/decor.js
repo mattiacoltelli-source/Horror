@@ -23,6 +23,21 @@ export function decorTunnel(group) {
   add(group, 'pipes', [...runZ('pipe_thin_200cm_metal', 2.0, -1.33, 1.62, 2.4, -54.4).map((p) => ({ ...p, r: [0, P2, 0] }))]);
   add(group, 'cables', [...cableRun(1.38, 2.0, -3, -7), ...cableRun(1.38, 2.0, -28, -31.5), { n: 'cable_lightswitch', p: [1.38, 1.3, -33], r: [0, 0, 0] }]);
   add(group, 'manhole', [...manhole(-0.15, -14.5), ...manhole(0.3, -45, 0.7)]);
+  sideGate(group, 1.4, -11);
+}
+// VARCO LATERALE CON CANCELLO CHIUSO: sul muro destro il tunnel sembra diramarsi in un'altra direzione, ma e' sbarrato (cancello, catena); dietro, solo buio
+function sideGate(group, wx, z) {
+  const g = new THREE.Group(); g.position.set(wx - 0.004, 0, z); g.rotation.y = -Math.PI / 2; group.add(g);   // +z locale = verso l'interno del tunnel
+  const black = new THREE.MeshBasicMaterial({ color: 0x000000, fog: false }), stone = new THREE.MeshStandardMaterial({ color: 0x2c2724, roughness: 0.9 });
+  const hole = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 2.35), black); hole.position.set(0, 1.18, 0); g.add(hole);
+  const post = (x, w, h, y) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.14), stone); m.position.set(x, y, 0.07); g.add(m); };
+  post(-1.0, 0.16, 2.45, 1.225); post(1.0, 0.16, 2.45, 1.225); post(0, 2.16, 0.16, 2.43);
+  // un filo di luce lontana nel buio dietro il cancello
+  const c = document.createElement('canvas'); c.width = 64; c.height = 128; { const x = c.getContext('2d'), gr = x.createRadialGradient(32, 70, 2, 32, 70, 60); gr.addColorStop(0, 'rgba(255,170,90,.35)'); gr.addColorStop(1, 'rgba(255,170,90,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 128); }
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.9), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, opacity: 0.55, depthWrite: false, fog: false, blending: THREE.AdditiveBlending })); glow.position.set(0.35, 1.0, 0.004); g.add(glow);
+  // il cancello e' una recinzione a rete (come quella del magazzino), appena davanti al buio, con il chiavistello al centro
+  add(group, 'fence', fenceZ(wx - 0.12, z + 1.0, z - 1.0));
+  new GLTFLoader().load('assets/models/gate.glb', (gg) => { const o = gg.scene; o.scale.setScalar(2.2); o.position.set(wx - 0.2, 1.0, z); o.rotation.y = Math.PI / 2; group.add(o); });
 }
 export function decorHall(group, z0) {
   stainDecals(group, [{ p: [-5.99, 1.6, z0 - 12], wall: '+x', w: 3.0, h: 3.4 }, { p: [5.99, 1.6, z0 - 20], wall: '-x', w: 3.0, h: 3.4, flip: true }]);
