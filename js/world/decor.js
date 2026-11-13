@@ -8,7 +8,7 @@ const add = async (group, kit, pl) => { try { const m = await kitMesh(kit, pl); 
 const manhole = (x, z, rot = 0) => [{ n: 'water_manhole_cover_frame', p: [x, -0.033, z], r: [0, rot, 0] }, { n: 'water_manhole_cover', p: [x, -0.007, z], r: [0, rot, 0] }]   // incassati: il bordo sporge di ~2 mm;
 // pezzo di recinzione lungo l'asse z (altezza 2.37): n pannelli da 0.93 + paletti
 const fenceZ = (x, z0, z1) => { const out = []; for (let z = z0 - 0.955; z > z1 - 0.5; z -= 1.91) { out.push({ n: 'Plane020', p: [x, 1.19, z], r: [0, P2, 0] }); out.push({ n: 'post', p: [x, 1.26, z + 0.955], r: [0, 0, 0] }); } out.push({ n: 'post', p: [x, 1.26, z0 - 1.91 * Math.ceil((z0 - z1) / 1.91)], r: [0, 0, 0] }); return out; };
-const cableRun = (x, y, z0, z1) => [...runZ('cable_straight_long', 0.61, x, y, z0, Math.max(z1, z0 - 1.9)), { n: 'cable_box_turn', p: [x, y, z0 + 0.1], r: [0, 0, 0] }];
+const cableRun = (x, y, z0, z1) => [...runZ('cable_straight_long', 0.61, x, y, z0, Math.max(z1, z0 - 1.9)), { n: 'cable_box_turn', p: [x, y - 0.1, z0 + 0.1], r: [0, 0, 0] }];   // y - 0.1: lo spuntone della scatola (a 0.1 dal suo fondo) si allinea al cavo
 
 export function decorTunnel(group) {
   stainDecals(group, [{ p: [-1.395, 1.2, -7.5], wall: '+x', w: 2.2, h: 2.6 }, { p: [1.395, 1.4, -19], wall: '-x', w: 2.0, h: 2.8, flip: true }, { p: [-1.395, 1.0, -30], wall: '+x', w: 2.4, h: 2.6, a: 0.8 }, { p: [1.395, 1.2, -45], wall: '-x', w: 2.2, h: 2.6 }]);
@@ -25,7 +25,7 @@ export function decorTunnel(group) {
   add(group, 'manhole', [...manhole(-0.15, -14.5), ...manhole(0.3, -45, 0.7)]);
   sideGate(group, 1.4, -11);
 }
-// VARCO LATERALE CON CANCELLO CHIUSO: sul muro destro il tunnel sembra diramarsi in un'altra direzione, ma e' sbarrato (cancello, catena); dietro, solo buio
+// VARCO LATERALE CON CANCELLO CHIUSO: sul muro destro il tunnel sembra diramarsi in un'altra direzione, ma e' sbarrato (cancello a rete); dietro, solo buio
 function sideGate(group, wx, z) {
   const g = new THREE.Group(); g.position.set(wx - 0.004, 0, z); g.rotation.y = -Math.PI / 2; group.add(g);   // +z locale = verso l'interno del tunnel
   const black = new THREE.MeshBasicMaterial({ color: 0x000000, fog: false }), stone = new THREE.MeshStandardMaterial({ color: 0x2c2724, roughness: 0.9 });
@@ -35,9 +35,9 @@ function sideGate(group, wx, z) {
   // un filo di luce lontana nel buio dietro il cancello
   const c = document.createElement('canvas'); c.width = 64; c.height = 128; { const x = c.getContext('2d'), gr = x.createRadialGradient(32, 70, 2, 32, 70, 60); gr.addColorStop(0, 'rgba(255,170,90,.35)'); gr.addColorStop(1, 'rgba(255,170,90,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 128); }
   const glow = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.9), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, opacity: 0.55, depthWrite: false, fog: false, blending: THREE.AdditiveBlending })); glow.position.set(0.35, 1.0, 0.004); g.add(glow);
-  // il cancello e' una recinzione a rete (come quella del magazzino), appena davanti al buio, con il chiavistello al centro
+  // il cancello e' una recinzione a rete (come quella del magazzino), appena davanti al buio
   add(group, 'fence', fenceZ(wx - 0.12, z + 1.0, z - 1.0));
-  new GLTFLoader().load('assets/models/gate.glb', (gg) => { const o = gg.scene; o.scale.setScalar(2.2); o.position.set(wx - 0.2, 1.0, z); o.rotation.y = Math.PI / 2; group.add(o); });
+  // nessuna maniglia ne' chiavistello: e' chiuso, non si capisce nemmeno come aprirlo
 }
 export function decorHall(group, z0) {
   stainDecals(group, [{ p: [-5.99, 1.6, z0 - 12], wall: '+x', w: 3.0, h: 3.4 }, { p: [5.99, 1.6, z0 - 20], wall: '-x', w: 3.0, h: 3.4, flip: true }]);
