@@ -204,6 +204,7 @@ async function enter() {
     writingDecals(wh.group, [{ ...pic('mural_demon', 1.1765, 5.94, 3.2, WZ - 12.6, '-x', 4.7, 0), rot: 0, a: 0.94 }]);              // magazzino, parete destra (di fronte al gruppo sopra il letto)
     writingDecals(hall.group, [{ ...pic('mural_fire', 1.2373, 5.97, 3.0, -86.95, '-x', 4.7, 0), rot: 0, a: 0.94 }]);              // sala della folla, parete destra, accanto ai volti
     writingDecals(hall.group, [{ ...pic('mural_throne', 1.012, 5.97, 3.1, -62.95, '-x', 4.7, 0), rot: 0, a: 0.94 }, { ...pic('mural_angels', 1.0, -5.97, 3.1, -86.95, '+x', 4.7, 0), rot: 0, a: 0.94 }]);              // sala della folla: il trono con la folla in ginocchio (appena entri, a destra) e gli angeli senza volto (a sinistra, piu' in fondo)
+    writingDecals(hall.group, [{ ...pic('mural_skull', 1.0, -5.97, 3.1, -80.95, '+x', 4.7, 0), rot: 0, a: 0.94 }]);              // sala della folla, parete sinistra, tra occhi e angeli
     writingDecals(wh.group, [{ ...pic('mural_angel', 1.808, 5.94, 3.0, WZ - 24.6, '-x', 4.7, 0), rot: 0, a: 0.94 }]);              // magazzino, parete destra
     writingDecals(tower.group, [{ ...pic('mural_cathedral', 1.351, 6.94, 3.2, TZ - 12.6, '-x', 4.7, 0), rot: 0, a: 0.94 }]);       // torre, parete destra
     writingDecals(wh.group, [pic('corridor', 1.369, -5.96, 1.5, WZ - 11.4, '+x', 0.85, 0.02), pic('window', 1.233, -5.96, 1.5, WZ - 12.55, '+x', 0.85, -0.02), pic('saint', 0.789, -5.96, 1.5, WZ - 13.65, '+x', 0.62, 0.02)])
