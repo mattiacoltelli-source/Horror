@@ -211,8 +211,8 @@ async function enter() {
     writingDecals(wh.group, [{ ...pic('mural_demon', 1.1765, 5.94, 3.2, WZ - 12.6, '-x', 4.7, 0), rot: 0, a: 0.94 }]);              // magazzino, parete destra (di fronte al gruppo sopra il letto)
     writingDecals(hall.group, [{ ...pic('mural_ritual', 1.8534, 5.97, 2.6, -56.95, '-x', 4.7, 0), rot: 0, a: 0.94, glow: 0.14 }]);              // sala della folla: un solo murale (rito, sbiadito e usurato): vedi la scritta, poi la prima colonna, poi il murale
     // Torre: due murali ai lati della porta in fondo (gli ultimi che vedi) e tre in alto sui muri lunghi, sopra la stufa. Magazzino: due in alto (sopra scaffali e tubi).
-    writingDecals(tower.group, [{ ...pic('mural_throne', 1.012, -3.2, 3.6, TZ - 17.97, '+z', 3.4, 0), rot: 0, a: 0.94, glow: 0.2 }]);   // torre, in fondo a sinistra della porta: il trono con la folla in ginocchio
-    writingDecals(tower.group, [{ ...pic('mural_angel', 1.808, 3.2, 3.6, TZ - 17.97, '+z', 3.4, 0), rot: 0, a: 0.94, glow: 0.4 },
+    writingDecals(tower.group, [{ ...pic('mural_angel', 1.808, -3.0, 3.6, TZ - 17.97, '+z', 3.6, 0), rot: 0, a: 0.94, glow: 0.8 }]);   // torre, in fondo: a sinistra della porta gli angeli (angelico), a destra il trono con la folla in ginocchio (malefico)
+    writingDecals(tower.group, [{ ...pic('mural_throne', 1.012, 2.5, 3.6, TZ - 17.97, '+z', 2.6, 0), rot: 0, a: 0.8, glow: 0.0 },
       { ...pic('mural_inferno', 0.9049, -6.94, 4.6, TZ - 12.6, '+x', 3.07, 0), rot: 0, a: 0.94, glow: 0.2 }, { ...pic('mural_eyes', 2.368, -6.94, 5.0, TZ - 6.6, '+x', 4.7, 0), rot: 0, a: 0.94, glow: 0.2 }, { ...pic('mural_faces', 1.2526, 6.94, 5.0, TZ - 6.6, '-x', 4.2, 0), rot: 0, a: 0.94, glow: 0.2 }]);
     writingDecals(cellar.group, [{ ...pic('mural_angels', 1.0, -3.94, 2.2, CZ - 5.5, '+x', 3.0, 0), rot: 0, a: 0.94, glow: 0.2 }]);   // cantina, parete sinistra prima dello specchio: gli angeli senza volto
     // cantina: la parete in fondo e' un murale intero attorno alla porta d'uscita (il vano della porta e' trasparente nel disegno)
