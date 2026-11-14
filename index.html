@@ -54,7 +54,7 @@
       <label for="nm">come ti chiami?</label>
       <input id="nm" type="text" maxlength="14" autocomplete="given-name" autocapitalize="words" spellcheck="false" inputmode="text">
       <label for="bd" class="sub">data di nascita (facoltativa)</label>
-      <input id="bd" type="date" min="1920-01-01" max="2015-12-31">
+      <div id="bdw" role="group" aria-label="data di nascita"><input id="bdd" type="text" inputmode="numeric" maxlength="2" placeholder="gg" autocomplete="off"><input id="bdm" type="text" inputmode="numeric" maxlength="2" placeholder="mm" autocomplete="off"><input id="bdy" type="text" inputmode="numeric" maxlength="4" placeholder="aaaa" autocomplete="off"></div>
       <div id="gen" role="group" aria-label="genere"><button type="button" data-g="m">lui</button><button type="button" data-g="f">lei</button></div>
       <button id="askgo" type="button" disabled>CONTINUA</button>
       <p id="askerr" class="small"></p>
@@ -85,10 +85,13 @@
   if (!asked || q.get('per')) return;
   intro.classList.add('asking'); document.getElementById('ask').classList.remove('hidden');
   var nm = document.getElementById('nm'), go2 = document.getElementById('askgo'), err = document.getElementById('askerr'), g = null;
-  var upd = function () { var n = nm.value.trim(), ok = OK.test(n) && !!g; go2.disabled = !ok; err.textContent = n && !OK.test(n) ? 'solo lettere (2-14)' : ''; };
+  var bdd = document.getElementById('bdd'), bdm = document.getElementById('bdm'), bdy = document.getElementById('bdy');
+  var bdv = function () { var d = bdd.value.trim(), m = bdm.value.trim(), y = bdy.value.trim(); if (!d && !m && !y) return ''; var D = +d, M = +m, Y = +y; if (!/^\d{1,2}$/.test(d) || !/^\d{1,2}$/.test(m) || !/^\d{4}$/.test(y) || D < 1 || D > 31 || M < 1 || M > 12 || Y < 1920 || Y > 2015) return null; return D + '-' + M + '-' + String(Y).slice(2); };
+  var upd = function () { var n = nm.value.trim(), dv = bdv(), ok = OK.test(n) && !!g && dv !== null; go2.disabled = !ok; err.textContent = n && !OK.test(n) ? 'solo lettere (2-14)' : (dv === null ? 'data: gg / mm / aaaa' : ''); };
+  [bdd, bdm, bdy].forEach(function (el) { el.addEventListener('input', function () { el.value = el.value.replace(/\D/g, ''); if (el === bdd && el.value.length === 2) bdm.focus(); else if (el === bdm && el.value.length === 2) bdy.focus(); upd(); }); });
   nm.addEventListener('input', upd);
   document.querySelectorAll('#gen button').forEach(function (b) { b.addEventListener('click', function () { g = b.dataset.g; document.querySelectorAll('#gen button').forEach(function (x) { x.classList.toggle('on', x === b); }); upd(); }); });
-  go2.addEventListener('click', function () { var n = nm.value.trim(); if (!OK.test(n) || !g) return; n = n.charAt(0).toUpperCase() + n.slice(1); var bv = (document.getElementById('bd').value || '').split('-'), dd = bv.length === 3 ? (+bv[2]) + '-' + (+bv[1]) + '-' + bv[0].slice(2) : ''; try { localStorage.setItem(KEY, JSON.stringify({ n: n, g: g, d: dd })); } catch (e) {} go(n, g, dd); });
+  go2.addEventListener('click', function () { var n = nm.value.trim(); if (!OK.test(n) || !g) return; n = n.charAt(0).toUpperCase() + n.slice(1); var dd = bdv() || ''; try { localStorage.setItem(KEY, JSON.stringify({ n: n, g: g, d: dd })); } catch (e) {} go(n, g, dd); });
   nm.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !go2.disabled) go2.click(); });
 })();
 </script>
