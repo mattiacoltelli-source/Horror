@@ -139,3 +139,9 @@ html,body{overscroll-behavior:none}
   #intro .linkbtn{min-height:40px;padding:6px 14px}
 }
 #intro{overflow:hidden;overflow:clip;contain:paint}
+
+/* menu 'riparti da…' (stanze raggiunte): stessa tendina della qualita' */
+#cmenu{display:flex;flex-direction:column;margin:-2px auto 6px;width:170px;border:1px solid #3a403a;background:rgba(0,0,0,.85)}
+#cmenu.hidden{display:none}
+#cmenu button{border:0;background:none;color:#9aa19a;letter-spacing:.2em;font-size:13px;padding:12px 10px;min-height:44px;text-transform:lowercase}
+#cmenu button+button{border-top:1px solid #262b26}

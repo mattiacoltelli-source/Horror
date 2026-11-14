@@ -27,7 +27,7 @@ Combattimento: pistola a 4 colpi o ascia (scelta nel magazzino); trascini per gu
 - **La sorella** (`js/events/sorella.js`, `assets/models/sorella.glb`, script Blender in `tools/monster/`): nel magazzino, sempre uguale e prima dell'arma.
 - **Oggetti che reagiscono**: i busti si voltano, la TV del magazzino si accende da sola; **topi** (`js/events/rats.js`).
 - **Audio**: sintesi Web Audio più alcune registrazioni mp3 corte in `assets/audio` (`audio.sfx`): respiro del cane, drone della sala della folla, ringhio, fuoco.
-- **Checkpoint**: a ogni stanza (`localStorage`, `ng_ckpt`); dalla schermata iniziale compare «riparti dalla…».
+- **Checkpoint**: a ogni stanza si salva uno snapshot con le scelte (`localStorage`, `ng_ckpt` e `ng_rooms`); dal menu iniziale «riparti da… ▾» scegli una qualsiasi delle stanze già raggiunte.
 - **Qualità grafica** (alta / media / bassa, di base alta) dal menu iniziale, ricordata in `ng_quality`; in partita la risoluzione si abbassa da sola se i frame calano. Gli shader di tutte le stanze si precompilano nel tunnel.
 - **Vibrazione** su porte, vetro, passi pesanti, note e TV (solo Android).
 
