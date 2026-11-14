@@ -224,6 +224,7 @@ async function enter() {
     // MURALES GIGANTI (affreschi scrostati), uno per ambiente grande, a riempire una campata intera tra due pilastri (sempre uguali in tutte le versioni)
     writingDecals(scene, [{ ...pic('mural_dog', 3.2200, 1.38, 1.1, -28.5, '-x', 4.8, 0), rot: 0, a: 0.94 }]);                    // tunnel, parete destra
     writingDecals(wh.group, [{ ...pic('mural_corridor', 1.2959, -5.96, 3.0, WZ - 18.6, '+x', 4.7, 0), rot: 0, a: 0.94 }]);              // magazzino, parete sinistra
+    writingDecals(wh.group, [{ img: 'assets/tex/pic_burn_figure.webp', aspect: 0.4879, p: [5.96, 0.93, WZ - 19.4], wall: '-x', w: 0.89, rot: 0, a: 1, plain: true }]);   // magazzino (dove e' partito il fuoco): una sagoma umana bruciata sul muro, una sola in tutto il gioco
     writingDecals(wh.group, [{ ...pic('mural_demon', 1.1765, 5.94, 3.2, WZ - 12.6, '-x', 4.7, 0), rot: 0, a: 0.94 }]);              // magazzino, parete destra (di fronte al gruppo sopra il letto)
     writingDecals(hall.group, [{ ...pic('mural_ritual', 1.8534, 5.97, 2.6, -56.95, '-x', 4.7, 0), rot: 0, a: 0.94, glow: 0.14 }]);              // sala della folla: un solo murale (rito, sbiadito e usurato): vedi la scritta, poi la prima colonna, poi il murale
     // Torre: due murali ai lati della porta in fondo (gli ultimi che vedi) e tre in alto sui muri lunghi, sopra la stufa. Magazzino: due in alto (sopra scaffali e tubi).
