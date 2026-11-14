@@ -15,7 +15,7 @@ export function createHound({ scene, player, lights, audio, glass }) {
     // occhi: due punti rossi appena accesi (come un demone), che seguono le ossa degli occhi; ogni tanto sbattono
     const gc = document.createElement('canvas'); gc.width = gc.height = 64; const gx = gc.getContext('2d'), gr = gx.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,22,8,1)'); gr.addColorStop(0.3, 'rgba(255,40,10,0.95)'); gr.addColorStop(0.65, 'rgba(255,20,0,0.35)'); gr.addColorStop(1, 'rgba(255,10,0,0)'); gx.fillStyle = gr; gx.fillRect(0, 0, 64, 64);
     const gt = new THREE.CanvasTexture(gc);
-    H.eyes = []; o.traverse((n) => { if (/^Eye[LR]/.test(n.name)) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: gt, color: new THREE.Color(1.1, 0.0, 0.0), transparent: true, opacity: 0.11, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, depthTest: false })); sp.scale.setScalar(0.099); sp.visible = false; scene.add(sp); H.eyes.push({ bone: n, sp }); } });
+    H.eyes = []; o.traverse((n) => { if (/^Eye[LR]/.test(n.name)) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: gt, color: new THREE.Color(1.1, 0.0, 0.0), transparent: true, opacity: 0.097, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, depthTest: false })); sp.scale.setScalar(0.087); sp.visible = false; scene.add(sp); H.eyes.push({ bone: n, sp }); } });
     if (g.animations?.length) { mixer = new THREE.AnimationMixer(o); mixer.clipAction(g.animations[0]).play(); }
   });
   H.update = (dt) => {
