@@ -67,9 +67,9 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   const gz = zFar + 6.5, gate = new THREE.Group(); gate.position.set(0, 0, gz); W.group.add(gate); let leaf = null;
   W.box = [W.bounds[0], W.bounds[1], gz + 0.5, W.bounds[3]];
   (async () => {
-    const frame = await kitObject('fence', 'Cylinder184'); if (frame) { frame.position.set(0, 1.26, 0); aged(frame, 0.55, 0.9); gate.add(frame); }
+    const frame = await kitObject('fence', 'Cylinder184'); if (frame) { frame.position.set(0, 1.26, 0); aged(frame, 0.55, 0.9, 'rust_ov2'); gate.add(frame); }
     const lf = await kitObject('fence', 'Cylinder140');
-    if (lf) { aged(lf, 0.55, 0.9); leaf = new THREE.Group(); leaf.position.set(-0.45, 0, 0); lf.position.set(0.47, 0.93, 0); leaf.add(lf); gate.add(leaf);
+    if (lf) { aged(lf, 0.55, 0.9, 'rust_ov2'); leaf = new THREE.Group(); leaf.position.set(-0.45, 0, 0); lf.position.set(0.47, 0.93, 0); leaf.add(lf); gate.add(leaf);
       const parts = await Promise.all(['gate_latch_01_frame', 'gate_latch_01_latch', 'gate_latch_01_hook'].map(() => null)); }
     new GLTFLoader().load('assets/models/gate.glb', (g) => { const o = g.scene; o.scale.setScalar(1.7); o.position.set(0.9, 0.95, 0.05); (leaf || gate).add(o); });
     // recinzione CONTINUA dai bordi del cancello fino ai muri laterali (nessun varco): pannelli da 1.91 m che partono esattamente dal telaio (±0.955)

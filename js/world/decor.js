@@ -94,7 +94,7 @@ export function decorTower(group, z0) {
 export function entryDoor(group, z0) {
   const holder = new THREE.Group(); group.add(holder);   // si può nascondere (es. al suo posto un cancello)
   new GLTFLoader().load('assets/models/door.glb', (g) => {
-    const m = g.scene; aged(m, 0.5, 0.6); m.getObjectByName('large_castle_door_left')?.rotation.set(0, 0, 0); m.getObjectByName('large_castle_door_right')?.rotation.set(0, 0, 0);
+    const m = g.scene; aged(m, 0.5, 0.6, 'rust_ov2'); m.getObjectByName('large_castle_door_left')?.rotation.set(0, 0, 0); m.getObjectByName('large_castle_door_right')?.rotation.set(0, 0, 0);
     const d = new THREE.Group(); d.position.set(0, 0, z0 - 0.14); d.rotation.y = Math.PI; d.add(m); holder.add(d);
     const gt = new GLTFLoader().load('assets/models/gate.glb', (gg) => { const o = gg.scene; o.scale.setScalar(2.2); o.position.set(-0.08, 1.02, 0.13); d.add(o); });
   });

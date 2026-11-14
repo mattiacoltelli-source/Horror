@@ -1,9 +1,9 @@
 // OGGETTI BRUCIATI E USURATI: scurisce, desatura e annerisce con macchie di fuliggine (piu' fitte in basso, dove il fuoco ha leccato) i materiali di un modello.
 // aged(obj, k): k 0..1 = quanto. Un solo shader leggero (rumore in fragment), nessuna texture in piu'.
 import * as THREE from 'three';
-let rustTex = null;
-export function aged(obj, k = 0.7, rust = 0) {
-  if (rust > 0 && !rustTex) { rustTex = new THREE.TextureLoader().load('assets/tex/rust_ov.jpg'); rustTex.wrapS = rustTex.wrapT = THREE.RepeatWrapping; rustTex.colorSpace = THREE.SRGBColorSpace; }
+const rustTexs = {};
+export function aged(obj, k = 0.7, rust = 0, ov = 'rust_ov') {   // ov: texture della ruggine ('rust_ov' arancio, 'rust_ov2' metallo grigio con ruggine scura)
+  const rustTex = rust > 0 ? (rustTexs[ov] ??= (() => { const t = new THREE.TextureLoader().load('assets/tex/' + ov + '.jpg'); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t; })()) : null;
   obj.traverse((m) => {
     if (!m.isMesh || !m.material) return;
     const mats = [].concat(m.material).map((mat) => {
@@ -27,7 +27,7 @@ float aN(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       diffuseColor.rgb = mix(diffuseColor.rgb, rc * 0.62, clamp(rm, 0.0, 0.85)); }
     float wear = smoothstep(0.78, 0.9, aN(vAgeW * 41.0)) * 0.35 * uAge; diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.34, 0.3, 0.25), wear); }   // vernice saltata`);
       };
-      c.customProgramCacheKey = () => 'aged' + k + '_' + rust;
+      c.customProgramCacheKey = () => 'aged' + k + '_' + rust + ov;
       return c;
     });
     m.material = Array.isArray(m.material) ? mats : mats[0];
