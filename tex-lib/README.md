@@ -6,3 +6,8 @@ Colore a 512 px, tileable. Originali 1K (con normal e roughness) conservati dall
 - rusty_metal_05: ruggine (porte, cancello, scaffali)
 - large_sandstone_blocks, sandstone_blocks_08, medieval_blocks_06: pietra (pareti)
 - bark_willow_02: corteccia (non utile per ora)
+- chinese_hackberry_bark: corteccia/muro bruno con macchie chiare (muffa, intonaco vecchio)
+- weathered_peeling_timber: assi di legno con vernice scrostata verde e bianca (cappella, porte, scaffali, corridoi del reparto)
+- dirty_carpet: moquette scura e sporca (sala di controllo, stanze del personale)
+- rusty_metal_grid: lamiera verde-azzurra a riquadri con ruggine (porte, pareti industriali)
+- rusty_metal_04: ruggine intensa (cancelli, tubi, serbatoi)
