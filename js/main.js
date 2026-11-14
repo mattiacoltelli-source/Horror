@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { P, PKEY } from './personal.js';
+import { P, PKEY, CITY } from './personal.js';
 import { GLTFLoader } from '../vendor/three/loaders/GLTFLoader.js';
 import { makeMaterials, setAnisotropy } from './world/materials.js';
 import { buildTunnel, LAMPS, W, Z_END, H0 } from './world/tunnel.js';
@@ -280,7 +280,9 @@ async function enter() {
     writingDecals(scene, [{ img: 'assets/tex/sym_house.png', aspect: 0.9042, dry: true, p: [-1.38, 1.1, -5.0], wall: '+x', w: 0.62, rot: -0.04 }]);
     writingDecals(morgue.group, [{ img: 'assets/tex/sym_face.png', aspect: 1.0278, dry: true, p: [-4.22, 1.7, MZ - 10.5], wall: '+x', w: 0.8, rot: 0.03 }]);
     // solo Laya: scritte in thailandese, col sangue, sulla parete destra del primo corridoio (tra due costoloni, a destra del tubo)
-    if (PKEY === 'laya') writingDecals(scene, [{ img: 'assets/tex/wr_thai.webp', aspect: 2.2928, dry: true, p: [1.375, 1.0, -34.8], wall: '-x', w: 3.8 }]);
+    if (PKEY === 'laya') writingDecals(scene, [{ img: 'assets/tex/wr_thai.webp', aspect: 2.2928, dry: true, p: [1.375, 1.0, -42.3], wall: '-x', w: 3.2 }]);   // muro destro, tra le ultime due costole (lontano dal simbolo e dalla mano a z -34.8)
+    // la città: scritta a sangue sul muro destro del tunnel, tra due costole libere (tra il cancello laterale e il vetro). Bologna cita i portici, le altre città restano generiche
+    if (CITY) { const cu = CITY.toUpperCase().replace(/[ÁÂÄ]/g, 'À').replace(/[ÉÊË]/g, 'È').replace(/[ÍÎÏ]/g, 'Ì').replace(/[ÓÔÖ]/g, 'Ò').replace(/[ÚÛÜ]/g, 'Ù').replace(/[^A-ZÀÈÌÒÙ ']/g, ''), T = cu === 'BOLOGNA' ? "SOTTO I PORTICI\nC'ERA GIÀ LEI." : 'A ' + cu + '\nNON TI CERCA NESSUNO.', ta = bloodText(T).aspect, cz = -17.65; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.45, cz], wall: '-x', w: Math.min(0.6 * ta, 2.9) }]); }   // dopo la lampada a muro (z -15,4), prima della costola a -19,5
     // solo Elisa: scherzo, sul muro destro del tunnel tra due costoloni
     if (PKEY === 'elisa') { const pz = (RIBS[6] + RIBS[7]) / 2, T = 'PAGLIACCINA\nSEXY', ta = bloodText(T).aspect; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.6, pz], wall: '-x', w: Math.min(0.75 * ta, Math.abs(RIBS[6] - RIBS[7]) - 1.0) }]); }
     // solo Yana: frase piccola e bassa, quasi nascosta, sul muro destro del tunnel (poco in vista)
