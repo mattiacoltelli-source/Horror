@@ -28,7 +28,7 @@ export function bloodDecals(group, list) {
   const rotY = { '+x': Math.PI / 2, '-x': -Math.PI / 2, '+z': 0, '-z': Math.PI };
   for (const d of list) {
     const h = (d.h ?? 0.3) * ((d.k === 'A' || d.k === 'C') && d.a !== 0 ? 1.3 : 1), w = h * ASPECT[d.k];   // la mano nuova e' piu' dettagliata: un po' piu' grande
-    const mat = new THREE.MeshStandardMaterial({ map: get(d.k), transparent: true, color: d.k === 'X' ? new THREE.Color(1, 1, 1) : new THREE.Color(0.78, 0.7, 0.7), roughness: d.k === 'X' ? 0.7 : 0.42, metalness: 0, opacity: d.a ?? 0.85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3, alphaTest: 0.02 });
+    const mat = new THREE.MeshStandardMaterial({ map: get(d.k), transparent: true, color: d.k === 'X' ? new THREE.Color(1, 1, 1) : new THREE.Color(1.1, 0.95, 0.95), roughness: d.k === 'X' ? 0.7 : 0.8, metalness: 0, opacity: d.a ?? 0.85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3, alphaTest: 0.02 });
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); if (d.flip) m.scale.x = -1;
     m.rotation.set(0, rotY[d.wall], (d.rot ?? 0)); m.rotation.order = 'YXZ';
     m.position.set(...d.p); m.userData.blood = true; group.add(m); made.push(m);
