@@ -2,6 +2,7 @@
 // attraverso; poi si spegne. Una volta sola per partita. Lo schermo è un piano con canvas a bassa risoluzione sopra lo schermo spento del modello.
 // La luce è soffusa: un alone morbido sul pavimento davanti e uno piccolo attorno allo schermo, che tremolano col segnale (niente righe nette).
 import * as THREE from 'three';
+import { PKEY } from '../personal.js';
 
 const radial = (stops, w = 128, h = 128) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'), r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); stops.forEach(([o, a]) => r.addColorStop(o, `rgba(255,255,255,${a})`)); g.fillStyle = r; g.fillRect(0, 0, w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
 
@@ -27,6 +28,21 @@ export function createTv({ camera, audio }) {
     }
     cx.putImageData(img, 0, 0); tex.needsUpdate = true;
   };
+  // LA FOTO: dopo la statica, per ~1,8 s compare la foto col volto bruciato (quella di chi gioca; per gli altri quella di Yana), in bianco e nero sporco, tremolante, con un'ombra che ci passa sopra.
+  // E' una sola immagine ferma su un canvas 128x96: nessun costo in piu'.
+  const PW = 128, PH = 96, pcv = document.createElement('canvas'); pcv.width = PW; pcv.height = PH; const pg = pcv.getContext('2d');
+  const ptex = new THREE.CanvasTexture(pcv); ptex.magFilter = THREE.LinearFilter; ptex.colorSpace = THREE.SRGBColorSpace;
+  let photo = null; const img0 = new Image(); img0.onload = () => { photo = img0; }; img0.src = 'assets/tex/' + ({ elisa: 'pic_elisa.jpg', alice: 'pic_alice.jpg', rebecca: 'pic_rebecca.jpg' }[PKEY] || 'pic_yana.jpg');
+  const drawPhoto = (t) => {
+    pg.fillStyle = '#05080a'; pg.fillRect(0, 0, PW, PH);
+    if (photo) { const hh = PH - 4, ww = hh * photo.width / photo.height, jx = (Math.random() - 0.5) * 3, jy = (Math.random() - 0.5) * 2; pg.save(); pg.filter = 'grayscale(1) contrast(1.25) brightness(0.9)'; pg.drawImage(photo, (PW - ww) / 2 + jx, 2 + jy, ww, hh); pg.restore(); }
+    pg.fillStyle = 'rgba(70,110,130,0.18)'; pg.fillRect(0, 0, PW, PH);                                       // tinta fredda
+    const sh = 0.5 + 0.5 * Math.sin(t * 5.0); pg.fillStyle = `rgba(0,0,0,${0.35 * sh})`; pg.fillRect(((t * 0.55) % 1.4 - 0.2) * PW, 0, PW * 0.16, PH);   // ombra che passa
+    for (let i = 0; i < 90; i++) { const v = 90 + Math.random() * 150; pg.fillStyle = `rgba(${v},${v},${v},0.22)`; pg.fillRect(Math.random() * PW, Math.random() * PH, 1, 1); }   // grana
+    for (let y = 0; y < PH; y += 3) { pg.fillStyle = 'rgba(0,0,0,0.22)'; pg.fillRect(0, y, PW, 1); }          // linee di scansione
+    if (Math.random() < 0.18) { pg.fillStyle = 'rgba(200,220,230,0.16)'; pg.fillRect(0, Math.random() * PH, PW, 2 + Math.random() * 4); }   // disturbo orizzontale
+    ptex.needsUpdate = true;
+  };
   // g: gruppo dell'oggetto (centrato su x,z con la base a terra, davanti = +z)
   T.attach = (g, { sw = 0.315, sh = 0.24, x = 0.006, y = 0.266, z = 0.1825 } = {}) => {
     T.g = g;
@@ -40,14 +56,16 @@ export function createTv({ camera, audio }) {
   T.update = (dt, enabled = true) => {
     if (!T.g || !enabled || T.state === 'done') return;
     T.g.getWorldPosition(p); camera.getWorldDirection(f); d.copy(p).sub(camera.position); const dist = d.length(); d.normalize();
-    if (T.state === 'idle') { if (dist < 6 && dist > 1.2 && d.dot(f) > 0.6) T.seen += dt; else T.seen = Math.max(0, T.seen - dt); if (T.seen > 0.6) { T.state = 'on'; T.t = 0; T.acc = 0; [T.plane, T.glow, T.floor].forEach((m) => { m.visible = true; }); noise(null, 0); T.pos.set(p.x, 0.5, p.z); audio.tvStatic(3.6, T.pos, 1); } return; }
+    if (T.state === 'idle') { if (dist < 6 && dist > 1.2 && d.dot(f) > 0.6) T.seen += dt; else T.seen = Math.max(0, T.seen - dt); if (T.seen > 0.6) { T.state = 'on'; T.t = 0; T.acc = 0; [T.plane, T.glow, T.floor].forEach((m) => { m.visible = true; }); noise(null, 0); T.pos.set(p.x, 0.5, p.z); audio.tvStatic(3.9, T.pos, 1); } return; }
     T.t += dt; T.acc += dt;
-    const smear = T.t > 2.6 && T.t < 2.85 ? (T.t - 2.6) / 0.25 : null;
-    if (T.acc > 0.06) { T.acc = 0; noise(smear, T.t); }
+    // TEMPI: 0-1,6 s statica · 1,6-3,4 s la foto · 3,4-3,7 s statica · spento a 3,9 s
+    const showPhoto = T.t > 1.6 && T.t < 3.4;
+    if (T.plane.material.map !== (showPhoto ? ptex : tex)) { T.plane.material.map = showPhoto ? ptex : tex; T.plane.material.needsUpdate = true; if (showPhoto) audio.swell?.(1.2, 0.18); }
+    if (T.acc > 0.06) { T.acc = 0; if (showPhoto) drawPhoto(T.t); else noise(null, T.t); }
     // tremolio della luce col segnale, accensione e spegnimento morbidi
-    const fade = Math.min(1, T.t / 0.25) * Math.min(1, Math.max(0, (3.55 - T.t) / 0.2)), fl = 0.8 + Math.random() * 0.2 - (smear != null ? 0.35 : 0);
+    const fade = Math.min(1, T.t / 0.25) * Math.min(1, Math.max(0, (3.9 - T.t) / 0.2)), fl = 0.8 + Math.random() * 0.2 - (showPhoto && Math.random() < 0.2 ? 0.3 : 0);
     T.floor.material.opacity = 0.34 * fl * fade; T.glow.material.opacity = 0.3 * fl * fade;
-    if (T.t > 3.55) { T.state = 'done'; [T.plane, T.glow, T.floor].forEach((m) => { m.visible = false; }); }
+    if (T.t > 3.9) { T.state = 'done'; [T.plane, T.glow, T.floor].forEach((m) => { m.visible = false; }); }
   };
   return T;
 }
