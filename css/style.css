@@ -122,3 +122,9 @@ h1.tglitch{animation:tglitch .22s steps(1,end)}
   #intro .small,#intro .credits{margin-top:12px}
   #quality{padding:10px 22px;min-height:44px}
 }
+
+/* menu iniziale: i link piccoli (installa, qualità, riparti) stanno vicini tra loro, ancora comodi da toccare (44 px) */
+#intro .linkbtn{margin-top:0;min-height:44px;padding:10px 18px}
+#intro #install,#intro #quality{display:block;margin-left:auto;margin-right:auto}
+#intro #loadmsg{margin-top:14px;min-height:2.6em}
+#intro .credits{margin-top:14px}
