@@ -1,7 +1,7 @@
 // Arredo modulare delle stanze (tubi, cavi, recinzioni, tombini, grondaie). Tutto statico e fuso in pochi mesh.
 import { kitMesh, runZ } from './props.js';
 import * as THREE from 'three';
-import { bloodDecals, stainDecals } from './blood.js';
+import { bloodDecals, stainDecals, burnDecals } from './blood.js';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 const P2 = Math.PI / 2;
 const add = async (group, kit, pl) => { try { const m = await kitMesh(kit, pl); if (m) { m.traverse((o) => { o.userData.decor = true; if (globalThis.__lowQ) o.visible = false; }); group.add(m); } } catch (e) { console.warn('decor', kit, e); } };
@@ -58,6 +58,13 @@ export function decorCellar(group, z0) {
 }
 export function decorWarehouse(group, z0) {
   stainDecals(group, [{ p: [-5.99, 1.6, z0 - 6], wall: '+x', w: 3.0, h: 3.4 }, { p: [5.99, 1.6, z0 - 12], wall: '-x', w: 3.0, h: 3.4, flip: true }, { p: [5.99, 1.6, z0 - 30], wall: '-x', w: 3.2, h: 3.4, a: 0.8 }]);
+  // L'INCENDIO E' PARTITO DA QUI: fuliggine sui muri e sul soffitto, pavimento carbonizzato, scia di benzina verso il cancello
+  burnDecals(group, [
+    { k: 'wall', p: [-5.985, 2.9, z0 - 15], wall: '+x', w: 4.6, h: 5.8, a: 0.8 }, { k: 'wall', p: [5.985, 2.8, z0 - 17.5], wall: '-x', w: 4.2, h: 5.6, a: 0.75, flip: true }, { k: 'wall', p: [5.985, 2.2, z0 - 7.5], wall: '-x', w: 3.0, h: 4.2, a: 0.5 },
+    { k: 'ceil', p: [-0.8, 6.46, z0 - 16.5], w: 9, h: 9, rot: 0.4, a: 0.8 },
+    { k: 'floor', p: [-1.4, 0.012, z0 - 15.5], w: 4.4, h: 3.8, rot: 0.3, a: 0.9 }, { k: 'floor', p: [2.7, 0.012, z0 - 19.4], w: 2.8, h: 2.4, rot: 2.1, a: 0.85 }, { k: 'floor', p: [-3.5, 0.012, z0 - 22.3], w: 1.9, h: 1.7, rot: 4.0, a: 0.8 },
+    { k: 'trail', p: [0.7, 0.014, z0 - 24.5], w: 1.0, h: 10.5, rot: 0.05, a: 0.85 },
+  ]);
   const entry = entryDoor(group, z0);
   bloodDecals(group, [{ k: 'A', p: [-5.995, 1.5, z0 - 27], wall: '+x', h: 0.32, rot: 0.2 }, { k: 'C', p: [-5.995, 1.2, z0 - 28.2], wall: '+x', h: 0.3, rot: -0.1, a: 0.8 }]);
   add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -2.4, 6.2, z0 - 1, z0 - 34));

@@ -55,6 +55,43 @@ export function stainDecals(group, list) {
 }
 
 
+// TRACCE D'INCENDIO (fuliggine sui muri e sul soffitto, pavimento bruciato, scia di benzina): texture generate al volo, nere e opache solo in parte, senza luce propria.
+// kinds: 'wall' (lingue di fuliggine che salgono dal pavimento), 'floor' (macchia carbonizzata con cenere), 'trail' (scia stretta con schizzi), 'ceil' (annerimento diffuso)
+const burnTex = {};
+function burnTexture(kind) {
+  if (burnTex[kind]) return burnTex[kind];
+  let sd = { wall: 11, floor: 23, trail: 37, ceil: 53 }[kind]; const R = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+  const W = kind === 'trail' ? 128 : 256, H = kind === 'trail' ? 512 : kind === 'wall' ? 512 : 256, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  g.filter = 'blur(2.5px)';
+  if (kind === 'wall') {   // lingue verticali che si assottigliano verso l'alto, piu' fitte al centro-basso
+    for (let i = 0; i < 38; i++) {
+      const x = W * (0.5 + (R() + R() + R() - 1.5) * 0.45), hgt = H * (0.3 + R() * 0.6) * (1 - Math.abs(x / W - 0.5) * 0.9), w0 = 6 + R() * 22, y0 = H;
+      const grd = g.createLinearGradient(0, y0, 0, y0 - hgt); grd.addColorStop(0, 'rgba(0,0,0,0.85)'); grd.addColorStop(0.55, 'rgba(0,0,0,0.45)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grd; g.beginPath(); g.moveTo(x - w0, y0); g.quadraticCurveTo(x - w0 * 0.6 + (R() - 0.5) * 18, y0 - hgt * 0.5, x + (R() - 0.5) * 14, y0 - hgt); g.quadraticCurveTo(x + w0 * 0.6 + (R() - 0.5) * 18, y0 - hgt * 0.5, x + w0, y0); g.closePath(); g.fill();
+    }
+    g.filter = 'none'; const gr = g.createLinearGradient(0, H, 0, H * 0.5); gr.addColorStop(0, 'rgba(0,0,0,0.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(W * 0.12, H * 0.5, W * 0.76, H * 0.5);
+  } else if (kind === 'floor') {   // macchia irregolare: nera al centro con cenere, bordo bruciacchiato
+    for (let i = 0; i < 46; i++) { const a = R() * 6.283, r = Math.pow(R(), 0.6) * W * 0.36, x = W / 2 + Math.cos(a) * r, y = H / 2 + Math.sin(a) * r * 0.8, rr = 14 + R() * 38; const gr = g.createRadialGradient(x, y, 0, x, y, rr); gr.addColorStop(0, `rgba(0,0,0,${0.5 + R() * 0.35})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, rr, 0, 6.283); g.fill(); }
+    g.filter = 'none'; for (let i = 0; i < 160; i++) { const a = R() * 6.283, r = R() * W * 0.34; g.fillStyle = `rgba(${120 + R() * 40},${112 + R() * 30},${100 + R() * 25},${0.05 + R() * 0.12})`; g.fillRect(W / 2 + Math.cos(a) * r, H / 2 + Math.sin(a) * r * 0.8, 1 + R() * 3, 1 + R() * 2); }   // cenere chiara a puntini
+  } else if (kind === 'trail') {   // scia che serpeggia lungo il pavimento, con schizzi ai lati
+    let x = W / 2; for (let y = 0; y < H; y += 5) { x += (R() - 0.5) * 7; x = Math.max(W * 0.3, Math.min(W * 0.7, x)); g.fillStyle = `rgba(0,0,0,${0.6 + R() * 0.3})`; g.beginPath(); g.ellipse(x, y, 11 + R() * 9, 7, 0, 0, 6.283); g.fill(); if (R() < 0.18) { g.beginPath(); g.arc(x + (R() - 0.5) * 70, y + (R() - 0.5) * 14, 2 + R() * 6, 0, 6.283); g.fill(); } }
+  } else {   // soffitto: annerimento diffuso, piu' scuro al centro
+    const gr = g.createRadialGradient(W / 2, H / 2, 4, W / 2, H / 2, W * 0.5); gr.addColorStop(0, 'rgba(0,0,0,0.9)'); gr.addColorStop(0.6, 'rgba(0,0,0,0.5)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 30; i++) { const x = R() * W, y = R() * H, rr = 10 + R() * 30, gg = g.createRadialGradient(x, y, 0, x, y, rr); gg.addColorStop(0, 'rgba(0,0,0,0.35)'); gg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gg; g.beginPath(); g.arc(x, y, rr, 0, 6.283); g.fill(); }
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return (burnTex[kind] = t);
+}
+export function burnDecals(group, list) {
+  const rotY = { '+x': Math.PI / 2, '-x': -Math.PI / 2, '+z': 0, '-z': Math.PI };
+  for (const d of list) {
+    const kind = d.k || 'wall', m = new THREE.Mesh(new THREE.PlaneGeometry(d.w ?? 3, d.h ?? 3), new THREE.MeshBasicMaterial({ map: burnTexture(kind), color: 0x0a0806, transparent: true, opacity: d.a ?? 0.85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1, fog: true }));
+    if (kind === 'floor' || kind === 'trail') { m.rotation.set(-Math.PI / 2, 0, d.rot ?? 0); m.rotation.order = 'YXZ'; }
+    else if (kind === 'ceil') { m.rotation.set(Math.PI / 2, 0, d.rot ?? 0); m.rotation.order = 'YXZ'; }
+    else { m.rotation.y = rotY[d.wall]; if (d.flip) m.scale.x = -1; }
+    m.position.set(...d.p); m.userData.stain = true; group.add(m);
+  }
+}
+
 // SCRITTE sul muro (sangue o bomboletta, immagini con trasparenza in assets/tex): grandi, leggibili nel cono della torcia.
 // list: [{ img, p:[x,y,z], wall:'+x'|'-x'|'+z'|'-z', w: larghezza in metri, rot: 0, a: 0.95 }]  (l'altezza segue le proporzioni dell'immagine)
 import { bloodText } from './bloodfont.js';
