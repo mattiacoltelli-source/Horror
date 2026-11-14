@@ -212,13 +212,13 @@ async function enter() {
     writingDecals(hall.group, [{ ...pic('mural_ritual', 1.8534, 5.97, 2.6, -56.95, '-x', 4.7, 0), rot: 0, a: 0.94, glow: 0.14 }]);              // sala della folla: un solo murale (rito, sbiadito e usurato): vedi la scritta, poi la prima colonna, poi il murale
     // Torre: due murali ai lati della porta in fondo (gli ultimi che vedi) e tre in alto sui muri lunghi, sopra la stufa. Magazzino: due in alto (sopra scaffali e tubi).
     writingDecals(tower.group, [{ ...pic('mural_throne', 1.012, -3.85, 3.6, TZ - 17.97, '+z', 3.8, 0), rot: 0, a: 0.94, glow: 0.2 }]);   // torre, in fondo a sinistra della porta: il trono con la folla in ginocchio
-    writingDecals(tower.group, [{ ...pic('mural_skull', 1.0, 3.85, 3.6, TZ - 17.97, '+z', 3.8, 0), rot: 0, a: 0.94, glow: 0.2 },
+    writingDecals(tower.group, [{ ...pic('mural_angel', 1.808, 3.85, 3.6, TZ - 17.97, '+z', 4.4, 0), rot: 0, a: 0.94, glow: 0.2 },
       { ...pic('mural_inferno', 0.9049, -6.94, 4.6, TZ - 12.6, '+x', 3.07, 0), rot: 0, a: 0.94, glow: 0.2 }, { ...pic('mural_eyes', 2.368, -6.94, 5.0, TZ - 6.6, '+x', 4.7, 0), rot: 0, a: 0.94, glow: 0.2 }, { ...pic('mural_faces', 1.2526, 6.94, 5.0, TZ - 6.6, '-x', 4.2, 0), rot: 0, a: 0.94, glow: 0.2 }]);
     writingDecals(cellar.group, [{ ...pic('mural_angels', 1.0, -3.94, 2.2, CZ - 5.5, '+x', 3.0, 0), rot: 0, a: 0.94, glow: 0.2 }]);   // cantina, parete sinistra prima dello specchio: gli angeli senza volto
     // cantina: la parete in fondo e' un murale intero attorno alla porta d'uscita (il vano della porta e' trasparente nel disegno)
     writingDecals(cellar.group, [{ ...pic('mural_door', 1.8018, 0, 2.22, CZ - 23.985, '+z', 8.0, 0), rot: 0, a: 0.96, glow: 0.16 }]);
     writingDecals(wh.group, [{ ...pic('mural_fire', 1.2373, -5.94, 4.4, WZ - 24.6, '+x', 3.2, 0), rot: 0, a: 0.94, glow: 0.2 }]);
-    writingDecals(wh.group, [{ ...pic('mural_angel', 1.808, 5.94, 3.0, WZ - 24.6, '-x', 4.7, 0), rot: 0, a: 0.94 }]);              // magazzino, parete destra
+    writingDecals(wh.group, [{ ...pic('mural_skull', 1.0, 5.94, 3.4, WZ - 24.6, '-x', 2.8, 0), rot: 0, a: 0.94, glow: 0.2 }]);              // magazzino, parete destra
     writingDecals(tower.group, [{ ...pic('mural_cathedral', 1.351, 6.94, 3.2, TZ - 12.6, '-x', 4.7, 0), rot: 0, a: 0.94 }]);       // torre, parete destra
     writingDecals(wh.group, [pic('corridor', 1.369, -5.96, 1.5, WZ - 11.4, '+x', 0.85, 0.02), pic('window', 1.233, -5.96, 1.5, WZ - 12.55, '+x', 0.85, -0.02), pic('saint', 0.789, -5.96, 1.5, WZ - 13.65, '+x', 0.62, 0.02)])
     if (PKEY === 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_elisa.jpg', aspect: 0.545, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
