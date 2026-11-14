@@ -24,13 +24,13 @@ export function createTorch({ group, player, camera, audio, x, z, yaw = 0, roll 
       return;
     }
     T.t += dt;
-    if (T.state === 'on') { const f = T.t < 0.5 ? (Math.sin(T.t * 55) > 0 ? 0.9 : 0.15) : 1; set(f); if (T.t > 1.5) { T.state = 'roll'; T.t = 0; } }          // si accende (guizzo), poi aspetta
+    if (T.state === 'on') { const f = T.t < 0.5 ? (Math.sin(T.t * 55) > 0 ? 0.9 : 0.15) : 1; set(f); if (T.t > 0.5 && !roll) { T.state = 'stay'; T.t = 0; } else if (T.t > 1.5) { T.state = 'roll'; T.t = 0; } }          // si accende (guizzo), poi aspetta
     else if (T.state === 'roll') {
       const k = ease(Math.min(1, T.t / 3.4)), r = 0.0225;
       G.position.x = start.x + roll * k; G.rotation.y = yaw + turn * k; R.rotation.z = -(roll * k) / r;       // 50 cm: gira il fascio verso di te mentre rotola
       set(1 - 0.12 * Math.sin(T.t * 3.1));
       if (T.t > 3.4) { T.state = 'stay'; T.t = 0; }
-    } else if (T.state === 'stay') { set(1); if (T.t > 7) { T.state = 'off'; T.t = 0; } }
+    } else if (T.state === 'stay') { set(1); if (T.t > (roll ? 7 : 2)) { T.state = 'off'; T.t = 0; } }
     else if (T.state === 'off') { set(T.t < 0.12 ? 0 : T.t < 0.3 ? 0.9 : T.t < 0.38 ? 0 : T.t < 0.55 ? 0.7 : 0); if (T.t > 0.55) { T.state = 'idle'; T.done = true; set(0); } }
   };
   return T;
