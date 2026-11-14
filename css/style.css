@@ -152,6 +152,9 @@ html,body{overscroll-behavior:none}
 #ask label{display:block;margin:0 0 12px;font-size:13px;letter-spacing:.3em;text-transform:uppercase;color:#8a9088}
 #nm{width:min(260px,72vw);box-sizing:border-box;background:transparent;border:1px solid #4a4f49;color:#cfd2cd;font:inherit;font-size:18px;letter-spacing:.2em;text-align:center;padding:14px 12px;min-height:52px;border-radius:0;outline:none}
 #nm:focus{border-color:#9fb4a2}
+#fr,#ct{width:min(320px,86vw);box-sizing:border-box;background:transparent;border:1px solid #4a4f49;color:#cfd2cd;font:inherit;font-size:15px;letter-spacing:.1em;text-align:center;padding:10px 10px;min-height:46px;border-radius:0;outline:none}
+#fr:focus,#ct:focus{border-color:#9fb4a2}
+#fr::placeholder,#ct::placeholder{color:#4b4f4a;letter-spacing:.1em}
 #gen{display:flex;gap:10px;justify-content:center;margin:14px 0 18px}
 #gen button{min-width:90px;padding:12px 18px;min-height:48px;font-size:13px}
 #gen button.on{border-color:#9fb4a2;color:#fff;background:#0f130f}
@@ -168,3 +171,5 @@ html,body{overscroll-behavior:none}
 #bdw input:last-child{width:84px}
 #bdw input:focus{border-color:#9fb4a2}
 #bdw input::placeholder{color:#4b4f4a;letter-spacing:.15em}
+@media (max-height:700px){#intro.asking h1{font-size:clamp(38px,11vw,52px)}#ask label{margin-bottom:5px;font-size:11px}#nm{min-height:42px;padding:8px 12px;font-size:16px}#fr,#ct{min-height:38px;padding:6px 10px}#bdw input{min-height:40px;padding:6px 4px}#gen button{min-height:40px}}
+@media (max-height:700px){#intro.asking .tag{display:none}}

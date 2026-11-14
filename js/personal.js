@@ -19,7 +19,10 @@ function generic() {
   return { name, f, hair, hairHex: HAIR[hair || 'castani'], joke: f ? (hair ? 'capelli ' + hair + '. ' : '') + 'molto carina, annota suor Agnese, e lo sottolinea due volte.' : 'non si lamenta mai, annota suor Agnese. mangia tutto e chiede solo che la luce resti accesa.', detail: 'quella faccia non è la sua', sister: hair ? 'quella con i capelli ' + hair + ' come i suoi' : 'quella con la sua stessa faccia' };
 }
 export const P = PRESETS[key] || (/^[a-zàèéìòù' -]{2,14}$/i.test(raw) ? generic() : null);
-export const PKEY = P ? key : '';   // 'elisa' | 'yana' | altro nome | ''
+export const PKEY = P ? key : '';
+// città: i profili già fatti sono di Bologna; un link può cambiarla con &citta=Nome (il modulo del link normale la chiede). Vuota = nessuna menzione.
+const _c = (qs.get('citta') || (PRESETS[key] ? 'Bologna' : '')).trim();
+export const CITY = P && /^[A-Za-zÀ-ÖØ-öø-ÿ' -]{2,20}$/.test(_c) ? _c.toLowerCase().replace(/(^|[ '-])([a-zà-ÿ])/g, (m, a, b) => a + b.toUpperCase()) : '';   // 'elisa' | 'yana' | altro nome | ''
 
 // sussurro con la voce sintetica del telefono: basso, lento, una o due volte in tutta la partita.
 // Se il profilo ha una lingua (es. ucraino) e il telefono ha quella voce, parla in quella lingua; altrimenti dice il nome in italiano (e, per le altre frasi, tace: il testo e' gia' sullo schermo).

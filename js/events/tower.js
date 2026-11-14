@@ -9,13 +9,13 @@ import { decorTower } from '../world/decor.js';
 import { addExtras, pedestal, turnToward } from '../world/extra.js';
 import { unseenMover } from './ambient.js';
 import { addAtmosphere } from '../world/atmos.js';
-import { P } from '../personal.js';
+import { P, CITY } from '../personal.js';
 
 export const TOWER = { z0: -300, w: 14, l: 18, h: 8.5 };
 const _o = P ? (P.f === false ? 'o' : 'a') : 'o', _n = P ? ', ' + P.name : '';
 const TEXT = {   // finale: la suora e' suor Agnese, l'infermiera che ti ha tirato fuori dal fuoco e non ti lascia andare
   A: 'non ti sei girat' + _o + _n + '.\nera già davanti a te.\nsuor Agnese non ti ha salvat' + _o + ':\nti ha tenut' + _o + ' qui.',
-  B: 'ti sei girat' + _o + _n + '.\ntua sorella non c\'è più.\nl\'incendio l\'hai acceso tu.\nsuor Agnese lo sa. ti tiene qui.',
+  B: 'ti sei girat' + _o + _n + '.\ntua sorella non c\'è più.\nl\'incendio l\'hai acceso tu.\n' + (CITY ? 'a ' + CITY + ' ti stanno ancora aspettando.\n' : '') + 'suor Agnese lo sa. ti tiene qui.',
 };
 
 export function createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn, combat }) {
