@@ -292,6 +292,8 @@ async function enter() {
   last = performance.now();
 }
 $('enter').addEventListener('click', enter);
+// il pulsante dice cosa sta succedendo: "caricamento…" finche' e' spento, poi "entra nel gioco"
+{ const en = $('enter'), lab = () => { en.textContent = en.disabled ? 'CARICAMENTO…' : 'ENTRA NEL GIOCO'; }; new MutationObserver(lab).observe(en, { attributes: true, attributeFilter: ['disabled'] }); lab(); }
 
 THREE.DefaultLoadingManager.onLoad = () => { window.__loadMsgStop?.(); $('loadmsg').textContent = ''; $('enter').disabled = false; };
 $('enter').disabled = true;
@@ -307,9 +309,11 @@ $('resume').addEventListener('click', () => setPaused(false));
 { const qb = $('quality'), qm = $('qmenu'); if (qb && qm) {
   const NAMES = { high: 'alta', mid: 'media', low: 'bassa' };
   qb.textContent = 'qualità: ' + NAMES[QUAL] + ' ▾';
-  qb.addEventListener('click', (e) => { e.stopPropagation(); qm.classList.toggle('hidden'); });
-  qm.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.q === QUAL); b.addEventListener('click', (e) => { e.stopPropagation(); qm.classList.add('hidden'); if (b.dataset.q === QUAL) return; try { localStorage.setItem(QK, b.dataset.q); } catch (_) {} location.reload(); }); });   // si ricarica: l'antialiasing si decide all'avvio
-  document.addEventListener('click', () => qm.classList.add('hidden'));
+  const setOpen = (v) => { qm.classList.toggle('hidden', !v); qb.setAttribute('aria-expanded', v ? 'true' : 'false'); };
+  qb.addEventListener('click', (e) => { e.stopPropagation(); setOpen(qm.classList.contains('hidden')); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
+  qm.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.q === QUAL); b.addEventListener('click', (e) => { e.stopPropagation(); setOpen(false); if (b.dataset.q === QUAL) return; try { localStorage.setItem(QK, b.dataset.q); } catch (_) {} location.reload(); }); });   // si ricarica: l'antialiasing si decide all'avvio
+  document.addEventListener('click', () => setOpen(false));
 } }
 // il telefono puo' togliere la GPU all'app (memoria bassa, schermo bloccato): invece di restare nero/bloccato, mette in pausa e riprende quando il contesto torna
 canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); setPaused(true); });

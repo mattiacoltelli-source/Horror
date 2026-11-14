@@ -108,3 +108,17 @@ h1.tglitch{animation:tglitch .22s steps(1,end)}
 #qmenu button{border:0;background:none;color:#9aa19a;letter-spacing:.2em;font-size:13px;padding:13px 10px;font-family:inherit}
 #qmenu button+button{border-top:1px solid #262b26}
 #qmenu button.on{color:#e6e9e4}
+
+/* menu iniziale: centrato in modo sicuro (se lo schermo e' basso scorre invece di tagliare il titolo), crediti leggibili, schermi bassi piu' compatti */
+#intro{overflow-y:auto;overflow-x:hidden;align-items:flex-start;-webkit-overflow-scrolling:touch}
+#intro .intro-inner{margin:auto;padding-top:max(16px,env(safe-area-inset-top,0px));padding-bottom:max(16px,env(safe-area-inset-bottom,0px))}
+#intro .credits{margin:22px 0 0;font-size:11px;letter-spacing:.06em;color:#7b807a;opacity:.85}
+#quality{padding:16px 22px}
+#qmenu button{min-height:48px}
+@media (max-height:700px){
+  #intro .intro-inner{transform:none}
+  #intro h1{font-size:min(15vw,12vh);margin-bottom:16px}
+  #intro .tag{margin-bottom:26px;line-height:1.75;font-size:12px}
+  #intro .small,#intro .credits{margin-top:12px}
+  #quality{padding:10px 22px;min-height:44px}
+}
