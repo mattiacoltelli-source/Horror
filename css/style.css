@@ -145,3 +145,16 @@ html,body{overscroll-behavior:none}
 #cmenu.hidden{display:none}
 #cmenu button{border:0;background:none;color:#9aa19a;letter-spacing:.2em;font-size:13px;padding:12px 10px;min-height:44px;text-transform:lowercase}
 #cmenu button+button{border-top:1px solid #262b26}
+
+/* schermata 'come ti chiami?' (link con ?chiedi=1) */
+#ask{margin:0 0 8px}
+#ask.hidden{display:none}
+#ask label{display:block;margin:0 0 12px;font-size:13px;letter-spacing:.3em;text-transform:uppercase;color:#8a9088}
+#nm{width:min(260px,72vw);box-sizing:border-box;background:transparent;border:1px solid #4a4f49;color:#cfd2cd;font:inherit;font-size:18px;letter-spacing:.2em;text-align:center;padding:14px 12px;min-height:52px;border-radius:0;outline:none}
+#nm:focus{border-color:#9fb4a2}
+#gen{display:flex;gap:10px;justify-content:center;margin:14px 0 18px}
+#gen button{min-width:90px;padding:12px 18px;min-height:48px;font-size:13px}
+#gen button.on{border-color:#9fb4a2;color:#fff;background:#0f130f}
+#askgo:disabled{opacity:.35}
+#askerr{min-height:1.2em;margin-top:10px}
+#intro.asking #enter,#intro.asking #ckpt,#intro.asking #cmenu,#intro.asking #install,#intro.asking #quality,#intro.asking #qmenu,#intro.asking #loadmsg{display:none}

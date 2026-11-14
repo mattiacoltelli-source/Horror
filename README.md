@@ -16,6 +16,7 @@ Combattimento: pistola a 4 colpi o ascia (scelta nel magazzino); trascini per gu
 ## Link e scorciatoie
 - Versione standard: la pagina senza parametri.
 - Versione personalizzata: `?per=elisa`, `?per=yana`, `?per=gabriele`, `?per=tommy`, `?per=alice` (profili in `js/personal.js`). Qualsiasi altro nome: `?per=nome&g=m|f` (e opzionale `&capelli=biondi|rossi|castani|neri|grigi|no`).
+- **Link per tutti:** `?chiedi=1` chiede nome e genere prima di iniziare (solo lettere, 2-14), salva il nome sul telefono (`ng_name`) e ricarica la pagina come versione personalizzata; la seconda volta salta la domanda, con «non sei …? cambia».
 - Per provare una parte: `?start=porta` · `cantina` · `reparto` · `obitorio` · `magazzino` · `torre` · `epilogo`, con `&turned=1` (scelta «ti sei girato»), `&door=red|breath` (porta dell'obitorio), `&weapon=axe`, `&nogun=1`, `&specchio=1` (cantina, davanti allo specchio), `&debug=1` (espone `window.__g`).
 
 ## Aspetto e giocabilità

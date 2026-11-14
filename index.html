@@ -40,10 +40,18 @@
   <div class="intro-inner">
     <h1>NON<br>GIRARTI</h1>
     <p class="tag"><span>Usa le cuffie.</span><span>Gioca al buio.</span><span id="tag3">Non sei solo.</span></p>
+    <div id="ask" class="hidden">
+      <label for="nm">come ti chiami?</label>
+      <input id="nm" type="text" maxlength="14" autocomplete="given-name" autocapitalize="words" spellcheck="false" inputmode="text">
+      <div id="gen" role="group" aria-label="genere"><button type="button" data-g="m">lui</button><button type="button" data-g="f">lei</button></div>
+      <button id="askgo" type="button" disabled>CONTINUA</button>
+      <p id="askerr" class="small"></p>
+    </div>
     <button id="enter" type="button">ENTRA NEL GIOCO</button>
     <button id="ckpt" class="hidden linkbtn" type="button"></button>
     <div id="cmenu" class="hidden" role="menu"></div>
     <p id="loadmsg" class="small">caricamento…</p>
+    <button id="notme" class="hidden linkbtn" type="button"></button>
     <button id="install" class="hidden linkbtn" type="button">installa l'app</button>
     <button id="quality" class="linkbtn" type="button" aria-haspopup="true" aria-expanded="false"></button>
     <div id="qmenu" class="hidden" role="menu"><button type="button" role="menuitem" data-q="high">alta</button><button type="button" role="menuitem" data-q="mid">media</button><button type="button" role="menuitem" data-q="low">bassa</button></div>
@@ -52,11 +60,34 @@
 </section>
 
 <script>
+// LINK PER TUTTI: con ?chiedi=1 prima di iniziare chiede nome e genere, poi ricarica la pagina come versione personalizzata (?per=nome&g=m|f). Il nome resta solo su questo telefono.
+(function () {
+  var q = new URLSearchParams(location.search), intro = document.getElementById('intro'); if (!intro) return;
+  var OK = /^[A-Za-zÀ-ÖØ-öø-ÿ' -]{2,14}$/, KEY = 'ng_name', stored = null;
+  try { stored = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+  var asked = q.get('chiedi') === '1', fromAsk = q.get('da') === 'chiedi';
+  var go = function (n, g) { location.replace(location.pathname + '?per=' + encodeURIComponent(n) + '&g=' + g + '&da=chiedi'); };
+  if (q.get('reset') === '1') { try { localStorage.removeItem(KEY); } catch (e) {} }
+  if (asked && !q.get('per') && stored && OK.test(stored.n || '') && q.get('reset') !== '1') { go(stored.n, stored.g === 'm' ? 'm' : 'f'); return; }
+  if (fromAsk && q.get('per') && stored) { var nb = document.getElementById('notme'); if (nb) { nb.textContent = 'non sei ' + stored.n + '? cambia'; nb.classList.remove('hidden'); nb.addEventListener('click', function () { try { localStorage.removeItem(KEY); } catch (e) {} location.replace(location.pathname + '?chiedi=1&reset=1'); }); } }
+  if (!asked || q.get('per')) return;
+  intro.classList.add('asking'); document.getElementById('ask').classList.remove('hidden');
+  var nm = document.getElementById('nm'), go2 = document.getElementById('askgo'), err = document.getElementById('askerr'), g = null;
+  var upd = function () { var n = nm.value.trim(), ok = OK.test(n) && !!g; go2.disabled = !ok; err.textContent = n && !OK.test(n) ? 'solo lettere (2-14)' : ''; };
+  nm.addEventListener('input', upd);
+  document.querySelectorAll('#gen button').forEach(function (b) { b.addEventListener('click', function () { g = b.dataset.g; document.querySelectorAll('#gen button').forEach(function (x) { x.classList.toggle('on', x === b); }); upd(); }); });
+  go2.addEventListener('click', function () { var n = nm.value.trim(); if (!OK.test(n) || !g) return; n = n.charAt(0).toUpperCase() + n.slice(1); try { localStorage.setItem(KEY, JSON.stringify({ n: n, g: g })); } catch (e) {} go(n, g); });
+  nm.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !go2.disabled) go2.click(); });
+})();
+</script>
+<script>
 // Messaggi di caricamento criptici (cambiano a ogni apertura). Nessun ritardo finto: spariscono appena il gioco e' pronto.
 (function () {
   var el = document.getElementById('loadmsg'); if (!el) return;
   var PROF = { elisa: ['Elisa', 'i capelli rossi si vedono anche al buio.', 'qualcuno ti ricorda. rossa, come lei.'], yana: ['Yana', 'gli occhi azzurri si vedono anche al buio.', 'in reparto la trovavano tutti bellissima. si vede dalla cartella.'], gabriele: ['Gabriele', 'a quest\'ora nessuno entra per caso, Gabriele.', 'nel registro il tuo nome c\'era già.', 'm'], alice: ['Alice', 'in reparto la trovavano tutti bellissima, Alice.', 'nel registro il tuo nome c\'era già.'], tommy: ['Tommy', 'a quest\'ora nessuno entra per caso, Tommy.', 'nel registro il tuo nome c\'era già.', 'm'] };
-  var km = /[?&]per=([a-z]+)/i.exec(location.search), pr = km && PROF[km[1].toLowerCase()], per = !!pr;
+  var km = /[?&]per=([^&]+)/i.exec(location.search), kn = km ? decodeURIComponent(km[1]) : '', gm = /[?&]g=m/i.test(location.search), pr = kn && PROF[kn.toLowerCase()];
+  if (!pr && kn && /^[A-Za-zÀ-ÖØ-öø-ÿ' -]{2,14}$/.test(kn)) { var NN = kn.charAt(0).toUpperCase() + kn.slice(1); pr = [NN, 'a quest\'ora nessuno entra per caso, ' + NN + '.', 'nel registro il tuo nome c\'era già.', gm ? 'm' : 'f']; }
+  var per = !!pr;
   if (per) { var t3 = document.getElementById('tag3'); if (t3) t3.textContent = pr[3] === 'm' ? 'Non sei solo.' : 'Non sei sola.'; }
   var M = per ? [pr[0] + ', paziente n. 17, in attesa.', pr[0] + ', ti stavano aspettando.', pr[0] + ', non voltarti ancora.', pr[1], pr[2], 'la luce regge. ancora per poco.', 'respira piano, ' + pr[0] + '.', 'conta i passi. sono sempre uno in più.', 'ricordi la tua faccia?', 'tieni accesa la torcia.', 'non guardare dietro, qualunque cosa senta.'] : ['paziente n. 17, in attesa.', 'ti stavano aspettando.', 'non voltarti ancora.', 'la luce regge. ancora per poco.', 'qualcuno ha già aperto la porta.', 'conta i passi. sono sempre uno in più.', 'lo specchio non c\'era, prima.', 'respira piano.', 'il corridoio è più lungo di come lo ricordi.', 'ricordi la tua faccia?', 'non sei il primo a entrare.', 'nessuno ti ha sentito arrivare.', 'tieni accesa la torcia.', 'non guardare dietro, qualunque cosa senta.'];
   for (var i = M.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = M[i]; M[i] = M[j]; M[j] = t; }
