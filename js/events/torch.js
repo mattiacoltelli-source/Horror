@@ -4,7 +4,8 @@
 import * as THREE from 'three';
 
 export function createTorch({ group, player, camera, audio, x, z, yaw = 0, roll = 0.5, turn = 0.6 }) {
-  const T = { state: 'idle', t: 0, done: false };
+  const T = { state: 'idle', t: 0, done: false, s: 0 };
+  let I = 0; for (let t = 0; t < 5.2; t += 0.01) I += (1 - Math.exp(-t / 0.45)) * Math.exp(-t / 1.5) * 0.01; const RK = (roll || 0) / I;   // velocita' di scala: la corsa totale e' esattamente 'roll' metri
   const G = new THREE.Group(); G.position.set(x, 0.036, z); G.rotation.y = yaw; group.add(G);     // il gruppo scivola; "R" ruota sul proprio asse
   const R = new THREE.Group(); G.add(R);
   const rub = new THREE.MeshStandardMaterial({ color: 0x151517, roughness: 0.85 }), met = new THREE.MeshStandardMaterial({ color: 0x3b3d40, roughness: 0.45, metalness: 0.8 });
@@ -14,7 +15,7 @@ export function createTorch({ group, player, camera, audio, x, z, yaw = 0, roll 
   const L = new THREE.SpotLight(0xffefcf, 0, 12, 0.42, 0.85, 1.4); L.castShadow = false; G.add(L, L.target); L.position.set(0, 0.012, 0.13); L.target.position.set(0, -0.02, 3);
   const set = (k) => { L.intensity = 9 * k; lensM.color.setRGB(0.09 + 1.4 * k, 0.09 + 1.3 * k, 0.09 + 1.1 * k); };
   const ease = (k) => k * k * (3 - 2 * k), d = new THREE.Vector3(), start = G.position.clone(), fwd = new THREE.Vector3();
-  T.reset = () => { T.state = 'idle'; T.t = 0; T.done = false; G.position.copy(start); G.rotation.y = yaw; R.rotation.z = 0; set(0); };
+  T.reset = () => { T.state = 'idle'; T.t = 0; T.s = 0; T.done = false; G.position.copy(start); G.rotation.y = yaw; R.rotation.z = 0; set(0); };
   T.update = (dt) => {
     if (T.done) return;
     const P = player.pos;
@@ -26,11 +27,15 @@ export function createTorch({ group, player, camera, audio, x, z, yaw = 0, roll 
     T.t += dt;
     if (T.state === 'on') { const f = T.t < 0.5 ? (Math.sin(T.t * 55) > 0 ? 0.9 : 0.15) : 1; set(f); if (T.t > 0.5 && !roll) { T.state = 'stay'; T.t = 0; } else if (T.t > 1.5) { T.state = 'roll'; T.t = 0; } }          // si accende (guizzo), poi aspetta
     else if (T.state === 'roll') {
-      const k = ease(Math.min(1, T.t / 3.4)), r = 0.0225;
-      G.position.x = start.x + roll * k; G.rotation.y = yaw + turn * k; R.rotation.z = -(roll * k) / r;       // 50 cm: gira il fascio verso di te mentre rotola
-      set(1 - 0.12 * Math.sin(T.t * 3.1));
-      if (T.t > 3.4) { T.state = 'stay'; T.t = 0; }
-    } else if (T.state === 'stay') { set(1); if (T.t > (roll ? 7 : 2)) { T.state = 'off'; T.t = 0; } }
+      // rotolamento naturale: parte da fermo (pavimento appena inclinato), accelera piano e rallenta per attrito; si muove di lato rispetto al suo asse,
+      // la testa piu' larga lo fa curvare (il fascio vira da solo), la rotazione sul proprio asse e' esattamente spazio/raggio; a fine corsa un dondolio che si smorza
+      const v = RK * (1 - Math.exp(-T.t / 0.45)) * Math.exp(-T.t / 1.5), ds = v * dt; T.s += ds;
+      G.position.x += Math.cos(G.rotation.y) * ds; G.position.z -= Math.sin(G.rotation.y) * ds;   // di lato rispetto all'asse
+      G.rotation.y += turn * (ds / roll); R.rotation.z = -T.s / 0.0225;
+      if (T.t > 3.2) R.rotation.z += Math.sin((T.t - 3.2) * 16) * 0.05 * Math.exp(-(T.t - 3.2) * 2.6);
+      set(1 - 0.08 * Math.sin(T.t * 3.1));
+      if (T.t > 5.2) { T.state = 'stay'; T.t = 0; }
+    } else if (T.state === 'stay') { set(1); if (T.t > 2) { T.state = 'off'; T.t = 0; } }
     else if (T.state === 'off') { set(T.t < 0.12 ? 0 : T.t < 0.3 ? 0.9 : T.t < 0.38 ? 0 : T.t < 0.55 ? 0.7 : 0); if (T.t > 0.55) { T.state = 'idle'; T.done = true; set(0); } }
   };
   return T;

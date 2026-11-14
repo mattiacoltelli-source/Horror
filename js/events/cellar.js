@@ -154,7 +154,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   }
 
 
-  const torch = createTorch({ group: C.group, player, camera, audio, x: 1.9, z: CELLAR.z0 - 15.2, yaw: -2.2, roll: 0, turn: 0 });   // a terra, nel corridoio libero verso l'uscita
+  const torch = createTorch({ group: C.group, player, camera, audio, x: 1.9, z: CELLAR.z0 - 15.2, yaw: -2.2, roll: 0.5, turn: 0.5 });   // a terra, nel corridoio libero verso l'uscita
   // apparizione: la sagoma nera attraversa il fondo in mezzo secondo
   const shade = hall.silhouette(0); shade.visible = false; C.group.add(shade);
   let ap = -1;
