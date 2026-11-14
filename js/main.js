@@ -204,7 +204,7 @@ async function enter() {
     // Torre: due murali ai lati della porta in fondo (gli ultimi che vedi) e tre in alto sui muri lunghi, sopra la stufa. Magazzino: due in alto (sopra scaffali e tubi).
     writingDecals(tower.group, [{ ...pic('mural_throne', 1.012, -3.85, 3.6, TZ - 17.97, '+z', 3.8, 0), rot: 0, a: 0.94, glow: 0.2 }]);   // torre, in fondo a sinistra della porta: il trono con la folla in ginocchio
     writingDecals(tower.group, [{ ...pic('mural_skull', 1.0, 3.85, 3.6, TZ - 17.97, '+z', 3.8, 0), rot: 0, a: 0.94, glow: 0.2 },
-      { ...pic('mural_inferno', 0.9049, -6.94, 5.0, TZ - 12.6, '+x', 3.07, 0), rot: 0, a: 0.94, glow: 0.2 }, { ...pic('mural_eyes', 2.368, -6.94, 5.0, TZ - 6.6, '+x', 4.7, 0), rot: 0, a: 0.94, glow: 0.2 }, { ...pic('mural_faces', 1.2526, 6.94, 5.0, TZ - 6.6, '-x', 4.2, 0), rot: 0, a: 0.94, glow: 0.2 }]);
+      { ...pic('mural_inferno', 0.9049, -6.94, 4.6, TZ - 12.6, '+x', 3.07, 0), rot: 0, a: 0.94, glow: 0.2 }, { ...pic('mural_eyes', 2.368, -6.94, 5.0, TZ - 6.6, '+x', 4.7, 0), rot: 0, a: 0.94, glow: 0.2 }, { ...pic('mural_faces', 1.2526, 6.94, 5.0, TZ - 6.6, '-x', 4.2, 0), rot: 0, a: 0.94, glow: 0.2 }]);
     writingDecals(cellar.group, [{ ...pic('mural_angels', 1.0, -3.94, 2.2, CZ - 5.5, '+x', 3.0, 0), rot: 0, a: 0.94, glow: 0.2 }]);   // cantina, parete sinistra prima dello specchio: gli angeli senza volto
     // cantina: la parete in fondo e' un murale intero attorno alla porta d'uscita (il vano della porta e' trasparente nel disegno)
     writingDecals(cellar.group, [{ ...pic('mural_door', 1.8018, 0, 2.22, CZ - 23.985, '+z', 8.0, 0), rot: 0, a: 0.96, glow: 0.16 }]);

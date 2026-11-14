@@ -6,6 +6,7 @@ const PRESETS = {
   yana: { name: 'Yana', hair: 'biondi', f: true, hairHex: 0x8c7440, joke: 'capelli biondi, occhi azzurri. molto carina, annota l\'infermiere. il turno di notte, da allora, lo chiedono tutti.', detail: 'quegli occhi azzurri non sono i suoi', sister: 'quella con i capelli biondi come i suoi',
     lang: 'uk-UA', whisper: ['Яно.', 'Спи, Яно.'], turn: 'Обернись, Яно.', nurse: 'ogni sera le dice «добраніч», buonanotte, come vuole lei.' },   // ucraina: sussurri in ucraino (se il telefono ha la voce), buonanotte nella nota dell\'infermiera
 };
+PRESETS.tommy = { name: 'Tommy', f: false, hair: '', hairHex: 0x3a2412, joke: 'non si lamenta mai, annota l\'infermiere. mangia tutto e chiede solo che la luce resti accesa.', detail: 'quella faccia non è la sua', sister: 'quella con la sua stessa faccia' };   // link pulito: ?per=tommy (maschio, senza capelli nominati)
 PRESETS.gabriele = { name: 'Gabriele', f: false, hair: '', hairHex: 0x3a2412, joke: 'non si lamenta mai, annota l\'infermiere. mangia tutto e chiede solo che la luce resti accesa.', detail: 'quella faccia non è la sua', sister: 'quella con la sua stessa faccia' };   // link pulito: ?per=gabriele
 const qs = new URLSearchParams(location.search), raw = (qs.get('per') || '').trim(), key = raw.toLowerCase();
 // profilo generico: basta il nome (?per=gabriele). Opzionali: &g=m|f (genere, default f), &capelli=biondi|rossi|castani|neri|grigi (default castani) oppure &capelli=no per non nominarli mai
