@@ -56,7 +56,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
   stainDecals(R.group, [{ p: [-hw + 0.01, 1.3, z0 - 5], wall: '+x', w: 2.6, h: 2.2 }, { p: [hw - 0.01, 1.2, z0 - 9.5], wall: '-x', w: 2.4, h: 2.2, flip: true }, { p: [-hw + 0.01, 1.2, z0 - 14], wall: '+x', w: 2.4, h: 2.2, a: 0.8 }, { p: [hw - 0.01, 1.2, z0 - 17.5], wall: '-x', w: 2.4, h: 2.2 }]);
   patchDecals(R.group, [{ img: 'assets/tex/pt_plaster.webp', p: [-hw + 0.016, 1.85, z0 - 2.6], wall: '+x', w: 1.9, h: 1.3 }, { img: 'assets/tex/pt_plaster.webp', p: [hw - 0.016, 1.85, z0 - 4.2], wall: '-x', w: 1.7, h: 1.2, rot: 0.04 }]);   // corridoio: intonaco scrostato e muro macchiato sopra le piastrelle
   // compleanno, scritto col sangue sulle piastrelle bianche: dai profili, oppure da ?nasc=g-m-aa (la domanda del link per tutti)
-  const BD = { rebecca: '20/6/97', tommy: '1/11/90', gabriele: '31/12/90', elisa: '2/8/90' };
+  const BD = { rebecca: '20/6/97', tommy: '1/11/90', gabriele: '31/12/90', elisa: '2/8/90', alice: '5/9/93' };
   const qn = /^(\d{1,2})-(\d{1,2})-(\d{2})$/.exec(new URLSearchParams(location.search).get('nasc') || '');
   const DATE = qn ? qn[1] + '/' + qn[2] + '/' + qn[3] : BD[PKEY];
   if (DATE) { const T = DATE, ta = bloodText(T).aspect; writingDecals(R.group, [{ text: T, aspect: ta, p: [-1.758, 0.64, z0 - 3.0], wall: '+x', w: Math.min(0.72 * ta, 2.4) }]); }
