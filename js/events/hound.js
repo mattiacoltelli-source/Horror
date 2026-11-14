@@ -26,7 +26,7 @@ export function createHound({ scene, player, lights, audio, glass }) {
     if (H.state === 'wait') {
       if (!lights.lamps[lampIdx]) return;
       if (!H.armed) { H.armed = true; lights.lamp(lampIdx, 'off'); }   // l'ultima lampada resta spenta: in fondo c'e' solo penombra
-      H.obj.visible = !!glass?.done && z < -8 && z > ZT - 0.5;   // compare solo dopo la scena del vetro (le mani sul vetro)
+      H.obj.visible = (!!glass?.done || (glass?.state === 'vanish' && glass.t > 2.2)) && z < -8 && z > ZT - 0.5;   // compare ~1,3 s prima della fine della scena del vetro (~2 m di cammino in anticipo)   // compare solo dopo la scena del vetro (le mani sul vetro)
       H.obj.rotation.y = Math.atan2(player.pos.x - H.obj.position.x, z - H.obj.position.z);   // guarda verso di te
       if (z < ZT) { H.state = 'flash'; H.t = 0; lights.lamp(lampIdx, 'flicker', 0.9); audio.swell?.(1.2, 0.35); }
     } else if (H.state === 'flash') {
