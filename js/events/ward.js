@@ -60,7 +60,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
   const qn = /^(\d{1,2})-(\d{1,2})-(\d{2})$/.exec(new URLSearchParams(location.search).get('nasc') || '');
   const DATE = qn ? qn[1] + '/' + qn[2] + '/' + qn[3] : BD[PKEY];
   writingDecals(R.group, [{ img: 'assets/tex/pic_mural_child.webp', aspect: 0.7378, p: [1.758, 1.9, z0 - 6.0], wall: '-x', w: 0.85, rot: 0, a: 0.9, plain: true, glow: 0.1 }]);   // reparto: la bambina alla finestra (la sorella), sulla parete verde sopra le piastrelle
-  writingDecals(R.group, [{ img: 'assets/tex/sym_eye.png', aspect: 0.8042, p: [1.758, 1.95, z0 - 14.5], wall: '-x', w: 0.7, rot: 0.03 }]);   // occhio che piange, sulla parete verde
+  writingDecals(R.group, [{ img: 'assets/tex/sym_eye.png', aspect: 0.8042, dry: true, p: [1.758, 1.95, z0 - 14.5], wall: '-x', w: 0.7, rot: 0.03 }]);   // occhio che piange, sulla parete verde
   // frase personale (max 28 lettere, due righe), scritta col sangue sulle piastrelle bianche piu' avanti nel corridoio
   { const raw = (new URLSearchParams(location.search).get('frase') || '').toUpperCase().replace(/[ÀÁÂÄ]/g, 'A').replace(/[ÉÊË]/g, 'È').replace(/[ÌÍÎÏ]/g, 'I').replace(/[ÒÓÔÖ]/g, 'O').replace(/[ÙÚÛÜ]/g, 'U').replace(/[^A-ZÈ ,.'\-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 28);
     if (raw.length >= 2) { const ws = raw.split(' '); let l1 = '', l2 = ''; for (const x of ws) { if (!l2 && (l1 + ' ' + x).trim().length <= 14) l1 = (l1 + ' ' + x).trim(); else l2 = (l2 + ' ' + x).trim(); }

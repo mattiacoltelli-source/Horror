@@ -275,8 +275,8 @@ async function enter() {
       writingDecals(cellar.group, [{ img: sg, aspect: A, p: [-3.96, 1.6, CZ - 20.5], wall: '+x', w: 1.6 }]);
       writingDecals(wh.group, [{ img: sg, aspect: A, p: [5.96, 1.9, WZ - 6.6], wall: '-x', w: 1.7 }]); }
     // tre simboli di sangue (casa, occhio che piange, faccia triste): uno nel tunnel, uno nel corridoio del reparto, uno nell'obitorio
-    writingDecals(scene, [{ img: 'assets/tex/sym_house.png', aspect: 0.9042, p: [-1.38, 1.1, -5.0], wall: '+x', w: 0.62, rot: -0.04 }]);
-    writingDecals(morgue.group, [{ img: 'assets/tex/sym_face.png', aspect: 1.0278, p: [-4.22, 1.7, MZ - 10.5], wall: '+x', w: 0.8, rot: 0.03 }]);
+    writingDecals(scene, [{ img: 'assets/tex/sym_house.png', aspect: 0.9042, dry: true, p: [-1.38, 1.1, -5.0], wall: '+x', w: 0.62, rot: -0.04 }]);
+    writingDecals(morgue.group, [{ img: 'assets/tex/sym_face.png', aspect: 1.0278, dry: true, p: [-4.22, 1.7, MZ - 10.5], wall: '+x', w: 0.8, rot: 0.03 }]);
     // solo Elisa: scherzo, sul muro destro del tunnel tra due costoloni
     if (PKEY === 'elisa') { const pz = (RIBS[6] + RIBS[7]) / 2, T = 'PAGLIACCINA\nSEXY', ta = bloodText(T).aspect; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.6, pz], wall: '-x', w: Math.min(0.75 * ta, Math.abs(RIBS[6] - RIBS[7]) - 1.0) }]); }
     // solo Yana: frase piccola e bassa, quasi nascosta, sul muro destro del tunnel (poco in vista)
