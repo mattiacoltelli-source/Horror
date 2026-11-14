@@ -32,7 +32,7 @@ export function createTv({ camera, audio }) {
   // E' una sola immagine ferma su un canvas 128x96: nessun costo in piu'.
   const PW = 128, PH = 96, pcv = document.createElement('canvas'); pcv.width = PW; pcv.height = PH; const pg = pcv.getContext('2d');
   const ptex = new THREE.CanvasTexture(pcv); ptex.magFilter = THREE.LinearFilter; ptex.colorSpace = THREE.SRGBColorSpace;
-  let photo = null; const img0 = new Image(); img0.onload = () => { photo = img0; }; img0.src = 'assets/tex/' + ({ elisa: 'pic_elisa.jpg', alice: 'pic_alice.jpg', rebecca: 'pic_rebecca.jpg' }[PKEY] || 'pic_yana.jpg');
+  let photo = null; const img0 = new Image(); img0.onload = () => { photo = img0; }; img0.src = 'assets/tex/' + ({ elisa: 'pic_elisa.jpg', alice: 'pic_alice.jpg', rebecca: 'pic_rebecca.jpg', laya: 'pic_laya.jpg' }[PKEY] || 'pic_yana.jpg');
   const drawPhoto = (t) => {
     pg.fillStyle = '#05080a'; pg.fillRect(0, 0, PW, PH);
     if (photo) { const hh = PH - 4, ww = hh * photo.width / photo.height, jx = (Math.random() - 0.5) * 3, jy = (Math.random() - 0.5) * 2; pg.save(); pg.filter = 'grayscale(1) contrast(1.25) brightness(0.9)'; pg.drawImage(photo, (PW - ww) / 2 + jx, 2 + jy, ww, hh); pg.restore(); }
