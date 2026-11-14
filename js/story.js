@@ -21,7 +21,9 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
   const EXTRA = { warehouse: 'qualcuno ha lasciato la pistola dove l\'avresti trovata.', tower: 'non si arrabbia. aspetta.' };   // seconda riga, piu' tardi
   const tell = (name) => {
     const l = LINES[name]; if (!l) return;
-    setTimeout(() => { if (current === name && !busy) say?.(l.join('\n'), 7000, 'note'); }, 3000);
+    // se un'altra nota e' ancora a schermo (es. quella del reparto mentre entri nell'obitorio) aspetta che finisca, invece di cancellarla a meta'
+    const show = () => { if (current !== name || busy) return; const wait = (say.noteUntil || 0) - performance.now(); if (wait > 0) { setTimeout(show, wait + 350); return; } say?.(l.join('\n'), 7000, 'note'); };
+    setTimeout(show, 3000);
     if (EXTRA[name]) setTimeout(() => { if (current === name && !busy) say?.(EXTRA[name], 5200); }, 13500);
   };
   const S = {
