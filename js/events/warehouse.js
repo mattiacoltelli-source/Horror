@@ -88,7 +88,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
     new GLTFLoader().load('assets/models/gate.glb', (g) => { const o = g.scene; o.scale.setScalar(1.7); o.position.set(0.9, 0.95, 0.05); (lf3 || gateIn).add(o); });
   })();
   let gateT = 0;
-  const shade = hall.silhouette(5); shade.visible = false; W.group.add(shade);
+  const shade = hall.silhouette(5); shade.visible = false; W.group.add(shade); W.shade = shade;
 
   W.enter = () => {
     W.gone = false; W.prev = false; if (W.bx) { W.bounds[0] = W.bx[0]; W.bounds[1] = W.bx[1]; } W.bounds[2] = WH.z0 - WH.l + 1.5; if (W.cap) W.cap.visible = true; W.group.position.z = 0; tv.reset(); sorella.reset(); sorella.load(); W.group.visible = true; W.taken = false; W.state = 'walk'; W.t = 0; W.beat = false; gateT = 0; if (leaf) leaf.rotation.y = 0;
@@ -101,7 +101,8 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   W.update = (dt) => {
     if (!W.group.visible || W.gone) return; const P = player.pos; W.t += dt; tv.update(dt, !combat?.active); sorella.update(dt, !combat?.active);
     // faro con sensore: passi nel suo raggio e si accende con un tonfo; qualcuno è già lì, fermo, nella luce. Poi si spegne.
-    if (W.sec === 0 && P.z < WH.z0 - 12) { W.sec = 1; W.secT = 0; lights.lamp(3, 'flicker', 0.5); shade.position.set(flags.turned ? 2.5 : 3.6, 0, WH.z0 - 22.5); shade.rotation.y = Math.PI / 2 + 0.2; shade.visible = true; audio.lightOn(); audio.whisper(1.6, 0.12); instab.push(0.7, 5); player.addShake(0.15); }
+    // l'ombra con la campana sta vicino al muro destro, di fronte al murale con le fiamme, a guardarlo
+    if (W.sec === 0 && P.z < WH.z0 - 12) { W.sec = 1; W.secT = 0; lights.lamp(3, 'flicker', 0.5); shade.position.set(flags.turned ? 4.4 : 4.8, 0, WH.z0 - 24.4); shade.rotation.y = Math.PI / 2; shade.visible = true; audio.lightOn(); audio.whisper(1.6, 0.12); instab.push(0.7, 5); player.addShake(0.15); }
     if (W.sec === 1) { W.secT += dt; secMats.forEach((m) => (m.emissiveIntensity = 2.2 * (lights.lamps[3]?.level ?? 0)));
       if (W.secT > 0.55 && W.secT < 0.6) lights.lamp(3, 'on');
       if ((W.secT > 4.2 || P.z < WH.z0 - 19) && W.secT > 1.2) { W.sec = 2; shade.visible = false; lights.lamp(3, 'off'); audio.lightOn(); secMats.forEach((m) => (m.emissiveIntensity = 0)); } }
