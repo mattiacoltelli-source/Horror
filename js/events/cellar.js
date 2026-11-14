@@ -2,6 +2,7 @@
 // Specchio: planare reale (Reflector) a bassa risoluzione, renderizzato solo se in vista. La figura "dietro di te" esiste
 // solo mentre guardi lo specchio: ogni volta che distogli lo sguardo e torni, è più vicina.
 import * as THREE from 'three';
+import { aged } from '../world/aged.js';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { Reflector } from '../../vendor/three/Reflector.js';
 import { buildRoom } from '../world/rooms.js';
@@ -131,7 +132,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   // lampade, oggetti di scena
   const loader = new GLTFLoader(), lampPos = [[0, 3.75, CELLAR.z0 - 6], [0, 3.75, CELLAR.z0 - 18]];
   loader.load('assets/models/lamp.glb', (g) => { for (const [x, y, z] of lampPos) { const o = g.scene.clone(true); const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(0.32 / (b.max.y - b.min.y)); b.setFromObject(o); o.position.set(x - (b.max.x + b.min.x) / 2, y - b.max.y, z); C.group.add(o); const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.6, 5), new THREE.MeshBasicMaterial({ color: 0 })); cord.position.set(x, y + 0.3, z); C.group.add(cord); } });
-  const prop = (url, h, x, z, ry) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y, c.z - z)); o.rotation.y = ry; C.group.add(o); });
+  const prop = (url, h, x, z, ry) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y, c.z - z)); o.rotation.y = ry; if (/cabinet|stool/.test(url)) aged(o, 0.6); C.group.add(o); });
   prop('assets/models/can.glb', 0.12, -2.6, CELLAR.z0 - 3, 0.5); prop('assets/models/tank.glb', 0.55, 3.1, CELLAR.z0 - 12.5, 0.4); prop('assets/models/rim.glb', 0.5, 2.4, CELLAR.z0 - 4.2, 1.2);
   prop('assets/models/stool.glb', 0.46, -2.2, CELLAR.z0 - 8.4, 0.3); prop('assets/models/cabinet.glb', 1.1, 3.4, CELLAR.z0 - 17, -Math.PI / 2);
   // atmosfera: fasci freddi sotto le lampade, pozzanghere, colature (non sul muro dello specchio)

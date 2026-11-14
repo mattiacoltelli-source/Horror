@@ -1,6 +1,7 @@
 // STANZA 3 — IL MAGAZZINO BRUCIATO: lunga sala di scaffali e pilastri. In fondo, su un carrello, una pistola e un caricatore.
 // Prenderla cambia l'atmosfera: la luce se ne va, passi pesanti si avvicinano da dietro, poi si apre la porta d'uscita.
 import * as THREE from 'three';
+import { aged } from '../world/aged.js';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { buildRoom } from '../world/rooms.js';
 import { kitMesh, kitObject } from '../world/props.js';
@@ -21,7 +22,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   const room = buildRoom(mats, { z0: WH.z0, w: WH.w, l: WH.l, h: WH.h, wall: 'brick', floor: 'floorB', ceil: 'stone', pillarEvery: 6, dark: 0.8, seed: 41, exit: { w: 2, h: 2.6 } });
   W.group.add(room.group); const entry = decorWarehouse(W.group, WH.z0); W.bounds = [room.bounds[0], room.bounds[1], WH.z0 - WH.l + 1.5, WH.z0 - 0.6];
   const zFar = WH.z0 - WH.l, loader = new GLTFLoader();
-  const prop = (url, h, x, y, z, ry, cb) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y - y, c.z - z)); o.rotation.y = ry; W.group.add(o); cb?.(o); });
+  const prop = (url, h, x, y, z, ry, cb) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y - y, c.z - z)); o.rotation.y = ry; if (/rack|stool|cart|shelf|chair|rim|can|tank|bin/.test(url)) aged(o, 0.9); W.group.add(o); cb?.(o); });
 
   // scaffali e cestini lungo i muri, un po' sparsi (non una fila perfetta)
   [-9, -13.5, -19, -24, -31, -33.5].forEach((dz, i) => { prop('assets/models/rack.glb', 1.9, i % 2 ? 5.2 : -5.2, 0, WH.z0 + dz - 0.4, (i % 2 ? -1 : 1) * Math.PI / 2 + (i % 3) * 0.05); });

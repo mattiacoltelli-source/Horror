@@ -4,6 +4,7 @@
 // 8° valore opzionale: 'lie' (rad) ribalta l'oggetto sull'asse X, es. -PI/2 = sdraiato a pancia in su, appoggiato.
 // Il modello viene scalato all'altezza data e centrato su (x, z) con la base a y; se manca il file, la stanza resta com'è.
 import * as THREE from 'three';
+import { aged } from './aged.js';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 
 const loader = new GLTFLoader(), cache = {};
@@ -16,6 +17,7 @@ export function addExtras(group, list) {
     if (lie) { o.rotation.x = lie; o.updateMatrixWorld(true); b.setFromObject(o); }   // la base si calcola dopo averlo sdraiato
     const c = b.getCenter(new THREE.Vector3()); o.position.set(-c.x, -b.min.y, -c.z);
     if (dark < 1) o.traverse((m) => { if (!m.isMesh) return; m.material = m.material.clone(); const c = m.material.color, gr = (c.r + c.g + c.b) / 3; c.setRGB(c.r + (gr - c.r) * 0.6, c.g + (gr - c.g) * 0.6, c.b + (gr - c.b) * 0.6).multiplyScalar(dark); if (m.material.emissive) m.material.emissive.multiplyScalar(dark); });
+    if (/x_clock|x_bust|x_basket|x_gnome|x_lion|x_tv|x_screen|bin|stove|cabinet|chair|stool|tank|rim|can$/.test(name)) aged(o, name === 'x_clock' ? 0.85 : 0.7);
     const g = new THREE.Group(); g.add(o); g.position.set(x, y, z); g.rotation.y = ry; group.add(g); cb?.(g);
   });
 }
