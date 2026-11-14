@@ -37,10 +37,10 @@ const q = new URLSearchParams(location.search);
 // ---------- renderer ----------
 const canvas = $('gl');
 // QUALITA' GRAFICA: alta / media / bassa. Scelta dal menu iniziale e ricordata sul telefono; se manca, si sceglie da soli dalla potenza dichiarata del dispositivo (memoria, core).
-// Se i frame calano durante la partita il gioco abbassa da solo la risoluzione e, come ultimo ripiego, ricorda "bassa" per la volta dopo.
+// Se i frame calano durante la partita il gioco abbassa da solo la risoluzione (solo per quella partita).
 const QK = 'ng_quality', QD = { high: { pr: 1.5, aa: true, an: 4 }, mid: { pr: 1.15, aa: false, an: 2 }, low: { pr: 0.8, aa: false, an: 1 } };
 let QUAL; try { QUAL = localStorage.getItem(QK); } catch (_) {}
-if (!QD[QUAL]) QUAL = ((navigator.deviceMemory && navigator.deviceMemory <= 3) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)) ? 'low' : (devicePixelRatio >= 2.5 ? 'mid' : 'high');
+if (!QD[QUAL]) QUAL = 'high';   // di base: alta (la scelta si cambia dal menu iniziale e resta ricordata)
 globalThis.__quality = QUAL; if (QUAL === 'low') globalThis.__lowQ = true;   // bassa: niente arredo modulare (tubi, cavi, recinzioni), specchio piu' piccolo
 const QC = QD[QUAL];
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: QC.aa && devicePixelRatio < 2, powerPreference: QUAL === 'low' ? 'default' : 'high-performance', alpha: false });
@@ -302,10 +302,12 @@ function setPaused(p) {
 }
 document.addEventListener('visibilitychange', () => document.hidden && setPaused(true));
 $('resume').addEventListener('click', () => setPaused(false));
-{ const qb = $('quality'); if (qb) {
-  const NAMES = { high: 'alta', mid: 'media', low: 'bassa' }, ORDER = ['low', 'mid', 'high'];
-  const paint = () => { qb.textContent = 'qualità: ' + NAMES[QUAL] + ' · cambia'; };
-  paint(); qb.addEventListener('click', () => { const nx = ORDER[(ORDER.indexOf(QUAL) + 1) % 3]; try { localStorage.setItem(QK, nx); } catch (_) {} location.reload(); });   // si ricarica: l'antialiasing si decide all'avvio
+{ const qb = $('quality'), qm = $('qmenu'); if (qb && qm) {
+  const NAMES = { high: 'alta', mid: 'media', low: 'bassa' };
+  qb.textContent = 'qualità: ' + NAMES[QUAL] + ' ▾';
+  qb.addEventListener('click', (e) => { e.stopPropagation(); qm.classList.toggle('hidden'); });
+  qm.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.q === QUAL); b.addEventListener('click', (e) => { e.stopPropagation(); qm.classList.add('hidden'); if (b.dataset.q === QUAL) return; try { localStorage.setItem(QK, b.dataset.q); } catch (_) {} location.reload(); }); });   // si ricarica: l'antialiasing si decide all'avvio
+  document.addEventListener('click', () => qm.classList.add('hidden'));
 } }
 // il telefono puo' togliere la GPU all'app (memoria bassa, schermo bloccato): invece di restare nero/bloccato, mette in pausa e riprende quando il contesto torna
 canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); setPaused(true); });
@@ -357,7 +359,7 @@ function frame(now) {
   if (fpsAcc > 2) {
     const fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0;
     if (fps < 38 && pr > 0.7) { pr = Math.max(0.7, pr - 0.15); renderer.setPixelRatio(pr); resize(); }
-    else if (fps < 28 && pr <= 0.71 && !globalThis.__lowQ) { globalThis.__lowQ = true; try { localStorage.setItem(QK, 'low'); } catch (_) {} scene.traverse((o) => { if (o.userData.decor) o.visible = false; }); }   // ultimo ripiego: via l'arredo modulare
+    else if (fps < 28 && pr <= 0.71 && !globalThis.__lowQ) { globalThis.__lowQ = true; scene.traverse((o) => { if (o.userData.decor) o.visible = false; }); }   // ultimo ripiego: via l'arredo modulare
   }
 }
 requestAnimationFrame((n) => { last = n; frame(n); });

@@ -102,3 +102,9 @@ h1.tglitch{animation:tglitch .22s steps(1,end)}
 #howto p{margin:0 0 6px;font-size:15px;letter-spacing:.32em;color:#d4d8d2;text-shadow:0 0 8px #000}
 #howto small{font-size:12px;letter-spacing:.08em;line-height:1.45;color:#9aa09a;text-shadow:0 0 6px #000}
 @media (prefers-reduced-motion:reduce){#howto .ring b{animation:none}}
+
+#qmenu{display:flex;flex-direction:column;margin:-2px auto 0;width:150px;border:1px solid #3a403a;background:rgba(0,0,0,.85)}
+#qmenu.hidden{display:none}
+#qmenu button{border:0;background:none;color:#9aa19a;letter-spacing:.2em;font-size:13px;padding:13px 10px;font-family:inherit}
+#qmenu button+button{border-top:1px solid #262b26}
+#qmenu button.on{color:#e6e9e4}
