@@ -264,6 +264,7 @@ async function enter() {
   }
   doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar', true); } });
   $('enter').disabled = true;
+  endMsgs();
   try { await audio.start(); audio.heartbeat?.(); navigator.vibrate?.(30); } catch (_) {}
   try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el, { navigationUI: 'hide' })?.catch?.(() => {}); } catch (_) {}
   try { await screen.orientation?.lock?.('portrait'); } catch (_) {}
@@ -295,9 +296,11 @@ $('enter').addEventListener('click', enter);
 // il pulsante dice cosa sta succedendo: "caricamento…" finche' e' spento, poi "entra nel gioco"
 { const en = $('enter'), lab = () => { en.textContent = en.disabled ? 'CARICAMENTO…' : 'ENTRA NEL GIOCO'; }; new MutationObserver(lab).observe(en, { attributes: true, attributeFilter: ['disabled'] }); lab(); }
 
-THREE.DefaultLoadingManager.onLoad = () => { window.__loadMsgStop?.(); $('loadmsg').textContent = ''; $('enter').disabled = false; };
+// i messaggi della schermata iniziale restano almeno ~7 secondi (anche se il caricamento finisce prima): il pulsante si accende subito, i messaggi continuano
+const endMsgs = () => { window.__loadMsgStop?.(); $('loadmsg').textContent = ''; };
+THREE.DefaultLoadingManager.onLoad = () => { $('enter').disabled = false; setTimeout(endMsgs, Math.max(0, 7000 - performance.now())); };
 $('enter').disabled = true;
-setTimeout(() => { window.__loadMsgStop?.(); $('enter').disabled = false; $('loadmsg').textContent = ''; }, 9000);
+setTimeout(() => { $('enter').disabled = false; endMsgs(); }, 9000);
 
 function setPaused(p) {
   if (!started || ended) return;
