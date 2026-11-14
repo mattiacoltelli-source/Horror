@@ -53,10 +53,10 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   // che affiorano dall'interno del vetro. L'ombra usa la stessa sagoma nera della folla.
   const fig = hall.silhouette(0); fig.visible = false; C.group.add(fig); C.figReady = true;
   const mdecals = bloodDecals(C.group, [
-    { k: 'A', p: [MIRROR.x + 0.012, 1.55, MIRROR.z + 0.28], wall: '+x', h: 0.5, rot: 0.15, flip: true, a: 0.0 },
-    { k: 'C', p: [MIRROR.x + 0.012, 1.18, MIRROR.z - 0.34], wall: '+x', h: 0.46, rot: -0.2, a: 0.0 },
+    { k: 'A', p: [MIRROR.x + 0.012, 1.55, MIRROR.z + 0.28], wall: '+x', h: 0.62, rot: 0.15, flip: true, a: 0.0 },
+    { k: 'C', p: [MIRROR.x + 0.012, 1.18, MIRROR.z - 0.34], wall: '+x', h: 0.56, rot: -0.2, a: 0.0 },
   ]); mdecals_fix(); const mdTarget = [0, 0, 0];
-  function mdecals_fix() { mdecals.forEach((m) => { const mat = new THREE.MeshBasicMaterial({ map: m.material.map, transparent: true, opacity: 0, color: new THREE.Color(0.36, 0.02, 0.02), depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }); m.material = mat; }); }
+  function mdecals_fix() { mdecals.forEach((m) => { const mat = new THREE.MeshBasicMaterial({ map: m.material.map, transparent: true, opacity: 0, color: new THREE.Color(0.8, 0.52, 0.52), depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }); m.material = mat; }); }
   const wash = (lv, P, d) => { if (!flash) return; flash.color.setHex(0xffcf9a); flash.position.set(P.x - d.x * 3.2, 2.3, P.z - d.z * 3.2 + 1.2); flash.intensity = lv; };
   // PRESENZA: una massa scura INDEFINITA nel vetro (nebbia di ombra, senza testa né braccia): bordi che si sfilacciano, si sposta
   // lentamente, a tratti si addensa. Si capisce che c'è "qualcosa", non cosa. Nessuna figura riconoscibile.
