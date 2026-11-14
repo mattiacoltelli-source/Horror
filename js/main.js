@@ -17,6 +17,7 @@ import { createHall } from './events/hall.js';
 import { createDawn } from './events/dawn.js';
 import { createCellar } from './events/cellar.js';
 import { createTower } from './events/tower.js';
+import { createHound } from './events/hound.js';
 import { createStory } from './story.js';
 import { createDust } from './world/dust.js';
 import { decorTunnel } from './world/decor.js';
@@ -119,6 +120,7 @@ place('assets/models/cam.glb', 0.3, -W + 0.12, 2.0, -12, Math.PI - 0.55);   // p
 
 // ---------- evento ----------
 const glassEvent = createGlassEvent({ scene, renderer, camera, player, audio, lights, instab });
+const hound = createHound({ scene, player, lights, audio });
 
 // grana della pellicola (leggerissima, generata una volta)
 try {
@@ -342,6 +344,7 @@ function tick(dt) {
   audio.setListener(camera);
   lights.update(dt, time, player.pos.z, player.pos.x);
   glassEvent.update(dt, time);
+  hound.update(dt);
   instab.update(dt);
   if (doorEvent?.ended) finish();
 }
