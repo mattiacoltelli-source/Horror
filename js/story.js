@@ -14,11 +14,11 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
     hall: ['erano qui tutti, quella notte.', 'nessuno di loro è uscito.', 'non guardarli in faccia.', SIG],
     cellar: ['lo specchio l\'hanno rimesso.', 'dice che non è la sua faccia.', 'non sa più chi è.', SIG],
     ward: ['la sedia si muove da sola.', 'chiede ogni giorno di sua sorella.', 'nessuno osa dirglielo.', SIG],
-    morgue: ['qui ti hanno curat' + o + (N ? ', ' + N : '') + '.', 'sedia, cinghie, tre strumenti.', 'sua sorella è qui sotto, dal fuoco.', 'giura di non averla vista.'],
-    warehouse: ['il fuoco è partito da qui.', 'benzina sui registri.', 'cancello chiuso da dentro.', SIG],
+    morgue: ['qui ti hanno curat' + o + (N ? ', ' + N : '') + '.', 'sua sorella è qui sotto, dal fuoco.', 'giura di non averla vista.', SIG],
+    warehouse: ['il fuoco è partito da qui.', 'benzina sui registri.', 'il cane è rimasto dentro, nel fuoco.', 'cancello chiuso da dentro.', SIG],
     tower: ['l\'ultima stanza era la sua.', 'l\'ho tirat' + o + ' fuori io, dal fuoco.', 'nessuno saprà cosa hai fatto' + (N ? ', ' + N : '') + '.', 'non ti lascio andare. ' + SIG],
   };
-  const EXTRA = { warehouse: 'qualcuno ha lasciato la pistola dove l\'avresti trovata.', tower: 'non si arrabbia. aspetta.' };   // seconda riga, piu' tardi
+  const EXTRA = { warehouse: 'qualcuno ha lasciato qualcosa per te, vicino al carrello.', tower: 'non si arrabbia. aspetta.' };   // seconda riga, piu' tardi
   const tell = (name) => {
     const l = LINES[name]; if (!l) return;
     // se un'altra nota e' ancora a schermo (es. quella del reparto mentre entri nell'obitorio) aspetta che finisca, invece di cancellarla a meta'

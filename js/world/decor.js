@@ -20,6 +20,7 @@ export function decorTunnel(group) {
     // (tolta la mano a z -28.5: li' c'e' il murale)
     { k: 'X', p: [1.397, 1.55, -34.8], wall: '-x', h: 0.62, rot: 0.2 }, { k: 'X', p: [-1.397, 1.7, -35.0], wall: '+x', h: 0.55, rot: -0.15, flip: true },
   ]);
+  burnDecals(group, [{ k: 'wall', p: [-1.393, 1.0, -46.5], wall: '+x', w: 1.7, h: 1.8, a: 0.3 }]);   // un segno di fumo vicino al portone: il fuoco ha toccato anche qui
   patchDecals(group, [{ img: 'assets/tex/pt_gravel.webp', p: [-0.5, 0.012, -16.7], wall: 'floor', w: 1.5, h: 2.3, rot: 0.55 }, { img: 'assets/tex/pt_layers.webp', p: [-0.3, 0.012, -33.5], wall: 'floor', w: 1.8, h: 2.8, rot: -0.15 }]);   // tunnel: cemento grezzo a chiazze sul pavimento
   add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -1.27, 2.0, 2.4, -48.4));
   add(group, 'pipes', [...runZ('pipe_thin_200cm_metal', 2.0, -1.33, 1.62, 2.4, -48.4).map((p) => ({ ...p, r: [0, P2, 0] }))]);
@@ -43,6 +44,7 @@ function sideGate(group, wx, z) {
   // nessuna maniglia ne' chiavistello: e' chiuso, non si capisce nemmeno come aprirlo
 }
 export function decorHall(group, z0) {
+  burnDecals(group, [{ k: 'wall', p: [-5.985, 1.3, z0 - 17.5], wall: '+x', w: 2.4, h: 2.4, a: 0.32 }, { k: 'floor', p: [3.2, 0.012, z0 - 30], w: 1.5, h: 1.3, rot: 0.8, a: 0.4 }]);   // pochi segni di fuoco
   patchDecals(group, [{ img: 'assets/tex/pt_blocks.webp', p: [-5.99, 0.65, z0 - 9], wall: '+x', w: 3.4, h: 1.1, a: 0.85 }, { img: 'assets/tex/pt_blocks.webp', p: [-5.99, 0.65, z0 - 33], wall: '+x', w: 3.4, h: 1.1, a: 0.85 }, { img: 'assets/tex/pt_blocks.webp', p: [5.99, 0.65, z0 - 21], wall: '-x', w: 3.4, h: 1.1, a: 0.85 }, { img: 'assets/tex/pt_blocks.webp', p: [5.99, 0.65, z0 - 27], wall: '-x', w: 3.4, h: 1.1, a: 0.85 }]);   // sala della folla: blocchi di pietra sporca in basso
   stainDecals(group, [{ p: [-5.99, 1.6, z0 - 12], wall: '+x', w: 3.0, h: 3.4 }, { p: [5.99, 1.6, z0 - 20], wall: '-x', w: 3.0, h: 3.4, flip: true }]);
   add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -5.8, 4.9, z0 - 1, z0 - 38));
@@ -50,6 +52,7 @@ export function decorHall(group, z0) {
   add(group, 'manhole', manhole(-2.4, z0 - 9, 0.4).concat(manhole(2.0, z0 - 23, 1.2)));
 }
 export function decorCellar(group, z0) {
+  burnDecals(group, [{ k: 'wall', p: [3.97, 1.1, z0 - 12.5], wall: '-x', w: 1.8, h: 2.0, a: 0.3, flip: true }, { k: 'floor', p: [-1.5, 0.012, z0 - 21], w: 1.2, h: 1.1, rot: 2.0, a: 0.4 }]);   // pochi segni di fuoco
   patchDecals(group, [{ img: 'assets/tex/pt_mold.webp', p: [-3.97, 0.6, z0 - 20.5], wall: '+x', w: 2.8, h: 1.1 }]);   // cantina: intonaco ruvido con mattoni e muffa in basso
   stainDecals(group, [{ p: [-3.99, 1.2, z0 - 5], wall: '+x', w: 2.6, h: 2.8 }, { p: [3.99, 1.3, z0 - 8], wall: '-x', w: 2.4, h: 2.8, flip: true }, { p: [-3.99, 1.1, z0 - 15], wall: '+x', w: 2.6, h: 2.8, a: 0.8 }]);
   entryDoor(group, z0);
