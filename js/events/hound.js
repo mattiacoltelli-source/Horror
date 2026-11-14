@@ -23,6 +23,9 @@ export function createHound({ scene, player, lights, audio, glass }) {
     if (!H.obj || H.state === 'gone') { H.eyes?.forEach((e) => { e.sp.visible = false; }); return; }
     if (H.eyes) { H.blink = (H.blink ?? 3) - dt; const closed = H.blink < 0 && H.blink > -0.14; if (H.blink < -0.14) H.blink = 2.5 + Math.random() * 4; H.eyes.forEach((e) => { e.bone.getWorldPosition(e.sp.position); e.sp.visible = H.obj.visible && !closed; }); }
     const z = player.pos.z;
+    // respiro del cane: quasi un sottofondo, parte ~1 m (0,65 s) prima che compaiano gli occhi e si ferma di colpo al flash
+    if (H.state === 'wait' && !H.snd && !H.sndDone && glass?.state === 'vanish' && glass.t > 0.9) { H.snd = audio.sfx?.('hound_breath', { level: 0.02, loop: true, fade: 3 }); if (H.snd) H.snd.setLevel(0.05, 6); else H.sndDone = true; }
+    if (H.state === 'flash' && H.snd) { H.snd.stop(0.15); H.snd = null; H.sndDone = true; }
     if (H.state === 'wait') {
       if (!lights.lamps[lampIdx]) return;
       if (!H.armed) { H.armed = true; lights.lamp(lampIdx, 'off'); }   // l'ultima lampada resta spenta: in fondo c'e' solo penombra

@@ -261,7 +261,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     // --- apparizione (spavento) ---
     if (!C.apDone && P.z < CELLAR.z0 - 14.2 && (Math.abs(player.forward.z) > 0.35 || P.z < CELLAR.z0 - 17.2)) {   // parte quando guardi lungo la stanza (avanti o indietro), non mentre guardi il muro di lato; se non lo fai, parte comunque poco dopo
       C.apDone = true; ap = 0; C.apBack = player.forward.z > 0.25; shade.visible = true;   // sagoma davanti a te se guardi avanti; se ti sei girato a guardare indietro, passa dietro (davanti alla porta d'ingresso)
-      audio.dash(0.5); player.addShake(0.7); lights.torchStutter(0.3); instab.set(1, 8); try { navigator.vibrate?.([60, 30, 90]); } catch (_) {}
+      audio.dash(0.5); audio.sfx?.('demon_growl', { level: 0.34, fade: 0.2 }); player.addShake(0.7); lights.torchStutter(0.3); instab.set(1, 8); try { navigator.vibrate?.([60, 30, 90]); } catch (_) {}
     }
     if (ap >= 0) {
       ap += dt; const k = Math.min(1, ap / 0.45);

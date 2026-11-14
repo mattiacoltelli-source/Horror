@@ -122,7 +122,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
        if (ng !== W.nearGate) {   // il pulsante APRI compare appena ti avvicini, senza ritardo
          W.nearGate = ng; actBtn.textContent = 'APRI'; actBtn.style.bottom = ng ? 'calc(env(safe-area-inset-bottom,0px) + 44%)' : ''; actBtn.classList.toggle('hidden', !ng); }   // sopra PISTOLA/ASCIA: mai coperto (senza :has, per i browser vecchi)
     }
-    if (W.state === 'open') { if (gateT === 0) { audio.clatter(); player.box = W.bounds; } gateT += dt; if (leaf) leaf.rotation.y = -Math.min(1.7, gateT * 1.1); doorT += dt; const a = Math.min(1.5, doorT * 0.5); if (L) L.rotation.y = a; if (R) R.rotation.y = -a; }
+    if (W.state === 'open') { if (gateT === 0) { audio.clatter(); audio.sfx?.('fire_swoosh', { level: 0.5, fade: 0.1 }); player.box = W.bounds; } gateT += dt; if (leaf) leaf.rotation.y = -Math.min(1.7, gateT * 1.1); doorT += dt; const a = Math.min(1.5, doorT * 0.5); if (L) L.rotation.y = a; if (R) R.rotation.y = -a; }
     // uscita senza stacco: con la porta aperta si vede la torre oltre il varco; attraversata la soglia sei dentro
     if (W.state === 'open' && P.z < zFar + 9 && !W.leaving && !W.prev) { W.prev = true; if (W.cap) W.cap.visible = false; W.bx = [W.bounds[0], W.bounds[1]]; story.preview('tower', zFar - TOWER.z0); }
     if (W.prev && !W.leaving) { const B = W.bounds; B[2] = Math.abs(P.x) < 0.75 ? zFar - 3 : zFar + 1.5; if (P.z < zFar + 0.3) { B[0] = -0.8; B[1] = 0.8; } else { B[0] = W.bx[0]; B[1] = W.bx[1]; } }   // si passa solo dal varco

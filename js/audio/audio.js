@@ -6,6 +6,7 @@ const vib = (p) => { try { navigator.vibrate?.(p); } catch (_) {} };   // solo A
 
 export function createAudio() {
   let ctx = null, master, amb, hum, verb, verbSend, drips = null, noiseBuf, ok = false;
+  const sfxBuf = {};   // suoni registrati (mp3 corti, mono): { nome: AudioBuffer }, caricati dopo il primo tocco
   const A = {
     get ready() { return ok; },
     async start() {
@@ -17,8 +18,15 @@ export function createAudio() {
         await ctx.resume();
         build();
         ok = true;
-        loadSteps();
+        loadSteps(); loadSfx();
       } catch (e) { console.warn('audio non disponibile', e); }
+    },
+    // suono registrato: A.sfx('nome', { level, loop, fade }) -> { setLevel(l, tc), stop(tc) } oppure null se non e' ancora caricato
+    sfx(name, { level = 0.5, loop = false, fade = 0.4, to = null } = {}) {
+      const b = sfxBuf[name]; if (!ok || !b) return null; const t = ctx.currentTime, src = ctx.createBufferSource(), g = ctx.createGain();
+      src.buffer = b; src.loop = loop; g.gain.setValueAtTime(0, t); g.gain.setTargetAtTime(level, t, fade / 3); src.connect(g); g.connect(to || master); if (!to) g.connect(verbSend); src.start(t);
+      let dead = false; src.onended = () => { dead = true; try { g.disconnect(); } catch (_) {} };
+      return { setLevel(l, tc = 0.5) { if (!dead) g.gain.setTargetAtTime(l, ctx.currentTime, tc / 3); }, stop(tc = 0.4) { if (dead) return; const n = ctx.currentTime; g.gain.cancelScheduledValues(n); g.gain.setTargetAtTime(0, n, tc / 3); try { src.stop(n + tc * 1.5 + 0.1); } catch (_) {} } };
     },
     suspend() { ctx?.suspend?.(); },
     resume() { ctx?.resume?.(); },
@@ -377,13 +385,14 @@ export function createAudio() {
       const lf = ctx.createOscillator(), lg = ctx.createGain(); lf.frequency.value = 0.09; lg.gain.value = 3; lf.connect(lg); lg.connect(C.o.frequency); lf.start(t);   // il tono medio vacilla piano
       const ns = ctx.createBufferSource(); ns.buffer = noiseBuf; ns.loop = true; ns.playbackRate.value = 0.4; const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 210; lp.Q.value = 0.8; const ng = ctx.createGain(); ng.gain.value = 0.22;
       ns.connect(lp); lp.connect(ng); ng.connect(out); ns.start(t);
+      const fl = sfxBuf.crowd_drone ? (() => { const sr = ctx.createBufferSource(), fg = ctx.createGain(); sr.buffer = sfxBuf.crowd_drone; sr.loop = true; fg.gain.value = 1.4; sr.connect(fg); fg.connect(out); sr.start(t); return sr; })() : null;   // sotto il drone sintetico: la registrazione "approaching threat"
       let lv = 0, gap = false, alive = true;
       const apply = (tc = 1.5) => { const n = ctx.currentTime; out.gain.cancelScheduledValues(n); out.gain.setTargetAtTime(gap ? 0 : lv * level * 0.5, n, tc); };
       const loop = () => { if (!alive) return; setTimeout(() => { if (!alive) return; gap = true; apply(0.35); setTimeout(() => { gap = false; apply(1.6); loop(); }, 1400 + Math.random() * 1800); }, 5000 + Math.random() * 6000); };
       loop();
       return {
         setLevel(l, tc = 1.5) { lv = l; apply(tc); },
-        stop(tc = 1) { alive = false; const n = ctx.currentTime; out.gain.cancelScheduledValues(n); out.gain.setTargetAtTime(0, n, tc); setTimeout(() => { try { [A, B, C, D, E].forEach((x) => x.o.stop()); lf.stop(); ns.stop(); } catch (_) {} }, tc * 5000 + 500); },
+        stop(tc = 1) { alive = false; const n = ctx.currentTime; out.gain.cancelScheduledValues(n); out.gain.setTargetAtTime(0, n, tc); setTimeout(() => { try { fl?.stop(); } catch (_) {} try { [A, B, C, D, E].forEach((x) => x.o.stop()); lf.stop(); ns.stop(); } catch (_) {} }, tc * 5000 + 500); },
       };
     },
     // gocce
@@ -398,6 +407,11 @@ export function createAudio() {
   };
 
   let dripOn = true, steps = [], lastStep = -1, stepSide = 1;
+  async function loadSfx() {
+    for (const n of ['hound_breath', 'crowd_drone', 'demon_growl', 'fire_swoosh']) {
+      try { const r = await fetch(`assets/audio/${n}.mp3`); if (!r.ok) throw new Error(r.status); sfxBuf[n] = await ctx.decodeAudioData(await r.arrayBuffer()); } catch (e) { console.warn('suono non caricato', n, e); }
+    }
+  }
   async function loadSteps() {
     try {
       const bufs = await Promise.all([0, 1, 2, 3, 4].map(async (i) => {
