@@ -16,6 +16,7 @@ import { WARD } from './ward.js';
 import { P as PROF, whisperName } from '../personal.js';
 import { createFingerWriter } from '../world/fingerwrite.js';
 import { rgbPulse } from '../ui/rgbshift.js';
+import { createTorch } from './torch.js';
 
 export const CELLAR = { z0: -200, w: 8, l: 24, h: 4.4 };
 const MIRROR = new THREE.Vector3(-3.98, 1.45, -210);
@@ -153,12 +154,13 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   }
 
 
+  const torch = createTorch({ group: C.group, player, camera, audio, x: 2.3, z: CELLAR.z0 - 13.0, yaw: -2.7, roll: 0.5, turn: 2.0 });   // a terra, nel corridoio libero verso l'uscita
   // apparizione: la sagoma nera attraversa il fondo in mezzo secondo
   const shade = hall.silhouette(0); shade.visible = false; C.group.add(shade);
   let ap = -1;
 
   C.enter = () => {
-    C.gone = false; C.exitStarted = false; if (exCap) exCap.visible = true; if (exL) { exL.rotation.y = 0; exR.rotation.y = 0; } C.group.position.z = 0; C.bounds[2] = CELLAR.z0 - CELLAR.l + 1.4; if (C.bx) { C.bounds[0] = C.bx[0]; C.bounds[1] = C.bx[1]; }
+    torch.reset(); C.gone = false; C.exitStarted = false; if (exCap) exCap.visible = true; if (exL) { exL.rotation.y = 0; exR.rotation.y = 0; } C.group.position.z = 0; C.bounds[2] = CELLAR.z0 - CELLAR.l + 1.4; if (C.bx) { C.bounds[0] = C.bx[0]; C.bounds[1] = C.bx[1]; }
     C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; cornerDone = false; cornerT = -1; corner.visible = false; runDone = false; runT = -1; runM.visible = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.uniforms.uA.value = 0; mist.material.opacity = 0; shNear.material.uniforms.uA.value = 0; fogMat.uniforms.uM.value = 0; fogMat.uniforms.uW.value = 0; fogMat.uniforms.uMask.value = blankTex; fogMat.uniforms.uTip.value.set(0, 0, 0); fogMat.uniforms.uR.value = 0.36; fogMat.uniforms.uB.value.set(0.47, 0.52); C.wr = null; C.wName = false; C.b1 = C.b2 = C.sw = C.sw2 = C.clean = false; C.farT = -1; C.farN = 0; far1.visible = false;
     player.box = C.bounds; player.pos.set(0.4, 1.62, CELLAR.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     lights.setLamps(lampPos, 2.1, 0x9db8ff); lights.grade({ fog: 0x03050c, hemi: [0x22336a, 0x0a0a14, 0.42] }); scene.fog.density = 0.04; audio.duck(1, 1); instab.set(0.1, 6);
@@ -168,7 +170,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   // il busto sul mobile, quando non lo guardi, si volta verso di te
   const bustMove = unseenMover({ camera, getObj: () => C.bust, max: 3, gap: 7, move: (n) => { turnToward(C.bust, player.pos, n); audio.shuffle?.(0.5, 0.22); } });
   C.update = (dt) => {
-    if (C.group.visible) { red.update(dt); bustMove(dt); }
+    if (C.group.visible) { red.update(dt); bustMove(dt); torch.update(dt); }
     if (!C.group.visible || C.gone) return;
     const P = player.pos;
     // --- specchio ---
