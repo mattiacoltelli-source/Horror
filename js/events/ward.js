@@ -53,7 +53,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
   // sporco sui muri e sangue vecchio
   stainDecals(R.group, [{ p: [-hw + 0.01, 1.3, z0 - 5], wall: '+x', w: 2.6, h: 2.2 }, { p: [hw - 0.01, 1.2, z0 - 9.5], wall: '-x', w: 2.4, h: 2.2, flip: true }, { p: [-hw + 0.01, 1.2, z0 - 14], wall: '+x', w: 2.4, h: 2.2, a: 0.8 }, { p: [hw - 0.01, 1.2, z0 - 17.5], wall: '-x', w: 2.4, h: 2.2 }]);
   burnDecals(R.group, [{ k: 'wall', p: [-hw + 0.014, 1.4, z0 - 8], wall: '+x', w: 3.4, h: 2.6, a: 0.5 }, { k: 'wall', p: [hw - 0.014, 1.3, z0 - 14.5], wall: '-x', w: 3.0, h: 2.4, a: 0.45, flip: true }, { k: 'floor', p: [0.3, 0.012, z0 - 16], w: 2.0, h: 1.6, rot: 1.0, a: 0.6 }]);   // corridoio: vicino a dove e' partito il fuoco, bruciature medie
-  bloodDecals(R.group, [{ k: 'A', p: [-hw + 0.012, 1.1, z0 - 12.2], wall: '+x', h: 0.3, rot: 0.1 }, { k: 'C', p: [-hw + 0.012, 0.85, z0 - 12.7], wall: '+x', h: 0.3, rot: -0.2, flip: true }]);
+  bloodDecals(R.group, [{ k: 'A', p: [-hw + 0.012, 1.1, z0 - 12.2], wall: '+x', h: 0.3, rot: 0.1 }]);
 
   // anteprima dal varco: la luce della lampada non c'e' ancora, un velo chiaro sul pavimento lo fa vedere (sparisce appena entri)
   R.onPreview = () => { R.pl = lights.addLamp(0, h - 0.12, z0 - 10 + R.pdz, 0xcfeadc); };   // la lampada vera della stanza, accesa gia' dal varco
