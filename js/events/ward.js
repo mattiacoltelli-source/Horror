@@ -64,8 +64,8 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
   // frase personale (max 28 lettere, due righe), scritta col sangue sulle piastrelle bianche piu' avanti nel corridoio
   { const raw = (new URLSearchParams(location.search).get('frase') || '').toUpperCase().replace(/[ÁÂÄ]/g, 'À').replace(/[ÉÊË]/g, 'È').replace(/[ÍÎÏ]/g, 'Ì').replace(/[ÓÔÖ]/g, 'Ò').replace(/[ÚÛÜ]/g, 'Ù').replace(/[^A-ZÀÈÌÒÙ ,.'\-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 28);
     if (raw.length >= 2) { const ws = raw.split(' '); let l1 = '', l2 = ''; for (const x of ws) { if (!l2 && (l1 + ' ' + x).trim().length <= 14) l1 = (l1 + ' ' + x).trim(); else l2 = (l2 + ' ' + x).trim(); }
-      const T = l2 ? l1 + '\n' + l2 : l1, ta = bloodText(T).aspect; writingDecals(R.group, [{ text: T, aspect: ta, p: [-1.758, 0.74, z0 - 7.2], wall: '+x', w: Math.min((l2 ? 0.56 : 0.4) * ta, 2.5) }]); } }
-  if (DATE) { const T = DATE, ta = bloodText(T).aspect; writingDecals(R.group, [{ text: T, aspect: ta, p: [-1.758, 0.64, z0 - 3.0], wall: '+x', w: Math.min(0.72 * ta, 2.4) }]); }
+      const T = l2 ? l1 + '\n' + l2 : l1, ta = bloodText(T).aspect; writingDecals(R.group, [{ text: T, aspect: ta, p: [-1.772, 1.82, z0 - 10.2], wall: '+x', w: 3.6, maxH: l2 ? 1.15 : 0.62 }]); } }
+  if (DATE) { const T = DATE, ta = bloodText(T).aspect; writingDecals(R.group, [{ text: T, aspect: ta, p: [-1.772, 1.8, z0 - 5.6], wall: '+x', w: 2.4, maxH: 0.72 }]); }
   burnDecals(R.group, [{ k: 'wall', p: [-hw + 0.014, 1.4, z0 - 8], wall: '+x', w: 3.4, h: 2.6, a: 0.5 }, { k: 'wall', p: [hw - 0.014, 1.3, z0 - 14.5], wall: '-x', w: 3.0, h: 2.4, a: 0.45, flip: true }, { k: 'floor', p: [0.3, 0.012, z0 - 16], w: 2.0, h: 1.6, rot: 1.0, a: 0.6 }]);   // corridoio: vicino a dove e' partito il fuoco, bruciature medie
   bloodDecals(R.group, [{ k: 'A', p: [-1.758, 1.1, z0 - 12.2], wall: '+x', h: 0.3, rot: 0.1 }]);
 
