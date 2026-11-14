@@ -128,3 +128,14 @@ h1.tglitch{animation:tglitch .22s steps(1,end)}
 #intro #install,#intro #quality{display:block;margin-left:auto;margin-right:auto}
 #intro #loadmsg{margin-top:14px;min-height:2.6em}
 #intro .credits{margin-top:14px}
+
+/* schermata iniziale: UNA pagina bloccata, non scorre mai (si adatta compattando gli spazi sugli schermi bassi) */
+html,body{overscroll-behavior:none}
+#intro{overflow:hidden;align-items:center;touch-action:none;overscroll-behavior:none}
+#intro .intro-inner{margin:0}
+@media (max-height:620px){
+  #intro h1{font-size:min(13vw,10vh);margin-bottom:10px}
+  #intro .tag{margin-bottom:16px;line-height:1.5;font-size:11px}
+  #intro .linkbtn{min-height:40px;padding:6px 14px}
+}
+#intro{overflow:hidden;overflow:clip;contain:paint}
