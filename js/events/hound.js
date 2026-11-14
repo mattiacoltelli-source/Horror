@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { aged } from '../world/aged.js';
 
-export function createHound({ scene, player, lights, audio }) {
+export function createHound({ scene, player, lights, audio, glass }) {
   const H = { state: 'wait', t: 0, obj: null }, lampIdx = 3, ZD = -45.6, ZT = -33.5;   // dove sta, e a che punto del tunnel parte lo scherzo
   let mixer = null;
   new GLTFLoader().load('assets/models/hound.glb', (g) => {
@@ -13,9 +13,9 @@ export function createHound({ scene, player, lights, audio }) {
     const b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()); o.position.set(-c.x, -b.min.y, -c.z);
     const grp = new THREE.Group(); grp.add(o); grp.position.set(0.15, 0, ZD); grp.rotation.y = 0; grp.scale.setScalar(1.1); grp.visible = false; scene.add(grp); H.obj = grp;
     // occhi: due punti rossi appena accesi (come un demone), che seguono le ossa degli occhi; ogni tanto sbattono
-    const gc = document.createElement('canvas'); gc.width = gc.height = 64; const gx = gc.getContext('2d'), gr = gx.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,70,50,1)'); gr.addColorStop(0.3, 'rgba(255,40,10,0.95)'); gr.addColorStop(0.65, 'rgba(255,20,0,0.35)'); gr.addColorStop(1, 'rgba(255,10,0,0)'); gx.fillStyle = gr; gx.fillRect(0, 0, 64, 64);
+    const gc = document.createElement('canvas'); gc.width = gc.height = 64; const gx = gc.getContext('2d'), gr = gx.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,40,25,1)'); gr.addColorStop(0.3, 'rgba(255,40,10,0.95)'); gr.addColorStop(0.65, 'rgba(255,20,0,0.35)'); gr.addColorStop(1, 'rgba(255,10,0,0)'); gx.fillStyle = gr; gx.fillRect(0, 0, 64, 64);
     const gt = new THREE.CanvasTexture(gc);
-    H.eyes = []; o.traverse((n) => { if (/^Eye[LR]/.test(n.name)) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: gt, color: new THREE.Color(2.0, 0.1, 0.05), transparent: true, opacity: 1.0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, depthTest: false })); sp.scale.setScalar(0.15); sp.visible = false; scene.add(sp); H.eyes.push({ bone: n, sp }); } });
+    H.eyes = []; o.traverse((n) => { if (/^Eye[LR]/.test(n.name)) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: gt, color: new THREE.Color(1.3, 0.025, 0.01), transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, depthTest: false })); sp.scale.setScalar(0.11); sp.visible = false; scene.add(sp); H.eyes.push({ bone: n, sp }); } });
     if (g.animations?.length) { mixer = new THREE.AnimationMixer(o); mixer.clipAction(g.animations[0]).play(); }
   });
   H.update = (dt) => {
@@ -26,7 +26,7 @@ export function createHound({ scene, player, lights, audio }) {
     if (H.state === 'wait') {
       if (!lights.lamps[lampIdx]) return;
       if (!H.armed) { H.armed = true; lights.lamp(lampIdx, 'off'); }   // l'ultima lampada resta spenta: in fondo c'e' solo penombra
-      H.obj.visible = z < -8 && z > ZT - 0.5;
+      H.obj.visible = !!glass?.done && z < -8 && z > ZT - 0.5;   // compare solo dopo la scena del vetro (le mani sul vetro)
       H.obj.rotation.y = Math.atan2(player.pos.x - H.obj.position.x, z - H.obj.position.z);   // guarda verso di te
       if (z < ZT) { H.state = 'flash'; H.t = 0; lights.lamp(lampIdx, 'flicker', 0.9); audio.swell?.(1.2, 0.35); }
     } else if (H.state === 'flash') {

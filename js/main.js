@@ -120,7 +120,7 @@ place('assets/models/cam.glb', 0.3, -W + 0.12, 2.0, -12, Math.PI - 0.55);   // p
 
 // ---------- evento ----------
 const glassEvent = createGlassEvent({ scene, renderer, camera, player, audio, lights, instab });
-const hound = createHound({ scene, player, lights, audio });
+const hound = createHound({ scene, player, lights, audio, glass: glassEvent });
 
 // grana della pellicola (leggerissima, generata una volta)
 try {
