@@ -2,6 +2,7 @@
 //   specchio completato → C (esci)   ·   ti sei girato nella sala → B   ·   altrimenti → A.
 import * as THREE from 'three';
 import { aged } from '../world/aged.js';
+import { patchDecals } from '../world/blood.js';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { buildRoom } from '../world/rooms.js';
 import { decorTower } from '../world/decor.js';
@@ -25,6 +26,7 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   const zFar = TOWER.z0 - TOWER.l, loader = new GLTFLoader();
   const stovePos = new THREE.Vector3(-2.4, 0, TOWER.z0 - 6.5);
 
+  patchDecals(T.group, [{ img: 'assets/tex/pt_gravel.webp', p: [-2.2, 0.012, TOWER.z0 - 8], wall: 'floor', w: 3.4, h: 3.0, rot: 0.3 }, { img: 'assets/tex/pt_layers.webp', p: [3.2, 0.012, TOWER.z0 - 13], wall: 'floor', w: 3.0, h: 2.6, rot: -0.4 }, { img: 'assets/tex/pt_layers.webp', p: [0, 8.49, TOWER.z0 - 7], wall: 'ceil', w: 6, h: 5, rot: 0.2, a: 0.8 }, { img: 'assets/tex/pt_stain.webp', p: [0, 8.49, TOWER.z0 - 13], wall: 'ceil', w: 5, h: 4, rot: -0.3, a: 0.7 }]);   // torre: cemento grezzo sul pavimento e soffitto macchiato
   const prop = (url, h, x, z, ry, cb) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y, c.z - z)); o.rotation.y = ry; if (/cabinet|shelf|stool|chair|cart/.test(url)) aged(o, 0.75); T.group.add(o); cb?.(o); });
   prop('assets/models/stove.glb', 0.9, stovePos.x, stovePos.z, 0.4);
   prop('assets/models/stool.glb', 0.46, -1.0, TOWER.z0 - 6.9, 2.4);

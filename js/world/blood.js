@@ -95,6 +95,20 @@ export function burnDecals(group, list) {
 // SCRITTE sul muro (sangue o bomboletta, immagini con trasparenza in assets/tex): grandi, leggibili nel cono della torcia.
 // list: [{ img, p:[x,y,z], wall:'+x'|'-x'|'+z'|'-z', w: larghezza in metri, rot: 0, a: 0.95 }]  (l'altezza segue le proporzioni dell'immagine)
 import { bloodText } from './bloodfont.js';
+// PEZZI DI TEXTURE (intonaco scrostato, muro macchiato, blocchi, cemento) con bordo irregolare, appoggiati su pareti, pavimento o soffitto: rovinano le superfici troppo pulite.
+// list: [{ img, p:[x,y,z], wall:'+x'|'-x'|'+z'|'-z'|'floor'|'ceil', w, h, rot, a, tint }]
+export function patchDecals(group, list) {
+  const rotY = { '+x': Math.PI / 2, '-x': -Math.PI / 2, '+z': 0, '-z': Math.PI }, made = [];
+  for (const d of list) {
+    const t = (wtex[d.img] ??= (() => { const x = loader.load(d.img); x.colorSpace = THREE.SRGBColorSpace; x.anisotropy = 4; return x; })());
+    const c = d.tint ?? 0.62, mat = new THREE.MeshStandardMaterial({ map: t, transparent: true, color: new THREE.Color(c, c * 0.97, c * 0.93), roughness: 0.95, metalness: 0, opacity: d.a ?? 0.92, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1.5, polygonOffsetUnits: -1.5 });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(d.w, d.h), mat); m.rotation.order = 'YXZ';
+    if (d.wall === 'floor') m.rotation.set(-Math.PI / 2, 0, d.rot ?? 0); else if (d.wall === 'ceil') m.rotation.set(Math.PI / 2, 0, d.rot ?? 0); else m.rotation.set(0, rotY[d.wall], d.rot ?? 0);
+    m.position.set(...d.p); m.userData.writing = true; group.add(m); made.push(m);
+  }
+  return made;
+}
+
 const wtex = {};
 export function writingDecals(group, list) {
   const rotY = { '+x': Math.PI / 2, '-x': -Math.PI / 2, '+z': 0, '-z': Math.PI }, made = [];

@@ -1,7 +1,8 @@
 // Arredo modulare delle stanze (tubi, cavi, recinzioni, tombini, grondaie). Tutto statico e fuso in pochi mesh.
 import { kitMesh, runZ } from './props.js';
 import * as THREE from 'three';
-import { bloodDecals, stainDecals, burnDecals } from './blood.js';
+import { bloodDecals, stainDecals, burnDecals, patchDecals } from './blood.js';
+import { aged } from './aged.js';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 const P2 = Math.PI / 2;
 const add = async (group, kit, pl) => { try { const m = await kitMesh(kit, pl); if (m) { m.traverse((o) => { o.userData.decor = true; if (globalThis.__lowQ) o.visible = false; }); group.add(m); } } catch (e) { console.warn('decor', kit, e); } };
@@ -19,6 +20,7 @@ export function decorTunnel(group) {
     // (tolta la mano a z -28.5: li' c'e' il murale)
     { k: 'X', p: [1.397, 1.55, -34.8], wall: '-x', h: 0.62, rot: 0.2 }, { k: 'X', p: [-1.397, 1.7, -35.0], wall: '+x', h: 0.55, rot: -0.15, flip: true },
   ]);
+  patchDecals(group, [{ img: 'assets/tex/pt_gravel.webp', p: [0.1, 0.012, -11], wall: 'floor', w: 1.9, h: 2.6, rot: 0.2 }, { img: 'assets/tex/pt_layers.webp', p: [-0.3, 0.012, -33.5], wall: 'floor', w: 1.8, h: 2.8, rot: -0.15 }]);   // tunnel: cemento grezzo a chiazze sul pavimento
   add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -1.27, 2.0, 2.4, -48.4));
   add(group, 'pipes', [...runZ('pipe_thin_200cm_metal', 2.0, -1.33, 1.62, 2.4, -48.4).map((p) => ({ ...p, r: [0, P2, 0] }))]);
   add(group, 'cables', [...cableRun(1.38, 2.0, -3, -7), ...cableRun(1.38, 2.0, -28, -31.5)]);
@@ -41,12 +43,14 @@ function sideGate(group, wx, z) {
   // nessuna maniglia ne' chiavistello: e' chiuso, non si capisce nemmeno come aprirlo
 }
 export function decorHall(group, z0) {
+  patchDecals(group, [{ img: 'assets/tex/pt_blocks.webp', p: [-5.99, 0.65, z0 - 9], wall: '+x', w: 3.4, h: 1.1, a: 0.85 }, { img: 'assets/tex/pt_blocks.webp', p: [-5.99, 0.65, z0 - 33], wall: '+x', w: 3.4, h: 1.1, a: 0.85 }, { img: 'assets/tex/pt_blocks.webp', p: [5.99, 0.65, z0 - 21], wall: '-x', w: 3.4, h: 1.1, a: 0.85 }, { img: 'assets/tex/pt_blocks.webp', p: [5.99, 0.65, z0 - 27], wall: '-x', w: 3.4, h: 1.1, a: 0.85 }]);   // sala della folla: blocchi di pietra sporca in basso
   stainDecals(group, [{ p: [-5.99, 1.6, z0 - 12], wall: '+x', w: 3.0, h: 3.4 }, { p: [5.99, 1.6, z0 - 20], wall: '-x', w: 3.0, h: 3.4, flip: true }]);
   add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -5.8, 4.9, z0 - 1, z0 - 38));
   add(group, 'cables', [...cableRun(-5.97, 3.2, z0 - 3, z0 - 6), ...cableRun(5.97, 3.0, z0 - 14, z0 - 17)]);
   add(group, 'manhole', manhole(-2.4, z0 - 9, 0.4).concat(manhole(2.0, z0 - 23, 1.2)));
 }
 export function decorCellar(group, z0) {
+  patchDecals(group, [{ img: 'assets/tex/pt_mold.webp', p: [-3.97, 0.6, z0 - 20.5], wall: '+x', w: 2.8, h: 1.1 }]);   // cantina: intonaco ruvido con mattoni e muffa in basso
   stainDecals(group, [{ p: [-3.99, 1.2, z0 - 5], wall: '+x', w: 2.6, h: 2.8 }, { p: [3.99, 1.3, z0 - 8], wall: '-x', w: 2.4, h: 2.8, flip: true }, { p: [-3.99, 1.1, z0 - 15], wall: '+x', w: 2.6, h: 2.8, a: 0.8 }]);
   entryDoor(group, z0);
   bloodDecals(group, [{ k: 'X', p: [3.995, 1.7, z0 - 14], wall: '-x', h: 0.7, rot: 0.1 }, { k: 'C', p: [3.995, 1.5, z0 - 10], wall: '-x', h: 0.3, rot: 0.15 }]);
@@ -66,6 +70,7 @@ export function decorWarehouse(group, z0) {
     { k: 'trail', p: [0.7, 0.014, z0 - 24.5], w: 1.0, h: 10.5, rot: 0.05, a: 0.85 },
   ]);
   const entry = entryDoor(group, z0);
+  patchDecals(group, [{ img: 'assets/tex/pt_rough.webp', p: [5.98, 1.5, z0 - 30.5], wall: '-x', w: 2.4, h: 1.8 }]);   // magazzino: muro ruvido e muffa
   add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -2.4, 6.2, z0 - 1, z0 - 34));
   add(group, 'fence', [...fenceZ(-4.05, z0 - 3, z0 - 8), ...fenceZ(4.05, z0 - 28.5, z0 - 34)]);
   add(group, 'gutter', runZ('modular_metal_gutter', 1.51, 5.55, 5.4, z0 - 1, z0 - 14).map((p) => ({ ...p, r: [0, P2, 0] })));
@@ -86,7 +91,7 @@ export function decorTower(group, z0) {
 export function entryDoor(group, z0) {
   const holder = new THREE.Group(); group.add(holder);   // si può nascondere (es. al suo posto un cancello)
   new GLTFLoader().load('assets/models/door.glb', (g) => {
-    const m = g.scene; m.getObjectByName('large_castle_door_left')?.rotation.set(0, 0, 0); m.getObjectByName('large_castle_door_right')?.rotation.set(0, 0, 0);
+    const m = g.scene; aged(m, 0.5, 0.6); m.getObjectByName('large_castle_door_left')?.rotation.set(0, 0, 0); m.getObjectByName('large_castle_door_right')?.rotation.set(0, 0, 0);
     const d = new THREE.Group(); d.position.set(0, 0, z0 - 0.14); d.rotation.y = Math.PI; d.add(m); holder.add(d);
     const gt = new GLTFLoader().load('assets/models/gate.glb', (gg) => { const o = gg.scene; o.scale.setScalar(2.2); o.position.set(-0.08, 1.02, 0.13); d.add(o); });
   });

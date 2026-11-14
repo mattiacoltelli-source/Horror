@@ -22,7 +22,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   const room = buildRoom(mats, { z0: WH.z0, w: WH.w, l: WH.l, h: WH.h, wall: 'brick', floor: 'floorB', ceil: 'stone', pillarEvery: 6, dark: 0.8, seed: 41, exit: { w: 2, h: 2.6 } });
   W.group.add(room.group); const entry = decorWarehouse(W.group, WH.z0); W.bounds = [room.bounds[0], room.bounds[1], WH.z0 - WH.l + 1.5, WH.z0 - 0.6];
   const zFar = WH.z0 - WH.l, loader = new GLTFLoader();
-  const prop = (url, h, x, y, z, ry, cb) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y - y, c.z - z)); o.rotation.y = ry; if (/rack|stool|cart|shelf|chair|rim|can|tank|bin/.test(url)) aged(o, 0.9); W.group.add(o); cb?.(o); });
+  const prop = (url, h, x, y, z, ry, cb) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y - y, c.z - z)); o.rotation.y = ry; if (/rack|stool|cart|shelf|chair|rim|can|tank|bin/.test(url)) aged(o, 0.9, /rack|cart|rim|can|tank|bin/.test(url) ? 0.85 : 0); W.group.add(o); cb?.(o); });
 
   // scaffali e cestini lungo i muri, un po' sparsi (non una fila perfetta)
   [-9, -13.5, -19, -24, -31, -33.5].forEach((dz, i) => { prop('assets/models/rack.glb', 1.9, i % 2 ? 5.2 : -5.2, 0, WH.z0 + dz - 0.4, (i % 2 ? -1 : 1) * Math.PI / 2 + (i % 3) * 0.05); });
@@ -67,9 +67,9 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   const gz = zFar + 6.5, gate = new THREE.Group(); gate.position.set(0, 0, gz); W.group.add(gate); let leaf = null;
   W.box = [W.bounds[0], W.bounds[1], gz + 0.5, W.bounds[3]];
   (async () => {
-    const frame = await kitObject('fence', 'Cylinder184'); if (frame) { frame.position.set(0, 1.26, 0); gate.add(frame); }
+    const frame = await kitObject('fence', 'Cylinder184'); if (frame) { frame.position.set(0, 1.26, 0); aged(frame, 0.55, 0.9); gate.add(frame); }
     const lf = await kitObject('fence', 'Cylinder140');
-    if (lf) { leaf = new THREE.Group(); leaf.position.set(-0.45, 0, 0); lf.position.set(0.47, 0.93, 0); leaf.add(lf); gate.add(leaf);
+    if (lf) { aged(lf, 0.55, 0.9); leaf = new THREE.Group(); leaf.position.set(-0.45, 0, 0); lf.position.set(0.47, 0.93, 0); leaf.add(lf); gate.add(leaf);
       const parts = await Promise.all(['gate_latch_01_frame', 'gate_latch_01_latch', 'gate_latch_01_hook'].map(() => null)); }
     new GLTFLoader().load('assets/models/gate.glb', (g) => { const o = g.scene; o.scale.setScalar(1.7); o.position.set(0.9, 0.95, 0.05); (leaf || gate).add(o); });
     // recinzione CONTINUA dai bordi del cancello fino ai muri laterali (nessun varco): pannelli da 1.91 m che partono esattamente dal telaio (±0.955)
