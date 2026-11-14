@@ -24,12 +24,12 @@ export function createHound({ scene, player, lights, audio, glass }) {
     if (H.eyes) { H.blink = (H.blink ?? 3) - dt; const closed = H.blink < 0 && H.blink > -0.14; if (H.blink < -0.14) H.blink = 2.5 + Math.random() * 4; H.eyes.forEach((e) => { e.bone.getWorldPosition(e.sp.position); e.sp.visible = H.obj.visible && !closed; }); }
     const z = player.pos.z;
     // respiro del cane: quasi un sottofondo, parte ~1 m (0,65 s) prima che compaiano gli occhi e si ferma di colpo al flash
-    if (H.state === 'wait' && !H.snd && !H.sndDone && glass?.state === 'vanish' && glass.t > 0.9) { H.snd = audio.sfx?.('hound_breath', { level: 0.02, loop: true, fade: 3 }); if (H.snd) H.snd.setLevel(0.05, 6); else H.sndDone = true; }
+    if (H.state === 'wait' && !H.snd && !H.sndDone && glass?.state === 'vanish' && glass.t > 0.25) { H.snd = audio.sfx?.('hound_breath', { level: 0.02, loop: true, fade: 3 }); if (H.snd) H.snd.setLevel(0.05, 6); else H.sndDone = true; }
     if (H.state === 'flash' && H.snd) { H.snd.stop(0.15); H.snd = null; H.sndDone = true; }
     if (H.state === 'wait') {
       if (!lights.lamps[lampIdx]) return;
       if (!H.armed) { H.armed = true; lights.lamp(lampIdx, 'off'); }   // l'ultima lampada resta spenta: in fondo c'e' solo penombra
-      H.obj.visible = (!!glass?.done || (glass?.state === 'vanish' && glass.t > 2.2)) && z < -8 && z > ZT - 0.5;   // compare ~1,3 s prima della fine della scena del vetro (~2 m di cammino in anticipo)   // compare solo dopo la scena del vetro (le mani sul vetro)
+      H.obj.visible = (!!glass?.done || (glass?.state === 'vanish' && glass.t > 0.9)) && z < -8 && z > ZT - 0.5;   // compare ~1,3 s prima della fine della scena del vetro (~2 m di cammino in anticipo)   // compare solo dopo la scena del vetro (le mani sul vetro)
       H.obj.rotation.y = Math.atan2(player.pos.x - H.obj.position.x, z - H.obj.position.z);   // guarda verso di te
       if (z < ZT) { H.state = 'flash'; H.t = 0; lights.lamp(lampIdx, 'flicker', 0.9); audio.swell?.(1.2, 0.35); }
     } else if (H.state === 'flash') {
