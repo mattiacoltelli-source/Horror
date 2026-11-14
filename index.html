@@ -79,7 +79,8 @@
   var q = new URLSearchParams(location.search), intro = document.getElementById('intro'); if (!intro) return;
   var OK = /^[A-Za-zÀ-ÖØ-öø-ÿ' -]{2,14}$/, KEY = 'ng_name', stored = null;
   try { stored = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
-  var asked = q.get('chiedi') === '1', fromAsk = q.get('da') === 'chiedi';
+  // la versione di base non c'e' piu': il link normale chiede sempre nome, genere, data e frase. Restano senza domanda i link gia' personalizzati (?per=), le scorciatoie di prova (?start=, ?debug=1) e ?base=1 (solo per provare).
+  var asked = q.get('chiedi') === '1' || (!q.get('per') && !q.get('start') && !q.get('debug') && q.get('base') !== '1'), fromAsk = q.get('da') === 'chiedi';
   var go = function (n, g, d, f) { location.replace(location.pathname + '?per=' + encodeURIComponent(n) + '&g=' + g + (d ? '&nasc=' + d : '') + (f ? '&frase=' + encodeURIComponent(f) : '') + '&da=chiedi'); };
   if (q.get('reset') === '1') { try { localStorage.removeItem(KEY); } catch (e) {} }
   if (asked && !q.get('per') && stored && OK.test(stored.n || '') && q.get('reset') !== '1') { go(stored.n, stored.g === 'm' ? 'm' : 'f', /^\d{1,2}-\d{1,2}-\d{2}$/.test(stored.d || '') ? stored.d : '', stored.f || ''); return; }
