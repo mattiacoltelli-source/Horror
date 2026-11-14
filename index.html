@@ -87,7 +87,7 @@
   if (!asked || q.get('per')) return;
   intro.classList.add('asking'); document.getElementById('ask').classList.remove('hidden');
   var nm = document.getElementById('nm'), go2 = document.getElementById('askgo'), err = document.getElementById('askerr'), g = null;
-  var fraseOk = function (t) { return String(t || '').toUpperCase().replace(/[ÀÁÂÄ]/g, 'A').replace(/[ÉÊË]/g, 'È').replace(/[ÌÍÎÏ]/g, 'I').replace(/[ÒÓÔÖ]/g, 'O').replace(/[ÙÚÛÜ]/g, 'U').replace(/[’`´]/g, "'").replace(/[^A-ZÈ ,.'\-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 28); };
+  var fraseOk = function (t) { return String(t || '').toUpperCase().replace(/[ÁÂÄ]/g, 'À').replace(/[ÉÊË]/g, 'È').replace(/[ÍÎÏ]/g, 'Ì').replace(/[ÓÔÖ]/g, 'Ò').replace(/[ÚÛÜ]/g, 'Ù').replace(/[’`´]/g, "'").replace(/[^A-ZÀÈÌÒÙ ,.'\-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 28); };
   document.getElementById('fr').addEventListener('input', function (e) { var el = e.target, v = el.value.toUpperCase(); el.value = v; });
   var bdd = document.getElementById('bdd'), bdm = document.getElementById('bdm'), bdy = document.getElementById('bdy');
   var bdv = function () { var d = bdd.value.trim(), m = bdm.value.trim(), y = bdy.value.trim(); if (!d && !m && !y) return ''; var D = +d, M = +m, Y = +y; if (!/^\d{1,2}$/.test(d) || !/^\d{1,2}$/.test(m) || !/^\d{4}$/.test(y) || D < 1 || D > 31 || M < 1 || M > 12 || Y < 1920 || Y > 2015) return null; return D + '-' + M + '-' + String(Y).slice(2); };
