@@ -11,7 +11,11 @@ import { addAtmosphere } from '../world/atmos.js';
 import { P } from '../personal.js';
 
 export const TOWER = { z0: -300, w: 14, l: 18, h: 8.5 };
-const TEXT = P ? { A: 'non ti sei girat' + (P.f === false ? 'o' : 'a') + ', ' + P.name + '.\nera già davanti a te.\nnon volevi ricordare.', B: 'ti sei girat' + (P.f === false ? 'o' : 'a') + ', ' + P.name + '.\nlei non se n\'è mai andata.\nl\'incendio l\'hai acceso tu.' } : { A: 'non ti sei girato.\nera già davanti a te.\nnon volevi ricordare.', B: 'ti sei girato.\nlei non se n\'è mai andata.\nl\'incendio l\'hai acceso tu.' };
+const _o = P ? (P.f === false ? 'o' : 'a') : 'o', _n = P ? ', ' + P.name : '';
+const TEXT = {   // finale: la suora e' suor Agnese, l'infermiera che ti ha tirato fuori dal fuoco e non ti lascia andare
+  A: 'non ti sei girat' + _o + _n + '.\nera già davanti a te.\nsuor Agnese non ti ha salvat' + _o + ':\nti ha tenut' + _o + ' qui.',
+  B: 'ti sei girat' + _o + _n + '.\nsua sorella non c\'è più.\nl\'incendio l\'hai acceso tu.\nsuor Agnese lo sa. ti tiene qui.',
+};
 
 export function createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn, combat }) {
   const T = { group: new THREE.Group(), opened: false, near: false };

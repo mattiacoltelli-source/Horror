@@ -10,7 +10,7 @@ const NOTE_STD = [
   'ha rotto lo specchio ogni mattina.\nogni mattina lo rimettiamo.\ndice che quella non è la sua faccia.',
   'terapia della sedia: sospesa.\nchiede ogni giorno di sua sorella.\nsorella: deceduta. lui era in casa, quando è bruciata.',
   'incendio partito dal magazzino.\ninnesco volontario. benzina sui registri.\nun solo sopravvissuto: paziente n. 17.',
-  'non l\'ho mai lasciato solo.\nl\'ho tirato fuori io, dal fuoco.\nnon lo lascerò nemmeno ora.',
+  'non l\'ho mai lasciato solo.\nl\'ho tirato fuori io, dal fuoco.\nho scritto che è stato un guasto.\nnon lo lascerò nemmeno ora.\n— suor Agnese',
 ];
 // versione personalizzata (profili in personal.js): stessa storia, ma la paziente n. 17 è lei e la sorella ha i suoi capelli
 const NOTE_PER = [
@@ -18,7 +18,7 @@ const NOTE_PER = [
   'ha rotto lo specchio ogni mattina.\nogni mattina lo rimettiamo.\ndice che ' + (P?.detail ?? '') + '.',
   'terapia della sedia: sospesa.\nchiede ogni giorno di sua sorella, ' + (P?.sister ?? '') + '.\nsorella: deceduta. ' + (P?.name ?? '') + ' era in casa, quando è bruciata.',
   'incendio partito dal magazzino.\ninnesco volontario. benzina sui registri.\nun solo sopravvissuto: ' + (P?.name ?? '') + '.',
-  'non l\'ho mai lasciata sola.\nl\'ho tirata fuori io, dal fuoco.\nnon la lascerò nemmeno ora.' + (P?.nurse ? '\n' + P.nurse : ''),
+  'non l\'ho mai lasciata sola.\nl\'ho tirata fuori io, dal fuoco.\nho scritto che è stato un guasto.\nnon la lascerò nemmeno ora.' + (P?.nurse ? '\n' + P.nurse : '') + '\n— suor Agnese',
 ];
 export const NOTE_TEXT = P ? NOTE_PER : NOTE_STD;
 
