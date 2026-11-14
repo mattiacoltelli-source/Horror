@@ -36,13 +36,20 @@ const q = new URLSearchParams(location.search);
 
 // ---------- renderer ----------
 const canvas = $('gl');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: devicePixelRatio < 2, powerPreference: 'high-performance', alpha: false });
-let pr = Math.min(devicePixelRatio || 1, 1.5);
+// QUALITA' GRAFICA: alta / media / bassa. Scelta dal menu iniziale e ricordata sul telefono; se manca, si sceglie da soli dalla potenza dichiarata del dispositivo (memoria, core).
+// Se i frame calano durante la partita il gioco abbassa da solo la risoluzione e, come ultimo ripiego, ricorda "bassa" per la volta dopo.
+const QK = 'ng_quality', QD = { high: { pr: 1.5, aa: true, an: 4 }, mid: { pr: 1.15, aa: false, an: 2 }, low: { pr: 0.8, aa: false, an: 1 } };
+let QUAL; try { QUAL = localStorage.getItem(QK); } catch (_) {}
+if (!QD[QUAL]) QUAL = ((navigator.deviceMemory && navigator.deviceMemory <= 3) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)) ? 'low' : (devicePixelRatio >= 2.5 ? 'mid' : 'high');
+globalThis.__quality = QUAL; if (QUAL === 'low') globalThis.__lowQ = true;   // bassa: niente arredo modulare (tubi, cavi, recinzioni), specchio piu' piccolo
+const QC = QD[QUAL];
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: QC.aa && devicePixelRatio < 2, powerPreference: QUAL === 'low' ? 'default' : 'high-performance', alpha: false });
+let pr = Math.min(devicePixelRatio || 1, QC.pr);
 renderer.setPixelRatio(pr);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-setAnisotropy(Math.min(4, renderer.capabilities.getMaxAnisotropy()));
+setAnisotropy(Math.min(QC.an, renderer.capabilities.getMaxAnisotropy()));
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
@@ -259,6 +266,12 @@ async function enter() {
   try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el, { navigationUI: 'hide' })?.catch?.(() => {}); } catch (_) {}
   try { await screen.orientation?.lock?.('portrait'); } catch (_) {}
   $('intro').classList.add('hidden');
+  // PRECOMPILA GLI SHADER di tutte le stanze mentre sei ancora nel tunnel: senza, il telefono compila al primo sguardo di ogni stanza nuova e il gioco si blocca per qualche decimo di secondo
+  setTimeout(() => { try {
+    const gs = [cellar, morgue, wh, tower, ward, hall].map((r) => r?.group).filter(Boolean), was = gs.map((g) => g.visible);
+    gs.forEach((g) => { g.visible = true; }); const p = renderer.compileAsync ? renderer.compileAsync(scene, camera) : (renderer.compile(scene, camera), Promise.resolve());
+    gs.forEach((g, i) => { g.visible = was[i]; }); p?.catch?.(() => {});
+  } catch (_) {} }, 2500);
   // ?start=porta → salta il tunnel e parte a ~8 m dal portone (per provare solo la parte finale)
   if (q.get('start') === 'porta') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, -46); }
   // scorciatoie di prova: ?start=cantina | torre  (&turned=1 / &mirror=1 per simulare le scelte)
@@ -289,6 +302,11 @@ function setPaused(p) {
 }
 document.addEventListener('visibilitychange', () => document.hidden && setPaused(true));
 $('resume').addEventListener('click', () => setPaused(false));
+{ const qb = $('quality'); if (qb) {
+  const NAMES = { high: 'alta', mid: 'media', low: 'bassa' }, ORDER = ['low', 'mid', 'high'];
+  const paint = () => { qb.textContent = 'qualità: ' + NAMES[QUAL] + ' · cambia'; };
+  paint(); qb.addEventListener('click', () => { const nx = ORDER[(ORDER.indexOf(QUAL) + 1) % 3]; try { localStorage.setItem(QK, nx); } catch (_) {} location.reload(); });   // si ricarica: l'antialiasing si decide all'avvio
+} }
 // il telefono puo' togliere la GPU all'app (memoria bassa, schermo bloccato): invece di restare nero/bloccato, mette in pausa e riprende quando il contesto torna
 canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); setPaused(true); });
 canvas.addEventListener('webglcontextrestored', () => { last = performance.now(); });
@@ -339,7 +357,7 @@ function frame(now) {
   if (fpsAcc > 2) {
     const fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0;
     if (fps < 38 && pr > 0.7) { pr = Math.max(0.7, pr - 0.15); renderer.setPixelRatio(pr); resize(); }
-    else if (fps < 28 && pr <= 0.71 && !globalThis.__lowQ) { globalThis.__lowQ = true; scene.traverse((o) => { if (o.userData.decor) o.visible = false; }); }   // ultimo ripiego: via l'arredo modulare
+    else if (fps < 28 && pr <= 0.71 && !globalThis.__lowQ) { globalThis.__lowQ = true; try { localStorage.setItem(QK, 'low'); } catch (_) {} scene.traverse((o) => { if (o.userData.decor) o.visible = false; }); }   // ultimo ripiego: via l'arredo modulare
   }
 }
 requestAnimationFrame((n) => { last = n; frame(n); });

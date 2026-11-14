@@ -30,7 +30,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const red = redLight(C.group, { x: CELLAR.w / 2 - 0.1, y: 2.5, z: CELLAR.z0 - 19.5, dir: 1 });   // luce rossa d'emergenza vicino all'uscita
   // specchio
   const mw = 1.7, mh = 2.4;
-  const mirror = new Reflector(new THREE.PlaneGeometry(mw, mh), { textureWidth: 256, textureHeight: 384, color: new THREE.Color(0xffffff), clipBias: 0.003 });
+  const mirror = new Reflector(new THREE.PlaneGeometry(mw, mh), { textureWidth: globalThis.__quality === 'low' ? 160 : 256, textureHeight: globalThis.__quality === 'low' ? 240 : 384, color: new THREE.Color(0xffffff), clipBias: 0.003 });
   mirror.position.copy(MIRROR); mirror.rotation.y = Math.PI / 2; C.group.add(mirror);
   // nel riflesso lo z-fighting del pavimento (pozzanghere, veli di luce, tombini incassati) fa comparire "quadratini" neri: durante il render dello specchio quegli oggetti sono nascosti
   { const orig = mirror.onBeforeRender; let flat = null;
