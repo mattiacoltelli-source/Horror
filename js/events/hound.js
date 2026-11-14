@@ -9,14 +9,19 @@ export function createHound({ scene, player, lights, audio }) {
   let mixer = null;
   new GLTFLoader().load('assets/models/hound.glb', (g) => {
     const o = g.scene; aged(o, 0.6);
-    o.traverse((m) => { if (!m.isMesh) return; for (const mat of [].concat(m.material)) { if (mat.map && !mat.alphaTest) { mat.emissiveMap = mat.map; mat.emissive = new THREE.Color(0.1, 0.087, 0.087); mat.emissiveIntensity = 1; } } });   // un chiarore minimo: da lontano resta solo il dubbio di una sagoma, mai una cosa che si vede chiaramente
+    o.traverse((m) => { if (!m.isMesh) return; for (const mat of [].concat(m.material)) { if (mat.map && !mat.alphaTest) { mat.emissiveMap = mat.map; mat.emissive = new THREE.Color(0.04, 0.035, 0.035); mat.emissiveIntensity = 1; } } });   // un chiarore minimo: da lontano resta solo il dubbio di una sagoma, mai una cosa che si vede chiaramente
     const b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()); o.position.set(-c.x, -b.min.y, -c.z);
     const grp = new THREE.Group(); grp.add(o); grp.position.set(0.15, 0, ZD); grp.rotation.y = 0; grp.scale.setScalar(1.1); grp.visible = false; scene.add(grp); H.obj = grp;
+    // occhi: due punti rossi appena accesi (come un demone), che seguono le ossa degli occhi; ogni tanto sbattono
+    const gc = document.createElement('canvas'); gc.width = gc.height = 64; const gx = gc.getContext('2d'), gr = gx.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,210,170,1)'); gr.addColorStop(0.25, 'rgba(255,70,30,0.8)'); gr.addColorStop(1, 'rgba(255,30,0,0)'); gx.fillStyle = gr; gx.fillRect(0, 0, 64, 64);
+    const gt = new THREE.CanvasTexture(gc);
+    H.eyes = []; o.traverse((n) => { if (/^Eye\./.test(n.name)) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: gt, color: 0xff4020, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending })); sp.scale.setScalar(0.075); sp.visible = false; scene.add(sp); H.eyes.push({ bone: n, sp }); } });
     if (g.animations?.length) { mixer = new THREE.AnimationMixer(o); mixer.clipAction(g.animations[0]).play(); }
   });
   H.update = (dt) => {
     mixer?.update(dt);
-    if (!H.obj || H.state === 'gone') return;
+    if (!H.obj || H.state === 'gone') { H.eyes?.forEach((e) => { e.sp.visible = false; }); return; }
+    if (H.eyes) { H.blink = (H.blink ?? 3) - dt; const closed = H.blink < 0 && H.blink > -0.14; if (H.blink < -0.14) H.blink = 2.5 + Math.random() * 4; H.eyes.forEach((e) => { e.bone.getWorldPosition(e.sp.position); e.sp.visible = H.obj.visible && !closed; }); }
     const z = player.pos.z;
     if (H.state === 'wait') {
       if (!lights.lamps[lampIdx]) return;
