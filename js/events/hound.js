@@ -9,7 +9,7 @@ export function createHound({ scene, player, lights, audio, glass }) {
   let mixer = null;
   new GLTFLoader().load('assets/models/hound.glb', (g) => {
     const o = g.scene; aged(o, 0.7);
-    o.traverse((m) => { if (!m.isMesh) return; for (const mat of [].concat(m.material)) { if (mat.map && !mat.alphaTest) { mat.emissiveMap = mat.map; mat.emissive = new THREE.Color(0.008, 0.007, 0.007); mat.emissiveIntensity = 1; } } });   // un chiarore minimo: da lontano resta solo il dubbio di una sagoma, mai una cosa che si vede chiaramente
+    o.traverse((m) => { if (!m.isMesh) return; for (const mat of [].concat(m.material)) { if (mat.map && !mat.alphaTest) { mat.emissiveMap = mat.map; mat.emissive = new THREE.Color(0.0145, 0.0125, 0.0125); mat.emissiveIntensity = 1; } } });   // un chiarore minimo: da lontano resta solo il dubbio di una sagoma, mai una cosa che si vede chiaramente
     const b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()); o.position.set(-c.x, -b.min.y, -c.z);
     const grp = new THREE.Group(); grp.add(o); grp.position.set(0.15, 0, ZD); grp.rotation.y = 0; grp.scale.setScalar(1.1); grp.visible = false; scene.add(grp); H.obj = grp;
     // occhi: due punti rossi appena accesi (come un demone), che seguono le ossa degli occhi; ogni tanto sbattono
