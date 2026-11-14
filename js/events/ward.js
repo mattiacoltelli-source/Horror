@@ -2,8 +2,10 @@
 // Si accede solo con ?start=reparto (non e' ancora nel percorso). Evento: a meta' corridoio le luci si spengono per ~1 s; la sedia a rotelle, nel buio, si e' avvicinata.
 import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
-import { stainDecals, bloodDecals, burnDecals, patchDecals } from '../world/blood.js';
+import { stainDecals, bloodDecals, burnDecals, patchDecals, writingDecals } from '../world/blood.js';
 import { buildRoom } from '../world/rooms.js';
+import { PKEY } from '../personal.js';
+import { bloodText } from '../world/bloodfont.js';
 
 export const WARD = { z0: -480, w: 4, l: 20, h: 2.5 };   // la fine del corridoio coincide con l'ingresso dell'obitorio (z0 -500): un unico ambiente
 const loader = new GLTFLoader(), cache = {};
@@ -53,6 +55,8 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
   // sporco sui muri e sangue vecchio
   stainDecals(R.group, [{ p: [-hw + 0.01, 1.3, z0 - 5], wall: '+x', w: 2.6, h: 2.2 }, { p: [hw - 0.01, 1.2, z0 - 9.5], wall: '-x', w: 2.4, h: 2.2, flip: true }, { p: [-hw + 0.01, 1.2, z0 - 14], wall: '+x', w: 2.4, h: 2.2, a: 0.8 }, { p: [hw - 0.01, 1.2, z0 - 17.5], wall: '-x', w: 2.4, h: 2.2 }]);
   patchDecals(R.group, [{ img: 'assets/tex/pt_plaster.webp', p: [-hw + 0.016, 1.85, z0 - 2.6], wall: '+x', w: 1.9, h: 1.3 }, { img: 'assets/tex/pt_plaster.webp', p: [hw - 0.016, 1.85, z0 - 4.2], wall: '-x', w: 1.7, h: 1.2, rot: 0.04 }]);   // corridoio: intonaco scrostato e muro macchiato sopra le piastrelle
+  const BD = { rebecca: 'REBECCA\n20 GIUGNO 1997', tommy: 'TOMMY\n1 NOVEMBRE 1990' };   // compleanni: ognuno vede il proprio, scritto col sangue sulle piastrelle bianche
+  if (BD[PKEY]) { const T = BD[PKEY], ta = bloodText(T).aspect; writingDecals(R.group, [{ text: T, aspect: ta, p: [-1.758, 0.74, z0 - 3.0], wall: '+x', w: Math.min(0.55 * ta, 1.7) }]); }   // il compleanno, scritto col sangue sulle piastrelle bianche
   burnDecals(R.group, [{ k: 'wall', p: [-hw + 0.014, 1.4, z0 - 8], wall: '+x', w: 3.4, h: 2.6, a: 0.5 }, { k: 'wall', p: [hw - 0.014, 1.3, z0 - 14.5], wall: '-x', w: 3.0, h: 2.4, a: 0.45, flip: true }, { k: 'floor', p: [0.3, 0.012, z0 - 16], w: 2.0, h: 1.6, rot: 1.0, a: 0.6 }]);   // corridoio: vicino a dove e' partito il fuoco, bruciature medie
   bloodDecals(R.group, [{ k: 'A', p: [-hw + 0.012, 1.1, z0 - 12.2], wall: '+x', h: 0.3, rot: 0.1 }]);
 
