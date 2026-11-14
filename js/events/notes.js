@@ -5,12 +5,15 @@ import * as THREE from 'three';
 import { P } from '../personal.js';
 import { W as TUNNEL_W } from '../world/tunnel.js';
 
+// l'ora vera del telefono (letta una volta sola all'avvio) entra nella firma di suor Agnese, con una frase che dipende dal momento della giornata
+const _d = new Date(), _h = _d.getHours(), _hm = String(_h).padStart(2, '0') + ':' + String(_d.getMinutes()).padStart(2, '0');
+const NOW = 'sono le ' + _hm + '. ' + (_h >= 23 || _h < 5 ? 'a quest\'ora non dorme nessuno.' : _h < 12 ? 'fuori è già giorno. qui dentro no.' : _h < 18 ? 'fuori c\'è luce. qui non è mai entrata.' : 'fuori è sera. qui è sempre notte.');
 const NOTE_STD = [
   'paziente n. 17.\ningresso: notte del 3 novembre.\nnon risponde al proprio nome.',
   'ha rotto lo specchio ogni mattina.\nogni mattina lo rimettiamo.\ndice che quella non è la sua faccia.',
   'terapia della sedia: sospesa.\nchiede ogni giorno di sua sorella.\nsorella: deceduta. lui era in casa, quando è bruciata.',
   'incendio partito dal magazzino.\ninnesco volontario. benzina sui registri.\nun solo sopravvissuto: paziente n. 17.\nil cane della struttura no.',
-  'non l\'ho mai lasciato solo.\nl\'ho tirato fuori io, dal fuoco.\nho scritto che è stato un guasto.\nnon lo lascerò nemmeno ora.\n— suor Agnese',
+  'non l\'ho mai lasciato solo.\nl\'ho tirato fuori io, dal fuoco.\nho scritto che è stato un guasto.\nnon lo lascerò nemmeno ora.\n' + NOW + '\n— suor Agnese',
 ];
 // versione personalizzata (profili in personal.js): stessa storia, ma la paziente n. 17 è lei e la sorella ha i suoi capelli
 const NOTE_PER = [
@@ -18,7 +21,7 @@ const NOTE_PER = [
   'ha rotto lo specchio ogni mattina.\nogni mattina lo rimettiamo.\ndice che ' + (P?.detail ?? '') + '.',
   'terapia della sedia: sospesa.\nchiede ogni giorno di sua sorella, ' + (P?.sister ?? '') + '.\nsorella: deceduta. ' + (P?.name ?? '') + ' era in casa, quando è bruciata.',
   'incendio partito dal magazzino.\ninnesco volontario. benzina sui registri.\nun solo sopravvissuto: ' + (P?.name ?? '') + '.\nil cane della struttura no.',
-  'non l\'ho mai lasciata sola.\nl\'ho tirata fuori io, dal fuoco.\nho scritto che è stato un guasto.\nnon la lascerò nemmeno ora.' + (P?.nurse ? '\n' + P.nurse : '') + '\n— suor Agnese',
+  'non l\'ho mai lasciata sola.\nl\'ho tirata fuori io, dal fuoco.\nho scritto che è stato un guasto.\nnon la lascerò nemmeno ora.\n' + NOW + (P?.nurse ? '\n' + P.nurse : '') + '\n— suor Agnese',
 ];
 export const NOTE_TEXT = P ? NOTE_PER : NOTE_STD;
 
@@ -63,7 +66,7 @@ export function createNotes({ camera, player, audio, story, say, instab, flags, 
       n.mesh.getWorldPosition(p); d.copy(p).sub(camera.position); const dist = d.length(); d.normalize();
       { const ph = ((clock + n.ph) % 3.1) / 3.1, pulse = Math.exp(-(((ph - 0.2) / 0.09) ** 2)); n.sp.material.opacity = dist < 9 ? 0.42 * pulse * Math.min(1, (9 - dist) / 3) : 0; }
       if (dist < 5.5 && d.dot(fw) > 0.9) n.t += dt; else n.t = Math.max(0, n.t - dt * 2);
-      if (n.t > 0.35) { N.found.add(n.i); flags.notes = N.found.size; audio.rustle?.(); instab?.push?.(0.25, 3); say(NOTE_TEXT[n.i], 5000, 'note'); }
+      if (n.t > 0.35) { N.found.add(n.i); flags.notes = N.found.size; audio.rustle?.(); instab?.push?.(0.25, 3); say(NOTE_TEXT[n.i], 5000 + Math.max(0, NOTE_TEXT[n.i].split('\n').length - 4) * 900, 'note'); }
     }
   };
   return N;
