@@ -11,3 +11,5 @@ Colore a 512 px, tileable. Originali 1K (con normal e roughness) conservati dall
 - dirty_carpet: moquette scura e sporca (sala di controllo, stanze del personale)
 - rusty_metal_grid: lamiera verde-azzurra a riquadri con ruggine (porte, pareti industriali)
 - rusty_metal_04: ruggine intensa (cancelli, tubi, serbatoi)
+- wood_planks_dirt: assi di legno sporche (pavimento/panche della cappella, scaffali)
+- wood_peeling_paint_weathered: legno con vernice scrostata (porte, mobili, pannelli)
