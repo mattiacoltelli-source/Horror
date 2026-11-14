@@ -42,11 +42,11 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
     }
     switch (E.state) {
       case 'idle':
-        if (pz < -43) { go('hush'); audio.duck(0.25, 4); }
+        if (pz < Z_END + 13) { go('hush'); audio.duck(0.25, 4); }
         break;
       case 'hush':
-        if (pz < -49.5) audio.duck(0.04, 1.2);
-        if (pz < -50.8 && E.t > 2) {
+        if (pz < Z_END + 6.5) audio.duck(0.04, 1.2);
+        if (pz < Z_END + 5.2 && E.t > 2) {
           go('burst'); openT = 0; audio.doorBang(doorPos, 1); audio.duck(0.12, 0.2); player.addShake(1.1);
           player.zMin = Z_END - 2.4; lights.lamp(3, 'flicker', 1.4); lights.torchStutter(0.5); instab.set(0.8, 10);
           hall?.enable(); hall?.setDist(PHASES[0].d);

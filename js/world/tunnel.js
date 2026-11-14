@@ -5,11 +5,11 @@ import { TILES } from './materials.js';
 export const W = 1.4;          // semi-larghezza
 export const H0 = 2.1;         // altezza dei piedritti
 export const Z_START = 3;
-export const Z_END = -56;
+export const Z_END = -50;   // accorciato di un segmento (6 m): era -56
 export const GLASS = { z0: -21, z1: -24, y0: 0.15, y1: 2.05, x: 1.62 };
 export const DOOR = { w: 2.0, h: 2.93 };
-export const RIBS = [-2, -8, -14, -19.5, -25.5, -31.5, -38, -44, -50];
-export const LAMPS = [-6, -17.5, -33, -47];
+export const RIBS = [-2, -8, -14, -19.5, -25.5, -31.5, -38, -44];
+export const LAMPS = [-6, -17.5, -33, -41];
 
 // rng deterministico: stessa geometria a ogni avvio
 let seed = 1337;

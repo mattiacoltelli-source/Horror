@@ -11,16 +11,16 @@ const fenceZ = (x, z0, z1) => { const out = []; for (let z = z0 - 0.955; z > z1 
 const cableRun = (x, y, z0, z1) => [...runZ('cable_straight_long', 0.61, x, y, z0, Math.max(z1, z0 - 1.9)), { n: 'cable_box_turn', p: [x, y - 0.034, z0 + 0.051], r: [0, 0, 0] }];   // misurato sui vertici reali: lo spuntone della scatola entra di ~1 cm nel capo del cavo, alla stessa altezza
 
 export function decorTunnel(group) {
-  stainDecals(group, [{ p: [-1.395, 1.2, -7.5], wall: '+x', w: 2.2, h: 2.6 }, { p: [1.395, 1.4, -19], wall: '-x', w: 2.0, h: 2.8, flip: true }, { p: [-1.395, 1.0, -30], wall: '+x', w: 2.4, h: 2.6, a: 0.8 }, { p: [1.395, 1.2, -45], wall: '-x', w: 2.2, h: 2.6 }]);
+  stainDecals(group, [{ p: [-1.395, 1.2, -7.5], wall: '+x', w: 2.2, h: 2.6 }, { p: [1.395, 1.4, -19], wall: '-x', w: 2.0, h: 2.8, flip: true }, { p: [-1.395, 1.0, -30], wall: '+x', w: 2.4, h: 2.6, a: 0.8 }, { p: [1.395, 1.2, -39], wall: '-x', w: 2.2, h: 2.6 }]);
   // tracce di mani sul muro sinistro: una scia che porta verso il portone, come se qualcuno si fosse trascinato lungo la parete
   bloodDecals(group, [
-    { k: 'C', p: [-1.397, 1.45, -45.2], wall: '+x', h: 0.3, rot: 0.2 }, { k: 'A', p: [-1.397, 1.22, -47.2], wall: '+x', h: 0.31, rot: -0.15, flip: true },
-    { k: 'C', p: [-1.397, 1.05, -49.0], wall: '+x', h: 0.29, rot: 0.3 }, { k: 'A', p: [-1.397, 0.82, -50.6], wall: '+x', h: 0.3, rot: 0.1, a: 0.7 },
+    { k: 'C', p: [-1.397, 1.45, -39.2], wall: '+x', h: 0.3, rot: 0.2 }, { k: 'A', p: [-1.397, 1.22, -41.2], wall: '+x', h: 0.31, rot: -0.15, flip: true },
+    { k: 'C', p: [-1.397, 1.05, -43.0], wall: '+x', h: 0.29, rot: 0.3 }, { k: 'A', p: [-1.397, 0.82, -44.6], wall: '+x', h: 0.3, rot: 0.1, a: 0.7 },
     // (tolta la mano a z -28.5: li' c'e' il murale)
-    { k: 'X', p: [1.397, 1.55, -40.5], wall: '-x', h: 0.62, rot: 0.2 }, { k: 'X', p: [-1.397, 1.7, -35.0], wall: '+x', h: 0.55, rot: -0.15, flip: true },
+    { k: 'X', p: [1.397, 1.55, -34.8], wall: '-x', h: 0.62, rot: 0.2 }, { k: 'X', p: [-1.397, 1.7, -35.0], wall: '+x', h: 0.55, rot: -0.15, flip: true },
   ]);
-  add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -1.27, 2.0, 2.4, -54.4));
-  add(group, 'pipes', [...runZ('pipe_thin_200cm_metal', 2.0, -1.33, 1.62, 2.4, -54.4).map((p) => ({ ...p, r: [0, P2, 0] }))]);
+  add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -1.27, 2.0, 2.4, -48.4));
+  add(group, 'pipes', [...runZ('pipe_thin_200cm_metal', 2.0, -1.33, 1.62, 2.4, -48.4).map((p) => ({ ...p, r: [0, P2, 0] }))]);
   add(group, 'cables', [...cableRun(1.38, 2.0, -3, -7), ...cableRun(1.38, 2.0, -28, -31.5)]);
   add(group, 'manhole', [...manhole(-0.15, -14.5), ...manhole(0.3, -45, 0.7)]);
   sideGate(group, 1.4, -11);

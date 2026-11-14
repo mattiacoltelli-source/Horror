@@ -257,7 +257,7 @@ async function enter() {
     // solo Elisa: scherzo, sul muro destro del tunnel tra due costoloni
     if (PKEY === 'elisa') { const pz = (RIBS[6] + RIBS[7]) / 2, T = 'PAGLIACCINA\nSEXY', ta = bloodText(T).aspect; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.6, pz], wall: '-x', w: Math.min(0.75 * ta, Math.abs(RIBS[6] - RIBS[7]) - 1.0) }]); }
     // solo Yana: frase piccola e bassa, quasi nascosta, sul muro destro del tunnel (poco in vista)
-    if (PKEY === 'yana') { const T = 'Я ТЕБЕ\nБАЧУ', ta = bloodText(T).aspect; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.4, (RIBS[7] + RIBS[8]) / 2], wall: '-x', w: Math.min(0.7 * ta, 1.7) }]); }   // Yana: frase ucraina piccola («io ti vedo») con le lettere vere
+    if (PKEY === 'yana') { const T = 'Я ТЕБЕ\nБАЧУ', ta = bloodText(T).aspect; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.4, (RIBS[6] + RIBS[7]) / 2], wall: '-x', w: Math.min(0.7 * ta, 1.7) }]); }   // Yana: frase ucraina piccola («io ti vedo») con le lettere vere
     writingDecals(tower.group, [{ ...spec('w4'), p: [0, 4.3, TZ - 0.05], wall: '-z', w: WR.w4[2] }]);   // torre: muro d'ingresso, sopra la porta: la vedi quando ti giri
   }
   doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar', true); } });
@@ -273,7 +273,7 @@ async function enter() {
     gs.forEach((g, i) => { g.visible = was[i]; }); p?.catch?.(() => {});
   } catch (_) {} }, 2500);
   // ?start=porta → salta il tunnel e parte a ~8 m dal portone (per provare solo la parte finale)
-  if (q.get('start') === 'porta') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, -46); }
+  if (q.get('start') === 'porta') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, Z_END + 10); }
   // scorciatoie di prova: ?start=cantina | torre  (&turned=1 / &mirror=1 per simulare le scelte)
   { const ck = restoreCk ? loadCkpt() : null, st = ck ? CK_ST[ck.room] : q.get('start'); flags.turned = ck ? ck.turned : q.get('turned') === '1'; flags.mirror = q.get('mirror') === '1'; flags.noGun = ck ? ck.noGun : q.get('nogun') === '1'; flags.weapon = ck ? ck.weapon : (q.get('weapon') === 'axe' ? 'axe' : null); flags.door = ck ? ck.door : (q.get('door') === 'red' ? 'red' : q.get('door') === 'breath' ? 'breath' : null);
     if (ck) { ck.notes.forEach((i) => notes.found.add(i)); flags.notes = notes.found.size; }
