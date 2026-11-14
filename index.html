@@ -55,6 +55,8 @@
       <input id="nm" type="text" maxlength="14" autocomplete="given-name" autocapitalize="words" spellcheck="false" inputmode="text">
       <label for="bd" class="sub">data di nascita (facoltativa)</label>
       <div id="bdw" role="group" aria-label="data di nascita"><input id="bdd" type="text" inputmode="numeric" maxlength="2" placeholder="gg" autocomplete="off"><input id="bdm" type="text" inputmode="numeric" maxlength="2" placeholder="mm" autocomplete="off"><input id="bdy" type="text" inputmode="numeric" maxlength="4" placeholder="aaaa" autocomplete="off"></div>
+      <label for="fr" class="sub">una frase per te (facoltativa, max 28)</label>
+      <input id="fr" type="text" maxlength="28" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="">
       <div id="gen" role="group" aria-label="genere"><button type="button" data-g="m">lui</button><button type="button" data-g="f">lei</button></div>
       <button id="askgo" type="button" disabled>CONTINUA</button>
       <p id="askerr" class="small"></p>
@@ -78,20 +80,22 @@
   var OK = /^[A-Za-zÀ-ÖØ-öø-ÿ' -]{2,14}$/, KEY = 'ng_name', stored = null;
   try { stored = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
   var asked = q.get('chiedi') === '1', fromAsk = q.get('da') === 'chiedi';
-  var go = function (n, g, d) { location.replace(location.pathname + '?per=' + encodeURIComponent(n) + '&g=' + g + (d ? '&nasc=' + d : '') + '&da=chiedi'); };
+  var go = function (n, g, d, f) { location.replace(location.pathname + '?per=' + encodeURIComponent(n) + '&g=' + g + (d ? '&nasc=' + d : '') + (f ? '&frase=' + encodeURIComponent(f) : '') + '&da=chiedi'); };
   if (q.get('reset') === '1') { try { localStorage.removeItem(KEY); } catch (e) {} }
-  if (asked && !q.get('per') && stored && OK.test(stored.n || '') && q.get('reset') !== '1') { go(stored.n, stored.g === 'm' ? 'm' : 'f', /^\d{1,2}-\d{1,2}-\d{2}$/.test(stored.d || '') ? stored.d : ''); return; }
+  if (asked && !q.get('per') && stored && OK.test(stored.n || '') && q.get('reset') !== '1') { go(stored.n, stored.g === 'm' ? 'm' : 'f', /^\d{1,2}-\d{1,2}-\d{2}$/.test(stored.d || '') ? stored.d : '', stored.f || ''); return; }
   if (fromAsk && q.get('per') && stored) { var nb = document.getElementById('notme'); if (nb) { nb.textContent = 'non sei ' + stored.n + '? cambia'; nb.classList.remove('hidden'); nb.addEventListener('click', function () { try { localStorage.removeItem(KEY); } catch (e) {} location.replace(location.pathname + '?chiedi=1&reset=1'); }); } }
   if (!asked || q.get('per')) return;
   intro.classList.add('asking'); document.getElementById('ask').classList.remove('hidden');
   var nm = document.getElementById('nm'), go2 = document.getElementById('askgo'), err = document.getElementById('askerr'), g = null;
+  var fraseOk = function (t) { return String(t || '').toUpperCase().replace(/[ÀÁÂÄ]/g, 'A').replace(/[ÉÊË]/g, 'È').replace(/[ÌÍÎÏ]/g, 'I').replace(/[ÒÓÔÖ]/g, 'O').replace(/[ÙÚÛÜ]/g, 'U').replace(/[’`´]/g, "'").replace(/[^A-ZÈ ,.'\-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 28); };
+  document.getElementById('fr').addEventListener('input', function (e) { var el = e.target, v = el.value.toUpperCase(); el.value = v; });
   var bdd = document.getElementById('bdd'), bdm = document.getElementById('bdm'), bdy = document.getElementById('bdy');
   var bdv = function () { var d = bdd.value.trim(), m = bdm.value.trim(), y = bdy.value.trim(); if (!d && !m && !y) return ''; var D = +d, M = +m, Y = +y; if (!/^\d{1,2}$/.test(d) || !/^\d{1,2}$/.test(m) || !/^\d{4}$/.test(y) || D < 1 || D > 31 || M < 1 || M > 12 || Y < 1920 || Y > 2015) return null; return D + '-' + M + '-' + String(Y).slice(2); };
   var upd = function () { var n = nm.value.trim(), dv = bdv(), ok = OK.test(n) && !!g && dv !== null; go2.disabled = !ok; err.textContent = n && !OK.test(n) ? 'solo lettere (2-14)' : (dv === null ? 'data: gg / mm / aaaa' : ''); };
   [bdd, bdm, bdy].forEach(function (el) { el.addEventListener('input', function () { el.value = el.value.replace(/\D/g, ''); if (el === bdd && el.value.length === 2) bdm.focus(); else if (el === bdm && el.value.length === 2) bdy.focus(); upd(); }); });
   nm.addEventListener('input', upd);
   document.querySelectorAll('#gen button').forEach(function (b) { b.addEventListener('click', function () { g = b.dataset.g; document.querySelectorAll('#gen button').forEach(function (x) { x.classList.toggle('on', x === b); }); upd(); }); });
-  go2.addEventListener('click', function () { var n = nm.value.trim(); if (!OK.test(n) || !g) return; n = n.charAt(0).toUpperCase() + n.slice(1); var dd = bdv() || ''; try { localStorage.setItem(KEY, JSON.stringify({ n: n, g: g, d: dd })); } catch (e) {} go(n, g, dd); });
+  go2.addEventListener('click', function () { var n = nm.value.trim(); if (!OK.test(n) || !g) return; n = n.charAt(0).toUpperCase() + n.slice(1); var dd = bdv() || '', ff = fraseOk(document.getElementById('fr').value); try { localStorage.setItem(KEY, JSON.stringify({ n: n, g: g, d: dd, f: ff })); } catch (e) {} go(n, g, dd, ff); });
   nm.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !go2.disabled) go2.click(); });
 })();
 </script>

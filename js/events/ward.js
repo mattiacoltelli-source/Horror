@@ -60,9 +60,13 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
   const qn = /^(\d{1,2})-(\d{1,2})-(\d{2})$/.exec(new URLSearchParams(location.search).get('nasc') || '');
   const DATE = qn ? qn[1] + '/' + qn[2] + '/' + qn[3] : BD[PKEY];
   writingDecals(R.group, [{ img: 'assets/tex/pic_mural_child.webp', aspect: 0.7378, p: [1.758, 1.9, z0 - 6.0], wall: '-x', w: 0.85, rot: 0, a: 0.9, plain: true, glow: 0.1 }]);   // reparto: la bambina alla finestra (la sorella), sulla parete verde sopra le piastrelle
+  // frase personale (max 28 lettere, due righe), scritta col sangue sulle piastrelle bianche piu' avanti nel corridoio
+  { const raw = (new URLSearchParams(location.search).get('frase') || '').toUpperCase().replace(/[ÀÁÂÄ]/g, 'A').replace(/[ÉÊË]/g, 'È').replace(/[ÌÍÎÏ]/g, 'I').replace(/[ÒÓÔÖ]/g, 'O').replace(/[ÙÚÛÜ]/g, 'U').replace(/[^A-ZÈ ,.'\-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 28);
+    if (raw.length >= 2) { const ws = raw.split(' '); let l1 = '', l2 = ''; for (const x of ws) { if (!l2 && (l1 + ' ' + x).trim().length <= 14) l1 = (l1 + ' ' + x).trim(); else l2 = (l2 + ' ' + x).trim(); }
+      const T = l2 ? l1 + '\n' + l2 : l1, ta = bloodText(T).aspect; writingDecals(R.group, [{ text: T, aspect: ta, p: [-1.758, 0.74, z0 - 7.2], wall: '+x', w: Math.min((l2 ? 0.56 : 0.4) * ta, 2.5) }]); } }
   if (DATE) { const T = DATE, ta = bloodText(T).aspect; writingDecals(R.group, [{ text: T, aspect: ta, p: [-1.758, 0.64, z0 - 3.0], wall: '+x', w: Math.min(0.72 * ta, 2.4) }]); }
   burnDecals(R.group, [{ k: 'wall', p: [-hw + 0.014, 1.4, z0 - 8], wall: '+x', w: 3.4, h: 2.6, a: 0.5 }, { k: 'wall', p: [hw - 0.014, 1.3, z0 - 14.5], wall: '-x', w: 3.0, h: 2.4, a: 0.45, flip: true }, { k: 'floor', p: [0.3, 0.012, z0 - 16], w: 2.0, h: 1.6, rot: 1.0, a: 0.6 }]);   // corridoio: vicino a dove e' partito il fuoco, bruciature medie
-  bloodDecals(R.group, [{ k: 'A', p: [-hw + 0.012, 1.1, z0 - 12.2], wall: '+x', h: 0.3, rot: 0.1 }]);
+  bloodDecals(R.group, [{ k: 'A', p: [-1.758, 1.1, z0 - 12.2], wall: '+x', h: 0.3, rot: 0.1 }]);
 
   // anteprima dal varco: la luce della lampada non c'e' ancora, un velo chiaro sul pavimento lo fa vedere (sparisce appena entri)
   R.onPreview = () => { R.pl = lights.addLamp(0, h - 0.12, z0 - 10 + R.pdz, 0xcfeadc); };   // la lampada vera della stanza, accesa gia' dal varco
