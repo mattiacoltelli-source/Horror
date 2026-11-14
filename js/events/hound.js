@@ -8,8 +8,8 @@ export function createHound({ scene, player, lights, audio }) {
   const H = { state: 'wait', t: 0, obj: null }, lampIdx = 3, ZD = -45.6, ZT = -33.5;   // dove sta, e a che punto del tunnel parte lo scherzo
   let mixer = null;
   new GLTFLoader().load('assets/models/hound.glb', (g) => {
-    const o = g.scene; aged(o, 0.4);
-    o.traverse((m) => { if (!m.isMesh) return; for (const mat of [].concat(m.material)) { mat.fog = false; if (mat.map && !mat.alphaTest) { mat.emissiveMap = mat.map; mat.emissive = new THREE.Color(0.15, 0.135, 0.135); mat.emissiveIntensity = 1; } } });   // un chiarore proprio: da lontano resta una sagoma pallida nel buio (senza, la nebbia e il buio se lo mangiano)
+    const o = g.scene; aged(o, 0.6);
+    o.traverse((m) => { if (!m.isMesh) return; for (const mat of [].concat(m.material)) { if (mat.map && !mat.alphaTest) { mat.emissiveMap = mat.map; mat.emissive = new THREE.Color(0.1, 0.087, 0.087); mat.emissiveIntensity = 1; } } });   // un chiarore minimo: da lontano resta solo il dubbio di una sagoma, mai una cosa che si vede chiaramente
     const b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()); o.position.set(-c.x, -b.min.y, -c.z);
     const grp = new THREE.Group(); grp.add(o); grp.position.set(0.15, 0, ZD); grp.rotation.y = 0; grp.scale.setScalar(1.1); grp.visible = false; scene.add(grp); H.obj = grp;
     if (g.animations?.length) { mixer = new THREE.AnimationMixer(o); mixer.clipAction(g.animations[0]).play(); }
