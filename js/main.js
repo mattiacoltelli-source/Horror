@@ -238,7 +238,8 @@ async function enter() {
     writingDecals(tower.group, [{ ...pic('mural_cathedral', 1.351, 6.94, 3.2, TZ - 12.6, '-x', 4.7, 0), rot: 0, a: 0.94 }]);       // torre, parete destra
     writingDecals(wh.group, [pic('corridor', 1.369, -5.96, 1.5, WZ - 11.4, '+x', 0.85, 0.02), pic('window', 1.233, -5.96, 1.5, WZ - 12.55, '+x', 0.85, -0.02), pic('saint', 0.789, -5.96, 1.5, WZ - 13.65, '+x', 0.62, 0.02)])
     if (PKEY === 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_elisa.jpg', aspect: 0.545, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
-    if (PKEY === 'rebecca') writingDecals(morgue.group, [{ img: 'assets/tex/pic_rebecca.jpg', aspect: 0.562, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
+    if (PKEY === 'alice') writingDecals(morgue.group, [{ img: 'assets/tex/pic_alice.jpg', aspect: 0.788, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.62, rot: -0.03, a: 1, plain: true }]);
+    else if (PKEY === 'rebecca') writingDecals(morgue.group, [{ img: 'assets/tex/pic_rebecca.jpg', aspect: 0.562, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
     else if (PKEY !== 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_yana.jpg', aspect: 0.741, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.6, rot: -0.03, a: 1, plain: true }]); }
   // SCRITTE DI SANGUE per le versioni personalizzate (frasi con il suo nome; per Yana anche in ucraino), grandi sui muri
   const WRI = {}[PKEY]
