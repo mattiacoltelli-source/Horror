@@ -7,7 +7,7 @@ import { W as TUNNEL_W } from '../world/tunnel.js';
 
 // l'ora vera del telefono (letta una volta sola all'avvio) entra nella firma di suor Agnese, con una frase che dipende dal momento della giornata
 const _d = new Date(), _h = _d.getHours(), _hm = String(_h).padStart(2, '0') + ':' + String(_d.getMinutes()).padStart(2, '0');
-const NOW = 'sono le ' + _hm + '. ' + (_h >= 23 || _h < 5 ? 'a quest\'ora non dorme nessuno.' : _h < 12 ? 'fuori è già giorno. qui dentro no.' : _h < 18 ? 'fuori c\'è luce. qui non è mai entrata.' : 'fuori è sera. qui è sempre notte.');
+const NOW = 'sono le ' + _hm + '.\n' + (_h >= 23 || _h < 5 ? 'a quest\'ora non dorme nessuno.' : _h < 12 ? 'fuori è già giorno. qui dentro no.' : _h < 18 ? 'fuori c\'è luce. qui non è mai entrata.' : 'fuori è sera. qui è sempre notte.');
 const NOTE_STD = [
   'paziente n. 17.\ningresso: notte del 3 novembre.\nnon risponde al proprio nome.',
   'ha rotto lo specchio ogni mattina.\nogni mattina lo rimettiamo.\ndice che quella non è la sua faccia.',
