@@ -87,16 +87,16 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
         }
         if (E.t > 1.2 && !E.said) { E.said = true; say(P ? 'non guardare dietro, ' + P.name + '.' : 'non guardare dietro.', 5500); instab.push(1, 10); }
         if (E.t > 5 && !E.torch) { E.torch = true; lights.torchKill(1.2, 0.08); }
-        if (E.t > 1.4 && E.said && player.forward.z > 0.1) { E.turnT = (E.turnT || 0) + dt; if (E.turnT > 0.12) { go('turned'); drone?.stop(0.5); drone = null; clearTimeout(bellT); breath?.stop(); breath = null; audio.duck(0, 0.05); showShade(); } } else E.turnT = 0;
+        if (E.t > 1.4 && E.said && player.forward.z > 0.1) { E.turnT = (E.turnT || 0) + dt; if (E.turnT > 0.12) { go('turned'); drone?.stop(0.5); drone = null; clearTimeout(bellT); breath?.stop(); breath = null; audio.duck(0, 0.05); hall?.lightOff(); lights.torchKill(1.8, 0); E.sh = 0; } } else E.turnT = 0;
         if (E.t > 17) { go('ignored'); drone?.stop(0.5); drone = null; clearTimeout(bellT); }
         break;
       }
       case 'turned':
-        // ti sei girato: davanti al portone chiuso, a due passi, qualcuno è fermo e ti guarda (sagoma nera nel cono della torcia).
-        // La luce balbetta, poi si spegne un istante: quando torna non c'è più.
-        if (E.t < 0.05) { lights.torchStutter(1.0); audio.whisper(1.4, 0.3); player.addShake(0.35); instab.set(1, 8); }
-        if (E.t > 1.5 && !E.fl) { E.fl = true; lights.torchKill(0.9, 0); }
-        if (E.t > 1.6 && shade && shade.visible) shade.visible = false;
+        // ti sei girato: BUIO subito (mezzo secondo), poi un lampo di luce fredda dietro una sagoma nera, a ~6 m, dritta davanti a te: la vedi per ~1,2 s; poi di nuovo buio e, quando torna la luce, non c'e' piu'.
+        if (E.t < 0.05) { audio.whisper(1.4, 0.3); player.addShake(0.3); instab.set(1, 8); }
+        if (E.t > 0.5 && !E.sh) { E.sh = 1; showShade(); audio.lightOn(); player.addShake(0.45); instab.push(1, 6); }
+        if (E.sh === 1 && E.t > 0.5 && E.t < 1.7) { shadeGlow.material.opacity = Math.min(1, (E.t - 0.5) / 0.05) * (0.8 + Math.random() * 0.1); }
+        if (E.sh === 1 && E.t >= 1.7) { E.sh = 2; if (shade) shade.visible = false; shadeGlow.visible = false; }
         if (E.t > 3.6) { go('over'); audio.duck(0.2, 1); onHallDone?.(true); }
         break;
       case 'ignored':
@@ -109,7 +109,16 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
 
   function lightOn() { hall?.lightOn(); audio.lightOn(); instab.set(0.3 + ph * 0.25, 8); }
   let shade = null;
-  function showShade() { if (!shade) { shade = hall.silhouette(3); scene.add(shade); } const f = camera.position; shade.position.set(camera.position.x - 0.35, 0, Z_END - 0.45); shade.rotation.y = Math.PI - 0.15; shade.visible = true; }
+  // la sagoma sta dritta davanti a te (a ~6 m, dentro la sala) con un bagliore freddo dietro: il contrasto lo fa la luce dietro, non la torcia
+  const gc = document.createElement('canvas'); gc.width = 64; gc.height = 128; { const g2 = gc.getContext('2d'); g2.save(); g2.translate(32, 64); g2.scale(1, 2); const gr = g2.createRadialGradient(0, 0, 1, 0, 0, 31); gr.addColorStop(0, 'rgba(205,222,245,0.9)'); gr.addColorStop(0.45, 'rgba(165,190,225,0.5)'); gr.addColorStop(1, 'rgba(120,150,200,0)'); g2.fillStyle = gr; g2.fillRect(-32, -32, 64, 64); g2.restore(); }
+  const shadeGlow = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 4.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gc), blending: THREE.AdditiveBlending, transparent: true, opacity: 0, depthWrite: false, fog: false, toneMapped: false })); shadeGlow.visible = false; shadeGlow.renderOrder = -1; scene.add(shadeGlow);
+  function showShade() {
+    if (!shade) { shade = hall.silhouette(3); scene.add(shade); }
+    const fx = player.forward.x, fz = player.forward.z, l = Math.hypot(fx, fz) || 1, nx = fx / l, nz = fz / l, cp = camera.position;
+    const cl = (v, a, b) => Math.min(b, Math.max(a, v)), px = cl(cp.x + nx * 6.2, -5.0, 5.0), pz = cl(cp.z + nz * 6.2, Z_END - 38, Z_END - 0.8), ry = Math.atan2(-nx, -nz);
+    shade.position.set(px, 0, pz); shade.rotation.y = ry; shade.visible = true;
+    shadeGlow.position.set(cl(px + nx * 0.7, -5.4, 5.4), 1.7, cl(pz + nz * 0.7, Z_END - 39, Z_END - 0.3)); shadeGlow.rotation.y = ry; shadeGlow.material.opacity = 0; shadeGlow.visible = true;
+  }
   // rintocco di campana lontana, sempre pianino: uno ogni volta che la luce torna e i mostri riappaiono (3 volte nella sala)
   let bellT = null;
   function bells() { clearTimeout(bellT); bellT = setTimeout(() => { if (drone && E.state === 'lit') audio.bell(0.36); }, 1100); }
