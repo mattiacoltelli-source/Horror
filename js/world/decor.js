@@ -63,6 +63,7 @@ export function decorWarehouse(group, z0) {
     { k: 'wall', p: [-5.985, 2.9, z0 - 15], wall: '+x', w: 4.6, h: 5.8, a: 0.8 }, { k: 'wall', p: [5.985, 2.8, z0 - 17.5], wall: '-x', w: 4.2, h: 5.6, a: 0.75, flip: true }, { k: 'wall', p: [5.985, 2.2, z0 - 7.5], wall: '-x', w: 3.0, h: 4.2, a: 0.5 },
     { k: 'ceil', p: [-0.8, 6.46, z0 - 16.5], w: 9, h: 9, rot: 0.4, a: 0.8 },
     { k: 'floor', p: [-1.4, 0.012, z0 - 15.5], w: 4.4, h: 3.8, rot: 0.3, a: 0.9 }, { k: 'floor', p: [2.7, 0.012, z0 - 19.4], w: 2.8, h: 2.4, rot: 2.1, a: 0.85 }, { k: 'floor', p: [-3.5, 0.012, z0 - 22.3], w: 1.9, h: 1.7, rot: 4.0, a: 0.8 },
+    { k: 'wall', p: [-1.1, 2.0, z0 - 0.03], wall: '-z', w: 4.2, h: 4.4, a: 0.55 }, { k: 'wall', p: [2.6, 1.8, z0 - 0.03], wall: '-z', w: 3.0, h: 3.6, a: 0.45, flip: true },   // attorno alla porta d'ingresso: poche bruciature
     { k: 'trail', p: [0.7, 0.014, z0 - 24.5], w: 1.0, h: 10.5, rot: 0.05, a: 0.85 },
   ]);
   const entry = entryDoor(group, z0);

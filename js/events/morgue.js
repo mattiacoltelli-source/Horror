@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { buildRoom } from '../world/rooms.js';
 import { entryDoor } from '../world/decor.js';
+import { burnDecals } from '../world/blood.js';
 import { unseenMover } from './ambient.js';
 import { doorGlow } from '../world/redlight.js';
 import { kitObject } from '../world/props.js';
@@ -17,7 +18,8 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
   M.group.visible = false; scene.add(M.group);
   const { z0, w, l, h } = MORGUE, zFar = z0 - l;
   const room = buildRoom(mats, { z0, w, l, h, wall: 'stone', floor: 'mfloor', ceil: 'stone', dark: 0.5, seed: 57, door: { w: 2, h: 2.6 } });   // vano d'ingresso aperto (si arriva dal reparto senza dissolvenza)
-  M.group.add(room.group); M.bounds = [room.bounds[0], room.bounds[1], zFar + 1.4, z0 - 0.6];
+  M.group.add(room.group); burnDecals(M.group, [{ k: 'wall', p: [-4.21, 1.1, z0 - 2.2], wall: '+x', w: 2.4, h: 2.0, a: 0.32 }, { k: 'wall', p: [4.21, 1.0, z0 - 0.9], wall: '-x', w: 1.6, h: 1.8, a: 0.28, flip: true }]);   // poche bruciature vicino all'ingresso (il fuoco e' partito piu' lontano)
+  M.bounds = [room.bounds[0], room.bounds[1], zFar + 1.4, z0 - 0.6];
   const loader = new GLTFLoader();
   const load = (u) => new Promise((res) => loader.load(u, (g) => res(g.scene), undefined, () => res(null)));
 
