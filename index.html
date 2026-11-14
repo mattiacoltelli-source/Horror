@@ -12,6 +12,16 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <meta name="apple-mobile-web-app-title" content="NON GIRARTI">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Horror psicologico da giocare al buio, con le cuffie.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="NON GIRARTI">
+<meta property="og:title" content="NON GIRARTI">
+<meta property="og:description" content="Usa le cuffie. Gioca al buio. Non sei solo.">
+<meta property="og:image" content="https://mattiacoltelli-source.github.io/Horror/icons/icon-512.png">
+<meta property="og:image:width" content="512"><meta property="og:image:height" content="512">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="NON GIRARTI">
+<meta name="twitter:image" content="https://mattiacoltelli-source.github.io/Horror/icons/icon-512.png">
 <link rel="stylesheet" href="css/style.css">
 <script type="importmap">
 { "imports": { "three": "./vendor/three/three.module.min.js" } }
@@ -43,6 +53,8 @@
     <div id="ask" class="hidden">
       <label for="nm">come ti chiami?</label>
       <input id="nm" type="text" maxlength="14" autocomplete="given-name" autocapitalize="words" spellcheck="false" inputmode="text">
+      <label for="bd" class="sub">data di nascita (facoltativa)</label>
+      <input id="bd" type="date" min="1920-01-01" max="2015-12-31">
       <div id="gen" role="group" aria-label="genere"><button type="button" data-g="m">lui</button><button type="button" data-g="f">lei</button></div>
       <button id="askgo" type="button" disabled>CONTINUA</button>
       <p id="askerr" class="small"></p>
@@ -66,9 +78,9 @@
   var OK = /^[A-Za-zÀ-ÖØ-öø-ÿ' -]{2,14}$/, KEY = 'ng_name', stored = null;
   try { stored = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
   var asked = q.get('chiedi') === '1', fromAsk = q.get('da') === 'chiedi';
-  var go = function (n, g) { location.replace(location.pathname + '?per=' + encodeURIComponent(n) + '&g=' + g + '&da=chiedi'); };
+  var go = function (n, g, d) { location.replace(location.pathname + '?per=' + encodeURIComponent(n) + '&g=' + g + (d ? '&nasc=' + d : '') + '&da=chiedi'); };
   if (q.get('reset') === '1') { try { localStorage.removeItem(KEY); } catch (e) {} }
-  if (asked && !q.get('per') && stored && OK.test(stored.n || '') && q.get('reset') !== '1') { go(stored.n, stored.g === 'm' ? 'm' : 'f'); return; }
+  if (asked && !q.get('per') && stored && OK.test(stored.n || '') && q.get('reset') !== '1') { go(stored.n, stored.g === 'm' ? 'm' : 'f', /^\d{1,2}-\d{1,2}-\d{2}$/.test(stored.d || '') ? stored.d : ''); return; }
   if (fromAsk && q.get('per') && stored) { var nb = document.getElementById('notme'); if (nb) { nb.textContent = 'non sei ' + stored.n + '? cambia'; nb.classList.remove('hidden'); nb.addEventListener('click', function () { try { localStorage.removeItem(KEY); } catch (e) {} location.replace(location.pathname + '?chiedi=1&reset=1'); }); } }
   if (!asked || q.get('per')) return;
   intro.classList.add('asking'); document.getElementById('ask').classList.remove('hidden');
@@ -76,7 +88,7 @@
   var upd = function () { var n = nm.value.trim(), ok = OK.test(n) && !!g; go2.disabled = !ok; err.textContent = n && !OK.test(n) ? 'solo lettere (2-14)' : ''; };
   nm.addEventListener('input', upd);
   document.querySelectorAll('#gen button').forEach(function (b) { b.addEventListener('click', function () { g = b.dataset.g; document.querySelectorAll('#gen button').forEach(function (x) { x.classList.toggle('on', x === b); }); upd(); }); });
-  go2.addEventListener('click', function () { var n = nm.value.trim(); if (!OK.test(n) || !g) return; n = n.charAt(0).toUpperCase() + n.slice(1); try { localStorage.setItem(KEY, JSON.stringify({ n: n, g: g })); } catch (e) {} go(n, g); });
+  go2.addEventListener('click', function () { var n = nm.value.trim(); if (!OK.test(n) || !g) return; n = n.charAt(0).toUpperCase() + n.slice(1); var bv = (document.getElementById('bd').value || '').split('-'), dd = bv.length === 3 ? (+bv[2]) + '-' + (+bv[1]) + '-' + bv[0].slice(2) : ''; try { localStorage.setItem(KEY, JSON.stringify({ n: n, g: g, d: dd })); } catch (e) {} go(n, g, dd); });
   nm.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !go2.disabled) go2.click(); });
 })();
 </script>

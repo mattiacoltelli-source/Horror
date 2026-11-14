@@ -14,9 +14,10 @@ Sei il paziente n. 17, entrato la notte del 3 novembre. Tua sorella è morta in 
 Combattimento: pistola a 4 colpi o ascia (scelta nel magazzino); trascini per guardare, joystick per camminare piano, per sparare devi fermarti (SPARA); il mostro ti disarma sempre.
 
 ## Link e scorciatoie
+- **Anteprima del link** (WhatsApp, Telegram…): `index.html` ha i meta Open Graph con l'icona del gioco; le app tengono l'anteprima in cache, quindi un link già inviato può mostrare quella vecchia.
 - Versione standard: la pagina senza parametri.
 - Versione personalizzata: `?per=elisa`, `?per=yana`, `?per=gabriele`, `?per=tommy`, `?per=alice` (profili in `js/personal.js`). Qualsiasi altro nome: `?per=nome&g=m|f` (e opzionale `&capelli=biondi|rossi|castani|neri|grigi|no`).
-- **Link per tutti:** `?chiedi=1` chiede nome e genere prima di iniziare (solo lettere, 2-14), salva il nome sul telefono (`ng_name`) e ricarica la pagina come versione personalizzata; la seconda volta salta la domanda, con «non sei …? cambia».
+- **Link per tutti:** `?chiedi=1` chiede nome e genere prima di iniziare (solo lettere, 2-14), chiede anche la data di nascita (facoltativa, scritta nel reparto come `g/m/aa`), salva nome e data sul telefono (`ng_name`) e ricarica la pagina come versione personalizzata; la seconda volta salta la domanda, con «non sei …? cambia».
 - Per provare una parte: `?start=porta` · `cantina` · `reparto` · `obitorio` · `magazzino` · `torre` · `epilogo`, con `&turned=1` (scelta «ti sei girato»), `&door=red|breath` (porta dell'obitorio), `&weapon=axe`, `&nogun=1`, `&specchio=1` (cantina, davanti allo specchio), `&debug=1` (espone `window.__g`).
 
 ## Aspetto e giocabilità

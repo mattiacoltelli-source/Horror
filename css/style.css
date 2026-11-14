@@ -158,3 +158,7 @@ html,body{overscroll-behavior:none}
 #askgo:disabled{opacity:.35}
 #askerr{min-height:1.2em;margin-top:10px}
 #intro.asking #enter,#intro.asking #ckpt,#intro.asking #cmenu,#intro.asking #install,#intro.asking #quality,#intro.asking #qmenu,#intro.asking #loadmsg{display:none}
+
+#ask .sub{margin:16px 0 8px;font-size:11px;letter-spacing:.2em}
+#bd{width:min(260px,72vw);box-sizing:border-box;background:transparent;border:1px solid #4a4f49;color:#cfd2cd;font:inherit;font-size:15px;letter-spacing:.1em;text-align:center;padding:10px 12px;min-height:48px;border-radius:0;color-scheme:dark}
+#bd:focus{border-color:#9fb4a2;outline:none}
