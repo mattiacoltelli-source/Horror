@@ -2,7 +2,7 @@
 // Tre murales sui tre muri (il quarto e' l'arco), altare di pietra, sedie ribaltate, candele, un rito: nome e data di oggi a sangue sull'altare.
 import * as THREE from 'three';
 import { buildRoom } from './rooms.js';
-import { writingDecals, burnDecals } from './blood.js';
+import { writingDecals, burnDecals, patchDecals } from './blood.js';
 import { bloodText } from './bloodfont.js';
 import { addExtras } from './extra.js';
 
@@ -18,11 +18,20 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
   const stoneM = mats.stone.clone(); stoneM.vertexColors = false; stoneM.color.setRGB(0.2, 0.185, 0.175);   // pietra con la texture del gioco, scurita
   const arch = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.3, bevelEnabled: false, curveSegments: 18 }), stoneM); arch.rotation.y = -Math.PI / 2; arch.position.set(x0, 0, zc); G.add(arch);
 
-  // altare di pietra contro il muro di fondo, sopra due gradini
-  const box = (bw, bh, bd, x, y, z, m = stoneM) => { const o = new THREE.Mesh(new THREE.BoxGeometry(bd, bh, bw), m); o.position.set(x, y, z); G.add(o); return o; };   // bw = lungo z, bd = lungo x
+  // altare di pietra contro il muro di fondo, sopra due gradini: arenaria a blocchi consumata, una texture per mesh (la ripetizione segue le misure)
+  const altMat = (rx, ry) => new THREE.MeshStandardMaterial({ map: (() => { const t = new THREE.TextureLoader().load('assets/tex/alt_stone.jpg'); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; })(), color: new THREE.Color(0.5, 0.47, 0.45), roughness: 1 });
+  const box = (bw, bh, bd, x, y, z, m) => { m ??= altMat(bw / 0.9, bh / 0.9); const o = new THREE.Mesh(new THREE.BoxGeometry(bd, bh, bw), m); o.position.set(x, y, z); G.add(o); return o; };   // bw = lungo z, bd = lungo x
   const aX = xr - 0.5;
   box(2.5, 0.14, 1.3, aX - 0.15, 0.07, zc); box(2.1, 0.12, 1.05, aX - 0.1, 0.2, zc);
-  box(1.7, 0.95, 0.8, aX, 0.74, zc, (() => { const m = stoneM.clone(); m.color.setRGB(0.27, 0.25, 0.23); return m; })()); box(1.9, 0.1, 0.92, aX - 0.02, 1.27, zc);   // blocco e piano (mensa)
+  box(1.7, 0.95, 0.8, aX, 0.74, zc, undefined); box(1.9, 0.1, 0.92, aX - 0.02, 1.27, zc);   // blocco e piano (mensa)
+
+  // muffa scura che sale dal basso sul davanti dell'altare e sui gradini; polvere chiara sul piano
+  patchDecals(G, [{ img: 'assets/tex/pt_altar_mold.webp', p: [aX - 0.406, 0.42, zc - 0.1], wall: '-x', w: 1.6, h: 0.8 }, { img: 'assets/tex/pt_altar_mold.webp', p: [aX - 0.806, 0.075, zc + 0.2], wall: '-x', w: 1.9, h: 0.14 }, { img: 'assets/tex/pt_altar_mold.webp', p: [aX - 0.631, 0.205, zc - 0.3], wall: '-x', w: 1.5, h: 0.1 }]);
+  { const c = document.createElement('canvas'); c.width = 256; c.height = 128; const x = c.getContext('2d'); let sd = 9; const r = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < 26; i++) { const gx = r() * 256, gy = r() * 128, rad = 14 + r() * 30, g = x.createRadialGradient(gx, gy, 0, gx, gy, rad); g.addColorStop(0, 'rgba(190,180,165,' + (0.1 + r() * 0.12) + ')'); g.addColorStop(1, 'rgba(190,180,165,0)'); x.fillStyle = g; x.fillRect(gx - rad, gy - rad, rad * 2, rad * 2); }
+    for (let i = 0; i < 700; i++) { x.fillStyle = 'rgba(205,195,180,' + (0.06 + r() * 0.2) + ')'; x.fillRect(r() * 256, r() * 128, 1 + r() * 1.5, 1 + r() * 1.5); }
+    const dt = new THREE.CanvasTexture(c); dt.colorSpace = THREE.SRGBColorSpace;
+    const dust = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 1.9), new THREE.MeshBasicMaterial({ map: dt, transparent: true, depthWrite: false, fog: true })); dust.rotation.x = -Math.PI / 2; dust.position.set(aX - 0.02, 1.322, zc); G.add(dust); }
 
   // candele sul piano e luce calda che sfarfalla
   const wax = new THREE.MeshStandardMaterial({ color: 0x15120f, roughness: 0.8 }), flame = new THREE.MeshBasicMaterial({ color: 0xffb35c });
