@@ -58,7 +58,7 @@ export function decorCellar(group, z0) {
   entryDoor(group, z0);
   bloodDecals(group, [{ k: 'X', p: [3.995, 1.7, z0 - 14], wall: '-x', h: 0.7, rot: 0.1 }, { k: 'C', p: [3.995, 1.5, z0 - 10], wall: '-x', h: 0.3, rot: 0.15 }]);
   add(group, 'pipes', [...runZ('pipe_200cm_metal', 2.0, 3.85, 3.6, z0 - 1, z0 - 23), ...runZ('pipe_thin_200cm_metal', 2.0, 3.9, 3.2, z0 - 1, z0 - 23).map((p) => ({ ...p, r: [0, P2, 0] }))]);
-  add(group, 'fence', fenceZ(3.25, z0 - 14, z0 - 19));
+  add(group, 'fence', fenceZ(3.25, z0 - 16.7, z0 - 18.7));
   add(group, 'cables', cableRun(-3.97, 3.0, z0 - 2, z0 - 5));
   add(group, 'manhole', manhole(-1.0, z0 - 5.5, 0.3));
 }

@@ -13,10 +13,11 @@ import { addExtras, pedestal, turnToward } from '../world/extra.js';
 import { unseenMover } from './ambient.js';
 import { addAtmosphere } from '../world/atmos.js';
 import { WARD } from './ward.js';
-import { P as PROF, whisperName } from '../personal.js';
+import { P as PROF, whisperName, BDAY, PHOTO } from '../personal.js';
 import { createFingerWriter } from '../world/fingerwrite.js';
 import { rgbPulse } from '../ui/rgbshift.js';
 import { createTorch } from './torch.js';
+import { createChapel } from '../world/chapel.js';
 
 export const CELLAR = { z0: -200, w: 8, l: 24, h: 4.4 };
 const MIRROR = new THREE.Vector3(-3.98, 1.45, -210);
@@ -25,8 +26,8 @@ const DIST = [7, 4.6, 2.6, 1.3, 0.7];
 export function createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash }) {
   const C = { group: new THREE.Group(), state: 'idle', step: -1, gaze: 0, away: 0, started: false, apDone: false };
   C.group.visible = false; scene.add(C.group);
-  const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23, exit: { w: 2, h: 2.5 } });
-  C.group.add(room.group); decorCellar(C.group, CELLAR.z0); C.bounds = [room.bounds[0], room.bounds[1], CELLAR.z0 - CELLAR.l + 1.4, CELLAR.z0 - 0.6];
+  const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23, exit: { w: 2, h: 2.5 } , sideDoor: { side: 1, z: CELLAR.z0 - 15.5, w: 2.0, h: 3.1 } });
+  C.group.add(room.group); decorCellar(C.group, CELLAR.z0); const chapel = createChapel({ group: C.group, mats, zc: CELLAR.z0 - 15.5, P: PROF, PHOTO, BDAY }); C.bounds = [room.bounds[0], room.bounds[1], CELLAR.z0 - CELLAR.l + 1.4, CELLAR.z0 - 0.6];
 
   const red = redLight(C.group, { x: CELLAR.w / 2 - 0.1, y: 2.5, z: CELLAR.z0 - 19.5, dir: 1 });   // luce rossa d'emergenza vicino all'uscita
   // specchio
@@ -170,7 +171,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   // il busto sul mobile, quando non lo guardi, si volta verso di te
   const bustMove = unseenMover({ camera, getObj: () => C.bust, max: 3, gap: 7, move: (n) => { turnToward(C.bust, player.pos, n); audio.shuffle?.(0.5, 0.22); } });
   C.update = (dt) => {
-    if (C.group.visible) { red.update(dt); bustMove(dt); torch.update(dt); }
+    if (C.group.visible) { red.update(dt); bustMove(dt); torch.update(dt); chapel.update(dt); }
     if (!C.group.visible || C.gone) return;
     const P = player.pos;
     // --- specchio ---

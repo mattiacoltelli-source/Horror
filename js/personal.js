@@ -24,6 +24,12 @@ export const PKEY = P ? key : '';
 const _c = (qs.get('citta') || (PRESETS[key] ? 'Bologna' : '')).trim();
 export const CITY = P && /^[A-Za-zÀ-ÖØ-öø-ÿ' -]{2,20}$/.test(_c) ? _c.toLowerCase().replace(/(^|[ '-])([a-zà-ÿ])/g, (m, a, b) => a + b.toUpperCase()) : '';   // 'elisa' | 'yana' | altro nome | ''
 
+// data di nascita (g/m/aa): dai profili o da ?nasc=g-m-aa; stringa vuota se non c'e'
+const _BD = { rebecca: '20/6/97', tommy: '1/11/90', gabriele: '31/12/90', elisa: '2/8/90', alice: '5/9/93' }, _qn = /^(\d{1,2})-(\d{1,2})-(\d{2})$/.exec(qs.get('nasc') || '');
+export const BDAY = P ? (_qn ? _qn[1] + '/' + _qn[2] + '/' + _qn[3] : (_BD[key] || '')) : '';
+// foto con il viso coperto (solo i profili che ne hanno una)
+export const PHOTO = { elisa: 'pic_elisa.jpg', alice: 'pic_alice.jpg', rebecca: 'pic_rebecca.jpg', laya: 'pic_laya.jpg', yana: 'pic_yana.jpg' }[key] || '';
+
 // sussurro con la voce sintetica del telefono: basso, lento, una o due volte in tutta la partita.
 // Se il profilo ha una lingua (es. ucraino) e il telefono ha quella voce, parla in quella lingua; altrimenti dice il nome in italiano (e, per le altre frasi, tace: il testo e' gia' sullo schermo).
 function speak(text, lang, fallback) {
