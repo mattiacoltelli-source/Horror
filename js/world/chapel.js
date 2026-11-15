@@ -30,8 +30,8 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
   for (const [dx, dz, ch] of [[-0.25, -0.78, 0.26], [-0.1, 0.8, 0.2], [0.05, -0.5, 0.14], [-0.2, 0.52, 0.3], [0.0, 0.25, 0.1], [-0.3, -0.2, 0.18]]) candle(aX + dx, 1.32, zc + dz, ch);   // sul piano
   for (const [dx, dz, ch] of [[-0.55, -1.0, 0.2], [-0.5, 0.95, 0.14], [-0.6, -0.4, 0.24], [-0.52, 0.45, 0.12]]) candle(aX + dx, 0.26, zc + dz, ch);   // sul secondo gradino
   for (const [x, z, ch] of [[x0 + 1.55, zc - 0.55, 0.3], [x0 + 1.7, zc + 0.5, 0.22], [x0 + 0.95, zc - 1.25, 0.16], [x0 + 0.9, zc + 1.2, 0.26]]) candle(x, 0, z, ch);   // sul pavimento, davanti all'altare
-  K.light = new THREE.PointLight(0xff8a3a, 1.7, 6.5, 1.6); K.light.position.set(aX - 0.9, 2.0, zc); G.add(K.light);
-  K.light2 = new THREE.PointLight(0xff7a30, 1.0, 5.0, 1.7); K.light2.position.set(x0 + 1.5, 0.8, zc); G.add(K.light2);   // candele sul pavimento: schiariscono i muri laterali
+  K.light = new THREE.PointLight(0xff8a3a, 2.2, 3.4, 1.3); K.light.position.set(aX - 0.8, 2.1, zc);   // raggio corto: le luci non sono bloccate dai muri, devono morire dentro la cappella G.add(K.light);
+  K.light2 = new THREE.PointLight(0xff7a30, 1.3, 2.6, 1.4); K.light2.position.set(x0 + 2.0, 0.8, zc); G.add(K.light2);   // candele sul pavimento: schiariscono i muri laterali
 
   // il rito: nome e data di OGGI (il giorno in cui si gioca) a sangue sul davanti dell'altare. Nessuna foto, in nessuna versione.
   if (P) {
@@ -51,6 +51,6 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
     mur('pic_chapel_hell.webp', 0.5392, [x0 + w / 2, 1.75, z0 - 0.012], '-z', 1.4),    // lato +z
   ]);
 
-  K.update = (dt) => { K.t += dt; K.light.intensity = 1.6 + Math.sin(K.t * 11.3) * 0.14 + Math.sin(K.t * 27.1) * 0.08 + (Math.sin(K.t * 3.1) > 0.97 ? -0.3 : 0); K.light2.intensity = 0.95 + Math.sin(K.t * 9.1 + 1) * 0.12 + Math.sin(K.t * 23.3) * 0.07; };
+  K.update = (dt) => { K.t += dt; K.light.intensity = 2.1 + Math.sin(K.t * 11.3) * 0.14 + Math.sin(K.t * 27.1) * 0.08 + (Math.sin(K.t * 3.1) > 0.97 ? -0.3 : 0); K.light2.intensity = 1.25 + Math.sin(K.t * 9.1 + 1) * 0.12 + Math.sin(K.t * 23.3) * 0.07; };
   return K;
 }
