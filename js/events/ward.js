@@ -36,7 +36,35 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
     if (mg) {
       const b0 = new THREE.Box3().setFromObject(mg), sz = b0.getSize(new THREE.Vector3()), c0 = b0.getCenter(new THREE.Vector3());
       mg.traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); m.material.color.setScalar(0.62); } });
-      const put = (x, z, ry, width = sz.x, y = 0, height = sz.y) => { const o = mg.clone(true), g = new THREE.Group(); o.position.set(-c0.x, -b0.min.y, -c0.z); g.add(o); g.scale.set(width / sz.x, height / sz.y, 1); g.position.set(x, y, z); g.rotation.y = ry; R.group.add(g); };
+      // Sopra il montacarichi si ritaglia la parte alta del muro originale:
+      // comprimere tutto il modulo riporterebbe qui anche le mattonelle basse.
+      const upper = new THREE.Group(), cutoff = b0.min.y + elevator.h;
+      mg.updateMatrixWorld(true);
+      mg.traverse((m) => {
+        if (!m.isMesh) return;
+        const baked = m.geometry.clone().applyMatrix4(m.matrixWorld), geo = baked.index ? baked.toNonIndexed() : baked;
+        const pos = geo.getAttribute('position'), norm = geo.getAttribute('normal'), uv = geo.getAttribute('uv');
+        const p = [], n = [], u = [];
+        const vertex = (i) => ({ p: new THREE.Vector3().fromBufferAttribute(pos, i), n: new THREE.Vector3().fromBufferAttribute(norm, i), u: new THREE.Vector2().fromBufferAttribute(uv, i) });
+        for (let i = 0; i < pos.count; i += 3) {
+          const tri = [vertex(i), vertex(i + 1), vertex(i + 2)], poly = [];
+          let prev = tri[2];
+          for (const cur of tri) {
+            if ((prev.p.y >= cutoff) !== (cur.p.y >= cutoff)) {
+              const t = (cutoff - prev.p.y) / (cur.p.y - prev.p.y);
+              poly.push({ p: prev.p.clone().lerp(cur.p, t), n: prev.n.clone().lerp(cur.n, t).normalize(), u: prev.u.clone().lerp(cur.u, t) });
+            }
+            if (cur.p.y >= cutoff) poly.push(cur);
+            prev = cur;
+          }
+          for (let j = 1; j + 1 < poly.length; j++) for (const v of [poly[0], poly[j], poly[j + 1]]) { p.push(...v.p); n.push(...v.n); u.push(...v.u); }
+        }
+        const clipped = new THREE.BufferGeometry();
+        clipped.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); clipped.setAttribute('normal', new THREE.Float32BufferAttribute(n, 3)); clipped.setAttribute('uv', new THREE.Float32BufferAttribute(u, 2));
+        const mesh = new THREE.Mesh(clipped, m.material); mesh.name = 'parete-verde-sopra-montacarichi'; upper.add(mesh);
+        geo.dispose(); if (geo !== baked) baked.dispose();
+      });
+      const put = (x, z, ry, width = sz.x, source = mg) => { const o = source.clone(true), g = new THREE.Group(); o.position.set(-c0.x, -b0.min.y, -c0.z); g.add(o); g.scale.set(width / sz.x, 1, 1); g.position.set(x, 0, z); g.rotation.y = ry; R.group.add(g); };
       const t = sz.z / 2 - 0.02;
       for (let i = 0; i < 7; i++) {
         const z = z0 - 1.5 - i * 3; put(-hw + t, z, Math.PI / 2);
@@ -47,7 +75,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
           if (lo < a) put(hw - t, (lo + a) / 2, -Math.PI / 2, a - lo);
           if (hi > b) put(hw - t, (b + hi) / 2, -Math.PI / 2, hi - b);
           const left = Math.max(lo, a), right = Math.min(hi, b);
-          put(hw - t, (left + right) / 2, -Math.PI / 2, right - left, elevator.h, sz.y - elevator.h);
+          put(hw - t, (left + right) / 2, -Math.PI / 2, right - left, upper);
         }
       }
       for (const sx of [-1, 1]) put(sx * 2.45, zFar + t + 0.01, 0);   // parete di fondo lato corridoio (con la faccia piastrellata verso di te), lasciando il varco dell'obitorio
