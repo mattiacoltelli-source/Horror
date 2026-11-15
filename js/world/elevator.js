@@ -2,6 +2,7 @@
 // Nessuna luce, animazione o interazione: l'interno emerge alla luce della torcia.
 import * as THREE from 'three';
 import { Builder, gray } from './tunnel.js';
+import { writingDecals } from './blood.js';
 
 export function createElevator({ group, mats, x, z }) {
   const G = new THREE.Group(); G.name = 'ascensore-fuori-servizio';
@@ -109,5 +110,9 @@ export function createElevator({ group, mats, x, z }) {
   for (const v of [0.244, 0.448, 0.67]) button(0.78, v, 0.035);
   const geometry = B.build({ iron, trim, floor, dark, details });
   geometry.name = 'ascensore-geometria'; G.add(geometry);
+  // Simbolo fornito dall'autore, senza fondo bianco: dipinto sulla lamiera
+  // interna sinistra, dietro il corrimano, visibile affacciandosi dal corridoio.
+  const mural = writingDecals(G, [{ img: 'assets/tex/elevator_mural.webp', aspect: 768 / 895, p: [-0.995, 1.29, -1.0], wall: '+x', w: 1.4, a: 0.96, plain: true }])[0];
+  mural.name = 'murale-ascensore';
   return G;
 }

@@ -30,6 +30,7 @@ Combattimento: pistola a 4 colpi o ascia (scelta nel magazzino); trascini per gu
 - **Oggetti che reagiscono**: i busti si voltano, la TV del magazzino si accende da sola; **topi** (`js/events/rats.js`).
 - **Ascensore fuori servizio** (`js/world/elevator.js`): nicchia sul lato destro del corridoio del reparto, prima dell'obitorio. Cabina arrugginita e grate aperte, pulsanti e lampada spenti; solo scenografia, senza interazioni. Si guarda dal corridoio, senza cambiare il percorso.
   Cartello «Fuori servizio · Ascensore abbandonato · Non utilizzare» e pulsantiera con tasti tondi, targhette dei piani e serratura ricreati dal riferimento fornito (`assets/tex/elevator_details.webp`, atlante condiviso); i tasti hanno rilievo geometrico.
+  Sulla parete interna sinistra, il simbolo rosso con colature fornito dall'autore (`assets/tex/elevator_mural.webp`), con fondo trasparente, appare dipinto sulla lamiera dietro il corrimano.
 - **Audio**: sintesi Web Audio più alcune registrazioni mp3 corte in `assets/audio` (`audio.sfx`): respiro del cane, drone della sala della folla, ringhio, fuoco.
 - **Checkpoint**: a ogni stanza si salva uno snapshot con le scelte (`localStorage`, `ng_ckpt` e `ng_rooms`); dal menu iniziale «riparti da… ▾» scegli una qualsiasi delle stanze già raggiunte.
 - **Qualità grafica** (alta / media / bassa, di base alta) dal menu iniziale, ricordata in `ng_quality`; in partita la risoluzione si abbassa da sola se i frame calano. Gli shader di tutte le stanze si precompilano nel tunnel.
