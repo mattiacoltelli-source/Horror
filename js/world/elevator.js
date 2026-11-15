@@ -56,9 +56,7 @@ export function createElevator({ group, mats, x, z }) {
     }
     box('trim', edge - side * 0.105, 1.12, -0.13, 0.025, 2.12, 0.035);
   }
-  // Pulsantiera interna spenta e pulsante di chiamata sullo stipite.
-  box('trim', 0.97, 1.19, -0.64, 0.04, 0.38, 0.19);
-  for (let i = 0; i < 3; i++) box('dark', 0.944, 1.31 - i * 0.105, -0.64, 0.015, 0.06, 0.06);
+  // Pulsante di chiamata spento sullo stipite; la pulsantiera e' sul fondo.
   box('trim', 1.105, 1.16, 0.088, 0.105, 0.22, 0.025);
   box('dark', 1.105, 1.18, 0.107, 0.045, 0.045, 0.016);
   // Lampada a gabbia bruciata; nessuna luce aggiunta al pool della stanza.
@@ -78,24 +76,38 @@ export function createElevator({ group, mats, x, z }) {
   const trim = mats.rust.clone(); trim.color.setHex(0x494038); trim.metalness = 0.55; trim.roughness = 0.86;
   const floor = mats.rust.clone(); floor.color.setHex(0x484139); floor.metalness = 0.3; floor.roughness = 1;
   const dark = new THREE.MeshStandardMaterial({ color: 0x100e0b, roughness: 1, vertexColors: true });
-  G.add(B.build({ iron, trim, floor, dark }));
   const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), new THREE.MeshStandardMaterial({ color: 0x393025, roughness: 0.85 }));
   bulb.position.set(0, 2.075, -0.95); bulb.scale.y = 1.35; G.add(bulb);
 
-  // Targa invecchiata: comunica che la nicchia e' solo scenografia.
-  const c = document.createElement('canvas'); c.width = 512; c.height = 256;
-  const ctx = c.getContext('2d'); ctx.fillStyle = '#a49a7d'; ctx.fillRect(0, 0, 512, 256);
-  ctx.strokeStyle = '#39332a'; ctx.lineWidth = 7; ctx.strokeRect(10, 10, 492, 236);
-  ctx.fillStyle = '#30251e'; ctx.textAlign = 'center'; ctx.font = 'bold 56px sans-serif';
-  ctx.fillText('FUORI', 256, 103); ctx.fillText('SERVIZIO', 256, 172);
-  let seed = 83;
-  for (let i = 0; i < 550; i++) {
-    seed = (seed * 1664525 + 1013904223) >>> 0; const x = seed % 512;
-    seed = (seed * 1664525 + 1013904223) >>> 0; const y = seed % 256;
-    ctx.fillStyle = i % 3 ? '#5c463038' : '#24201b52'; ctx.fillRect(x, y, 2 + i % 9, 1 + i % 5);
-  }
-  const map = new THREE.CanvasTexture(c); map.colorSpace = THREE.SRGBColorSpace;
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.63, 0.315), new THREE.MeshStandardMaterial({ map, roughness: 1 }));
-  sign.position.set(-0.1, 1.45, -1.76); sign.rotation.z = -0.055; G.add(sign);
+  // Atlante ricreato dal riferimento: cartello nella meta' superiore,
+  // pulsantiera nel quadrante in basso a sinistra. Un'unica texture e mesh.
+  const map = new THREE.TextureLoader().load('assets/tex/elevator_details.webp');
+  map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 4;
+  const details = new THREE.MeshStandardMaterial({ map, color: 0xc7bda9, roughness: 0.95, metalness: 0.12, vertexColors: true });
+  const uv = (u0, v0, u1, v1) => [[u0,v0],[u1,v0],[u1,v1],[u0,v1]];
+  const face = (x, y, z, w, h, coords) => {
+    B.quad('details', [[x-w/2,y-h/2,z],[x+w/2,y-h/2,z],[x+w/2,y+h/2,z],[x-w/2,y+h/2,z]], coords, [gray(1),gray(1),gray(1),gray(1)], [0,0,1]);
+  };
+  // Lamiera spessa dietro il cartello: niente testo procedurale sovrapposto.
+  box('trim', -0.18, 1.66, -1.75, 1.02, 0.51, 0.025);
+  face(-0.18, 1.66, -1.736, 1.02, 0.51, uv(0.002, 0.502, 0.998, 0.998));
+  const px = -0.04, py = 1.14, pw = 0.43, pz = -1.72;
+  box('trim', px, py, pz - 0.02, pw, pw, 0.035);
+  face(px, py, pz, pw, pw, uv(0.002, 0.002, 0.498, 0.498));
+  // Tasti tondi in rilievo, campionati dalla stessa immagine: restano spenti.
+  const button = (u, v, radius) => {
+    const x = px + (u - 0.5) * pw, y = py + (0.5 - v) * pw;
+    const sample = (dx, dy) => [0.002 + 0.496 * (u + dx / pw), 0.002 + 0.496 * (1 - v + dy / pw)];
+    for (let i = 0; i < 12; i++) {
+      const a = i * Math.PI / 6, b = (i + 1) * Math.PI / 6;
+      const ax = Math.cos(a) * radius, ay = Math.sin(a) * radius, bx = Math.cos(b) * radius, by = Math.sin(b) * radius;
+      B.quad('trim', [[x+ax,y+ay,pz],[x+bx,y+by,pz],[x+bx,y+by,pz+0.018],[x+ax,y+ay,pz+0.018]], [[0,0],[0.02,0],[0.02,0.02],[0,0.02]], [gray(0.6),gray(0.6),gray(0.8),gray(0.8)], [Math.cos((a+b)/2),Math.sin((a+b)/2),0]);
+      B.quad('details', [[x,y,pz+0.019],[x+ax,y+ay,pz+0.019],[x+bx,y+by,pz+0.019],[x,y,pz+0.019]], [sample(0,0),sample(ax,ay),sample(bx,by),sample(0,0)], [gray(1),gray(1),gray(1),gray(1)], [0,0,1]);
+    }
+  };
+  button(0.257, 0.25, 0.035);
+  for (const v of [0.244, 0.448, 0.67]) button(0.78, v, 0.035);
+  const geometry = B.build({ iron, trim, floor, dark, details });
+  geometry.name = 'ascensore-geometria'; G.add(geometry);
   return G;
 }
