@@ -48,7 +48,7 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
   let stampMesh = null;
   K.stamp = () => {
     if (stampMesh) { G.remove(stampMesh); stampMesh.geometry.dispose(); stampMesh.material.dispose(); stampMesh = null; }
-    const nw = new Date(), p2 = (n) => String(n).padStart(2, '0'), T = 'È IL ' + nw.getDate() + '/' + (nw.getMonth() + 1) + '/' + String(nw.getFullYear()).slice(2) + '.\nSONO LE ' + p2(nw.getHours()) + ':' + p2(nw.getMinutes()) + '.\nTRA 7 MINUTI\nTI PORTO VIA.\n- SUOR AGNESE', ta = bloodText(T).aspect, ww = Math.min(1.62, 0.9 * ta);
+    const nw = new Date(), p2 = (n) => String(n).padStart(2, '0'), T = 'È IL ' + nw.getDate() + '/' + (nw.getMonth() + 1) + '/' + String(nw.getFullYear()).slice(2) + '.\nSONO LE ' + p2(nw.getHours()) + ':' + p2(nw.getMinutes()) + '.\nTRA 3 MINUTI\nTI PORTO VIA.\n- SUOR AGNESE', ta = bloodText(T).aspect, ww = Math.min(1.62, 0.9 * ta);
     stampMesh = writingDecals(G, [{ text: T, aspect: ta, p: [aX - 0.405, 0.615, zc], wall: '-x', w: ww, dry: true }])[0];
   };
   K.stamp();
