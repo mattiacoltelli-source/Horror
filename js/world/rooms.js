@@ -20,11 +20,16 @@ export function buildRoom(mats, o) {
       [[x / cu, -z / cv], [xe / cu, -z / cv], [xe / cu, -ze / cv], [x / cu, -ze / cv]], [gray(.22 * dark), gray(.22 * dark), gray(.22 * dark), gray(.22 * dark)], [0, -1, 0]);
   }
   // muri laterali
-  const wallQ = (x, nx) => { for (let z = z0; z > z1 + 0.01; z -= 4) {
-    const ze = Math.max(z - 4, z1), k = 0.6 + rnd() * 0.4, fl = rnd() < 0.5 ? -1 : 1, ou = rnd() * 4;
-    const U = (zz) => (fl * -zz) / wu + ou;
-    B.quad(wall, [[x, 0, z], [x, 0, ze], [x, h, ze], [x, h, z]], [[U(z), 0], [U(ze), 0], [U(ze), h / wv], [U(z), h / wv]], [col(0, k), col(0, k), col(h, k), col(h, k)], [nx, 0, 0]);
-  } };
+  // sideDoor: { side: 1 (muro destro) | -1 (muro sinistro), z, w, h } = varco rettangolare in un muro laterale (nicchia / cappella)
+  const wallQ = (x, nx) => { const hole = o.sideDoor && ((o.sideDoor.side === 1 && nx === -1) || (o.sideDoor.side === -1 && nx === 1)) ? o.sideDoor : null;
+    for (let z = z0; z > z1 + 0.01; z -= 4) {
+      const ze = Math.max(z - 4, z1), k = 0.6 + rnd() * 0.4, fl = rnd() < 0.5 ? -1 : 1, ou = rnd() * 4;
+      const U = (zz) => (fl * -zz) / wu + ou;
+      const seg = (za, zb, ya, yb) => B.quad(wall, [[x, ya, za], [x, ya, zb], [x, yb, zb], [x, yb, za]], [[U(za), ya / wv], [U(zb), ya / wv], [U(zb), yb / wv], [U(za), yb / wv]], [col(ya, k), col(ya, k), col(yb, k), col(yb, k)], [nx, 0, 0]);
+      if (hole) { const ha = hole.z + hole.w / 2, hb = hole.z - hole.w / 2;
+        if (ha > ze && hb < z) { if (z > ha) seg(z, ha, 0, h); if (hb > ze) seg(hb, ze, 0, h); seg(Math.min(ha, z), Math.max(hb, ze), hole.h, h); continue; } }
+      seg(z, ze, 0, h);
+    } };
   wallQ(xl, 1); wallQ(xr, -1);
   // pareti di testa (la prima con il vano porta)
   const endWall = (z, nz, opening) => { for (let x = xl; x < xr - 0.01; x += 1) {   // pannelli da 1 m: il vano porta (2 m) resta esatto
