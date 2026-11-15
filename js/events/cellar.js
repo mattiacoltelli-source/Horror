@@ -161,7 +161,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   let ap = -1;
 
   C.enter = () => {
-    torch.reset(); C.gone = false; C.exitStarted = false; if (exCap) exCap.visible = true; if (exL) { exL.rotation.y = 0; exR.rotation.y = 0; } C.group.position.z = 0; C.bounds[2] = CELLAR.z0 - CELLAR.l + 1.4; if (C.bx) { C.bounds[0] = C.bx[0]; C.bounds[1] = C.bx[1]; }
+    torch.reset(); chapel.stamped = false; C.gone = false; C.exitStarted = false; if (exCap) exCap.visible = true; if (exL) { exL.rotation.y = 0; exR.rotation.y = 0; } C.group.position.z = 0; C.bounds[2] = CELLAR.z0 - CELLAR.l + 1.4; if (C.bx) { C.bounds[0] = C.bx[0]; C.bounds[1] = C.bx[1]; }
     C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; cornerDone = false; cornerT = -1; corner.visible = false; runDone = false; runT = -1; runM.visible = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.uniforms.uA.value = 0; mist.material.opacity = 0; shNear.material.uniforms.uA.value = 0; fogMat.uniforms.uM.value = 0; fogMat.uniforms.uW.value = 0; fogMat.uniforms.uMask.value = blankTex; fogMat.uniforms.uTip.value.set(0, 0, 0); fogMat.uniforms.uR.value = 0.36; fogMat.uniforms.uB.value.set(0.47, 0.52); C.wr = null; C.wName = false; C.b1 = C.b2 = C.sw = C.sw2 = C.clean = false; C.farT = -1; C.farN = 0; far1.visible = false;
     player.box = C.bounds; player.pos.set(0.4, 1.62, CELLAR.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     lights.setLamps(lampPos, 2.1, 0x9db8ff); lights.grade({ fog: 0x03050c, hemi: [0x22336a, 0x0a0a14, 0.42] }); scene.fog.density = 0.04; audio.duck(1, 1); instab.set(0.1, 6);
@@ -171,7 +171,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   // il busto sul mobile, quando non lo guardi, si volta verso di te
   const bustMove = unseenMover({ camera, getObj: () => C.bust, max: 3, gap: 7, move: (n) => { turnToward(C.bust, player.pos, n); audio.shuffle?.(0.5, 0.22); } });
   C.update = (dt) => {
-    if (C.group.visible) { red.update(dt); bustMove(dt); torch.update(dt); chapel.update(dt); }
+    if (C.group.visible) { red.update(dt); bustMove(dt); torch.update(dt); chapel.update(dt); if (!chapel.stamped && Math.hypot(player.pos.x - 4, player.pos.z - (CELLAR.z0 - 15.5)) < 9) { chapel.stamped = true; chapel.stamp(); } }
     if (!C.group.visible || C.gone) return;
     const P = player.pos;
     // --- specchio ---

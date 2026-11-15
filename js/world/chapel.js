@@ -43,10 +43,15 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
   K.light2 = new THREE.PointLight(0xff7a30, 1.3, 2.6, 1.4); K.light2.position.set(x0 + 2.0, 0.8, zc); G.add(K.light2);   // candele sul pavimento: schiariscono i muri laterali
 
   // il rito: nome e data di OGGI (il giorno in cui si gioca) a sangue sul davanti dell'altare. Nessuna foto, in nessuna versione.
-  if (P) {
-    const nw = new Date(), today = nw.getDate() + '/' + (nw.getMonth() + 1) + '/' + String(nw.getFullYear()).slice(2), T = P.name.toUpperCase() + '\n' + today, ta = bloodText(T).aspect, ww = Math.min(1.45, 0.52 * ta);
-    writingDecals(G, [{ text: T, aspect: ta, p: [aX - 0.405, 0.78, zc], wall: '-x', w: ww, dry: true }]);
-  }
+  // nome, data e ORA del giocatore (quelle del suo telefono) scritte a sangue sul davanti dell'altare: la scritta si rifà quando ci si avvicina, quindi l'ora è quella dell'ingresso
+  let stampMesh = null;
+  K.stamp = () => {
+    if (!P) return;
+    if (stampMesh) { G.remove(stampMesh); stampMesh.geometry.dispose(); stampMesh.material.dispose(); stampMesh = null; }
+    const nw = new Date(), p2 = (n) => String(n).padStart(2, '0'), T = P.name.toUpperCase() + '\n' + nw.getDate() + '/' + (nw.getMonth() + 1) + '/' + String(nw.getFullYear()).slice(2) + '\n' + p2(nw.getHours()) + ':' + p2(nw.getMinutes()), ta = bloodText(T).aspect, ww = Math.min(1.5, 0.64 * ta);
+    stampMesh = writingDecals(G, [{ text: T, aspect: ta, p: [aX - 0.405, 0.74, zc], wall: '-x', w: ww, dry: true }])[0];
+  };
+  K.stamp();
   burnDecals(G, [{ k: 'floor', p: [aX - 1.1, 0.012, zc], w: 1.7, h: 1.7, rot: 0.6, a: 0.85 }]);
 
   // sedie ribaltate (sgabelli di legno)
