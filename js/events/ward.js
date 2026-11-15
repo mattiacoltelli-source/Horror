@@ -6,6 +6,7 @@ import { stainDecals, bloodDecals, burnDecals, patchDecals, writingDecals } from
 import { buildRoom } from '../world/rooms.js';
 import { PKEY } from '../personal.js';
 import { bloodText } from '../world/bloodfont.js';
+import { createElevator } from '../world/elevator.js';
 
 export const WARD = { z0: -480, w: 4, l: 20, h: 2.5 };   // la fine del corridoio coincide con l'ingresso dell'obitorio (z0 -500): un unico ambiente
 const loader = new GLTFLoader(), cache = {};
@@ -18,6 +19,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
   const R = { group: new THREE.Group(), state: 'idle', t: 0 };
   R.group.visible = false; scene.add(R.group);
   const { z0, w, l, h } = WARD, zFar = z0 - l, hw = w / 2;
+  const elevator = { side: 1, z: z0 - 16.75, w: 2.15, h: 2.25 };
   let atlas = null;
   const lampPos = [[0, h - 0.12, z0 - 10]];   // una sola lampada, a meta' corridoio
   // un pezzo del kit: base a terra, centrato; material = atlante condiviso (uno solo in memoria), scurito e sporcato
@@ -27,15 +29,27 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
     if (opt.scale) o.scale.setScalar(opt.scale); const g = new THREE.Group(); g.add(o); g.position.set(x, y, z); g.rotation.y = ry; R.group.add(g); return g;
   };
   // guscio: pavimento e pareti piastrellate come l'obitorio (le texture di pareti e pavimento del kit non erano nel pacchetto ricevuto); soffitto e arredo: pezzi del kit
-  const room = buildRoom(mats, { z0, w, l, h, wall: 'stone', floor: 'mfloor', ceil: 'stone', dark: 0.5, seed: 61, openEnd: true, door: { w: 2, h: 2.5 } }); R.group.add(room.group);
+  const room = buildRoom(mats, { z0, w, l, h, wall: 'stone', floor: 'mfloor', ceil: 'stone', dark: 0.5, seed: 61, openEnd: true, door: { w: 2, h: 2.5 }, sideDoor: elevator }); R.group.add(room.group);
+  createElevator({ group: R.group, mats, x: hw - 0.26, z: elevator.z });
   (async () => {
     const mg = await get('../mg_wall'); // (percorso relativo: assets/models/mg_wall.glb)
     if (mg) {
       const b0 = new THREE.Box3().setFromObject(mg), sz = b0.getSize(new THREE.Vector3()), c0 = b0.getCenter(new THREE.Vector3());
       mg.traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); m.material.color.setScalar(0.62); } });
-      const put = (x, z, ry) => { const o = mg.clone(true), g = new THREE.Group(); o.position.set(-c0.x, -b0.min.y, -c0.z); g.add(o); g.position.set(x, 0, z); g.rotation.y = ry; R.group.add(g); };
+      const put = (x, z, ry, width = sz.x, y = 0, height = sz.y) => { const o = mg.clone(true), g = new THREE.Group(); o.position.set(-c0.x, -b0.min.y, -c0.z); g.add(o); g.scale.set(width / sz.x, height / sz.y, 1); g.position.set(x, y, z); g.rotation.y = ry; R.group.add(g); };
       const t = sz.z / 2 - 0.02;
-      for (let i = 0; i < 7; i++) { const z = z0 - 1.5 - i * 3; put(-hw + t, z, Math.PI / 2); put(hw - t, z, -Math.PI / 2); }
+      for (let i = 0; i < 7; i++) {
+        const z = z0 - 1.5 - i * 3; put(-hw + t, z, Math.PI / 2);
+        // Anche il rivestimento piastrellato deve lasciare aperto il vano della cabina.
+        const lo = z - sz.x / 2, hi = z + sz.x / 2, a = elevator.z - elevator.w / 2, b = elevator.z + elevator.w / 2;
+        if (hi <= a || lo >= b) put(hw - t, z, -Math.PI / 2);
+        else {
+          if (lo < a) put(hw - t, (lo + a) / 2, -Math.PI / 2, a - lo);
+          if (hi > b) put(hw - t, (b + hi) / 2, -Math.PI / 2, hi - b);
+          const left = Math.max(lo, a), right = Math.min(hi, b);
+          put(hw - t, (left + right) / 2, -Math.PI / 2, right - left, elevator.h, sz.y - elevator.h);
+        }
+      }
       for (const sx of [-1, 1]) put(sx * 2.45, zFar + t + 0.01, 0);   // parete di fondo lato corridoio (con la faccia piastrellata verso di te), lasciando il varco dell'obitorio
     }
     // soffitto: le stesse piastrelle bianche delle pareti (ritaglio pulito della loro texture), ripetute
@@ -53,7 +67,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
     { const bd = await get('../hs_bed'); if (bd) { const o = bd.clone(true), b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()), g = new THREE.Group(); o.traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); m.material.color.multiplyScalar(0.55); desat(m.material, 0.6); } }); const sc = 2.0 / Math.max(b.max.x - b.min.x, b.max.z - b.min.z); o.scale.setScalar(sc); b.setFromObject(o); o.position.set(-c.x * sc, -b.min.y, -c.z * sc); g.add(o); g.position.set(-1.2, 0, z0 - 15.2); g.rotation.y = 0.04; R.group.add(g); } }
   })();
   // sporco sui muri e sangue vecchio
-  stainDecals(R.group, [{ p: [-hw + 0.01, 1.3, z0 - 5], wall: '+x', w: 2.6, h: 2.2 }, { p: [hw - 0.01, 1.2, z0 - 9.5], wall: '-x', w: 2.4, h: 2.2, flip: true }, { p: [-hw + 0.01, 1.2, z0 - 14], wall: '+x', w: 2.4, h: 2.2, a: 0.8 }, { p: [hw - 0.01, 1.2, z0 - 17.5], wall: '-x', w: 2.4, h: 2.2 }]);
+  stainDecals(R.group, [{ p: [-hw + 0.01, 1.3, z0 - 5], wall: '+x', w: 2.6, h: 2.2 }, { p: [hw - 0.01, 1.2, z0 - 9.5], wall: '-x', w: 2.4, h: 2.2, flip: true }, { p: [-hw + 0.01, 1.2, z0 - 14], wall: '+x', w: 2.4, h: 2.2, a: 0.8 }, { p: [hw - 0.01, 1.2, z0 - 4.8], wall: '-x', w: 2.4, h: 2.2 }]);
   patchDecals(R.group, [{ img: 'assets/tex/pt_plaster.webp', p: [-hw + 0.016, 1.85, z0 - 2.6], wall: '+x', w: 1.9, h: 1.3 }, { img: 'assets/tex/pt_plaster.webp', p: [hw - 0.016, 1.85, z0 - 4.2], wall: '-x', w: 1.7, h: 1.2, rot: 0.04 }]);   // corridoio: intonaco scrostato e muro macchiato sopra le piastrelle
   // compleanno, scritto col sangue sulle piastrelle bianche: dai profili, oppure da ?nasc=g-m-aa (la domanda del link per tutti)
   const BD = { rebecca: '20/6/97', tommy: '1/11/90', gabriele: '31/12/90', elisa: '2/8/90', alice: '5/9/93' };
