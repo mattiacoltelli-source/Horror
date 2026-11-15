@@ -28,6 +28,7 @@ Combattimento: pistola a 4 colpi o ascia (scelta nel magazzino); trascini per gu
 - **Il cane** (`js/events/hound.js`, «Grimhound Rig» di DM-913, CC-BY 4.0): nel tunnel, dopo il vetro, solo due occhi rossi e un respiro; scompare quando la lampada sfarfalla.
 - **La sorella** (`js/events/sorella.js`, `assets/models/sorella.glb`, script Blender in `tools/monster/`): nel magazzino, sempre uguale e prima dell'arma.
 - **Oggetti che reagiscono**: i busti si voltano, la TV del magazzino si accende da sola; **topi** (`js/events/rats.js`).
+- **Ascensore fuori servizio** (`js/world/elevator.js`): nicchia sul lato destro del corridoio del reparto, prima dell'obitorio. Cabina arrugginita e grate aperte, pulsanti e lampada spenti; solo scenografia, senza interazioni. Si guarda dal corridoio, senza cambiare il percorso.
 - **Audio**: sintesi Web Audio più alcune registrazioni mp3 corte in `assets/audio` (`audio.sfx`): respiro del cane, drone della sala della folla, ringhio, fuoco.
 - **Checkpoint**: a ogni stanza si salva uno snapshot con le scelte (`localStorage`, `ng_ckpt` e `ng_rooms`); dal menu iniziale «riparti da… ▾» scegli una qualsiasi delle stanze già raggiunte.
 - **Qualità grafica** (alta / media / bassa, di base alta) dal menu iniziale, ricordata in `ng_quality`; in partita la risoluzione si abbassa da sola se i frame calano. Gli shader di tutte le stanze si precompilano nel tunnel.
