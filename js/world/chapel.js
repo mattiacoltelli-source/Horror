@@ -48,8 +48,8 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
   K.stamp = () => {
     if (!P) return;
     if (stampMesh) { G.remove(stampMesh); stampMesh.geometry.dispose(); stampMesh.material.dispose(); stampMesh = null; }
-    const nw = new Date(), p2 = (n) => String(n).padStart(2, '0'), T = P.name.toUpperCase() + '\n' + nw.getDate() + '/' + (nw.getMonth() + 1) + '/' + String(nw.getFullYear()).slice(2) + '\n' + p2(nw.getHours()) + ':' + p2(nw.getMinutes()), ta = bloodText(T).aspect, ww = Math.min(1.62, 0.84 * ta);
-    stampMesh = writingDecals(G, [{ text: T, aspect: ta, p: [aX - 0.405, 0.76, zc], wall: '-x', w: ww, dry: true }])[0];
+    const nw = new Date(), p2 = (n) => String(n).padStart(2, '0'), T = P.name.toUpperCase() + '\n' + nw.getDate() + '/' + (nw.getMonth() + 1) + '/' + String(nw.getFullYear()).slice(2) + '\n' + p2(nw.getHours()) + ':' + p2(nw.getMinutes()), ta = bloodText(T).aspect, ww = Math.min(1.62, 0.66 * ta);
+    stampMesh = writingDecals(G, [{ text: T, aspect: ta, p: [aX - 0.405, 0.625, zc], wall: '-x', w: ww, dry: true }])[0];
   };
   K.stamp();
   burnDecals(G, [{ k: 'floor', p: [aX - 1.1, 0.012, zc], w: 1.7, h: 1.7, rot: 0.6, a: 0.85 }]);
