@@ -1,12 +1,12 @@
 // MICRO CAPPELLA SCONSACRATA: una nicchia dietro un arco sempre aperto sul muro destro della cantina. Ci si affaccia (non si entra).
-// Tre murales sui tre muri (il quarto e' l'arco), altare di pietra, sedie ribaltate, candele, un rito: la foto (viso coperto) capovolta sull'altare con nome e data a sangue.
+// Tre murales sui tre muri (il quarto e' l'arco), altare di pietra, sedie ribaltate, candele, un rito: nome e data di oggi a sangue sull'altare.
 import * as THREE from 'three';
 import { buildRoom } from './rooms.js';
 import { writingDecals, burnDecals } from './blood.js';
 import { bloodText } from './bloodfont.js';
 import { addExtras } from './extra.js';
 
-export function createChapel({ group, mats, zc, P, PHOTO, BDAY, x0 = 4.0, w = 3.2, l = 3.0, h = 3.4 }) {
+export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h = 3.4 }) {
   const K = { group: new THREE.Group(), t: 0 }; group.add(K.group);
   const G = K.group, xr = x0 + w, z0 = zc + l / 2, z1 = zc - l / 2;
   const room = buildRoom(mats, { cx: x0 + w / 2, z0, w, l, h, wall: 'stone', floor: 'floorA', ceil: 'stone', dark: 0.7, seed: 61, sideDoor: { side: -1, z: zc, w: 2.0, h: 3.1 } });
@@ -32,14 +32,9 @@ export function createChapel({ group, mats, zc, P, PHOTO, BDAY, x0 = 4.0, w = 3.
   }
   K.light = new THREE.PointLight(0xff8a3a, 1.5, 6.5, 1.6); K.light.position.set(aX - 0.9, 2.0, zc); G.add(K.light);
 
-  // il rito: foto capovolta appoggiata al muro sul piano, viso coperto; nome e data a sangue sul davanti dell'altare
-  if (PHOTO) {
-    const tx = new THREE.TextureLoader().load('assets/tex/' + PHOTO); tx.colorSpace = THREE.SRGBColorSpace;
-    const ph = new THREE.Mesh(new THREE.PlaneGeometry(0.31, 0.42), new THREE.MeshStandardMaterial({ map: tx, roughness: 0.9, color: new THREE.Color(0.7, 0.68, 0.64) }));
-    ph.position.set(aX + 0.27, 1.5, zc + 0.02); ph.rotation.set(0, -Math.PI / 2, Math.PI + 0.05); ph.rotation.order = 'YXZ'; G.add(ph);   // capovolta
-  }
+  // il rito: nome e data di OGGI (il giorno in cui si gioca) a sangue sul davanti dell'altare. Nessuna foto, in nessuna versione.
   if (P) {
-    const T = P.name.toUpperCase() + (BDAY ? '\n' + BDAY : ''), ta = bloodText(T).aspect, ww = Math.min(1.45, 0.52 * ta);
+    const nw = new Date(), today = nw.getDate() + '/' + (nw.getMonth() + 1) + '/' + String(nw.getFullYear()).slice(2), T = P.name.toUpperCase() + '\n' + today, ta = bloodText(T).aspect, ww = Math.min(1.45, 0.52 * ta);
     writingDecals(G, [{ text: T, aspect: ta, p: [aX - 0.405, 0.78, zc], wall: '-x', w: ww, dry: true }]);
   }
   burnDecals(G, [{ k: 'floor', p: [aX - 1.1, 0.012, zc], w: 1.7, h: 1.7, rot: 0.6, a: 0.85 }]);

@@ -13,7 +13,7 @@ import { addExtras, pedestal, turnToward } from '../world/extra.js';
 import { unseenMover } from './ambient.js';
 import { addAtmosphere } from '../world/atmos.js';
 import { WARD } from './ward.js';
-import { P as PROF, whisperName, BDAY, PHOTO } from '../personal.js';
+import { P as PROF, whisperName } from '../personal.js';
 import { createFingerWriter } from '../world/fingerwrite.js';
 import { rgbPulse } from '../ui/rgbshift.js';
 import { createTorch } from './torch.js';
@@ -27,7 +27,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const C = { group: new THREE.Group(), state: 'idle', step: -1, gaze: 0, away: 0, started: false, apDone: false };
   C.group.visible = false; scene.add(C.group);
   const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23, exit: { w: 2, h: 2.5 } , sideDoor: { side: 1, z: CELLAR.z0 - 15.5, w: 2.0, h: 3.1 } });
-  C.group.add(room.group); decorCellar(C.group, CELLAR.z0); const chapel = createChapel({ group: C.group, mats, zc: CELLAR.z0 - 15.5, P: PROF, PHOTO, BDAY }); C.bounds = [room.bounds[0], room.bounds[1], CELLAR.z0 - CELLAR.l + 1.4, CELLAR.z0 - 0.6];
+  C.group.add(room.group); decorCellar(C.group, CELLAR.z0); const chapel = createChapel({ group: C.group, mats, zc: CELLAR.z0 - 15.5, P: PROF }); C.bounds = [room.bounds[0], room.bounds[1], CELLAR.z0 - CELLAR.l + 1.4, CELLAR.z0 - 0.6];
 
   const red = redLight(C.group, { x: CELLAR.w / 2 - 0.1, y: 2.5, z: CELLAR.z0 - 19.5, dir: 1 });   // luce rossa d'emergenza vicino all'uscita
   // specchio
