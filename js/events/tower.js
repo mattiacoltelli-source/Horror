@@ -9,6 +9,7 @@ import { decorTower } from '../world/decor.js';
 import { addExtras, pedestal, turnToward } from '../world/extra.js';
 import { unseenMover } from './ambient.js';
 import { addAtmosphere } from '../world/atmos.js';
+import { createBedroom } from '../world/bedroom.js';
 import { P, CITY } from '../personal.js';
 
 export const TOWER = { z0: -300, w: 14, l: 18, h: 8.5 };
@@ -21,8 +22,8 @@ const TEXT = {   // finale: la suora e' suor Agnese, l'infermiera che ti ha tira
 export function createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn, combat }) {
   const T = { group: new THREE.Group(), opened: false, near: false };
   T.group.visible = false; scene.add(T.group);
-  const room = buildRoom(mats, { z0: TOWER.z0, w: TOWER.w, l: TOWER.l, h: TOWER.h, wall: 'stone', floor: 'floorA', ceil: 'brick', pillarEvery: 6, dark: 0.95, seed: 31, door: { w: 2, h: 2.6 } });
-  T.group.add(room.group); T.entry = decorTower(T.group, TOWER.z0); T.bounds = [room.bounds[0], room.bounds[1], TOWER.z0 - TOWER.l + 1.6, TOWER.z0 - 0.6];
+  const room = buildRoom(mats, { z0: TOWER.z0, w: TOWER.w, l: TOWER.l, h: TOWER.h, wall: 'stone', floor: 'floorA', ceil: 'brick', pillarEvery: 6, dark: 0.95, seed: 31, door: { w: 2, h: 2.6 }, sideDoor: { side: 1, z: TOWER.z0 - 6.6, w: 2.0, h: 3.1 } });
+  T.group.add(room.group); const bedroom = createBedroom({ group: T.group, mats, zc: TOWER.z0 - 6.6 }); T.entry = decorTower(T.group, TOWER.z0); T.bounds = [room.bounds[0], room.bounds[1], TOWER.z0 - TOWER.l + 1.6, TOWER.z0 - 0.6];
   const zFar = TOWER.z0 - TOWER.l, loader = new GLTFLoader();
   const stovePos = new THREE.Vector3(-2.4, 0, TOWER.z0 - 6.5);
 
@@ -80,6 +81,7 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   T.update = (dt, time) => {
     if (T.preview) return;
     if (!T.group.visible) return;
+    bedroom.update(dt);
     if (st === 'idle') bustMove(dt);
     wt += dt; warm.intensity = (36 + Math.sin(time * 9) * 3 + Math.sin(time * 23) * 1.6) * (st === 'idle' ? 1 : st === 'opening' ? 0.5 : 0.04);
     // CARROZZINA: quando non la guardi si gira verso di te; quando la guardi (dopo averla persa di vista) può avanzare di ~40 cm
