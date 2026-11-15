@@ -44,8 +44,10 @@ export function createBedroom({ group, mats, zc, x0 = 7.0, w = 3.4, l = 3.4, h =
     const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace;
     const mk = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 1.06), new THREE.MeshBasicMaterial({ map: tx, transparent: true, depthWrite: false, opacity: 0.8 })); mk.rotation.y = Math.PI / 2; mk.position.set(x0 + 0.006, 0.62, zc + 1.36); G.add(mk); }
 
-  // due disegni di bambino sul muro di lato (carta ingiallita, piccoli)
-  writingDecals(G, [{ img: 'assets/tex/pic_drawing2.webp', aspect: 1.442, p: [x0 + 1.25, 1.5, z0 - 0.012], wall: '-z', w: 0.55, rot: -0.03, a: 1, plain: true }, { img: 'assets/tex/pic_drawing.jpg', aspect: 1.0, p: [x0 + 2.3, 1.38, z1 + 0.012], wall: '+z', w: 0.5, rot: 0.04, a: 1, plain: true }]);
+  // quattro disegni di bambino (fogli ingialliti e bruciacchiati) sui due muri di lato
+  const kid = (n, asp, x, y, z, wall, ww, rot) => ({ img: 'assets/tex/pic_kid_' + n + '.webp', aspect: asp, p: [x, y, z], wall, w: ww, rot, a: 1, plain: true });
+  writingDecals(G, [kid(1, 1.709, x0 + 0.85, 1.62, z0 - 0.012, '-z', 0.62, -0.04), kid(2, 1.758, x0 + 2.45, 1.32, z0 - 0.012, '-z', 0.66, 0.03),
+    kid(3, 1.707, x0 + 1.0, 1.45, z1 + 0.012, '+z', 0.64, 0.035), kid(4, 1.731, x0 + 2.5, 1.7, z1 + 0.012, '+z', 0.62, -0.03)]);
 
   K.update = (dt) => { K.t += dt; const f = 1 + Math.sin(K.t * 9.7) * 0.07 + Math.sin(K.t * 23.1) * 0.05 + (Math.sin(K.t * 2.3) > 0.985 ? -0.45 : 0); K.light.intensity = 1.7 * f; K.shade.material.color.setRGB(1, 0.72 * Math.min(1, f), 0.4 * Math.min(1, f)); };
   return K;
