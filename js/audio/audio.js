@@ -1,14 +1,17 @@
 // Audio procedurale (Web Audio): nessun file da scaricare, avvio dopo il tap dell'utente.
 // Ambiente: rumore a bassa frequenza + ronzio elettrico + gocce; eventi: passi, battito, impatto sul vetro.
 import * as THREE from 'three';
+import { createAmbientCue } from './ambience.js';
 
 const vib = (p) => { try { navigator.vibrate?.(p); } catch (_) {} };   // solo Android; altrove non fa nulla
 
 export function createAudio() {
-  let ctx = null, master, amb, hum, verb, verbSend, drips = null, noiseBuf, ok = false;
+  let ctx = null, master, amb, hum, accents, verb, verbSend, drips = null, noiseBuf, ok = false, duckLevel = 1;
   const sfxBuf = {};   // suoni registrati (mp3 corti, mono): { nome: AudioBuffer }, caricati dopo il primo tocco
   const A = {
     get ready() { return ok; },
+    get ambienceAllowed() { return ok && duckLevel > 0.5; },
+    ambientCue(kind, position) { return A.ambienceAllowed ? createAmbientCue(ctx, noiseBuf, accents, kind, position) : null; },
     async start() {
       if (ctx) { await ctx.resume?.(); return; }
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -44,8 +47,10 @@ export function createAudio() {
     // abbassa ambiente + ronzio (silenzio di tensione)
     duck(level, time = 1) {
       if (!ok) return; const t = ctx.currentTime;
+      duckLevel = level;
       amb.gain.cancelScheduledValues(t); amb.gain.setTargetAtTime(0.5 * level, t, time / 3);
       hum.gain.cancelScheduledValues(t); hum.gain.setTargetAtTime(0.035 * level, t, time / 3);
+      accents.gain.cancelScheduledValues(t); accents.gain.setTargetAtTime(level, t, time / 3);
       dripOn = level > 0.5;
     },
     step(speed = 1) {
@@ -437,6 +442,9 @@ export function createAudio() {
     const vf = ctx.createBiquadFilter(); vf.type = 'lowpass'; vf.frequency.value = 2400;
     verbSend = ctx.createGain(); verbSend.gain.value = 0.35;
     verbSend.connect(vf); vf.connect(verb); verb.connect(master);
+    // Gli accenti discreti seguono gli stessi silenzi dell'ambiente principale.
+    accents = ctx.createGain(); accents.gain.value = 1; accents.connect(master);
+    const accentWet = ctx.createGain(); accentWet.gain.value = 0.45; accents.connect(accentWet); accentWet.connect(verbSend);
 
     // ambiente: rumore marrone filtrato con lenta modulazione
     const ab = ctx.createBuffer(1, sr * 6, sr), ad = ab.getChannelData(0); let last = 0;

@@ -1,12 +1,15 @@
 // Ambiente vivo: (1) rumori che reagiscono a come ti muovi (se resti fermo a lungo qualcosa si muove alle tue spalle; appena riparti, ti risponde un passo),
 // (2) oggetti che cambiano quando non li guardi (stesso meccanismo della sedia a rotelle: li vedi, distogli lo sguardo, li ritrovi spostati).
 import * as THREE from 'three';
+import { createAmbientMoments } from '../audio/ambience.js';
 
 export function createAmbient({ player, audio, story, combat }) {
   const A = {}, v = new THREE.Vector3(), back = new THREE.Vector3();
+  const moments = createAmbientMoments({ player, audio, story, combat });
   let still = 0, n = 0, cool = 8, pending = false, ans = 0, lastYaw = 0, room = '';
   const behind = (d, side = 0) => { back.set(player.forward.x, 0, player.forward.z).normalize(); return v.set(player.pos.x - back.x * d - back.z * side, 0, player.pos.z - back.z * d + back.x * side); };
   A.update = (dt) => {
+    moments(dt);
     const cur = story.current(); if (cur !== room) { room = cur; still = 0; n = 0; cool = 7; pending = false; }
     if (!['cellar', 'morgue', 'warehouse'].includes(cur) || story.busy() || combat?.active) return;
     const moving = player.speedNow > 0.15 || Math.abs(player.yaw - lastYaw) > 0.02; lastYaw = player.yaw; cool -= dt;

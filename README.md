@@ -32,6 +32,7 @@ Combattimento: pistola a 4 colpi o ascia (scelta nel magazzino); trascini per gu
   Cartello «Fuori servizio · Ascensore abbandonato · Non utilizzare» e pulsantiera con tasti tondi, targhette dei piani e serratura ricreati dal riferimento fornito (`assets/tex/elevator_details.webp`, atlante condiviso); i tasti hanno rilievo geometrico.
   Sulla parete interna sinistra, il simbolo rosso con colature fornito dall'autore (`assets/tex/elevator_mural.webp`), con fondo trasparente, appare dipinto sulla lamiera dietro il corrimano.
 - **Audio**: sintesi Web Audio più alcune registrazioni mp3 corte in `assets/audio` (`audio.sfx`): respiro del cane, drone della sala della folla, ringhio, fuoco.
+  Accenti ambientali molto bassi (`js/audio/ambience.js`): aria nel tunnel, tubature nel reparto, ventilazione lontana nell'obitorio e scricchiolio nel magazzino. Una sola volta per ambiente, durante brevi finestre di esplorazione, con dissolvenza e posizione 3D; si interrompono cambiando stanza, nei silenzi di tensione e durante il combattimento. Nessun nuovo file audio da scaricare.
 - **Checkpoint**: a ogni stanza si salva uno snapshot con le scelte (`localStorage`, `ng_ckpt` e `ng_rooms`); dal menu iniziale «riparti da… ▾» scegli una qualsiasi delle stanze già raggiunte.
 - **Qualità grafica** (alta / media / bassa, di base alta) dal menu iniziale, ricordata in `ng_quality`; in partita la risoluzione si abbassa da sola se i frame calano. Gli shader di tutte le stanze si precompilano nel tunnel.
 - **Vibrazione** su porte, vetro, passi pesanti, note e TV (solo Android).
