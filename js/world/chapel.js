@@ -38,7 +38,7 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
   if (PKEY === 'elisa') {
     const frame = new THREE.Group(); frame.name = 'foto-elisa-altare';
     frame.position.set(aX + 0.04, 1.324, zc - 0.02); frame.rotation.y = -Math.PI / 2 + 0.17;
-    frame.scale.setScalar(0.85); G.add(frame);   // ulteriore riduzione del 15%, inclusi base e sostegno
+    frame.scale.setScalar(0.85 * 0.9); G.add(frame);   // ulteriore riduzione del 10%, inclusi base e sostegno
     const tilted = new THREE.Group(); tilted.rotation.x = -0.16; frame.add(tilted);
     const photoH = 0.79 * 0.85, photoW = (0.74 * 0.545 + 0.05) * 0.85;
     const woodMap = new THREE.TextureLoader().load('assets/tex/floor_planks.jpg'); woodMap.colorSpace = THREE.SRGBColorSpace; woodMap.anisotropy = 4;
