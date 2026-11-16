@@ -229,7 +229,9 @@ async function enter() {
     // GRUPPI (stesso criterio in tutte le versioni): cantina = i due disegni dei bambini vicini; obitorio parete destra = anatomia, uomo a carboncino, famiglia + murale largo;
     // magazzino = corridoio, finestra e santo vicini, sopra il letto
     writingDecals(cellar.group, [pic('drawing2', 1.442, 3.96, 1.5, CZ - 5.9, '-x', 1.0, -0.03)]);
-    writingDecals(morgue.group, [pic('anatomy', 0.755, 4.22, 1.5, MZ - 5.8, '-x', 0.6, 0.02), pic('charcoal', 0.756, 4.22, 1.5, MZ - 7.0, '-x', 0.55, -0.02), pic('family', 1.287, 4.22, 1.5, MZ - 8.4, '-x', 0.75, 0.02)]);
+    // Elisa: le tre foto passano vicino all'ingresso; la composizione occupa il loro tratto piu' avanti.
+    const morguePhotoShift = PKEY === 'elisa' ? 4 : 0;
+    writingDecals(morgue.group, [pic('anatomy', 0.755, 4.22, 1.5, MZ - 5.8 + morguePhotoShift, '-x', 0.6, 0.02), pic('charcoal', 0.756, 4.22, 1.5, MZ - 7.0 + morguePhotoShift, '-x', 0.55, -0.02), pic('family', 1.287, 4.22, 1.5, MZ - 8.4 + morguePhotoShift, '-x', 0.75, 0.02)]);
     // MURALES GIGANTI (affreschi scrostati), uno per ambiente grande, a riempire una campata intera tra due pilastri (sempre uguali in tutte le versioni)
     writingDecals(scene, [{ ...pic('mural_dog', 3.2200, 1.38, 1.1, -28.5, '-x', 4.8, 0), rot: 0, a: 0.94 }]);                    // tunnel, parete destra
     writingDecals(wh.group, [{ ...pic('mural_corridor', 1.2959, -5.96, 3.0, WZ - 18.6, '+x', 4.7, 0), rot: 0, a: 0.94 }]);              // magazzino, parete sinistra
@@ -247,7 +249,7 @@ async function enter() {
     writingDecals(wh.group, [{ ...pic('mural_skull', 1.0, 5.94, 3.4, WZ - 24.6, '-x', 2.8, 0), rot: 0, a: 0.94, glow: 0.2 }]);              // magazzino, parete destra
     writingDecals(tower.group, [{ ...pic('mural_nun', 0.9340, 6.94, 3.2, TZ - 12.6, '-x', 3.2, 0), rot: 0, a: 0.94 }]);       // torre, parete destra
     writingDecals(wh.group, [pic('corridor', 1.369, -5.96, 1.5, WZ - 11.4, '+x', 0.85, 0.02), pic('window', 1.233, -5.96, 1.5, WZ - 12.55, '+x', 0.85, -0.02), pic('saint', 0.789, -5.96, 1.5, WZ - 13.65, '+x', 0.62, 0.02)])
-    if (PKEY === 'elisa') createMorgueWall(morgue.group, mats, { x: 4.255, z: MZ - 3.0 });
+    if (PKEY === 'elisa') createMorgueWall(morgue.group, mats, { x: 4.255, z: MZ - 7.0 });
     if (PKEY === 'laya') writingDecals(morgue.group, [{ img: 'assets/tex/pic_laya.jpg', aspect: 0.572, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
     else if (PKEY === 'alice') writingDecals(morgue.group, [{ img: 'assets/tex/pic_alice.jpg', aspect: 0.788, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.62, rot: -0.03, a: 1, plain: true }]);
     else if (PKEY === 'steve') writingDecals(morgue.group, [{ img: 'assets/tex/pic_steve.jpg', aspect: 0.762, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.56, rot: -0.03, a: 1, plain: true }]);
