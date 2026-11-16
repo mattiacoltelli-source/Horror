@@ -2,7 +2,7 @@
 // compare il testo, in corsivo, per qualche secondo. Non c'è nessun contatore: alla fine una riga discreta dice quante ne hai trovate.
 // Le note raccontano la storia; chi le trova tutte e 5 ha qualche secondo in più nel combattimento della torre.
 import * as THREE from 'three';
-import { P, CITY } from '../personal.js';
+import { P, PKEY, CITY } from '../personal.js';
 import { W as TUNNEL_W } from '../world/tunnel.js';
 
 // l'ora vera del telefono (letta una volta sola all'avvio) entra nella firma di suor Agnese, con una frase che dipende dal momento della giornata
@@ -17,7 +17,7 @@ const NOTE_STD = [
 ];
 // versione personalizzata (profili in personal.js): stessa storia, ma la paziente n. 17 è lei e la sorella ha i suoi capelli
 const NOTE_PER = [
-  'paziente n. 17: ' + (P?.name ?? '') + '.\ningresso: notte del 3 novembre.\n' + (CITY ? 'proveniente da ' + CITY + '. nessun familiare in visita.\n' : '') + (P?.joke ?? ''),
+  'paziente n. 17: ' + (P?.name ?? '') + '.\ningresso: notte del 3 novembre.\n' + (CITY ? 'proveniente da ' + CITY + (PKEY === 'elisa' ? '.' : '. nessun familiare in visita.') + '\n' : '') + (P?.joke ?? ''),
   'ha rotto lo specchio ogni mattina.\nogni mattina lo rimettiamo.\ndice che ' + (P?.detail ?? '') + '.',
   'terapia della sedia: sospesa.\nchiede ogni giorno di sua sorella, ' + (P?.sister ?? '') + '.\nsorella: deceduta. ' + (P?.name ?? '') + ' era in casa, quando è bruciata.',
   'incendio partito dal magazzino.\ninnesco volontario. benzina sui registri.\nun solo sopravvissuto: ' + (P?.name ?? '') + '.\nil cane della struttura no.' + (CITY ? '\nil giornale di ' + CITY + ' ha scritto: guasto elettrico.' : ''),
