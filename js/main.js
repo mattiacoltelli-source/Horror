@@ -26,6 +26,7 @@ import { createMorgue } from './events/morgue.js';
 import { createWard } from './events/ward.js';
 import { createAmbient } from './events/ambient.js';
 import { createNotes } from './events/notes.js';
+import { createRadiograph } from './world/radiograph.js';
 import { writingDecals } from './world/blood.js';
 import { bloodText } from './world/bloodfont.js';
 import { RIBS } from './world/tunnel.js';
@@ -216,7 +217,7 @@ async function enter() {
     { room: 'warehouse', parent: wh.group, p: [-5.96, 1.5, WZ - 17], ry: Math.PI / 2 },
     { room: 'tower', parent: tower.group, p: [-6.96, 1.5, TZ - 5], ry: Math.PI / 2 },
   ] });
-  // disegno da bambino (tutte le versioni) in cantina, e foto di Elisa col volto bruciato (solo Elisa) in obitorio: fogli appesi al muro, senza luce propria
+  // Disegno in cantina; nell'obitorio Elisa ha una radiografia al posto della foto.
   // Letto d'ospedale con le sue texture, nel magazzino contro il muro destro
   if (!window.__bed) { window.__bed = true; gl.load('assets/models/hs_bed.glb', (g) => { const o = g.scene, b = new THREE.Box3().setFromObject(o), sz = b.getSize(new THREE.Vector3()), long = Math.max(sz.x, sz.z), k = 2.0 / long; o.scale.setScalar(k); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x, b.min.y, c.z));
       o.traverse((m) => { if (m.isMesh) { m.material.color?.multiplyScalar(0.42).lerp(new THREE.Color(0.3, 0.22, 0.17), 0.15); m.material.roughness = Math.max(0.6, m.material.roughness ?? 0.7); } });
@@ -246,7 +247,7 @@ async function enter() {
     writingDecals(wh.group, [{ ...pic('mural_skull', 1.0, 5.94, 3.4, WZ - 24.6, '-x', 2.8, 0), rot: 0, a: 0.94, glow: 0.2 }]);              // magazzino, parete destra
     writingDecals(tower.group, [{ ...pic('mural_nun', 0.9340, 6.94, 3.2, TZ - 12.6, '-x', 3.2, 0), rot: 0, a: 0.94 }]);       // torre, parete destra
     writingDecals(wh.group, [pic('corridor', 1.369, -5.96, 1.5, WZ - 11.4, '+x', 0.85, 0.02), pic('window', 1.233, -5.96, 1.5, WZ - 12.55, '+x', 0.85, -0.02), pic('saint', 0.789, -5.96, 1.5, WZ - 13.65, '+x', 0.62, 0.02)])
-    if (PKEY === 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_elisa.jpg', aspect: 0.545, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
+    if (PKEY === 'elisa') createRadiograph(morgue.group, mats, { x: 4.255, y: 1.5, z: MZ - 3.2 });
     if (PKEY === 'laya') writingDecals(morgue.group, [{ img: 'assets/tex/pic_laya.jpg', aspect: 0.572, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
     else if (PKEY === 'alice') writingDecals(morgue.group, [{ img: 'assets/tex/pic_alice.jpg', aspect: 0.788, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.62, rot: -0.03, a: 1, plain: true }]);
     else if (PKEY === 'steve') writingDecals(morgue.group, [{ img: 'assets/tex/pic_steve.jpg', aspect: 0.762, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.56, rot: -0.03, a: 1, plain: true }]);
