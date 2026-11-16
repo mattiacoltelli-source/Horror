@@ -1,0 +1,26 @@
+name: Suor Agnese - Blender reference
+on:
+  push:
+    branches: [feature/nun-3d-upgrade]
+    paths:
+      - '.github/workflows/nun-reference.yml'
+      - 'tools/nun/**'
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender
+      - name: Render original model
+        run: blender -b -t 2 --python-exit-code 1 --python tools/nun/render_reference.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: suor-agnese-original-reference
+          path: nun-reference/
+          if-no-files-found: error
