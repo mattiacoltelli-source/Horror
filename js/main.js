@@ -132,10 +132,18 @@ try {
 let dawn = null, doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null, wh = null, morgue = null, ward = null, ambient = null, notes = null, combat = null;
 const flags = { turned: false, mirror: false, door: null, notes: 0 };
 // CHECKPOINT: a ogni stanza si salva dove sei e le scelte fatte. Dalla schermata iniziale puoi ripartire da lì.
-const CK = 'ng_ckpt', CK_ST = { cellar: 'cantina', morgue: 'obitorio', warehouse: 'magazzino', tower: 'torre' }, CK_NAME = { cellar: 'dalla cantina', morgue: "dall'obitorio", warehouse: 'dal magazzino', tower: 'dalla torre' };
+const CK = 'ng_ckpt', CK_ST = { cellar: 'cantina', ward: 'reparto', morgue: 'obitorio', warehouse: 'magazzino', tower: 'torre' }, CK_NAME = { cellar: 'dalla cantina', ward: 'dal reparto', morgue: "dall'obitorio", warehouse: 'dal magazzino', tower: 'dalla torre' };
 // Il salvataggio tiene anche uno snapshot per ogni stanza raggiunta (ng_rooms): dal menu iniziale riparti da una qualsiasi delle stanze gia' superate, con le scelte fatte fino a li'.
-const CK_ORDER = ['cellar', 'morgue', 'warehouse', 'tower'], RK = 'ng_rooms';
-const loadRooms = () => { try { return JSON.parse(localStorage.getItem(RK) || '{}') || {}; } catch (_) { return {}; } };
+const CK_ORDER = ['cellar', 'ward', 'morgue', 'warehouse', 'tower'], RK = 'ng_rooms';
+const loadRooms = () => { try {
+  const rooms = JSON.parse(localStorage.getItem(RK) || '{}') || {};
+  // Compatibilita' anche con i salvataggi che avevano solo l'ultimo checkpoint.
+  try { const last = JSON.parse(localStorage.getItem(CK) || 'null'); if (CK_ST[last?.room] && !rooms[last.room]) rooms[last.room] = last; } catch (_) {}
+  // Prima del checkpoint del reparto: all'ingresso dell'obitorio scelte e note
+  // sono ancora quelle del corridoio, che non contiene note o scelte nuove.
+  if (!rooms.ward && rooms.morgue?.room === 'morgue') rooms.ward = { ...rooms.morgue, room: 'ward' };
+  return rooms;
+} catch (_) { return {}; } };
 const loadCkpt = (room) => { try { if (room) { const c = loadRooms()[room]; return c && CK_ST[c.room] ? c : null; } const c = JSON.parse(localStorage.getItem(CK) || 'null'); return c && CK_ST[c.room] ? c : null; } catch (_) { return null; } };
 function saveCkpt(room) { if (!CK_ST[room]) return; try { const snap = { room, turned: !!flags.turned, door: flags.door || null, weapon: flags.weapon || null, noGun: !!flags.noGun, notes: [...(notes?.found || [])] }; localStorage.setItem(CK, JSON.stringify(snap)); const r = loadRooms(); r[room] = snap; localStorage.setItem(RK, JSON.stringify(r)); } catch (_) {} }
 let restoreCk = false, restoreRoom = null;
