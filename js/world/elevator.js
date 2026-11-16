@@ -67,10 +67,6 @@ export function createElevator({ group, mats, x, z }) {
     box('trim', side * 0.085, 1.96, -0.95, 0.012, 0.012, 0.18);
     box('trim', 0, 1.96, -0.95 + side * 0.085, 0.18, 0.012, 0.012);
   }
-  // Cavo allentato sul fondo, statico.
-  bar(-0.74, 2.18, -0.61, 1.93, -1.76, 0.014);
-  bar(-0.61, 1.93, -0.64, 1.65, -1.76, 0.014);
-
   const iron = mats.rust.clone(); iron.color.setHex(0x746356); iron.metalness = 0.42; iron.roughness = 0.96;
   const trim = mats.rust.clone(); trim.color.setHex(0x494038); trim.metalness = 0.55; trim.roughness = 0.86;
   const floor = mats.rust.clone(); floor.color.setHex(0x484139); floor.metalness = 0.3; floor.roughness = 1;
