@@ -5,6 +5,7 @@ import { buildRoom } from './rooms.js';
 import { writingDecals, burnDecals, patchDecals } from './blood.js';
 import { bloodText } from './bloodfont.js';
 import { addExtras } from './extra.js';
+import { PKEY } from '../personal.js';
 
 export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h = 3.4 }) {
   const K = { group: new THREE.Group(), t: 0 }; group.add(K.group);
@@ -33,6 +34,23 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
     const dt = new THREE.CanvasTexture(c); dt.colorSpace = THREE.SRGBColorSpace;
     const dust = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 1.9), new THREE.MeshBasicMaterial({ map: dt, transparent: true, depthWrite: false, fog: true })); dust.rotation.x = -Math.PI / 2; dust.position.set(aX - 0.02, 1.322, zc); G.add(dust); }
 
+  // Prova solo per Elisa: la sua foto col volto bruciato, in una cornice
+  // appoggiata sul piano dell'altare e leggermente inclinata all'indietro.
+  if (PKEY === 'elisa') {
+    const frame = new THREE.Group(); frame.name = 'foto-elisa-altare';
+    frame.position.set(aX + 0.04, 1.324, zc - 0.02); frame.rotation.y = -Math.PI / 2; G.add(frame);
+    const tilted = new THREE.Group(); tilted.rotation.x = -0.1; frame.add(tilted);
+    const photoH = 0.74, photoW = photoH * 0.545, frameH = photoH + 0.05, frameW = photoW + 0.05;
+    const darkWood = new THREE.MeshStandardMaterial({ color: 0x21170f, roughness: 0.95 });
+    const backing = new THREE.Mesh(new THREE.BoxGeometry(frameW, frameH, 0.035), darkWood);
+    backing.position.y = frameH / 2; tilted.add(backing);
+    const map = new THREE.TextureLoader().load('assets/tex/pic_elisa.jpg'); map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 4;
+    const photo = new THREE.Mesh(new THREE.PlaneGeometry(photoW, photoH), new THREE.MeshStandardMaterial({ map, color: new THREE.Color(0.8, 0.78, 0.74), roughness: 0.94, metalness: 0 }));
+    photo.position.set(0, frameH / 2, 0.019); tilted.add(photo);
+    const stand = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.45, 0.025), darkWood);
+    stand.position.set(0, 0.2, -0.145); stand.rotation.x = 0.5; frame.add(stand);
+  }
+
   // candele sul piano e luce calda che sfarfalla
   const wax = new THREE.MeshStandardMaterial({ color: 0x15120f, roughness: 0.8 }), flame = new THREE.MeshBasicMaterial({ color: 0xffb35c });
   const candle = (x, y, z, ch) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.036, ch, 8), wax); c.position.set(x, y + ch / 2, z); G.add(c); const f = new THREE.Mesh(new THREE.SphereGeometry(0.014, 6, 6), flame); f.position.set(x, y + ch + 0.025, z); G.add(f); };
@@ -42,7 +60,7 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
   K.light = new THREE.PointLight(0xff8a3a, 2.2, 3.4, 1.3); K.light.position.set(aX - 0.8, 2.1, zc);   // raggio corto: le luci non sono bloccate dai muri, devono morire dentro la cappella G.add(K.light);
   K.light2 = new THREE.PointLight(0xff7a30, 1.3, 2.6, 1.4); K.light2.position.set(x0 + 2.0, 0.8, zc); G.add(K.light2);   // candele sul pavimento: schiariscono i muri laterali
 
-  // il rito: nome e data di OGGI (il giorno in cui si gioca) a sangue sul davanti dell'altare. Nessuna foto, in nessuna versione.
+  // Il rito resta sul davanti dell'altare; la foto di prova di Elisa e' sul piano.
   // la minaccia di suor Agnese, a sangue sul davanti dell'altare (uguale in tutte le versioni, senza nome): data e ORA del giocatore (quelle del suo telefono) e «tra sette minuti».
   // La scritta si rifà quando ci si avvicina, quindi l'ora è quella dell'arrivo.
   let stampMesh = null;
