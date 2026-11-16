@@ -1,7 +1,4 @@
-// JUMP SCARE (evento 5): costruito sulla scelta del giocatore.
-//  'behind' = ti sei girato  → buio e silenzio, poi la torcia si riaccende e lei è a un metro da te.
-//  'ahead'  = sei entrato nel buio senza girarti → poi la figura compare davanti.
-// Dura meno di mezzo secondo di "esposizione": breve, luce instabile, mai a figura intera e ferma.
+// Suor Agnese compare davanti al giocatore in entrambi i finali.
 import * as THREE from 'three';
 import { grimeNun } from '../world/nun.js';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
@@ -9,22 +6,28 @@ import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 export function createScare({ scene, camera, player, audio, lights, instab, finish }) {
   const S = { active: false, kind: null, t: 0, ready: false };
   const ent = new THREE.Group(); ent.visible = false; scene.add(ent); S.ent = ent;
-  // due figure a colori, in posa fissa (infermiera davanti a te se ti giri; incappucciata con tentacoli se vai avanti)
-  const figs = {};
-  const loader = new GLTFLoader();
-  const loadFig = (key, url, h) => loader.load(url, (g) => {
-    const m = g.scene; m.traverse((o) => { if (o.isMesh) o.frustumCulled = false; }); if (/c_nurse/.test(url)) grimeNun(m); else m.traverse((o) => { if (o.isMesh) { o.material.roughness = 0.9; o.material.metalness = 0; o.material.color?.multiplyScalar(0.62); o.material.emissive?.setRGB(0, 0, 0); } });
-    m.updateMatrixWorld(true); const box = new THREE.Box3().setFromObject(m), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
-    m.scale.setScalar(h / size.y); box.setFromObject(m); m.position.set(-c.x, -box.min.y, -c.z);
-    const holder = new THREE.Group(); holder.add(m); holder.visible = false; ent.add(holder); figs[key] = holder; S.ready = true;
-  }, undefined, (e) => console.warn(url, e));
-  loadFig('behind', 'assets/models/c_nurse.glb', 2.0);
-  loadFig('ahead', 'assets/models/c_nurse.glb', 2.0);   // stessa suora anche se non ti sei girato
-  let mixer = null;
+  let headMesh = null;
+  new GLTFLoader().load('assets/models/c_nurse.glb', ({ scene: model }) => {
+    grimeNun(model);
+    const bounds = new THREE.Box3().setFromObject(model);
+    const center = bounds.getCenter(new THREE.Vector3());
+    const scale = 2 / (bounds.max.y - bounds.min.y);
+    model.scale.setScalar(scale);
+    model.position.set(-center.x * scale, -bounds.min.y * scale, -center.z * scale);
+    model.traverse((mesh) => {
+      if (!mesh.isMesh) return;
+      mesh.frustumCulled = false;
+      addHeadPose(mesh);
+      headMesh = mesh;
+    });
+    ent.add(model);
+    S.ready = true;
+  }, undefined, (error) => console.warn('c_nurse.glb', error));
 
   const baseFov = () => camera.userData.baseFov ?? 68;
   const fwd = new THREE.Vector3(), pos = new THREE.Vector3();
-  let kick = 0, dir = new THREE.Vector3();
+  let kick = 0;
+  const dir = new THREE.Vector3();
 
   S.trigger = (kind, text) => {
     S.text = text;
@@ -33,7 +36,7 @@ export function createScare({ scene, camera, player, audio, lights, instab, fini
     fwd.set(player.forward.x, 0, player.forward.z).normalize();
     // la figura compare SEMPRE nella direzione in cui stai guardando (prima, per 'ahead', era fissa verso -z: se guardavi altrove non la vedevi)
     dir.copy(fwd); player.pitch = 0.12;    // sguardo all'altezza del petto (mentre è buio)
-    for (const k in figs) figs[k].visible = k === kind;
+    if (headMesh) headMesh.morphTargetInfluences[0] = 0.18;
   };
 
   S.update = (dt) => {
@@ -51,8 +54,10 @@ export function createScare({ scene, camera, player, audio, lights, instab, fini
       const d = THREE.MathUtils.lerp(2.1, 1.15, Math.min(1, e / 0.18) ** 0.6);
       pos.copy(camera.position).addScaledVector(dir, d); pos.y = 0;
       ent.position.copy(pos); ent.position.y = -0.12 + Math.max(0, 0.4 - e) * 0.3;
-      ent.rotation.set(0.12, Math.atan2(-dir.x, -dir.z), 0);   // si china verso di te
-      ent.position.x += Math.sin(e * 90) * 0.012;
+      const reach = THREE.MathUtils.smoothstep(e, 0, 0.18);
+      const tilt = THREE.MathUtils.smoothstep(e, 0.12, 0.23);
+      ent.rotation.set(0.07 + 0.12 * reach, Math.atan2(-dir.x, -dir.z), -0.035 * reach);
+      if (headMesh) headMesh.morphTargetInfluences[0] = 0.18 + 0.82 * tilt;
       kick = Math.max(0, kick - dt * 5.5);
       camera.fov = baseFov() + kick * 22; camera.updateProjectionMatrix();
       // il flash di luce dura pochissimo, la torcia balbetta
@@ -65,4 +70,43 @@ export function createScare({ scene, camera, player, audio, lights, instab, fini
     }
   };
   return S;
+}
+
+/** Build a weighted neck-to-head pose from the original static mesh. */
+function addHeadPose(mesh) {
+  const geometry = mesh.geometry;
+  geometry.computeBoundingBox();
+  const { min, max } = geometry.boundingBox;
+  const height = max.y - min.y;
+  const positions = geometry.getAttribute('position');
+  const normals = geometry.getAttribute('normal');
+  const pose = new Float32Array(positions.count * 3);
+  const normalPose = new Float32Array(normals.count * 3);
+  const pivot = new THREE.Vector3();
+  let samples = 0;
+  for (let i = 0; i < positions.count; i++) {
+    if (positions.getY(i) < min.y + height * 0.91) continue;
+    pivot.x += positions.getX(i);
+    pivot.z += positions.getZ(i);
+    samples++;
+  }
+  pivot.x /= Math.max(1, samples);
+  pivot.z /= Math.max(1, samples);
+  pivot.y = min.y + height * 0.84;
+
+  const point = new THREE.Vector3();
+  const normal = new THREE.Vector3();
+  const rotation = new THREE.Quaternion();
+  const angles = new THREE.Euler();
+  for (let i = 0; i < positions.count; i++) {
+    point.fromBufferAttribute(positions, i);
+    const weight = THREE.MathUtils.smoothstep((point.y - min.y) / height, 0.82, 0.94);
+    rotation.setFromEuler(angles.set(0.09 * weight, -0.12 * weight, 0.19 * weight));
+    point.sub(pivot).applyQuaternion(rotation).add(pivot);
+    point.toArray(pose, i * 3);
+    normal.fromBufferAttribute(normals, i).applyQuaternion(rotation).toArray(normalPose, i * 3);
+  }
+  geometry.morphAttributes.position = [new THREE.BufferAttribute(pose, 3)];
+  geometry.morphAttributes.normal = [new THREE.BufferAttribute(normalPose, 3)];
+  mesh.updateMorphTargets();
 }
