@@ -2,7 +2,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { mergeGeometries } from '../../vendor/three/utils/BufferGeometryUtils.js';
-import { createRadiograph } from './radiograph.js';
 import { writingDecals } from './blood.js';
 
 export function createMorgueWall(parent, mats, { x, z }) {
@@ -52,9 +51,8 @@ export function createMorgueWall(parent, mats, { x, z }) {
     strip(px + dx, py + dy, depth + 0.014, r + (i % 2 ? 0.24 : -0.25));
     if (i % 4 === 0) pin(px + dx, py + dy - 0.01, depth + 0.018);
   });
-  // Il pannello da 50 x 60 cm rimane, circondato da altre pellicole con clip.
-  createRadiograph(G, mats, { x: 0.93, y: 2.05, z: 0.033, rotationY: 0 });
-  const films = [[1.38, 2.02, 6, -0.03, 0.31], [0.80, 1.50, 5, 0.025, 0.38], [1.23, 1.49, 7, -0.02, 0.38], [0.80, 0.99, 6, -0.04, 0.38], [1.23, 0.99, 4, 0.035, 0.38]];
+  // Sei pellicole senza cornice, fissate direttamente alla parete con clip.
+  const films = [[0.80, 2.02, 4, 0.025, 0.38], [1.23, 2.02, 6, -0.03, 0.38], [0.80, 1.50, 5, 0.025, 0.38], [1.23, 1.49, 7, -0.02, 0.38], [0.80, 0.99, 6, -0.04, 0.38], [1.23, 0.99, 4, 0.035, 0.38]];
   films.forEach(([px, py, index, r, w], i) => {
     const h = w * 4 / 3, depth = 0.055 + i * 0.001;
     put(tile(index, w, h, 0.003), film, [px, py, depth], r);
@@ -122,6 +120,6 @@ export function createMorgueWall(parent, mats, { x, z }) {
     const mesh = new THREE.Mesh(mergeGeometries(geos, false), mat); mesh.name = mat === paper ? 'fogli-clinici-sovrapposti' : mat === film ? 'pellicole-appese' : 'dettagli-parete-obitorio'; G.add(mesh);
     geos.forEach(geo => geo.dispose());
   }
-  G.userData.sheetCount = sheets.length; G.userData.filmCount = films.length + 1;
+  G.userData.sheetCount = sheets.length; G.userData.filmCount = films.length;
   return G;
 }
