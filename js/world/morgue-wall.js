@@ -2,7 +2,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { mergeGeometries } from '../../vendor/three/utils/BufferGeometryUtils.js';
-import { writingDecals } from './blood.js';
 
 export function createMorgueWall(parent, mats, { x, z }) {
   const G = new THREE.Group(); G.name = 'parete-ossessiva-elisa';
@@ -14,7 +13,6 @@ export function createMorgueWall(parent, mats, { x, z }) {
   const film = new THREE.MeshStandardMaterial({ map: atlas, color: new THREE.Color(0.67, 0.72, 0.70), roughness: 0.77, transparent: true, alphaTest: 0.12, side: THREE.DoubleSide });
   const tape = new THREE.MeshStandardMaterial({ color: 0x8b7c51, roughness: 1 });
   const iron = new THREE.MeshStandardMaterial({ color: 0x39342a, roughness: 0.92, metalness: 0.38 });
-  const ink = new THREE.MeshStandardMaterial({ color: 0x26211b, roughness: 1 });
   const batches = new Map();
   const put = (geo, mat, p, r = 0) => {
     const m = new THREE.Matrix4().compose(new THREE.Vector3(...p), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, r)), new THREE.Vector3(1, 1, 1));
@@ -61,39 +59,28 @@ export function createMorgueWall(parent, mats, { x, z }) {
       pin(px + side * w * 0.30, py + h * 0.37 + 0.007, depth + 0.018);
     }
   });
-  // Segni opachi e slegati dalla trama: numeri, frasi spezzate, conteggi e scarabocchi.
-  const texts = writingDecals(G, [
-    { text: '17 17 17', p: [-0.91, 0.77, 0.025], wall: '+z', w: 0.65, maxH: 0.16, rot: -0.04 },
-    { text: 'NON È QUI', p: [-0.78, 0.53, 0.025], wall: '+z', w: 0.88, maxH: 0.20, rot: 0.015 },
-    { text: 'GLI OCCHI APERTI', p: [0.62, 0.51, 0.025], wall: '+z', w: 1.13, maxH: 0.18, rot: -0.045 },
-    { text: '3 / 1 / 3', p: [0.15, 2.55, 0.025], wall: '+z', w: 0.63, maxH: 0.16, rot: 0.06 },
-  ]);
-  texts.forEach(m => { m.material.color.setHex(0x342a22); m.material.emissive.setHex(0); m.material.roughness = 1; m.name = 'scarabocchio-obitorio'; });
-  const stroke = (points, radius = 0.0015, mat = ink) => {
+  const stroke = (points, radius = 0.003, mat = iron) => {
     const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
     put(new THREE.TubeGeometry(curve, Math.max(8, points.length * 7), radius, 4, false), mat, [0, 0, 0]);
   };
-  for (let row = 0; row < 2; row++) for (let i = 0; i < 24; i++) {
-    const px = -1.44 + i * 0.032, py = 1.04 - row * 0.16;
-    stroke([[px, py, 0.022], [px - 0.004, py + 0.05, 0.023], [px + 0.006, py + 0.11, 0.022]], 0.0011);
-    if (i % 5 === 4) stroke([[px - 0.14, py + 0.015, 0.024], [px + 0.02, py + 0.09, 0.024]], 0.0012);
+  // Una barra di legno fissata con due viti sostiene tutti i cinque utensili.
+  const woodMap = loader.load('assets/tex/floor_planks.jpg'); woodMap.colorSpace = THREE.SRGBColorSpace;
+  woodMap.wrapS = woodMap.wrapT = THREE.RepeatWrapping; woodMap.repeat.set(1, 0.18); woodMap.anisotropy = 4;
+  const wood = new THREE.MeshStandardMaterial({ map: woodMap, color: 0x79634a, roughness: 1 });
+  const rack = new THREE.Mesh(new THREE.BoxGeometry(0.94, 0.12, 0.035, 7, 1, 1), wood);
+  rack.name = 'supporto-legno-utensili'; rack.position.set(-1.72, 2.17, 0.046); rack.rotation.z = -0.014;
+  const rp = rack.geometry.attributes.position;
+  for (let i = 0; i < rp.count; i++) { const px = rp.getX(i); rp.setY(i, rp.getY(i) + Math.sin(px * 41) * 0.002); }
+  rack.geometry.computeVertexNormals(); G.add(rack);
+  for (const dx of [-0.41, 0.41]) {
+    const screw = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.006, 8), iron);
+    screw.rotation.x = Math.PI / 2; screw.position.set(-1.72 + dx, 2.17 - dx * 0.014, 0.067); G.add(screw);
   }
-  // Una faccina cancellata a spirale, piccola come un disegno fatto a mano.
-  for (let turn = 0; turn < 2; turn++) {
-    const points = [];
-    for (let i = 0; i <= 28; i++) { const a = i / 28 * Math.PI * 2; points.push([0.34 + Math.cos(a) * (0.09 + turn * 0.015), 0.80 + Math.sin(a) * 0.105, 0.025]); }
-    stroke(points, 0.0013);
-  }
-  stroke([[0.29, 0.83, 0.026], [0.31, 0.84, 0.026], [0.32, 0.82, 0.026]]);
-  stroke([[0.36, 0.83, 0.026], [0.38, 0.85, 0.026], [0.39, 0.82, 0.026]]);
-  stroke([[0.28, 0.76, 0.026], [0.34, 0.79, 0.026], [0.40, 0.75, 0.026]]);
-  // Strumenti veri del kit dell'obitorio, appesi a ganci, piu' un tubo a cappio.
-  stroke([[-1.40, 2.35, 0.05], [-1.56, 2.13, 0.09], [-1.66, 1.47, 0.11], [-1.53, 1.17, 0.11], [-1.36, 1.36, 0.09], [-1.39, 2.35, 0.05]], 0.009, iron);
-  const tools = [['mg_tool1', -1.69, 1.96, 0.29, -0.10], ['mg_tool3', -1.44, 1.88, 0.32, 0.10], ['mg_tool4', -1.19, 2.27, 0.34, -0.12], ['mg_tool3', -1.79, 1.51, 0.29, -0.07], ['mg_tool1', -1.36, 1.34, 0.27, 0.16]];
+  const tools = [['mg_tool1', -2.06, 0.29, -0.04], ['mg_tool3', -1.89, 0.32, 0.035], ['mg_tool4', -1.72, 0.34, -0.025], ['mg_tool3', -1.55, 0.29, -0.035], ['mg_tool1', -1.38, 0.27, 0.04]];
   const gl = new GLTFLoader(), models = new Map(); G.userData.toolsLoaded = 0;
-  tools.forEach(([name, px, py, size, r]) => {
-    const hookY = py + size * 0.52; pin(px, hookY, 0.049);
-    stroke([[px, hookY + 0.025, 0.038], [px, hookY - 0.006, 0.075], [px, hookY - 0.022, 0.066]], 0.003, iron);
+  tools.forEach(([name, px, size, r]) => {
+    const hookY = 2.17 - (px + 1.72) * 0.014, py = hookY - size / 2 + 0.018;
+    stroke([[px, hookY + 0.025, 0.066], [px, hookY + 0.007, 0.13], [px, hookY - 0.025, 0.145], [px, hookY - 0.015, 0.155]], 0.004, iron);
     if (!models.has(name)) models.set(name, new Promise(resolve => gl.load(`assets/models/${name}.glb`, g => resolve(g.scene), undefined, () => resolve(null))));
     models.get(name).then(src => {
       if (!src) return;
@@ -101,7 +88,7 @@ export function createMorgueWall(parent, mats, { x, z }) {
       let box = new THREE.Box3().setFromObject(obj); const s = box.getSize(new THREE.Vector3()); obj.scale.multiplyScalar(size / Math.max(s.x, s.y, s.z));
       box = new THREE.Box3().setFromObject(obj); const center = box.getCenter(new THREE.Vector3()); obj.position.sub(center);
       obj.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.color.multiplyScalar(0.53); o.material.roughness = Math.max(0.75, o.material.roughness || 0); } });
-      const holder = new THREE.Group(); holder.name = 'strumento-appeso'; holder.position.set(px, py, 0.073); holder.rotation.z = r; holder.add(obj); G.add(holder); G.userData.toolsLoaded++;
+      const holder = new THREE.Group(); holder.name = 'strumento-appeso'; holder.position.set(px, py, 0.13); holder.rotation.z = Math.PI + r; holder.add(obj); G.add(holder); G.userData.toolsLoaded++;
     });
   });
   // Testa di bambola: volume curvo, faccia in ceramica e cordino fissato in alto.
