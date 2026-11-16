@@ -16,8 +16,9 @@ load('assets/tex/blood_font.png', (i) => (atlas = i)); load('assets/tex/blood_re
 const cache = new Map();
 function rng(str) { let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return () => ((h = Math.imul(h ^ (h >>> 15), 2246822507) + 0x9e3779b9 | 0) >>> 0) / 4294967296; }
 const CYR2LAT = { 'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'У': 'Y', 'Х': 'X', 'І': 'I', 'Ґ': 'Г', 'Ё': 'Е' };   // lettere cirilliche uguali (o simili) a quelle latine
-export function bloodText(text) {
-  if (cache.has(text)) return cache.get(text);
+export function bloodText(text, { lineHeight = LH, bottomPadding = BOT } = {}) {
+  const key = JSON.stringify([text, lineHeight, bottomPadding]);
+  if (cache.has(key)) return cache.get(key);
   const R = rng(text), has = (c) => c === ' ' || REAL[c] || A[c], lines = text.toUpperCase().replace(/[’`´]/g, "'").replace(/[АВЕКМНОРСТУХІҐЁ]/g, (ch) => (REAL[ch] && ch !== 'С' ? ch : CYR2LAT[ch])).split('\n').map((l) => [...l].filter(has));
   let prev = null;
   const pl = lines.map((l) => { let x = 0; const g = l.map((c) => {
@@ -28,13 +29,13 @@ export function bloodText(text) {
     if (c === 'I') x += 14;   // la I e' sottile: un po' di spazio prima e dopo, cosi' non si perde tra le altre lettere
     const o = { c, v, x, w, h, base, rot: (R() - 0.5) * 0.07, dy: (R() - 0.5) * 6, sc: 0.96 + R() * 0.08 }; x += w * (v ? 0.9 : 0.9) + 6 + (R() - 0.3) * 6 + (c === 'I' ? 14 : 0); return o; });
     return { g: g.filter(Boolean), w: x }; });
-  const maxW = Math.max(...pl.map((l) => l.w), 1), cw = Math.ceil(maxW * S + PAD * 2), ch = Math.ceil(TOPPAD * S + pl.length * LH * S + BOT * S);
+  const maxW = Math.max(...pl.map((l) => l.w), 1), cw = Math.ceil(maxW * S + PAD * 2), ch = Math.ceil(TOPPAD * S + pl.length * lineHeight * S + bottomPadding * S);
   const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
   const draw = () => {
     const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, cw, ch);
     pl.forEach((l, li) => {
-      const ox = PAD + (maxW - l.w) * S / 2, by = (TOPPAD + CAP + li * LH) * S;   // by: linea di base
+      const ox = PAD + (maxW - l.w) * S / 2, by = (TOPPAD + CAP + li * lineHeight) * S;   // by: linea di base
       for (const o of l.g) {
         ctx.save(); ctx.translate(ox + o.x * S + o.w * S / 2, by + o.dy * S); ctx.rotate(o.rot); ctx.scale(o.sc, o.sc);
         if (o.c === ',') { const a = REAL["'"][0]; ctx.rotate(0.1); ctx.drawImage(real, a[0], a[1], a[2], a[3], -a[2] * S * 0.6, -3 * S, a[2] * S * 1.2, a[3] * S * 1.15); }   // virgola: l'apostrofo vero, abbassato sulla linea
@@ -46,5 +47,5 @@ export function bloodText(text) {
     tex.needsUpdate = true;
   };
   if (atlas && real && dig) draw(); else waiting.push(draw);
-  const res = { tex, aspect: cw / ch }; cache.set(text, res); return res;
+  const res = { tex, aspect: cw / ch }; cache.set(key, res); return res;
 }

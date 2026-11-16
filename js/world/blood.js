@@ -114,7 +114,7 @@ const wtex = {};
 export function writingDecals(group, list) {
   const rotY = { '+x': Math.PI / 2, '-x': -Math.PI / 2, '+z': 0, '-z': Math.PI }, made = [];
   for (const d of list) {
-    const T = d.text ? bloodText(d.text) : null;   // { text } = frase scritta al volo con il font di sangue
+    const T = d.text ? bloodText(d.text, d.bloodLayout) : null;   // bloodLayout opzionale per spaziatura e margine finale
     const t = T ? T.tex : (wtex[d.img] ??= (() => { const x = loader.load(d.img, (tt) => { d.__asp = tt.image.width / tt.image.height; }); x.colorSpace = THREE.SRGBColorSpace; x.anisotropy = 4; return x; })());
     const asp = T ? T.aspect : (d.aspect ?? 4.5), mat = new THREE.MeshStandardMaterial({ map: t, transparent: true, color: d.plain ? new THREE.Color(0.8, 0.78, 0.74) : (T || d.dry) ? new THREE.Color(0.62, 0.38, 0.38) : new THREE.Color(0.95, 0.62, 0.62), emissive: d.plain ? 0x000000 : (T || d.dry) ? 0x140202 : 0x300606, emissiveIntensity: 1.0, roughness: d.plain ? 0.85 : (T || d.dry) ? 0.85 : 0.32, metalness: 0, opacity: d.a ?? 0.96, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     const ww = d.maxH ? Math.min(d.w, d.maxH * asp) : d.w, m = new THREE.Mesh(new THREE.PlaneGeometry(ww, ww / asp), mat); m.rotation.set(0, rotY[d.wall], d.rot ?? 0); m.rotation.order = 'YXZ'; m.position.set(...d.p); if (d.glow) { mat.emissiveMap = t; mat.emissive = new THREE.Color(d.glow, d.glow, d.glow); mat.emissiveIntensity = 1; }   // murali: restano appena leggibili anche al buio (come un dipinto che conserva un po' di luce)
