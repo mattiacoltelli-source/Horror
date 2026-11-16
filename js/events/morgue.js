@@ -47,7 +47,9 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
   for (const [dx, dz] of [[-0.3, -0.7], [0.3, -0.7], [-0.3, 0.7], [0.3, 0.7]]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.9, 0.04), steel); leg.position.set(dx, 0.45, dz); tbl.add(leg); }
   M.group.add(tbl);
   addExtras(M.group, [['x_micro', 0.46, w / 2 - 0.9, 0.92, z0 - 4.5, -Math.PI / 2 - 0.4], ['x_watch', 0.13, w / 2 - 0.9, 0.92, z0 - 5.7, 0.8, 1, -Math.PI / 2], ['x_screen', 1.7, -w / 2 + 0.5, 0, z0 - 3.4, Math.PI / 2], ['x_basket', 0.32, -w / 2 + 0.7, 0, z0 - 9.5, 0.4, 0.12]]);
-  ['mg_tool1', 'mg_tool3', 'mg_tool4'].forEach((n, i) => load(`assets/models/${n}.glb`).then((o) => { if (!o) return; const b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x, b.min.y, c.z)); const g = new THREE.Group(); g.add(o); g.position.set(-0.12 + i * 0.12, 0.92, -0.5 + i * 0.45); g.rotation.y = [0.4, 1.2, -0.3][i]; tbl.add(g); if (i === 1) M.tool = g; }));
+  // Sega all'estremita' opposta al microscopio; i due strumenti piccoli stanno al centro.
+  const toolSpots = [[-0.19, -0.05, 0.12], [0.18, -0.04, -0.18], [0, -0.4, Math.PI / 2 + 0.08]];
+  ['mg_tool1', 'mg_tool3', 'mg_tool4'].forEach((n, i) => load(`assets/models/${n}.glb`).then((o) => { if (!o) return; const b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x, b.min.y, c.z)); const g = new THREE.Group(); g.name = 'utensile-tavolo-' + n; g.add(o); const [tx, tz, ry] = toolSpots[i]; g.position.set(tx, 0.92, tz); g.rotation.y = ry; tbl.add(g); if (i === 1) M.tool = g; }));
   // lampada sospesa sopra la sedia
   const lampPos = [[0, 2.8, chairZ]];   // una sola lampada, sopra la sedia: gli angoli restano bui
   load('assets/models/hlamp.glb').then((o) => { if (!o) return; for (const [x, , z] of lampPos) { const c = o.clone(true); c.position.set(x, h, z); M.group.add(c); } });
