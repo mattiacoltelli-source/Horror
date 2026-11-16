@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { stainDecals, bloodDecals, burnDecals, patchDecals, writingDecals } from '../world/blood.js';
 import { buildRoom } from '../world/rooms.js';
-import { PKEY } from '../personal.js';
+import { PKEY, P } from '../personal.js';
 import { bloodText } from '../world/bloodfont.js';
 import { createElevator } from '../world/elevator.js';
 
@@ -98,13 +98,13 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
   stainDecals(R.group, [{ p: [-hw + 0.01, 1.3, z0 - 5], wall: '+x', w: 2.6, h: 2.2 }, { p: [hw - 0.01, 1.2, z0 - 9.5], wall: '-x', w: 2.4, h: 2.2, flip: true }, { p: [-hw + 0.01, 1.2, z0 - 14], wall: '+x', w: 2.4, h: 2.2, a: 0.8 }, { p: [hw - 0.01, 1.2, z0 - 4.8], wall: '-x', w: 2.4, h: 2.2 }]);
   patchDecals(R.group, [{ img: 'assets/tex/pt_plaster.webp', p: [-hw + 0.016, 1.85, z0 - 2.6], wall: '+x', w: 1.9, h: 1.3 }, { img: 'assets/tex/pt_plaster.webp', p: [hw - 0.016, 1.85, z0 - 4.2], wall: '-x', w: 1.7, h: 1.2, rot: 0.04 }]);   // corridoio: intonaco scrostato e muro macchiato sopra le piastrelle
   // compleanno, scritto col sangue sulle piastrelle bianche: dai profili, oppure da ?nasc=g-m-aa (la domanda del link per tutti)
-  const BD = { rebecca: '20/6/97', tommy: '1/11/90', gabriele: '31/12/90', elisa: '2/8/90', alice: '5/9/93' };
+  const BD = { steve: '23/4/88', rebecca: '20/6/97', tommy: '1/11/90', gabriele: '31/12/90', elisa: '2/8/90', alice: '5/9/93' };
   const qn = /^(\d{1,2})-(\d{1,2})-(\d{2})$/.exec(new URLSearchParams(location.search).get('nasc') || '');
   const DATE = qn ? qn[1] + '/' + qn[2] + '/' + qn[3] : BD[PKEY];
   writingDecals(R.group, [{ img: 'assets/tex/pic_mural_child.webp', aspect: 0.7378, p: [1.758, 1.9, z0 - 6.0], wall: '-x', w: 0.85, rot: 0, a: 0.9, plain: true, glow: 0.1 }]);   // reparto: la bambina alla finestra (la sorella), sulla parete verde sopra le piastrelle
   writingDecals(R.group, [{ img: 'assets/tex/sym_eye.png', aspect: 0.8042, dry: true, p: [1.758, 1.95, z0 - 14.5], wall: '-x', w: 0.7, rot: 0.03 }]);   // occhio che piange, sulla parete verde
   // frase personale (max 28 lettere, due righe), scritta col sangue sulle piastrelle bianche piu' avanti nel corridoio
-  { const raw = (new URLSearchParams(location.search).get('frase') || '').toUpperCase().replace(/[ÁÂÄ]/g, 'À').replace(/[ÉÊË]/g, 'È').replace(/[ÍÎÏ]/g, 'Ì').replace(/[ÓÔÖ]/g, 'Ò').replace(/[ÚÛÜ]/g, 'Ù').replace(/[^A-ZÀÈÌÒÙ ,.'\-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 28);
+  { const raw = (new URLSearchParams(location.search).get('frase') || P?.frase || '').toUpperCase().replace(/[ÁÂÄ]/g, 'À').replace(/[ÉÊË]/g, 'È').replace(/[ÍÎÏ]/g, 'Ì').replace(/[ÓÔÖ]/g, 'Ò').replace(/[ÚÛÜ]/g, 'Ù').replace(/[^A-ZÀÈÌÒÙ ,.'\-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 28);
     if (raw.length >= 2) { const ws = raw.split(' '); let l1 = '', l2 = ''; for (const x of ws) { if (!l2 && (l1 + ' ' + x).trim().length <= 14) l1 = (l1 + ' ' + x).trim(); else l2 = (l2 + ' ' + x).trim(); }
       const T = l2 ? l1 + '\n' + l2 : l1, ta = bloodText(T).aspect; writingDecals(R.group, [{ text: T, aspect: ta, p: [-1.772, 1.82, z0 - 10.2], wall: '+x', w: 3.6, maxH: l2 ? 1.15 : 0.62 }]); } }
   if (DATE) { const T = DATE, ta = bloodText(T).aspect; writingDecals(R.group, [{ text: T, aspect: ta, p: [-1.772, 1.8, z0 - 5.6], wall: '+x', w: 2.4, maxH: 0.72 }]); }

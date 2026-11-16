@@ -9,6 +9,7 @@ const PRESETS = {
 PRESETS.alice = { name: 'Alice', f: true, hair: '', hairHex: 0x3a2412, joke: 'molto carina e prosperosa, annota suor Agnese, e lo sottolinea due volte.', detail: 'quella faccia non è la sua', sister: 'quella con la sua stessa faccia' };   // link pulito: ?per=alice (femmina, senza capelli nominati)
 PRESETS.rebecca = { name: 'Rebecca', f: true, hair: '', hairHex: 0x14100c, joke: 'molto carina e atletica, annota suor Agnese. in reparto la chiamano Reb, e lo sottolinea due volte.', detail: 'quella faccia non è la sua', sister: 'quella con la sua stessa faccia' };   // link pulito: ?per=rebecca (femmina, capelli scuri, senza nominarli)
 PRESETS.laya = { name: 'Laya', f: true, hair: '', hairHex: 0x14100c, joke: 'molto carina e prosperosa, annota suor Agnese, e lo sottolinea due volte.', detail: 'quella faccia non è la sua', sister: 'quella con la sua stessa faccia' };   // link pulito: ?per=laya (femmina; scritte thailandesi nel tunnel)
+PRESETS.steve = { name: 'Steve', f: false, hair: '', hairHex: 0x7a4e2a, frase: "F. MERDA", joke: 'elegante anche in reparto, annota suor Agnese. arriva col papillon e non vuole toglierlo.', detail: 'quella faccia non è la sua', sister: 'quella con la sua stessa faccia' };   // link pulito: ?per=steve (maschio, Bologna, 23/4/88, foto col volto bruciato)
 PRESETS.tommy = { name: 'Tommy', f: false, hair: '', hairHex: 0x3a2412, joke: 'non si lamenta mai, annota suor Agnese. mangia tutto e chiede solo che la luce resti accesa.', detail: 'quella faccia non è la sua', sister: 'quella con la sua stessa faccia' };   // link pulito: ?per=tommy (maschio, senza capelli nominati)
 PRESETS.gabriele = { name: 'Gabriele', f: false, hair: '', hairHex: 0x3a2412, joke: 'non si lamenta mai, annota suor Agnese. mangia tutto e chiede solo che la luce resti accesa.', detail: 'quella faccia non è la sua', sister: 'quella con la sua stessa faccia' };   // link pulito: ?per=gabriele
 const qs = new URLSearchParams(location.search), raw = (qs.get('per') || '').trim(), key = raw.toLowerCase();
@@ -25,7 +26,7 @@ const _c = (qs.get('citta') || (PRESETS[key] ? 'Bologna' : '')).trim();
 export const CITY = P && /^[A-Za-zÀ-ÖØ-öø-ÿ' -]{2,20}$/.test(_c) ? _c.toLowerCase().replace(/(^|[ '-])([a-zà-ÿ])/g, (m, a, b) => a + b.toUpperCase()) : '';   // 'elisa' | 'yana' | altro nome | ''
 
 // data di nascita (g/m/aa): dai profili o da ?nasc=g-m-aa; stringa vuota se non c'e'
-const _BD = { rebecca: '20/6/97', tommy: '1/11/90', gabriele: '31/12/90', elisa: '2/8/90', alice: '5/9/93' }, _qn = /^(\d{1,2})-(\d{1,2})-(\d{2})$/.exec(qs.get('nasc') || '');
+const _BD = { steve: '23/4/88', rebecca: '20/6/97', tommy: '1/11/90', gabriele: '31/12/90', elisa: '2/8/90', alice: '5/9/93' }, _qn = /^(\d{1,2})-(\d{1,2})-(\d{2})$/.exec(qs.get('nasc') || '');
 export const BDAY = P ? (_qn ? _qn[1] + '/' + _qn[2] + '/' + _qn[3] : (_BD[key] || '')) : '';
 // foto con il viso coperto (solo i profili che ne hanno una)
 export const PHOTO = { elisa: 'pic_elisa.jpg', alice: 'pic_alice.jpg', rebecca: 'pic_rebecca.jpg', laya: 'pic_laya.jpg', yana: 'pic_yana.jpg' }[key] || '';

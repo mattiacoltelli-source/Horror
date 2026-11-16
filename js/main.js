@@ -241,6 +241,7 @@ async function enter() {
     if (PKEY === 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_elisa.jpg', aspect: 0.545, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
     if (PKEY === 'laya') writingDecals(morgue.group, [{ img: 'assets/tex/pic_laya.jpg', aspect: 0.572, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
     else if (PKEY === 'alice') writingDecals(morgue.group, [{ img: 'assets/tex/pic_alice.jpg', aspect: 0.788, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.62, rot: -0.03, a: 1, plain: true }]);
+    else if (PKEY === 'steve') writingDecals(morgue.group, [{ img: 'assets/tex/pic_steve.jpg', aspect: 0.762, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.56, rot: -0.03, a: 1, plain: true }]);
     else if (PKEY === 'rebecca') writingDecals(morgue.group, [{ img: 'assets/tex/pic_rebecca.jpg', aspect: 0.562, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
     else if (PKEY !== 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_yana.jpg', aspect: 0.741, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.6, rot: -0.03, a: 1, plain: true }]); }
   // SCRITTE DI SANGUE per le versioni personalizzate (frasi con il suo nome; per Yana anche in ucraino), grandi sui muri
