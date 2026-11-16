@@ -26,7 +26,7 @@ import { createMorgue } from './events/morgue.js';
 import { createWard } from './events/ward.js';
 import { createAmbient } from './events/ambient.js';
 import { createNotes } from './events/notes.js';
-import { createRadiograph } from './world/radiograph.js';
+import { createMorgueWall } from './world/morgue-wall.js';
 import { writingDecals } from './world/blood.js';
 import { bloodText } from './world/bloodfont.js';
 import { RIBS } from './world/tunnel.js';
@@ -247,7 +247,7 @@ async function enter() {
     writingDecals(wh.group, [{ ...pic('mural_skull', 1.0, 5.94, 3.4, WZ - 24.6, '-x', 2.8, 0), rot: 0, a: 0.94, glow: 0.2 }]);              // magazzino, parete destra
     writingDecals(tower.group, [{ ...pic('mural_nun', 0.9340, 6.94, 3.2, TZ - 12.6, '-x', 3.2, 0), rot: 0, a: 0.94 }]);       // torre, parete destra
     writingDecals(wh.group, [pic('corridor', 1.369, -5.96, 1.5, WZ - 11.4, '+x', 0.85, 0.02), pic('window', 1.233, -5.96, 1.5, WZ - 12.55, '+x', 0.85, -0.02), pic('saint', 0.789, -5.96, 1.5, WZ - 13.65, '+x', 0.62, 0.02)])
-    if (PKEY === 'elisa') createRadiograph(morgue.group, mats, { x: 4.255, y: 1.5, z: MZ - 3.2 });
+    if (PKEY === 'elisa') createMorgueWall(morgue.group, mats, { x: 4.255, z: MZ - 3.0 });
     if (PKEY === 'laya') writingDecals(morgue.group, [{ img: 'assets/tex/pic_laya.jpg', aspect: 0.572, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
     else if (PKEY === 'alice') writingDecals(morgue.group, [{ img: 'assets/tex/pic_alice.jpg', aspect: 0.788, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.62, rot: -0.03, a: 1, plain: true }]);
     else if (PKEY === 'steve') writingDecals(morgue.group, [{ img: 'assets/tex/pic_steve.jpg', aspect: 0.762, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.56, rot: -0.03, a: 1, plain: true }]);

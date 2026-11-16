@@ -2,9 +2,9 @@
 // Il pannello e' appena luminoso: si riconosce l'immagine, senza leggere testo.
 import * as THREE from 'three';
 
-export function createRadiograph(group, mats, { x, y, z }) {
+export function createRadiograph(group, mats, { x, y, z, rotationY = -Math.PI / 2 }) {
   const G = new THREE.Group(); G.name = 'radiografia-obitorio-elisa';
-  G.position.set(x, y, z); G.rotation.y = -Math.PI / 2; group.add(G);
+  G.position.set(x, y, z); G.rotation.y = rotationY; group.add(G);
   const frame = mats.rust.clone(); frame.vertexColors = false; frame.color.setHex(0x667064); frame.roughness = 1; frame.metalness = 0.25;
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.045), frame); body.name = 'pannello-radiografia-elisa'; G.add(body);
   const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.446, 0.526), new THREE.MeshStandardMaterial({ color: 0x58645b, emissive: 0x9ea79a, emissiveIntensity: 0.06, roughness: 1 }));
