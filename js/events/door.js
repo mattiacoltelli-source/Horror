@@ -1,6 +1,6 @@
 // EVENTO 4 — La porta + sala oltre il portone + EVENTO 5.
 // Il portone si spalanca contro il giocatore. Dietro: buio. Poi una luce lontana mostra una folla di sagome ferme che ti fissa.
-// La luce si spegne; quando torna, sono più vicine. Tre volte. Infine il respiro, «non guardare dietro.» e la scelta.
+// Tre apparizioni, due avvicinamenti nel buio. Infine il respiro, «non guardare dietro.» e la scelta.
 import * as THREE from 'three';
 import { rgbPulse } from '../ui/rgbshift.js';
 import { P } from '../personal.js';
@@ -27,9 +27,11 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
     const b = t > 0.28 ? 0.2 * Math.exp(-(t - 0.28) * 7) * Math.abs(Math.sin((t - 0.28) * 15)) : 0;
     return Math.max(0, a - b);
   };
-  const go = (st) => { E.state = st; E.t = 0; };
+  // Nei passaggi a tempo si conserva la frazione avanzata: gli FPS bassi non aggiungono attese a ogni fase.
+  const go = (st, duration) => { E.state = st; E.t = duration == null ? 0 : Math.max(0, E.t - duration); };
+  const TIMING = { burst: 1.2, reveal: 1, warning: 0.6, turn: 0.8, choice: 8.5, breath: 8 };
   // fasi della folla: [distanza, durata luce accesa, durata buio dopo]
-  const PHASES = [{ d: 26, hold: 7.5, dark: 1.2 }, { d: 14, hold: 5.5, dark: 1.2 }, { d: 7.5, hold: 4.2, dark: 1.2 }];   // buio totale di ~1 s: la folla si sposta dentro il buio
+  const PHASES = [{ d: 26, hold: 7, dark: 0.7 }, { d: 14, hold: 2.4, dark: 0.7 }, { d: 7.5, hold: 1.5, dark: 0.7 }];   // la prima nota resta leggibile; poi il ritmo accelera
   let ph = 0;
 
   E.update = (dt) => {
@@ -55,17 +57,17 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
       case 'burst': {
         openT += dt; const a = angle(openT);
         if (left) left.rotation.y = -a; if (right) right.rotation.y = a; E.curA = a;
-        if (E.t > 1.6) go('void');
+        if (E.t > TIMING.burst) go('void', TIMING.burst);
         break;
       }
       case 'void':
         // buio e silenzio: ti aspetti qualcosa
-        if (E.t > 3.2) { ph = 0; go('lit'); lightOn(); say('erano qui tutti, quella notte.\nnessuno di loro è uscito.\nnon guardarli in faccia.', 7000, 'note'); rgbPulse(1); drone ??= audio.crowdDrone(); drone?.setLevel(0.45, 2.5); bells(); }
+        if (E.t > TIMING.reveal) { ph = 0; go('lit', TIMING.reveal); lightOn(); say('erano qui tutti, quella notte.\nnessuno di loro è uscito.\nnon guardarli in faccia.', 7000, 'note'); rgbPulse(1); drone ??= audio.crowdDrone(); drone?.setLevel(0.45, 2.5); bells(); }
         break;
       case 'lit': {
         // la sala è illuminata: in fondo, file di sagome ferme che ti fissano
         const P = PHASES[ph];
-        if (E.t > P.hold) { go('dark'); drone?.setLevel(1, 0.6); hall?.lightOff(); lights.torchKill(P.dark - 0.4, 0.04); audio.duck(0, 0.05); audio.shuffle(P.dark, 0.55); instab.push(0.9, 4); }
+        if (E.t > P.hold) { go('dark', P.hold); drone?.setLevel(1, 0.6); hall?.lightOff(); lights.torchKill(P.dark - 0.4, 0.04); audio.duck(0, 0.05); audio.shuffle(P.dark, 0.55); instab.push(0.9, 4); }
         break;
       }
       case 'dark': {
@@ -73,28 +75,28 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
         // mentre sei al buio si avvicinano (non lo vedi: lo senti)
         if (E.t > P.dark) {
           ph++;
-          if (ph >= PHASES.length) { go('choice'); drone?.setLevel(0.3, 3); hall?.lightDim?.(); startBreath(); }
-          else { hall?.setDist(PHASES[ph].d); go('lit'); drone?.setLevel(0.55 + 0.15 * ph, 1.5); lightOn(); bells(); }
+          if (ph >= PHASES.length) { go('choice', P.dark); drone?.setLevel(0.3, 3); hall?.lightDim?.(); startBreath(); }
+          else { hall?.setDist(PHASES[ph].d); go('lit', P.dark); drone?.setLevel(0.55 + 0.15 * ph, 1.5); lightOn(); bells(); }
         }
         break;
       }
       case 'choice': {
         // il respiro si avvicina da dietro; «non guardare dietro.»: voltarsi o no
         if (breath) {
-          const k = Math.min(1, E.t / 16), e = k * k;
+          const k = Math.min(1, E.t / TIMING.breath), e = k * k;
           const back = tmp.copy(player.forward).multiplyScalar(-1.4).add(camera.position); back.y = 1.35;
           breath.setPos(THREE.MathUtils.lerp(0, back.x, e), 1.3, THREE.MathUtils.lerp(Z_END - 3, back.z, e)); breath.setLevel(0.5 + 0.9 * e, 0.8);
         }
-        if (E.t > 1.2 && !E.said) { E.said = true; say(P ? 'non guardare dietro, ' + P.name + '.' : 'non guardare dietro.', 5500); instab.push(1, 10); }
+        if (E.t > TIMING.warning && !E.said) { E.said = true; say(P ? 'non guardare dietro, ' + P.name + '.' : 'non guardare dietro.', 5500); instab.push(1, 10); }
         if (E.t > 5 && !E.torch) { E.torch = true; lights.torchKill(1.2, 0.08); }
-        if (E.t > 1.4 && E.said && player.forward.z > 0.1) { E.turnT = (E.turnT || 0) + dt; if (E.turnT > 0.12) { go('turned'); drone?.stop(0.5); drone = null; clearTimeout(bellT); breath?.stop(); breath = null; audio.duck(0, 0.05); showShade(); } } else E.turnT = 0;
-        if (E.t > 17) { go('ignored'); drone?.stop(0.5); drone = null; clearTimeout(bellT); }
+        if (E.t > TIMING.turn && E.said && player.forward.z > 0.1) { E.turnT = (E.turnT || 0) + dt; if (E.turnT > 0.12) { go('turned'); drone?.stop(0.5); drone = null; clearTimeout(bellT); breath?.stop(); breath = null; audio.duck(0, 0.05); showShade(); } } else E.turnT = 0;
+        if (E.t > TIMING.choice) { go('ignored', TIMING.choice); drone?.stop(0.5); drone = null; clearTimeout(bellT); }
         break;
       }
       case 'turned':
         // ti sei girato: davanti al portone chiuso, a due passi, qualcuno è fermo e ti guarda (sagoma nera nel cono della torcia).
         // La luce balbetta, poi si spegne un istante: quando torna non c'è più.
-        if (E.t < 0.05) { lights.torchStutter(1.0); audio.whisper(1.4, 0.3); player.addShake(0.35); instab.set(1, 8); }
+        if (!E.turnBeat) { E.turnBeat = true; lights.torchStutter(1.0); audio.whisper(1.4, 0.3); player.addShake(0.35); instab.set(1, 8); }
         if (E.t > 1.5 && !E.fl) { E.fl = true; lights.torchKill(0.9, 0); }
         if (E.t > 1.6 && shade && shade.visible) shade.visible = false;
         if (E.t > 3.6) { go('over'); audio.duck(0.2, 1); onHallDone?.(true); }
@@ -113,7 +115,7 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
   // rintocco di campana lontana, sempre pianino: uno ogni volta che la luce torna e i mostri riappaiono (3 volte nella sala)
   let bellT = null;
   function bells() { clearTimeout(bellT); bellT = setTimeout(() => { if (drone && E.state === 'lit') audio.bell(0.36); }, 1100); }
-  function startBreath() { E.torch = false; E.said = false; E.k = false; E.fl = false; E.turnT = 0; breath = audio.breath(); breath?.setPos(0, 1.3, Z_END - 3); breath?.setLevel(0.5, 1.2); }
+  function startBreath() { E.torch = false; E.said = false; E.k = false; E.fl = false; E.turnBeat = false; E.turnT = 0; breath = audio.breath(); breath?.setPos(0, 1.3, Z_END - 3); breath?.setLevel(0.5, 1.2); }
   E.getPh = () => ph;
   return E;
 }

@@ -375,10 +375,10 @@ $('act').addEventListener('click', () => { if (wh && wh.nearGate) wh.openGate();
 $('fire').addEventListener('pointerdown', (e) => { e.preventDefault(); combat?.fire(); });
 addEventListener('keydown', (e) => { if (e.code === 'Space') combat?.fire(); });
 
-function tick(dt) {
-  doorEvent?.update(dt);
+function tick(dt, hallDt = dt) {
+  doorEvent?.update(hallDt);
   scare?.update(dt);
-  hall?.update(dt, camera);
+  hall?.update(hallDt, camera);
   dust.update(dt, time);
   dawn?.update(dt);
   cellar?.update(dt);
@@ -388,7 +388,7 @@ function tick(dt) {
   time += dt;
   player.update(dt, time);
   audio.setListener(camera);
-  lights.update(dt, time, player.pos.z, player.pos.x);
+  lights.update(hall?.active ? hallDt : dt, time, player.pos.z, player.pos.x);
   glassEvent.update(dt, time);
   hound.update(dt);
   instab.update(dt);
@@ -397,9 +397,10 @@ function tick(dt) {
 
 function frame(now) {
   requestAnimationFrame(frame);
-  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const elapsed = Math.max(0, (now - last) / 1000), dt = Math.min(0.05, elapsed); last = now;
   if (paused || state === 'loading') { if (state === 'loading') renderer.render(scene, camera); return; }
-  if (!(window.__g && window.__g.hold)) tick(dt);
+  // La regia della sala usa il tempo reale; movimento e collisioni mantengono il passo limitato.
+  if (!(window.__g && window.__g.hold)) tick(dt, elapsed);
   glassEvent.preRender();
   rgbShift.update(dt); rgbShift.render(scene, camera);
 
