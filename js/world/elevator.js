@@ -114,5 +114,9 @@ export function createElevator({ group, mats, x, z }) {
   // interna sinistra, dietro il corrimano, visibile affacciandosi dal corridoio.
   const mural = writingDecals(G, [{ img: 'assets/tex/elevator_mural.webp', aspect: 768 / 895, p: [-0.995, 1.29, -1.0], wall: '+x', w: 1.4, a: 0.96, plain: true }])[0];
   mural.name = 'murale-ascensore';
+  // Sangue vecchio di mesi: bruno molto scuro e opaco anche sotto la torcia.
+  mural.material.color.setRGB(0.12, 0.075, 0.055);
+  mural.material.roughness = 1;
+  mural.material.envMapIntensity = 0;
   return G;
 }
