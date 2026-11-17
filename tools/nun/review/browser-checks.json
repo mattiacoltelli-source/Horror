@@ -1,0 +1,29 @@
+{
+  "preview": {
+    "triangles": 31998,
+    "calls": 1,
+    "textures": 4,
+    "skinned": true,
+    "clips": [
+      "Idle"
+    ]
+  },
+  "reselectedScale": 1.1870832470886314,
+  "errors": [],
+  "finale-0": {
+    "ready": true,
+    "kind": "ahead",
+    "fired": true,
+    "model": "Scene",
+    "drawCalls": 33,
+    "finished": true
+  },
+  "finale-1": {
+    "ready": true,
+    "kind": "behind",
+    "fired": true,
+    "model": "Scene",
+    "drawCalls": 80,
+    "finished": true
+  }
+}

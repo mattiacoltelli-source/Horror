@@ -1,0 +1,15 @@
+{
+  "triangles": 31998,
+  "bones": 12,
+  "atlas": {
+    "basecolor": 2048,
+    "normal": 1024,
+    "roughness": 1024
+  },
+  "clips": [
+    "Idle",
+    "HeadTurn",
+    "Apparition"
+  ],
+  "glb_bytes": 3131664
+}
