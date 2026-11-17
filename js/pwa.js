@@ -1,4 +1,4 @@
-// PWA: registrazione del service worker, banner di aggiornamento e pulsante «installa».
+// PWA: registrazione del service worker, banner di aggiornamento.
 const $ = (id) => document.getElementById(id);
 let reg = null, reloading = false;
 
@@ -24,8 +24,3 @@ if ('serviceWorker' in navigator) {
   });
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloading) return; reloading = true; location.reload(); });
 }
-// installazione: Chrome/Android propone l'evento, iOS no (istruzioni a parte)
-let deferred = null;
-window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; $('install')?.classList.remove('hidden'); });
-window.addEventListener('appinstalled', () => { $('install')?.classList.add('hidden'); deferred = null; });
-$('install')?.addEventListener('click', async () => { if (!deferred) return; deferred.prompt(); await deferred.userChoice.catch(() => {}); deferred = null; $('install').classList.add('hidden'); });
