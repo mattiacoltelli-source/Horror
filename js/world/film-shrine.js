@@ -27,9 +27,15 @@ export function createFilmShrine({ group, mats, panel }) {
   hinge.add(panel);
   box(hinge, wood, 0.055, FILM_DOOR.h / 2, -FILM_DOOR.w / 2, 0.105, FILM_DOOR.h - 0.008, FILM_DOOR.w - 0.008);
   // Foro piccolo, nessuna maniglia vistosa o suggerimento prima della chiave.
-  const lock = box(hinge, iron, -0.006, 1.1, -FILM_DOOR.w + 0.14, 0.012, 0.065, 0.036);
+  const lock = box(hinge, brass, -0.006, 1.25, -FILM_DOOR.w + 0.14, 0.012, 0.1, 0.06);
   lock.name = 'serratura-nascosta';
-  box(hinge, new THREE.MeshBasicMaterial({ color: 0x080706 }), -0.014, 1.1, -FILM_DOOR.w + 0.14, 0.003, 0.024, 0.008);
+  box(hinge, new THREE.MeshBasicMaterial({ color: 0x080706 }), -0.014, 1.25, -FILM_DOOR.w + 0.14, 0.003, 0.032, 0.01);
+  // Dopo il ritrovamento della chiave il giocatore riconosce le sottili fughe
+  // del pannello. Segni scuri, senza illuminazione propria o cornice nuova.
+  const discovery = new THREE.Group(); discovery.name = 'giunti-pannello-segreto'; discovery.visible = false; hinge.add(discovery);
+  const seam = new THREE.MeshBasicMaterial({ color: 0x14110e, transparent: true, opacity: 0.48, depthWrite: false });
+  for (const zz of [-0.006, -FILM_DOOR.w + 0.006]) box(discovery, seam, -0.004, FILM_DOOR.h / 2, zz, 0.004, FILM_DOOR.h, 0.009);
+  box(discovery, seam, -0.004, FILM_DOOR.h - 0.004, -FILM_DOOR.w / 2, 0.004, 0.009, FILM_DOOR.w);
   const threshold = box(G, iron, 0, 0.012, -0.04, FILM_DOOR.w, 0.024, 0.18); threshold.name = 'soglia-santuario';
 
   // Chiave sul lato opposto, realmente infilata in un piccolo gancio.
@@ -125,5 +131,5 @@ export function createFilmShrine({ group, mats, panel }) {
   const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.043, 10, 8), new THREE.MeshBasicMaterial({ color: 0x8b5b31 })); bulb.position.copy(light.position); G.add(bulb);
   const shade = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.11, 16, 1, true), iron); shade.position.copy(light.position); shade.position.y += 0.095; G.add(shade);
   const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.22, 5), iron); wire.position.set(0, 2.68, -1.75); G.add(wire);
-  return { group: G, hinge, key, light, bulb, posters, depth: DEPTH, width: W };
+  return { group: G, hinge, key, light, bulb, discovery, posters, depth: DEPTH, width: W };
 }

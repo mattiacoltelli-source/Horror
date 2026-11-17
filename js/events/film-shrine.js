@@ -13,7 +13,7 @@ export function createFilmShrineEvent({ group, mats, panel, player, flags, audio
     if (next) { actBtn.textContent = next === 'key' ? 'PRENDI CHIAVE' : 'USA LA CHIAVE'; actBtn.classList.remove('hidden'); }
     else if (owned) actBtn.classList.add('hidden');
   };
-  const sync = () => { S.key.visible = !flags.filmKey && !flags.filmDoorOpen; };
+  const sync = () => { S.key.visible = !flags.filmKey && !flags.filmDoorOpen; S.discovery.visible = !!flags.filmKey && !flags.filmDoorOpen; };
   S.reset = () => { prompt(null); sync(); S.angle = flags.filmDoorOpen ? 1.55 : 0; S.hinge.rotation.y = -S.angle; S.entered = false; };
   S.update = (dt, active) => {
     sync();
@@ -26,7 +26,14 @@ export function createFilmShrineEvent({ group, mats, panel, player, flags, audio
     let next = null;
     const looking = (p, max, dot) => { target.set(...p); dir.copy(target).sub(player.pos); const distance = dir.length(); return distance < max && dir.normalize().dot(player.forward) > dot; };
     if (!player.frozen && !flags.filmKey && !flags.filmDoorOpen && looking(FILM_KEY, 1.8, 0.88)) next = 'key';
-    if (!player.frozen && flags.filmKey && !flags.filmDoorOpen && player.pos.x < wallX && looking([3.98, 1.15, center - 0.45], 1.9, 0.86)) next = 'door';
+    // Si guarda il pannello, non un singolo pixel della serratura: vicino al
+    // muro si deve poter tenere la visuale all'altezza degli occhi.
+    if (!player.frozen && flags.filmKey && !flags.filmDoorOpen && player.pos.x < wallX && player.forward.x > 0.3) {
+      const t = (wallX - player.pos.x) / player.forward.x;
+      const hitY = player.pos.y + player.forward.y * t, hitZ = player.pos.z + player.forward.z * t;
+      const distance = Math.hypot(wallX - player.pos.x, Math.max(0, Math.abs(player.pos.z - center) - FILM_DOOR.w / 2));
+      if (distance < 2.6 && t < 3.2 && hitY > 0.1 && hitY < FILM_DOOR.h + 0.2 && Math.abs(hitZ - center) < FILM_DOOR.w / 2 + 0.3) next = 'door';
+    }
     prompt(next);
     if (inside && !S.entered) { S.entered = true; say('La collezione di Cos.', 3200); }
   };
@@ -35,7 +42,7 @@ export function createFilmShrineEvent({ group, mats, panel, player, flags, audio
     // Ricalcola distanza e sguardo: niente azioni da un pulsante rimasto visibile.
     S.update(0, true);
     if (S.near === 'key') {
-      flags.filmKey = true; sync(); audio.tinkle?.(); say('Una piccola chiave annerita.', 3200); prompt(null); onSave?.();
+      flags.filmKey = true; sync(); audio.tinkle?.(); say('Una piccola chiave.\nC’è una serratura sul muro opposto,\nverso l’ingresso della cantina.', 5800); prompt(null); onSave?.();
     } else if (S.near === 'door') {
       flags.filmDoorOpen = true; audio.squeak?.(1.7, new THREE.Vector3(4, 1.1, center)); say('Il pannello cede verso l’interno.', 3000); prompt(null); onSave?.();
     }

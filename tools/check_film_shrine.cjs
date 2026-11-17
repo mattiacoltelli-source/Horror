@@ -33,7 +33,7 @@ const root = path.resolve(__dirname, '..');
   for (const x of [3.39, 4.61]) assert.ok(ray(small.group, [x, 1.62, -0.5], [0, 0, 1]).length);
   // Il controller riceve una scena leggera, mantenendo i servizi reali di THREE.
   const z = -210.8, flags = {}, player = { pos: new THREE.Vector3(), forward: new THREE.Vector3(), frozen: false };
-  const visual = { group: new THREE.Group(), key: new THREE.Group(), hinge: new THREE.Group(), light: { intensity: 0 }, bulb: { material: { color: new THREE.Color() } }, depth: 3.4, width: 3.3 };
+  const visual = { group: new THREE.Group(), key: new THREE.Group(), discovery: new THREE.Group(), hinge: new THREE.Group(), light: { intensity: 0 }, bulb: { material: { color: new THREE.Color() } }, depth: 3.4, width: 3.3 };
   const world = namespace({ FILM_DOOR: { z, w: 1.2, h: 2.3 }, FILM_KEY: [-3.88, 1.3, -212], createFilmShrine: () => visual });
   const mod = new vm.SourceTextModule(fs.readFileSync(path.join(root, 'js/events/film-shrine.js'), 'utf8'), { context });
   await mod.link(s => s === 'three' ? three : world); await mod.evaluate();
@@ -43,10 +43,18 @@ const root = path.resolve(__dirname, '..');
   const look = (p, t) => { player.pos.set(...p); player.forward.set(...t).sub(player.pos).normalize(); S.update(0, true); };
   const bounds = [-3.5, 3.5, -222.6, -200.6];
   const move = (x, zz) => { const next = S.move(x, zz, bounds); player.pos.set(next[0], 1.62, next[1]); return [...next]; };
-  S.reset(); look([3, 1.62, z], [4, 1.1, z]); assert.equal(S.near, null); assert.ok(hidden.has('hidden'));
+  S.reset(); look([3, 1.62, z], [4, 1.1, z]); assert.equal(S.near, null); assert.ok(hidden.has('hidden')); assert.equal(S.discovery.visible, false);
   move(4.5, z); assert.ok(player.pos.x <= 3.5, 'Porta chiusa invalicabile');
   look([-2.8, 1.62, -212], [-3.88, 1.3, -212]); assert.equal(S.near, 'key'); S.act(); assert.ok(flags.filmKey); assert.equal(saves, 1);
-  assert.equal(S.key.visible, false);
+  assert.equal(S.key.visible, false); assert.equal(S.discovery.visible, true);
+  // Vicinissimi, al centro o ai bordi, guardando dritto all'altezza degli occhi.
+  // Prima era necessario abbassare la visuale verso un punto della serratura.
+  for (const x of [1.5, 2.5, 3, 3.5]) for (const dz of [-.5, 0, .5]) {
+    look([x, 1.62, z + dz], [4, 1.62, z + dz]); assert.equal(S.near, 'door');
+  }
+  look([1, 1.62, z], [4, 1.62, z]); assert.equal(S.near, null, 'Non apre dall’altro lato della sala');
+  look([3.5, 1.62, z], [0, 1.62, z]); assert.equal(S.near, null, 'Non apre guardando altrove');
+  look([3.5, 1.62, z - 1.3], [4, 1.62, z - 1.3]); assert.equal(S.near, null, 'Non apre guardando il muro accanto');
   look([3, 1.62, z], [3.98, 1.15, z - .45]); assert.equal(S.near, 'door');
   // Un tasto vecchio non puo' aprire da lontano o quando il gioco congela il giocatore.
   player.pos.set(0, 1.62, -202); S.act(); assert.equal(flags.filmDoorOpen, undefined);
@@ -54,7 +62,7 @@ const root = path.resolve(__dirname, '..');
   player.frozen = false; S.update(0, true); S.act(); assert.ok(flags.filmDoorOpen); assert.equal(saves, 2);
   move(4.5, z); assert.ok(player.pos.x <= 3.5, 'Attende l’apertura dell’anta');
   for (let i = 0; i < 120; i++) S.update(.02, true);
-  assert.equal(S.angle, 1.55);
+  assert.equal(S.angle, 1.55); assert.equal(S.discovery.visible, false);
   for (let i = 0; i < 45; i++) move(player.pos.x + .05, z);
   assert.ok(player.pos.x > 5, 'Ingresso praticabile');
   for (let i = 0; i < 90; i++) move(player.pos.x - .05, z);
