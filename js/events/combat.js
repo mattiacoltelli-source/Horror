@@ -33,13 +33,34 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
   K.giveAxe = () => { K.armed = true; K.weapon = 'axe'; axeG.visible = true; gun.visible = false; };
   // il mostro
   const mon = new THREE.Group(); mon.visible = false; scene.add(mon); let monModel = null;
-  K.setMonster = (kind) => new Promise((res) => new GLTFLoader().load('assets/models/c_nurse.glb', (g) => {
-    if (monModel) mon.remove(monModel); const m = g.scene;
-    m.traverse((o) => { if (o.isMesh) o.frustumCulled = false; }); grimeNun(m);
-    const b = new THREE.Box3().setFromObject(m), sz = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3());
-    m.scale.setScalar(1.95 / sz.y);   // sempre la stessa suora, qualunque scelta tu abbia fatto
-     b.setFromObject(m); m.position.set(-c.x, -b.min.y, -c.z); mon.add(m); monModel = m; res();
-  }, undefined, () => res()));
+  let monsterLoading = null, monsterMixer = null;
+  K.setMonster = (kind) => monsterLoading ||= (async () => {
+    const loader = new GLTFLoader();
+    let g, legacy = false;
+    try { g = await loader.loadAsync('assets/models/agnese/suor-agnese.glb'); }
+    catch (error) {
+      console.warn('Agnese combat asset could not load; using fallback', error);
+      legacy = true;
+      g = await loader.loadAsync('assets/models/c_nurse.glb');
+    }
+    const m = g.scene;
+    m.traverse((o) => {
+      if (!o.isMesh) return;
+      o.frustumCulled = false; o.castShadow = false;
+      const materials = Array.isArray(o.material) ? o.material : [o.material];
+      for (const material of materials) material.envMapIntensity = 0.15;
+    });
+    if (legacy) grimeNun(m);
+    m.updateMatrixWorld(true);
+    const b = new THREE.Box3().setFromObject(m), c = b.getCenter(new THREE.Vector3());
+    const scale = 1.95 / Math.max(0.001, b.max.y - b.min.y);
+    m.scale.setScalar(scale);
+    m.position.set(-c.x * scale, -b.min.y * scale, -c.z * scale);
+    monsterMixer = new THREE.AnimationMixer(m);
+    const idle = g.animations.find((clip) => clip.name === 'Idle');
+    if (idle) monsterMixer.clipAction(idle).play();
+    mon.add(m); monModel = m;
+  })().catch((error) => { monsterLoading = null; console.error('Agnese combat fallback failed', error); });
 
   const poses = {   // posizioni dell'arma (relative alla camera)
     low: { p: [0.13, -0.24, -0.42], r: [-0.45, 0, 0.1] }, ready: { p: [0.09, -0.115, -0.45], r: [0, 0, 0.03] }, ads: { p: [0, -0.078, -0.36], r: [0, 0, 0] },
@@ -162,6 +183,7 @@ export function createCombat({ scene, camera, player, audio, lights, instab, say
     // recupero del rinculo
     if (K.recoil > 0) { const r = Math.min(K.recoil, dt * 0.25); K.recoil -= r; player.pitch -= r * 0.8; }
     if (!K.active) return;
+    monsterMixer?.update(dt);
     K.t += dt;
     if (K.state === 'fight' && K.calm && !K.fin && K.hide <= 0 && K.t > 3.5) { if (!K.canLower) { K.canLower = true; if (K.actBtn) { K.actBtn.textContent = 'ABBASSA LA PISTOLA'; K.actBtn.classList.remove('hidden'); } } }
     if (K.fin && K.canLower) { K.canLower = false; K.actBtn?.classList.add('hidden'); }
