@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { buildRoom } from './rooms.js';
 import { FILMS } from './film-catalog.js';
 import { wornPaper } from './worn-paper.js';
+import { createWornDoorOutline } from './worn-door.js';
 import { aged } from './aged.js';
 import { burnDecals, stainDecals, patchDecals } from './blood.js';
 
@@ -15,21 +16,39 @@ export function createFilmShrine({ group, mats, panel }) {
   const G = new THREE.Group(); G.name = 'santuario-horror-cos';
   G.position.set(4, 0, FILM_DOOR.z); G.rotation.y = -Math.PI / 2; group.add(G);
   const room = buildRoom(mats, { z0: 0, w: W, l: DEPTH, h: H, wall: 'brick', floor: 'floorB', ceil: 'stone', dark: 0.72, seed: 819, door: { w: FILM_DOOR.w, h: FILM_DOOR.h } });
-  G.add(room.group); aged(room.group, 0.52);
+  G.add(room.group);
+  for (const mesh of room.group.children) {
+    if (mesh.material !== mats.floorB) { aged(mesh, 0.52); continue; }
+    // Pavimento piano: umidita' nel materiale, senza frammenti o sagome sopra.
+    const floor = mesh.material.clone(); floor.roughness = 0.78; floor.normalScale.multiplyScalar(0.65); mesh.material = floor; mesh.name = 'pavimento-umido-santuario';
+    floor.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vDampFloor;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvDampFloor = transformed.xz;');
+      shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>
+        varying vec2 vDampFloor;
+        float dampFloorMask() {
+          float noise = 0.035*sin(vDampFloor.x*13.0+sin(vDampFloor.y*9.0));
+          float a = length((vDampFloor-vec2(-0.95,-2.6))*vec2(1.0,1.7))+noise;
+          float b = length((vDampFloor-vec2(0.8,-1.15))*vec2(1.1,1.4))-noise;
+          return max(1.0-smoothstep(0.38,0.72,a),1.0-smoothstep(0.27,0.56,b));
+        }
+      `).replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb *= 1.0 - 0.18*dampFloorMask();')
+        .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, max(0.22,roughnessFactor*0.55),dampFloorMask());');
+    };
+    floor.customProgramCacheKey = () => 'damp-shrine-floor-v1';
+  }
   burnDecals(G, [
     { k: 'ceil', p: [-0.35, H - 0.012, -2.25], w: 3.3, h: 2.8, a: 0.95, rot: 0.2 },
-    { k: 'wall', p: [0.4, 1.4, -DEPTH + 0.008], wall: '+z', w: 2.4, h: 2.8, a: 0.86 },
-    { k: 'wall', p: [-W / 2 + 0.008, 1.15, -1.3], wall: '+x', w: 2.5, h: 2.3, a: 0.7 },
-    { k: 'floor', p: [0.4, 0.013, -2.3], w: 2.7, h: 2.2, a: 0.85, rot: -0.4 },
+    { k: 'wall', p: [0.4, 1.4, -DEPTH + 0.002], wall: '+z', w: 2.4, h: 2.8, a: 0.86 },
+    { k: 'wall', p: [-W / 2 + 0.002, 1.15, -1.3], wall: '+x', w: 2.5, h: 2.3, a: 0.7 },
   ]);
   stainDecals(G, [
-    { p: [0.75, 1.4, -DEPTH + 0.009], wall: '+z', w: 1.7, h: 2.7, a: 0.9 },
-    { p: [W / 2 - 0.009, 1.5, -1.9], wall: '-x', w: 2.1, h: 2.8, a: 0.85 },
+    { p: [0.75, 1.4, -DEPTH + 0.002], wall: '+z', w: 1.7, h: 2.7, a: 0.9 },
+    { p: [W / 2 - 0.002, 1.5, -1.9], wall: '-x', w: 2.1, h: 2.8, a: 0.85 },
   ]);
   patchDecals(G, [
-    { img: 'assets/tex/pt_mold.webp', p: [0.1, 0.3, -DEPTH + 0.012], wall: '+z', w: 3.1, h: 0.75, tint: 0.38, a: 0.8 },
-    { img: 'assets/tex/pt_mold.webp', p: [-W / 2 + 0.012, 0.3, -1.7], wall: '+x', w: 2.8, h: 0.7, tint: 0.34, a: 0.8 },
-    { img: 'assets/tex/pt_stain.webp', p: [W / 2 - 0.012, 1.6, -2], wall: '-x', w: 2.8, h: 2.3, tint: 0.32, a: 0.6 },
+    { img: 'assets/tex/pt_mold.webp', p: [0.1, 0.3, -DEPTH + 0.003], wall: '+z', w: 3.1, h: 0.75, tint: 0.38, a: 0.8 },
+    { img: 'assets/tex/pt_mold.webp', p: [-W / 2 + 0.003, 0.3, -1.7], wall: '+x', w: 2.8, h: 0.7, tint: 0.34, a: 0.8 },
+    { img: 'assets/tex/pt_stain.webp', p: [W / 2 - 0.003, 1.6, -2], wall: '-x', w: 2.8, h: 2.3, tint: 0.32, a: 0.6 },
   ]);
   const loader = new THREE.TextureLoader();
   const woodMap = loader.load('assets/tex/floor_planks.jpg'); woodMap.colorSpace = THREE.SRGBColorSpace;
@@ -48,12 +67,8 @@ export function createFilmShrine({ group, mats, panel }) {
   const lock = box(hinge, brass, -0.006, 1.25, -FILM_DOOR.w + 0.14, 0.012, 0.1, 0.06);
   lock.name = 'serratura-nascosta';
   box(hinge, new THREE.MeshBasicMaterial({ color: 0x080706 }), -0.014, 1.25, -FILM_DOOR.w + 0.14, 0.003, 0.032, 0.01);
-  // Dopo il ritrovamento della chiave il giocatore riconosce le sottili fughe
-  // del pannello. Segni scuri, senza illuminazione propria o cornice nuova.
-  const discovery = new THREE.Group(); discovery.name = 'giunti-pannello-segreto'; discovery.visible = false; hinge.add(discovery);
-  const seam = new THREE.MeshBasicMaterial({ color: 0x14110e, transparent: true, opacity: 0.48, depthWrite: false });
-  for (const zz of [-0.006, -FILM_DOOR.w + 0.006]) box(discovery, seam, -0.004, FILM_DOOR.h / 2, zz, 0.004, FILM_DOOR.h, 0.009);
-  box(discovery, seam, -0.004, FILM_DOOR.h - 0.004, -FILM_DOOR.w / 2, 0.004, 0.009, FILM_DOOR.w);
+  // Dopo la chiave emergono crepe e malta scheggiata lungo il giunto.
+  const discovery = createWornDoorOutline(FILM_DOOR.w, FILM_DOOR.h); hinge.add(discovery);
   const threshold = box(G, iron, 0, 0.012, -0.04, FILM_DOOR.w, 0.024, 0.18); threshold.name = 'soglia-santuario';
 
   // Chiave sul lato opposto, realmente infilata in un piccolo gancio.
@@ -82,7 +97,7 @@ export function createFilmShrine({ group, mats, panel }) {
       const a = p.getX(i) / w, v = p.getY(i) / h, edge = Math.max(0, Math.abs(a) - 0.32) / 0.18;
       const fold = 0.29 + 0.34 * ((index * 0.43) % 1) - 0.5;
       const ridge = Math.exp(-Math.abs(a - fold) * 90) * 0.006;
-      p.setZ(i, 0.004 + ridge + edge * edge * (0.018 + 0.012 * Math.sin(v * 7 + index)) + 0.004 * Math.sin(v * 15 + a * 13 + index));
+      p.setZ(i, (featured ? 1 : 0.3) * (0.004 + ridge + edge * edge * (0.018 + 0.012 * Math.sin(v * 7 + index)) + 0.004 * Math.sin(v * 15 + a * 13 + index)));
     }
     geo.computeVertexNormals(); geo.applyMatrix4(holder.matrix); const flat = geo.toNonIndexed();
     const pos = flat.attributes.position, n = flat.attributes.normal, uv = flat.attributes.uv;
@@ -136,7 +151,7 @@ export function createFilmShrine({ group, mats, panel }) {
   attachments(new THREE.SphereGeometry(0.006, 6, 4), iron, pins, 'puntine-locandine');
   G.userData.posters = posters;
 
-  // Arredi anneriti e carta bruciata a terra. Passaggio centrale libero.
+  // Arredi anneriti negli angoli, pavimento libero.
   const furniture = new THREE.Group(); furniture.name = 'arredi-consumati'; G.add(furniture);
   for (const side of [-1, 1]) box(furniture, wood, side * (W / 2 - 0.03), 0.065, -DEPTH / 2, 0.055, 0.13, DEPTH);
   box(furniture, wood, 0, 0.065, -DEPTH + 0.025, W, 0.13, 0.055);
@@ -150,17 +165,6 @@ export function createFilmShrine({ group, mats, panel }) {
     const rim = new THREE.Mesh(new THREE.TorusGeometry(0.143, 0.003, 4, 24), iron); rim.rotation.x = Math.PI / 2; rim.position.copy(can.position); rim.position.y += 0.018; furniture.add(rim);
   }
   aged(furniture, 0.68);
-  const scraps = { p: [], c: [] };
-  for (let j = 0; j < 28; j++) {
-    const x = (rnd() - 0.5) * 2.85, z = -0.6 - rnd() * 2.5, r = 0.035 + rnd() * 0.08, angle = rnd() * Math.PI * 2;
-    const edges = Array.from({ length: 6 }, (_, i) => { const a = angle + i * Math.PI / 3, k = 0.65 + rnd() * 0.5; return [x + Math.cos(a) * r * k, 0.014 + rnd() * 0.012, z + Math.sin(a) * r * k * 1.6]; });
-    for (let i = 0; i < 6; i++) {
-      scraps.p.push(x, 0.03, z, ...edges[i], ...edges[(i + 1) % 6]);
-      const k = 0.08 + rnd() * 0.13; scraps.c.push(k * 1.3, k, k * 0.65, 0.035, 0.025, 0.014, 0.045, 0.033, 0.02);
-    }
-  }
-  const debrisGeo = new THREE.BufferGeometry(); debrisGeo.setAttribute('position', new THREE.Float32BufferAttribute(scraps.p, 3)); debrisGeo.setAttribute('color', new THREE.Float32BufferAttribute(scraps.c, 3)); debrisGeo.computeVertexNormals();
-  const debris = new THREE.Mesh(debrisGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, side: THREE.DoubleSide })); debris.name = 'frammenti-carta-carbonizzata'; G.add(debris);
   const light = new THREE.PointLight(0xe5a266, 0, 4.1, 1.5); light.position.set(0, 2.48, -1.75); G.add(light);
   const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.043, 10, 8), new THREE.MeshBasicMaterial({ color: 0x8b5b31 })); bulb.position.copy(light.position); G.add(bulb);
   const shade = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.11, 16, 1, true), iron); shade.position.copy(light.position); shade.position.y += 0.095; G.add(shade);
