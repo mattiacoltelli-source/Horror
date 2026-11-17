@@ -93,11 +93,131 @@ for obj in [o for o in scene.objects if o.type == "MESH"]:
     for poly in mesh.polygons:
         poly.use_smooth = True
 
+
+# Refine exposed facial planes, hands and the starched cornette.
+# Coordinates are measured in world space so the original export axes are preserved.
+for obj in [o for o in scene.objects if o.type == "MESH"]:
+    inverse = obj.matrix_world.inverted()
+    for vertex in obj.data.vertices:
+        p = obj.matrix_world @ vertex.co
+        z = (p.z - lo.z) / height
+        x = (p.x - center.x) / height
+        if z > 0.94 and abs(x) > 0.065:
+            edge = smooth(0.065, 0.18, abs(x))
+            p.z -= height * 0.009 * edge
+        if 0.875 < z < 0.94 and p.y < center.y:
+            cheek = exp(-((abs(x)-0.035)/0.018)**2) * exp(-((z-0.904)/0.019)**2)
+            p.y += height * 0.003 * cheek
+        vertex.co = inverse @ p
+
+# Bake fabric ageing into portable UV textures, including tangent-space normals.
+for obj in [o for o in scene.objects if o.type == "MESH"]:
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.smart_project(island_margin=0.025)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    mat = bpy.data.materials.new("Agnese_aged_ivory")
+    mat.use_nodes = True
+    obj.data.materials.clear()
+    obj.data.materials.append(mat)
+    nodes, links = mat.node_tree.nodes, mat.node_tree.links
+    nodes.clear()
+    output = nodes.new("ShaderNodeOutputMaterial")
+    bsdf = nodes.new("ShaderNodeBsdfPrincipled")
+    links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
+    vertex_color = nodes.new("ShaderNodeVertexColor")
+    vertex_color.layer_name = obj.data.color_attributes.active_color.name
+    coords = nodes.new("ShaderNodeTexCoord")
+    noise = nodes.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = 95
+    noise.inputs["Detail"].default_value = 3
+    links.new(coords.outputs["Generated"], noise.inputs["Vector"])
+    tint = nodes.new("ShaderNodeMixRGB")
+    tint.blend_type = "MULTIPLY"
+    tint.inputs[0].default_value = 1
+    tint.inputs[2].default_value = (0.86, 0.79, 0.61, 1)
+    links.new(vertex_color.outputs["Color"], tint.inputs[1])
+    dirt = nodes.new("ShaderNodeMixRGB")
+    dirt.blend_type = "MULTIPLY"
+    dirt.inputs[0].default_value = 0.18
+    links.new(tint.outputs[0], dirt.inputs[1])
+    links.new(noise.outputs["Fac"], dirt.inputs[2])
+    links.new(dirt.outputs[0], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = 0.84
+    bump = nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = 0.22
+    bump.inputs["Distance"].default_value = 0.0007
+    links.new(noise.outputs["Fac"], bump.inputs["Height"])
+    links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
+    baked = {}
+    scene.cycles.samples = 8
+    scene.render.bake.margin = 12
+    for label in ["basecolor", "normal", "roughness"]:
+        image = bpy.data.images.new("Agnese_" + label, width=1024, height=1024)
+        if label != "basecolor":
+            image.colorspace_settings.name = "Non-Color"
+        target = nodes.new("ShaderNodeTexImage")
+        target.image = image
+        nodes.active = target
+        if label == "normal":
+            links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
+            bpy.ops.object.bake(type="NORMAL")
+        else:
+            emit = nodes.new("ShaderNodeEmission")
+            if label == "basecolor":
+                links.new(dirt.outputs[0], emit.inputs["Color"])
+            else:
+                emit.inputs["Color"].default_value = (0.84, 0.84, 0.84, 1)
+            links.new(emit.outputs[0], output.inputs["Surface"])
+            bpy.ops.object.bake(type="EMIT")
+            nodes.remove(emit)
+        image.filepath_raw = str(out / ("Agnese_" + label + ".png"))
+        image.file_format = "PNG"
+        image.save()
+        baked[label] = image
+    nodes.clear()
+    output = nodes.new("ShaderNodeOutputMaterial")
+    bsdf = nodes.new("ShaderNodeBsdfPrincipled")
+    links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
+    for label, socket in [("basecolor","Base Color"), ("roughness","Roughness")]:
+        tex = nodes.new("ShaderNodeTexImage")
+        tex.image = baked[label]
+        links.new(tex.outputs["Color"], bsdf.inputs[socket])
+    tex = nodes.new("ShaderNodeTexImage")
+    tex.image = baked["normal"]
+    normal = nodes.new("ShaderNodeNormalMap")
+    links.new(tex.outputs["Color"], normal.inputs["Color"])
+    links.new(normal.outputs["Normal"], bsdf.inputs["Normal"])
+    # Colors are already baked, remove the source to avoid double multiplication in GLB.
+    for attribute in list(obj.data.color_attributes):
+        obj.data.color_attributes.remove(attribute)
+
+# Export only character meshes, excluding studio cameras and lights.
+bpy.ops.object.select_all(action="DESELECT")
+for obj in scene.objects:
+    if obj.type == "MESH":
+        obj.select_set(True)
 bpy.ops.export_scene.gltf(filepath=str(out / "suor-agnese-proposta.glb"),
-                          export_format="GLB", use_visible=True)
+                          export_format="GLB", use_selection=True)
 for label, offset in [("proposta-front", (0,-3,0)), ("proposta-three-quarter", (2,-3,0))]:
     scene.camera.location = center + Vector(offset)
     aim(scene.camera, center)
     scene.render.filepath = str(out / (label + ".png"))
     bpy.ops.render.render(write_still=True)
 bpy.ops.wm.save_as_mainfile(filepath=str(out / "suor-agnese-proposta.blend"))
+
+camera.ortho_scale = height * 0.29
+target = Vector((center.x, center.y, lo.z + height * 0.89))
+scene.camera.location = target + Vector((0,-3,0))
+aim(scene.camera, target)
+scene.render.filepath = str(out / "proposta-viso.png")
+bpy.ops.render.render(write_still=True)
+camera.ortho_scale = height * 0.57
+target = Vector((center.x, center.y, lo.z + height * 0.43))
+scene.camera.location = target + Vector((0,-3,0))
+aim(scene.camera, target)
+scene.render.filepath = str(out / "proposta-mani.png")
+bpy.ops.render.render(write_still=True)
