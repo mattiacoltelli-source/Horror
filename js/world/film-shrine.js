@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { buildRoom } from './rooms.js';
 import { FILMS } from './film-catalog.js';
 import { wornPaper } from './worn-paper.js';
-import { createWornDoorOutline } from './worn-door.js';
+import { createRustedDoorFrame } from './rusted-door-frame.js';
 import { aged } from './aged.js';
 import { burnDecals, stainDecals, patchDecals } from './blood.js';
 
@@ -67,9 +67,17 @@ export function createFilmShrine({ group, mats, panel }) {
   const lock = box(hinge, brass, -0.006, 1.25, -FILM_DOOR.w + 0.14, 0.012, 0.1, 0.06);
   lock.name = 'serratura-nascosta';
   box(hinge, new THREE.MeshBasicMaterial({ color: 0x080706 }), -0.014, 1.25, -FILM_DOOR.w + 0.14, 0.003, 0.032, 0.01);
-  // Dopo la chiave emergono crepe e malta scheggiata lungo il giunto.
-  const discovery = createWornDoorOutline(FILM_DOOR.w, FILM_DOOR.h); hinge.add(discovery);
-  const threshold = box(G, iron, 0, 0.012, -0.04, FILM_DOOR.w, 0.024, 0.18); threshold.name = 'soglia-santuario';
+  // Un labbro di pochi millimetri si confonde col muro da chiuso; aprendo,
+  // si vedono i risvolti di ferro corroso che rivestono il vano e l'anta.
+  const doorFrame = createRustedDoorFrame({ width: FILM_DOOR.w, height: FILM_DOOR.h, depth: 0.15, lip: 0.007, material: mats.rust });
+  doorFrame.name = 'telaio-ferro-porta-segreta'; G.add(doorFrame);
+  const leafFrame = createRustedDoorFrame({ width: FILM_DOOR.w - 0.012, height: FILM_DOOR.h - 0.013, depth: 0.108, lip: 0.004, material: mats.rust, bottom: true });
+  leafFrame.name = 'bordo-ferro-anta'; leafFrame.rotation.y = -Math.PI / 2; leafFrame.position.set(0, 0.006, -FILM_DOOR.w / 2); hinge.add(leafFrame);
+  // Compatibilita' con l'indizio del controller: il riconoscimento ora passa
+  // per serratura e telaio, senza linee disegnate sopra i mattoni.
+  const discovery = new THREE.Group(); discovery.name = 'indizio-porta-segreta'; discovery.visible = false; hinge.add(discovery);
+  const thresholdMetal = mats.rust.clone(); thresholdMetal.vertexColors = false; thresholdMetal.color.setHex(0x4c3c2d); thresholdMetal.roughness = 0.95; thresholdMetal.metalness = 0.45;
+  const threshold = box(G, thresholdMetal, 0, 0.006, -0.06, FILM_DOOR.w, 0.012, 0.16); threshold.name = 'soglia-santuario';
 
   // Chiave sul lato opposto, realmente infilata in un piccolo gancio.
   const peg = new THREE.Group(); peg.position.set(-3.97, FILM_KEY[1] + 0.045, FILM_KEY[2]); peg.rotation.y = Math.PI / 2; group.add(peg);
