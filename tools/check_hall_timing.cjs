@@ -10,7 +10,8 @@ const root = path.resolve(__dirname, '..');
 async function scenario(THREE, fps, turn) {
   let now = 0, nextTimer = 0;
   const timers = new Map(), messages = [], distances = [], darks = [], outcomes = [];
-  let whispers = 0, nearBreath = 0;
+  let whispers = 0, nearBreath = 0, pressureStops = 0, pressureStoppedAt = null, breathStartedAt = null;
+  const stages = [], rushes = [];
   const context = vm.createContext({
     console,
     setTimeout(fn, ms) { const id = ++nextTimer; timers.set(id, { fn, due: now + ms / 1000 }); return id; },
@@ -20,7 +21,12 @@ async function scenario(THREE, fps, turn) {
   const audio = {
     duck() {}, doorBang() {}, lightOn() {}, shuffle() {}, bell() {},
     whisper() { whispers++; }, crowdDrone: () => handle,
-    breath: () => ({ setPos() {}, stop() {}, setLevel(v) { nearBreath = Math.max(nearBreath, v); } }),
+    hallPressure: () => ({
+      update() {}, setStage(n) { stages.push(n); },
+      rush(from, to, duration) { rushes.push({ from, to, duration, state: E.state, at: now }); },
+      stop() { pressureStops++; pressureStoppedAt = now; },
+    }),
+    breath: () => { breathStartedAt = now; return { setPos() {}, stop() {}, setLevel(v) { nearBreath = Math.max(nearBreath, v); } }; },
   };
   const hall = {
     enable() {}, setDist(d) { distances.push({ d, at: now }); },
@@ -71,6 +77,10 @@ async function scenario(THREE, fps, turn) {
   const warning = messages.find(m => m.text.startsWith('non guardare dietro'));
   assert.ok(warning && warning.at >= 15 && warning.at <= 16.2, `Avviso a ${warning?.at}s, ${fps} FPS`);
   assert.deepEqual(distances.map(s => s.d), [26, 14, 7.5], 'Restano i due avvicinamenti');
+  assert.deepEqual(stages, [0, 1, 2], 'Il ritmo cresce a ogni apparizione');
+  assert.deepEqual(rushes.map(r => [r.from, r.to]), [[-76, -64], [-64, -57.5]]);
+  assert.ok(rushes.every(r => r.state === 'dark' && r.duration === 0.7), 'Passi solo nei due bui di movimento');
+  assert.equal(pressureStops, 1); assert.ok(pressureStoppedAt < breathStartedAt, 'Il crescendo lascia spazio al respiro');
   assert.equal(note.ms, 7000); assert.ok(darks[0] - note.at >= 6.75, 'Tempo per leggere la nota');
   assert.equal(outcomes.length, 1); assert.equal(outcomes[0].turned, turn);
   if (turn) assert.equal(whispers, 1, 'Il colpo di scena parte una sola volta anche a FPS bassi');

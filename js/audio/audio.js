@@ -2,6 +2,7 @@
 // Ambiente: rumore a bassa frequenza + ronzio elettrico + gocce; eventi: passi, battito, impatto sul vetro.
 import * as THREE from 'three';
 import { createAmbientCue } from './ambience.js';
+import { createHallPressure } from './hall.js';
 
 const vib = (p) => { try { navigator.vibrate?.(p); } catch (_) {} };   // solo Android; altrove non fa nulla
 
@@ -12,6 +13,7 @@ export function createAudio() {
     get ready() { return ok; },
     get ambienceAllowed() { return ok && duckLevel > 0.5; },
     ambientCue(kind, position) { return A.ambienceAllowed ? createAmbientCue(ctx, noiseBuf, accents, kind, position) : null; },
+    hallPressure() { return ok ? createHallPressure(ctx, noiseBuf, master, verbSend, () => steps) : null; },
     async start() {
       if (ctx) { await ctx.resume?.(); return; }
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -382,8 +384,8 @@ export function createAudio() {
       wg.gain.setValueAtTime(0.0, t); wg.gain.linearRampToValueAtTime(0.05, t + 0.05); wg.gain.exponentialRampToValueAtTime(0.0005, t + 3.2); wb.connect(wf); wf.connect(wg); wg.connect(out); wb.start(t); wb.stop(t + 3.4);
     },
     // SOTTOFONDO DELLA SALA DELLA FOLLA: un bordone basso e dissonante (due toni quasi uguali che battono), un velo di rumore scuro e un sibilo acuto lontano;
-    // il livello lo decide chi lo usa (setLevel) e ogni tanto cade da solo nel silenzio per un paio di secondi, cosi' i vuoti pesano.
-    crowdDrone(level = 0.5) {
+    // Il livello lo decide chi lo usa; con gaps:false anche i silenzi seguono la regia della sala.
+    crowdDrone(level = 0.5, { gaps = true } = {}) {
       if (!ok) return null; const t = ctx.currentTime, out = ctx.createGain(); out.gain.setValueAtTime(0, t); out.connect(master); out.connect(verbSend);
       const mk = (type, f, g) => { const o = ctx.createOscillator(), gn = ctx.createGain(); o.type = type; o.frequency.value = f; gn.gain.value = g; o.connect(gn); gn.connect(out); o.start(t); return { o, gn }; };
       const A = mk('sine', 46, 0.5), B = mk('sine', 48.7, 0.45), C = mk('triangle', 92.4, 0.12), D = mk('sine', 1830, 0.0035), E = mk('sine', 1871, 0.003);
@@ -394,7 +396,7 @@ export function createAudio() {
       let lv = 0, gap = false, alive = true;
       const apply = (tc = 1.5) => { const n = ctx.currentTime; out.gain.cancelScheduledValues(n); out.gain.setTargetAtTime(gap ? 0 : lv * level * 0.5, n, tc); };
       const loop = () => { if (!alive) return; setTimeout(() => { if (!alive) return; gap = true; apply(0.35); setTimeout(() => { gap = false; apply(1.6); loop(); }, 1400 + Math.random() * 1800); }, 5000 + Math.random() * 6000); };
-      loop();
+      if (gaps) loop();
       return {
         setLevel(l, tc = 1.5) { lv = l; apply(tc); },
         stop(tc = 1) { alive = false; const n = ctx.currentTime; out.gain.cancelScheduledValues(n); out.gain.setTargetAtTime(0, n, tc); setTimeout(() => { try { fl?.stop(); } catch (_) {} try { [A, B, C, D, E].forEach((x) => x.o.stop()); lf.stop(); ns.stop(); } catch (_) {} }, tc * 5000 + 500); },
