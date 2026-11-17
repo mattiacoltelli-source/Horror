@@ -65,7 +65,7 @@ async function select(version){
     turntable.add(model);mixer=new THREE.AnimationMixer(model);action=null;
     const idle=animations.find(c=>c.name==='Idle');if(idle)mixer.clipAction(idle).play();
     current=version;frame();
-    status.textContent=version==='new'?'Avorio invecchiato · 12 ossa · 3 animazioni':'Modello originale';
+    status.textContent=version==='new'?'Abito antracite · 12 ossa · 3 animazioni':'Modello originale';
     document.querySelector('#motion').disabled=!animations.length;
     document.querySelector('#finale').href='index.html?start=torre&debug=1&agneseFinale=1'+(version==='original'?'&agnese=original':'');
     document.querySelectorAll('[data-version]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.version===version));
