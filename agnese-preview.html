@@ -36,7 +36,7 @@ const status=document.querySelector('#status');
 const paths={new:'assets/models/agnese/suor-agnese.glb',original:'assets/models/c_nurse.glb'};
 function frame(){
   const portrait=innerWidth<innerHeight;
-  const framing={body:[1.13,portrait?3.9:4.7],face:[1.83,portrait?.85:1.15],hands:[1.02,portrait?2:2.7]}[view];
+  const framing={body:[1.13,portrait?3.9:4.7],face:[1.83,portrait?.85:1.15],hands:[1.02,portrait?2.6:2.7]}[view];
   camera.position.set(0,framing[0],framing[1]);camera.lookAt(0,framing[0],0);
 }
 async function select(version){

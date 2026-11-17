@@ -440,9 +440,16 @@ bpy.ops.object.camera_add();camera=bpy.context.object;scene.camera=camera;camera
 scene.render.resolution_x=720;scene.render.resolution_y=960;scene.render.resolution_percentage=100
 scene.cycles.samples=32
 scene.view_settings.view_transform='AgX'
-for label,loc,target,scale in [('new-front',(-.10,-3,.85),(-.10,-.10,.85),1.96),('new-three-quarter',(1.3,-3,1.1),(-.10,-.10,.90),1.96),('new-face',(-.13,-3,1.55),(-.13,-.1,1.55),.35),('new-hands',(-.1,-3,.84),(-.1,-.1,.84),.78)]:
+for label,loc,target,scale in [('new-front',(-.10,-3,.85),(-.10,-.10,.85),1.96),('new-three-quarter',(1.3,-3,1.1),(-.10,-.10,.90),1.96),('new-face',(-.13,-3,1.55),(-.13,-.1,1.55),.35),('new-hands',(-.1,-3,.84),(-.1,-.1,.84),.98)]:
     camera.location=loc;aim(camera,target);camera.data.ortho_scale=scale
     scene.render.filepath=str(REVIEW/(label+'.png'));bpy.ops.render.render(write_still=True)
 bpy.ops.file.pack_all()
 bpy.ops.wm.save_as_mainfile(filepath=str(SOURCE/'suor-agnese.blend'),compress=True)
 print('AGNESE_METRICS', (OUT/'metrics.json').read_text())
+
+# Render the unmodified source under exactly the same studio lighting.
+character.hide_render=True
+bpy.ops.import_scene.gltf(filepath=str(ROOT/'assets/models/c_nurse.glb'))
+for label,loc,target,scale in [('original-front',(-.10,-3,.85),(-.10,-.10,.85),1.96),('original-face',(-.13,-3,1.55),(-.13,-.1,1.55),.35)]:
+    camera.location=loc;aim(camera,target);camera.data.ortho_scale=scale
+    scene.render.filepath=str(REVIEW/(label+'.png'));bpy.ops.render.render(write_still=True)
