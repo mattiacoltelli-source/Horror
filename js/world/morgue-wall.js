@@ -63,7 +63,7 @@ export function createMorgueWall(parent, mats, { x, z }) {
     const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
     put(new THREE.TubeGeometry(curve, Math.max(8, points.length * 7), radius, 4, false), mat, [0, 0, 0]);
   };
-  // Una barra di legno fissata con due viti sostiene tutti i cinque utensili.
+  // Una barra di legno fissata con due viti sostiene quattro utensili, con spaziature irregolari.
   const woodMap = loader.load('assets/tex/floor_planks.jpg'); woodMap.colorSpace = THREE.SRGBColorSpace;
   woodMap.wrapS = woodMap.wrapT = THREE.RepeatWrapping; woodMap.repeat.set(1, 0.18); woodMap.anisotropy = 4;
   const wood = new THREE.MeshStandardMaterial({ map: woodMap, color: 0x79634a, roughness: 1 });
@@ -76,7 +76,7 @@ export function createMorgueWall(parent, mats, { x, z }) {
     const screw = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.006, 8), iron);
     screw.rotation.x = Math.PI / 2; screw.position.set(-1.72 + dx, 2.17 - dx * 0.014, 0.067); G.add(screw);
   }
-  const tools = [['mg_tool1', -2.06, 0.29, -0.04], ['mg_tool3', -1.89, 0.32, 0.035], ['mg_tool4', -1.72, 0.34, -0.025], ['mg_tool3', -1.55, 0.29, -0.035], ['mg_tool1', -1.38, 0.27, 0.04]];
+  const tools = [['mg_tool1', -2.06, 0.29, -0.10], ['mg_tool3', -1.87, 0.32, 0.055], ['mg_tool4', -1.67, 0.34, -0.08], ['mg_tool1', -1.38, 0.27, 0.065]];
   const gl = new GLTFLoader(), models = new Map(); G.userData.toolsLoaded = 0;
   tools.forEach(([name, px, size, r]) => {
     const hookY = 2.17 - (px + 1.72) * 0.014, py = hookY - size / 2 + 0.018;
