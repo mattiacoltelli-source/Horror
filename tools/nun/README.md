@@ -26,8 +26,11 @@ The face surface is remeshed and relaxed. New recessed eyes, irises, pupils,
 eyelids, brows and a pleated gauze mask replace the original flat eye shapes.
 Fingers and palms have denser rounded surfaces, nails and joint creases.
 The starched cornette retains its broad silhouette with softened outer edges.
-The aged ivory dress has actual shallow folds and a darker lower hem. Shoes
-have rounded surfaces and a worn leather material.
+The habit and outer cornette use a charcoal palette with an ivory coif, collar,
+cuffs, belt, apron piping and a small painted cross. The face and neck use a
+pallid skin tone. These palette details are baked into the existing atlas.
+The dress retains its absorbed blood stains and shallow folds. Shoes have
+rounded surfaces and a worn leather material.
 
 The atlas contains a 2048 px base color and 1024 px normal and roughness maps.
 One material and one skinned mesh use a target of 32,000 triangles and 12 bones.
