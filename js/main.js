@@ -154,18 +154,28 @@ function saveCkpt(room) { if (!CK_ST[room]) return; try { const snap = { room, t
 let restoreCk = false, restoreRoom = null;
 { const last = loadCkpt(), b = document.getElementById('ckpt'), menu = document.getElementById('cmenu');
   if (last && b && menu) {
-    const rooms = loadRooms(); if (last.room && !rooms[last.room]) rooms[last.room] = last;   // vecchi salvataggi: almeno l'ultima stanza
+    const rooms = loadRooms(); if (last.room && !rooms[last.room]) rooms[last.room] = last;
     const reached = CK_ORDER.filter((r) => rooms[r]);
-    const go = (room) => { restoreCk = true; restoreRoom = room; document.getElementById('enter').click(); };
-    if (reached.length <= 1) { b.textContent = 'riparti ' + CK_NAME[last.room]; b.classList.remove('hidden'); b.addEventListener('click', () => go(last.room)); }
-    else {
-      b.textContent = 'riparti da… ▾'; b.classList.remove('hidden'); b.setAttribute('aria-haspopup', 'true'); b.setAttribute('aria-expanded', 'false');
-      reached.forEach((r) => { const it = document.createElement('button'); it.type = 'button'; it.setAttribute('role', 'menuitem'); it.textContent = CK_NAME[r].replace(/^(dalla|dall'|dal|da) ?/, ''); it.addEventListener('click', (e) => { e.stopPropagation(); go(r); }); menu.appendChild(it); });
-      const setOpen = (v) => { menu.classList.toggle('hidden', !v); b.setAttribute('aria-expanded', v ? 'true' : 'false'); };
-      b.addEventListener('click', (e) => { e.stopPropagation(); setOpen(menu.classList.contains('hidden')); });
-      document.addEventListener('click', () => setOpen(false)); document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
+    const setOpen = (v) => { menu.classList.toggle('hidden', !v); b.setAttribute('aria-expanded', v ? 'true' : 'false'); };
+    const select = (room) => {
+      restoreCk = room !== null; restoreRoom = room;
+      b.textContent = room ? 'riparti da: ' + CK_ST[room] + ' ▾' : 'riparti da: inizio ▾';
+      for (const item of menu.children) item.setAttribute('aria-checked', String(item.dataset.room === (room || '')));
+      setOpen(false); b.focus();
+    };
+    b.textContent = 'riparti da: inizio ▾'; b.classList.remove('hidden');
+    b.setAttribute('aria-haspopup', 'menu'); b.setAttribute('aria-expanded', 'false');
+    for (const room of [null, ...reached]) {
+      const item = document.createElement('button'); item.type = 'button';
+      item.dataset.room = room || ''; item.setAttribute('role', 'menuitemradio'); item.setAttribute('aria-checked', String(room === null));
+      item.textContent = room ? CK_ST[room] : 'inizio';
+      item.addEventListener('click', (e) => { e.stopPropagation(); select(room); }); menu.appendChild(item);
     }
+    b.addEventListener('click', (e) => { e.stopPropagation(); setOpen(menu.classList.contains('hidden')); });
+    document.addEventListener('click', () => setOpen(false));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
   } }
+
 const warm = new THREE.PointLight(0xff9a50, 0, 15, 1.7); scene.add(warm);
 const flash = new THREE.PointLight(0xffd9a0, 0, 28, 1.6); scene.add(flash);   // lampo dello sparo
 let state = 'loading', last = 0, time = 0, paused = false, ended = false;
