@@ -67,5 +67,14 @@ const root = path.resolve(__dirname, '..');
   assert.ok(player.pos.x <= 7.08, 'Parete di fondo invalicabile');
   S.reset(); assert.equal(S.angle, 1.55); assert.equal(S.key.visible, false);
   S.update(.1, false); assert.equal(S.near, null); assert.equal(S.light.intensity, 0); assert.ok(hidden.has('hidden'));
+  const handlers = {}, uiContext = vm.createContext({ paused: true, state: 'play', cellar: { shrine: { near: 'key', act() { uiContext.picked++; } } }, picked: 0, combat: null,
+    $(id) { return { addEventListener(type, fn) { handlers[type] = fn; } }; }, addEventListener(type, fn) { handlers[type] = fn; } });
+  const main = fs.readFileSync(path.join(root, 'js/main.js'), 'utf8');
+  for (const line of main.split('\n').filter(l => l.startsWith("$('act').addEventListener") || l.startsWith("addEventListener('keydown', (e) => { if (e.code === 'Space')"))) vm.runInContext(line, uiContext);
+  for (const state of ['paused', 'loading', 'play']) {
+    uiContext.paused = state === 'paused'; uiContext.state = state === 'loading' ? 'loading' : 'play';
+    const before = uiContext.picked; handlers.click(); handlers.keydown({ code: 'KeyE', repeat: false });
+    assert.equal(uiContext.picked - before, state === 'play' ? 2 : 0, 'Interazione ferma durante pausa e caricamento');
+  }
   console.log('Film shrine: chiave, salvataggio, porta, collisioni, ritorno e aperture verificati.');
 })().catch(e => { console.error(e); process.exit(1); });

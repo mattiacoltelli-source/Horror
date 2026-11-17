@@ -372,9 +372,9 @@ function finish(msg, fast = false, light = false) {
   setTimeout(() => $('end').classList.remove('hidden'), fast ? 1800 : 3200);
 }
 $('again').addEventListener('click', () => location.reload());
-$('act').addEventListener('click', () => { if (cellar?.shrine.near) cellar.shrine.act(); else if (wh && wh.nearGate) wh.openGate(); else if (wh && wh.near) wh.take(); else if (tower && tower.near) tower.open(); else if (morgue && morgue.near) morgue.open(); else if (combat && combat.canLower) combat.lower(); });
+$('act').addEventListener('click', () => { if (paused || state !== 'play') return; if (cellar?.shrine.near) cellar.shrine.act(); else if (wh && wh.nearGate) wh.openGate(); else if (wh && wh.near) wh.take(); else if (tower && tower.near) tower.open(); else if (morgue && morgue.near) morgue.open(); else if (combat && combat.canLower) combat.lower(); });
 $('fire').addEventListener('pointerdown', (e) => { e.preventDefault(); combat?.fire(); });
-addEventListener('keydown', (e) => { if (e.code === 'Space') combat?.fire(); if (e.code === 'KeyE' && !e.repeat && cellar?.shrine.near) cellar.shrine.act(); });
+addEventListener('keydown', (e) => { if (e.code === 'Space') combat?.fire(); if (e.code === 'KeyE' && !e.repeat && !paused && state === 'play' && cellar?.shrine.near) cellar.shrine.act(); });
 
 function tick(dt, hallDt = dt) {
   doorEvent?.update(hallDt);
