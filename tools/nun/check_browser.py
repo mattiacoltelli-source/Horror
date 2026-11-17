@@ -29,6 +29,7 @@ async def main():
    await page.wait_for_function("!document.querySelector('#enter').disabled",timeout=60000)
    await page.locator('#enter').click()
    await page.wait_for_function("window.__g?.scare?.ready",timeout=60000)
+   await page.wait_for_function("parseFloat(getComputedStyle(document.querySelector('#fade')).opacity)<0.01",timeout=30000)
    await page.evaluate("__g.hold=true")
    result=await page.evaluate("""turned=>{const g=__g,s=g.scare; const kind=turned?'behind':'ahead';s.trigger(kind,'prova');s.update(1.06);g.lights.update(.016,1,g.player.pos.z,g.player.pos.x);g.renderer.render(g.scene,g.camera);return {ready:s.ready,kind:s.kind,fired:s.fired,model:s.model.name,drawCalls:g.renderer.info.render.calls}}""",turned)
    await page.screenshot(path=str(OUT/f'finale-{turned}.png'))
