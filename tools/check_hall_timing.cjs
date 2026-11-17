@@ -99,7 +99,7 @@ function checkFrameClock() {
   assert.ok(tickStart >= 0 && frameStart > tickStart && frameEnd > frameStart);
   const calls = [], noop = () => {}, update = { update: noop };
   const context = vm.createContext({
-    paused: false, state: 'play', last: 0, time: 0, fpsAcc: 0, fpsN: 0,
+    paused: false, state: 'play', last: 0, time: 0, ended: false,
     requestAnimationFrame: noop, window: {}, camera: {}, renderer: {}, scene: {},
     doorEvent: { update: dt => calls.push(['event', dt]) },
     hall: { active: true, update: dt => calls.push(['hall', dt]) },
@@ -107,6 +107,9 @@ function checkFrameClock() {
     player: { pos: { x: 0, z: 0 }, update: dt => calls.push(['motion', dt]) },
     audio: { setListener: noop }, glassEvent: { update: noop, preRender: noop },
     rgbShift: { update: noop, render: noop },
+    updateVisibleWorldMatrices: noop,
+    story: { busy: () => false },
+    adaptiveResolution: { reset: noop, sample: dt => { calls.push(['quality', dt]); return null; } },
     scare: update, dust: update, dawn: update, cellar: update, tower: update,
     wh: update, morgue: update, ward: update, ambient: update, notes: update,
     rats: update, combat: update, hound: update, instab: update,
@@ -115,6 +118,7 @@ function checkFrameClock() {
   context.frame(100); // 10 FPS reali: la fisica resta limitata, la regia no.
   for (const kind of ['event', 'hall', 'lights']) assert.equal(calls.find(c => c[0] === kind)[1], 0.1);
   assert.equal(calls.find(c => c[0] === 'motion')[1], 0.05);
+  assert.equal(calls.find(c => c[0] === 'quality')[1], 0.1, 'Anche la qualita adatta i pixel al tempo reale');
   const count = calls.length;
   context.paused = true; context.frame(60100); assert.equal(calls.length, count, 'La pausa ferma i timer');
   context.paused = false; context.frame(60200);

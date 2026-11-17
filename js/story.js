@@ -1,6 +1,6 @@
 // Regia del gioco: stanze, scelte (flags) e passaggi tra una stanza e l'altra (dissolvenza nel buio).
 import { P, onRoom as personalRoom } from './personal.js';
-export function createStory({ scene, camera, controls, player, audio, hall, getCellar, getTower, getWh, getMorgue, getWard, say, lights, instab, onRoom }) {
+export function createStory({ scene, camera, controls, player, audio, hall, getCellar, getTower, getWh, getMorgue, getWard, say, lights, instab, prepare, onRoom }) {
   let busy = false, current = 'tunnel';
   const fade = document.getElementById('fade');
   const hideLegacy = (keep) => scene.children.forEach((o) => { if (!o.isLight && o !== camera && !o.userData.keep && !keep.includes(o)) o.visible = false; });
@@ -43,7 +43,7 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
     goto(name, quick = false) {
       if (busy) return; busy = true; controls.enabled = false;
       fade.style.transition = quick ? 'opacity 0.25s' : 'opacity 1.3s'; fade.style.opacity = 1; audio.duck(0, quick ? 0.2 : 0.6);
-      setTimeout(() => {
+      setTimeout(async () => {
         const cellar = getCellar(), tower = getTower(), wh = getWh(), morgue = getMorgue(), ward = getWard?.();
         player.box = null; player.frozen = false;
         if (name === 'cellar') { hideLegacy([cellar.group]); hall.group.visible = false; hall.active = false; cellar.enter(); }
@@ -52,7 +52,9 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
         if (name === 'ward') { hideLegacy([ward.group, morgue.group]); cellar.leave(); ward.enter(); }
         if (name === 'tower') { hideLegacy([tower.group]); cellar.leave(); wh.leave(); tower.enter(); }
         camera.far = { cellar: 42, morgue: 34, warehouse: 36, tower: 46, ward: 40 }[name] ?? 60; camera.updateProjectionMatrix();   // oltre la nebbia non serve disegnare
-        current = name; lights.torchKill(0.01, 0); tell(name); onRoom?.(name); personalRoom(name);
+        current = name; lights.torchKill(0.01, 0); onRoom?.(name);
+        await prepare?.();
+        tell(name); personalRoom(name);
         setTimeout(() => { fade.style.transition = quick ? 'opacity 0.9s' : 'opacity 2s'; fade.style.opacity = 0; controls.enabled = true; busy = false; audio.duck(1, 2); }, 350);
       }, quick ? 320 : 1500);
     },

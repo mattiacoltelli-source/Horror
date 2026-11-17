@@ -27,7 +27,8 @@ float aN(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       diffuseColor.rgb = mix(diffuseColor.rgb, rc * 0.62, clamp(rm, 0.0, 0.85)); }
     float wear = smoothstep(0.78, 0.9, aN(vAgeW * 41.0)) * 0.35 * uAge; diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.34, 0.3, 0.25), wear); }   // vernice saltata`);
       };
-      c.customProgramCacheKey = () => 'aged' + k + '_' + rust + ov;
+      // Eta', ruggine e texture sono uniformi: non richiedono programmi GPU diversi.
+      c.customProgramCacheKey = () => 'aged-v2';
       return c;
     });
     m.material = Array.isArray(m.material) ? mats : mats[0];

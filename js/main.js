@@ -32,6 +32,8 @@ import { bloodText } from './world/bloodfont.js';
 import { RIBS } from './world/tunnel.js';
 import { W as TUNNEL_W } from './world/tunnel.js';
 import { createCombat } from './events/combat.js';
+import { QUALITY as QD, chooseQuality, createAdaptiveResolution } from './render/quality.js';
+import { updateVisibleWorldMatrices, createScenePreparation } from './render/scene.js';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -40,9 +42,9 @@ const q = new URLSearchParams(location.search);
 const canvas = $('gl');
 // QUALITA' GRAFICA: alta / media / bassa. Scelta dal menu iniziale e ricordata sul telefono; se manca, si sceglie da soli dalla potenza dichiarata del dispositivo (memoria, core).
 // Se i frame calano durante la partita il gioco abbassa da solo la risoluzione (solo per quella partita).
-const QK = 'ng_quality', QD = { high: { pr: 1.5, aa: true, an: 4 }, mid: { pr: 1.15, aa: false, an: 2 }, low: { pr: 0.8, aa: false, an: 1 } };
+const QK = 'ng_quality';
 let QUAL; try { QUAL = localStorage.getItem(QK); } catch (_) {}
-if (!QD[QUAL]) QUAL = 'high';   // di base: alta (la scelta si cambia dal menu iniziale e resta ricordata)
+QUAL = chooseQuality(QUAL, { touch: navigator.maxTouchPoints > 0 && matchMedia('(pointer: coarse)').matches, memory: navigator.deviceMemory, cores: navigator.hardwareConcurrency });
 globalThis.__quality = QUAL; if (QUAL === 'low') globalThis.__lowQ = true;   // bassa: niente arredo modulare (tubi, cavi, recinzioni), specchio piu' piccolo
 const QC = QD[QUAL];
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: QC.aa && devicePixelRatio < 2, powerPreference: QUAL === 'low' ? 'default' : 'high-performance', alpha: false });
@@ -57,6 +59,8 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 scene.fog = new THREE.FogExp2(0x030405, 0.085);
 const camera = new THREE.PerspectiveCamera(68, 9 / 16, 0.05, 60);
+const adaptiveResolution = createAdaptiveResolution(pr);
+const prepareScene = createScenePreparation(renderer, scene, camera);
 
 function resize() {
   const w = innerWidth, h = innerHeight;
@@ -164,8 +168,8 @@ let restoreCk = false, restoreRoom = null;
   } }
 const warm = new THREE.PointLight(0xff9a50, 0, 15, 1.7); scene.add(warm);
 const flash = new THREE.PointLight(0xffd9a0, 0, 28, 1.6); scene.add(flash);   // lampo dello sparo
-let state = 'loading', last = 0, time = 0, paused = false, fpsAcc = 0, fpsN = 0, ended = false;
-let started = false;
+let state = 'loading', last = 0, time = 0, paused = false, ended = false;
+let started = false, entering = false;
 const hint = $('subtitle');
 // Le note hanno la precedenza: finché una nota è a schermo, gli altri messaggi aspettano (resta in coda solo l'ultimo) e compaiono subito dopo.
 function say(txt, ms = 4000, style = '') {
@@ -185,10 +189,11 @@ function showHowto() {
 }
 
 async function enter() {
+  if (entering || started) return; entering = true;
   scare ??= createScare({ scene, camera, player, audio, lights, instab, finish: (m, f) => (dawn ? dawn.start(m) : finish(m, f)) });
   hall ??= createHall({ scene, mats, lights });
   dawn ??= createDawn({ scene, camera, player, audio, lights, instab, say, finish, onStart: () => combat?.hideAll(), hall });
-  story ??= createStory({ scene, camera, controls, player, audio, hall, getCellar: () => cellar, getTower: () => tower, getWh: () => wh, getMorgue: () => morgue, getWard: () => ward, say, lights, instab, onRoom: (name) => saveCkpt(name) });
+  story ??= createStory({ scene, camera, controls, player, audio, hall, getCellar: () => cellar, getTower: () => tower, getWh: () => wh, getMorgue: () => morgue, getWard: () => ward, say, lights, instab, prepare: prepareScene, onRoom: (name) => saveCkpt(name) });
   combat ??= createCombat({ scene, camera, player, audio, lights, instab, say, flash, scare, ui: { aimAll: (b) => { controls.aimAll = b; if (b) { controls.move.x = controls.move.y = 0; $('stick').style.opacity = 0; } }, label: (t) => ($('fire').textContent = t), cool: (b) => $('fire').classList.toggle('cool', b), show: (b) => { $('fire').classList.toggle('hidden', !b); $('dot').classList.toggle('hidden', !b); } } });
   ward ??= createWard({ scene, mats, player, camera, audio, lights, instab, say, getMorgue: () => morgue, get story() { return story; } });
   morgue ??= createMorgue({ scene, mats, player, camera, audio, lights, instab, say, hall, story, flags, actBtn: $('act') });
@@ -302,13 +307,10 @@ async function enter() {
   try { await audio.start(); audio.heartbeat?.(); navigator.vibrate?.(30); } catch (_) {}
   try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el, { navigationUI: 'hide' })?.catch?.(() => {}); } catch (_) {}
   try { await screen.orientation?.lock?.('portrait'); } catch (_) {}
+  if (!restoreCk && (!q.get('start') || q.get('start') === 'porta')) await prepareScene();
   $('intro').classList.add('hidden');
-  // PRECOMPILA GLI SHADER di tutte le stanze mentre sei ancora nel tunnel: senza, il telefono compila al primo sguardo di ogni stanza nuova e il gioco si blocca per qualche decimo di secondo
-  setTimeout(() => { try {
-    const gs = [cellar, morgue, wh, tower, ward, hall].map((r) => r?.group).filter(Boolean), was = gs.map((g) => g.visible);
-    gs.forEach((g) => { g.visible = true; }); const p = renderer.compileAsync ? renderer.compileAsync(scene, camera) : (renderer.compile(scene, camera), Promise.resolve());
-    gs.forEach((g, i) => { g.visible = was[i]; }); p?.catch?.(() => {});
-  } catch (_) {} }, 2500);
+  // I programmi e le texture della stanza vengono preparati durante il
+  // caricamento o la dissolvenza, senza accendere tutte le stanze durante il gioco.
   // ?start=porta → salta il tunnel e parte a ~8 m dal portone (per provare solo la parte finale)
   if (q.get('start') === 'porta') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, Z_END + 10); }
   // scorciatoie di prova: ?start=cantina | torre  (&turned=1 / &mirror=1 per simulare le scelte)
@@ -320,8 +322,8 @@ async function enter() {
     if (st === 'reparto') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; story.goto('ward'); }
     if (st === 'cantina' || st === 'torre' || st === 'magazzino' || st === 'obitorio') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; if (st === 'torre' && flags.weapon === 'axe') combat.giveAxe(); story.goto(st === 'cantina' ? 'cellar' : st === 'obitorio' ? 'morgue' : st === 'magazzino' ? 'warehouse' : 'tower'); if (st === 'cantina' && q.get('specchio')) setTimeout(() => { player.pos.set(-1.3, 1.62, -210); player.yaw = Math.PI / 2; player.pitch = 0.02; }, 4500); } }   // ?start=cantina&specchio=1: direttamente davanti allo specchio
 
-  controls.enabled = true; started = true; state = 'play';
-  $('fade').style.opacity = 0;
+  controls.enabled = !story.busy(); started = true; state = 'play';
+  if (!story.busy()) $('fade').style.opacity = 0;
   setTimeout(() => instab.show(), 4000);
   if (!q.get('start')) setTimeout(showHowto, 1800);
   if (!q.get('start') && !restoreCk) setTimeout(() => story?.tell('tunnel'), 13500);   // il registro dell'infermiera comincia dal tunnel
@@ -334,14 +336,14 @@ $('enter').addEventListener('click', enter);
 
 // i messaggi della schermata iniziale restano almeno ~7 secondi (anche se il caricamento finisce prima): il pulsante si accende subito, i messaggi continuano
 const endMsgs = () => { window.__loadMsgStop?.(); $('loadmsg').textContent = ''; };
-THREE.DefaultLoadingManager.onLoad = () => { $('enter').disabled = false; setTimeout(endMsgs, Math.max(0, 7000 - performance.now())); };
+THREE.DefaultLoadingManager.onLoad = () => { if (!entering && !started) $('enter').disabled = false; setTimeout(endMsgs, Math.max(0, 7000 - performance.now())); };
 $('enter').disabled = true;
-setTimeout(() => { $('enter').disabled = false; endMsgs(); }, 9000);
+setTimeout(() => { if (!entering && !started) { $('enter').disabled = false; endMsgs(); } }, 9000);
 
 function setPaused(p) {
   if (!started || ended) return;
   paused = p; $('pause').classList.toggle('hidden', !p);
-  controls.enabled = !p; p ? audio.suspend() : (audio.resume(), (last = performance.now()));
+  controls.enabled = !p; adaptiveResolution.reset(); p ? audio.suspend() : (audio.resume(), (last = performance.now()));
 }
 document.addEventListener('visibilitychange', () => document.hidden && setPaused(true));
 $('resume').addEventListener('click', () => setPaused(false));
@@ -395,19 +397,19 @@ function tick(dt, hallDt = dt) {
 function frame(now) {
   requestAnimationFrame(frame);
   const elapsed = Math.max(0, (now - last) / 1000), dt = Math.min(0.05, elapsed); last = now;
-  if (paused || state === 'loading') { if (state === 'loading') renderer.render(scene, camera); return; }
+  if (paused || state === 'loading') { if (state === 'loading') { updateVisibleWorldMatrices(scene); renderer.render(scene, camera); } return; }
   // La regia della sala usa il tempo reale; movimento e collisioni mantengono il passo limitato.
   if (!(window.__g && window.__g.hold)) tick(dt, elapsed);
+  updateVisibleWorldMatrices(scene);
   glassEvent.preRender();
   rgbShift.update(dt); rgbShift.render(scene, camera);
 
-  // qualità adattiva: se i frame calano, scala la risoluzione
-  fpsAcc += dt; fpsN++;
-  if (fpsAcc > 2) {
-    const fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0;
-    if (fps < 38 && pr > 0.7) { pr = Math.max(0.7, pr - 0.15); renderer.setPixelRatio(pr); resize(); }
-    else if (fps < 28 && pr <= 0.71 && !globalThis.__lowQ) { globalThis.__lowQ = true; scene.traverse((o) => { if (o.userData.decor) o.visible = false; }); }   // ultimo ripiego: via l'arredo modulare
-  }
+  // Le attese di caricamento/dissolvenza non misurano la fluidita' della partita.
+  if (story?.busy() || ended) { adaptiveResolution.reset(); return; }
+  const adjustment = adaptiveResolution.sample(elapsed);
+  // setPixelRatio ridimensiona gia' il buffer: non riallocarlo una seconda volta.
+  if (adjustment?.ratio) { pr = adjustment.ratio; renderer.setPixelRatio(pr); }
+  if (adjustment?.trim && !globalThis.__lowQ) { globalThis.__lowQ = true; scene.traverse((o) => { if (o.userData.decor) o.visible = false; }); }
 }
 requestAnimationFrame((n) => { last = n; frame(n); });
 

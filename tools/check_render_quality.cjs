@@ -1,0 +1,21 @@
+// node tools/check_render_quality.cjs
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const source=fs.readFileSync(path.join(__dirname,'../js/render/quality.js'),'utf8');
+const {chooseQuality,createAdaptiveResolution}=new Function(source.replaceAll('export ', '')+';return {chooseQuality,createAdaptiveResolution};')();
+assert.equal(chooseQuality(null,{touch:true,memory:8,cores:8}),'mid');
+assert.equal(chooseQuality(null,{memory:4,cores:8}),'mid');
+assert.equal(chooseQuality(null,{memory:16,cores:8}),'high');
+for(const q of ['high','mid','low'])assert.equal(chooseQuality(q,{touch:true,memory:2,cores:2}),q,'Rispetta la scelta salvata');
+assert.equal(chooseQuality('__proto__',{touch:true}),'mid');
+const simulate=(r,fps,seconds)=>{const changes=[];for(let i=0;i<fps*seconds;i++){const event=r.sample(1/fps);if(event)changes.push({time:(i+1)/fps,...event});}return changes;};
+assert.deepEqual(simulate(createAdaptiveResolution(1.15),60,12),[],'Nessun resize sui dispositivi fluidi');
+const isolated=createAdaptiveResolution(1.15);simulate(isolated,60,1);isolated.sample(.25);
+assert.deepEqual(simulate(isolated,60,2),[],'Uno scatto isolato non riduce la risoluzione');
+const slow=simulate(createAdaptiveResolution(1.5),5,12),floor=slow.find(x=>x.ratio===.7);
+assert.ok(floor&&floor.time<7,'A 5 fps raggiunge il minimo entro 7 s, senza usare il dt limitato a 50 ms');
+assert.equal(slow.filter(x=>x.trim).length,1,'Il ripiego sugli arredi si applica una sola volta');
+assert.ok(slow.find(x=>x.trim).time>=floor.time+3,'Prima del ripiego aspetta altri 3 secondi al minimo');
+const medium=simulate(createAdaptiveResolution(1.15),30,10);assert.ok(medium.length&&medium.every(x=>!x.trim),'A 30 fps riduce solo i pixel, conserva gli arredi');
+const paused=createAdaptiveResolution(1.15);simulate(paused,10,.8);paused.reset();assert.deepEqual(simulate(paused,60,3),[],'La pausa non conta come un rallentamento');
+assert.equal(paused.sample(30),null,'Ignora il salto dopo una scheda sospesa');
+console.log(JSON.stringify({quality:'saved/default selection OK',severeSlowdown:slow,mildSlowdown:medium}));
