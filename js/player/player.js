@@ -29,7 +29,9 @@ export function createPlayer(camera, controls, audio) {
     p.speedNow += (target - p.speedNow) * Math.min(1, dt * 8);
     if (mag > 0.01) {
       tmp.normalize().multiplyScalar(p.speedNow * dt);
-      if (p.box) {   // stanze: rettangolo di movimento
+      const resolved = p.constrainMove?.(p.pos.x + tmp.x, p.pos.z + tmp.z);
+      if (resolved) { p.pos.x = resolved[0]; p.pos.z = resolved[1]; }
+      else if (p.box) {   // stanze: rettangolo di movimento
         p.pos.x = THREE.MathUtils.clamp(p.pos.x + tmp.x, p.box[0], p.box[1]);
         p.pos.z = THREE.MathUtils.clamp(p.pos.z + tmp.z, p.box[2], p.box[3]);
       } else {

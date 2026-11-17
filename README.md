@@ -13,6 +13,13 @@ Sei il paziente n. 17, entrato la notte del 3 novembre. Tua sorella è morta in 
 
 Combattimento: pistola a 4 colpi o ascia (scelta nel magazzino); trascini per guardare, joystick per camminare piano, per sparare devi fermarti (SPARA); il mostro ti disarma sempre.
 
+## Santuario di Cos (facoltativo)
+Nella cantina, prima della cripta, una chiave sul muro opposto apre un pannello mimetizzato nei mattoni. Il piccolo archivio contiene 10 locandine principali e altre 38 sui muri, selezionate dagli horror votati almeno 7 dal profilo CineFighi **Cos** (snapshot del 17 novembre 2026). La visita non modifica scelte o finali; chiave e apertura vengono salvate nei checkpoint. Su desktop si può usare anche **E** quando compare il pulsante.
+
+Le locandine originali provengono da TMDB: titoli, voti e riferimenti delle immagini sono in `assets/tex/film-shrine/sources.json`. I due atlanti WebP sono locali e funzionano offline, senza accessi a CineFighi durante la partita. Geometria e interazioni: `js/world/film-shrine.js` e `js/events/film-shrine.js`.
+
+Verifica delle interazioni e delle collisioni: `node --experimental-vm-modules tools/check_film_shrine.cjs`.
+
 ## Link e scorciatoie
 - **Anteprima del link** (WhatsApp, Telegram…): `index.html` ha i meta Open Graph con l'icona del gioco; le app tengono l'anteprima in cache, quindi un link già inviato può mostrare quella vecchia.
 - **Il link normale (senza parametri) è la versione personalizzabile**: chiede nome, genere, data e frase (vedi sotto). La versione di base senza domande esiste solo con `?base=1` (per provare).

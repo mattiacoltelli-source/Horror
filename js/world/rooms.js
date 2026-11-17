@@ -20,22 +20,37 @@ export function buildRoom(mats, o) {
       [[x / cu, -z / cv], [xe / cu, -z / cv], [xe / cu, -ze / cv], [x / cu, -ze / cv]], [gray(.22 * dark), gray(.22 * dark), gray(.22 * dark), gray(.22 * dark)], [0, -1, 0]);
   }
   // muri laterali
-  // sideDoor: { side: 1 (muro destro) | -1 (muro sinistro), z, w, h } = varco rettangolare in un muro laterale (nicchia / cappella)
-  const wallQ = (x, nx) => { const hole = o.sideDoor && ((o.sideDoor.side === 1 && nx === -1) || (o.sideDoor.side === -1 && nx === 1)) ? o.sideDoor : null;
+  // sideDoor / sideDoors: { side: 1 (destro) | -1 (sinistro), z, w, h }.
+  // panel: nome facoltativo della faccia da restituire separata, per una porta nascosta.
+  const panels = {};
+  const wallQ = (x, nx) => { const holes = (o.sideDoors || (o.sideDoor ? [o.sideDoor] : []))
+      .filter((d) => d.side === -nx).sort((a, b) => b.z - a.z);
     for (let z = z0; z > z1 + 0.01; z -= 4) {
       const ze = Math.max(z - 4, z1), k = 0.6 + rnd() * 0.4, fl = rnd() < 0.5 ? -1 : 1, ou = rnd() * 4;
       const U = (zz) => (fl * -zz) / wu + ou;
-      const seg = (za, zb, ya, yb) => B.quad(wall, [[x, ya, za], [x, ya, zb], [x, yb, zb], [x, yb, za]], [[U(za), ya / wv], [U(zb), ya / wv], [U(zb), yb / wv], [U(za), yb / wv]], [col(ya, k), col(ya, k), col(yb, k), col(yb, k)], [nx, 0, 0]);
-      if (hole) { const ha = hole.z + hole.w / 2, hb = hole.z - hole.w / 2;
-        if (ha > ze && hb < z) { if (z > ha) seg(z, ha, 0, h); if (hb > ze) seg(hb, ze, 0, h); seg(Math.min(ha, z), Math.max(hb, ze), hole.h, h); continue; } }
-      seg(z, ze, 0, h);
+      const matching = holes.filter((d) => d.z + d.w / 2 > ze && d.z - d.w / 2 < z);
+      const hasPanel = matching.some((d) => d.panel);
+      const shade = (y) => hasPanel ? gray(k * dark * (0.5 + 0.5 * y / h)) : col(y, k);
+      const seg = (za, zb, ya, yb, target = B) => { if (za <= zb || yb <= ya) return; target.quad(wall, [[x, ya, za], [x, ya, zb], [x, yb, zb], [x, yb, za]], [[U(za), ya / wv], [U(zb), ya / wv], [U(zb), yb / wv], [U(za), yb / wv]], [shade(ya), shade(ya), shade(yb), shade(yb)], [nx, 0, 0]); };
+      let cursor = z;
+      for (const hole of matching) {
+        const ha = Math.min(hole.z + hole.w / 2, z), hb = Math.max(hole.z - hole.w / 2, ze);
+        if (ha <= hb) continue;
+        seg(cursor, ha, 0, h); seg(ha, hb, hole.h, h);
+        // Un pannello segreto conserva UV e colori esatti del muro originale.
+        if (hole.panel) seg(ha, hb, 0, hole.h, panels[hole.panel] ??= new Builder());
+        cursor = hb;
+      }
+      seg(cursor, ze, 0, h);
     } };
   wallQ(xl, 1); wallQ(xr, -1);
   // pareti di testa (la prima con il vano porta)
   const endWall = (z, nz, opening) => { for (let x = xl; x < xr - 0.01; x += 1) {   // pannelli da 1 m: il vano porta (2 m) resta esatto
-    const xe = Math.min(x + 1, xr), k = 0.5 + rnd() * 0.3, U = (xx) => xx / wu + 0.3, ins = opening && (x + xe) / 2 > -opening.w / 2 - 0.02 && (x + xe) / 2 < opening.w / 2 + 0.02;
-    const yb = ins ? opening.h : 0;
-    B.quad(wall, [[x, yb, z], [xe, yb, z], [xe, h, z], [x, h, z]], [[U(x), yb / wv], [U(xe), yb / wv], [U(xe), h / wv], [U(x), h / wv]], [col(yb, k), col(yb, k), col(h, k), col(h, k)], [0, 0, nz]);
+    const xe = Math.min(x + 1, xr), k = 0.5 + rnd() * 0.3, U = (xx) => xx / wu + 0.3;
+    const seg = (a, b, y) => { if (b <= a) return; B.quad(wall, [[a, y, z], [b, y, z], [b, h, z], [a, h, z]], [[U(a), y / wv], [U(b), y / wv], [U(b), h / wv], [U(a), h / wv]], [col(y, k), col(y, k), col(h, k), col(h, k)], [0, 0, nz]); };
+    const left = cx - (opening?.w || 0) / 2, right = cx + (opening?.w || 0) / 2;
+    if (opening && xe > left && x < right) { seg(x, Math.max(x, left), 0); seg(Math.max(x, left), Math.min(xe, right), opening.h); seg(Math.min(xe, right), xe, 0); }
+    else seg(x, xe, 0);
   } };
   endWall(z0, -1, door); if (!o.openEnd) endWall(z1, 1, o.exit || null);   // exit: varco d'uscita in fondo   // openEnd: niente parete di fondo (si continua in un'altra stanza)
   // pilastri in pietra lungo i muri
@@ -47,5 +62,6 @@ export function buildRoom(mats, o) {
       quad([[ax, 0, az], [bx, 0, bz], [bx, h, bz], [ax, h, az]], [[0, 0], [1, 0], [1, h / 1.8], [0, h / 1.8]], [nx, 0, nz]);
   }
   const group = B.build(mats);
-  return { group, bounds: [xl + 0.5, xr - 0.5, z1 + 0.6, z0 - 0.4], pillars };
+  const sidePanels = Object.fromEntries(Object.entries(panels).map(([key, b]) => [key, b.build(mats)]));
+  return { group, bounds: [xl + 0.5, xr - 0.5, z1 + 0.6, z0 - 0.4], pillars, sidePanels };
 }
