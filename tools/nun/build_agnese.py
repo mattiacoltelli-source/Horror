@@ -239,11 +239,19 @@ def tube(name, coordinates, radius, mat, region):
 
 # Recess the eyes and blend fleshy orbital surrounds into the face surface.
 head_bvh = BVHTree.FromObject(head, bpy.context.evaluated_depsgraph_get())
-for side, x in [('L', -.166), ('R', -.097)]:
-    z = 1.555 + (.0007 if side == 'L' else 0)
+for side, x in [('L', -.160), ('R', -.101)]:
+    z = 1.570 + (.0007 if side == 'L' else 0)
     ellipsoid('Eye_'+side, (x,-.176,z), (.015,.009,.006), sclera, 'head', 24, 12)
-    ellipsoid('Iris_'+side, (x+.001,-.1848,z), (.0043,.0006,.0043), iris, 'head', 24, 12)
-    ellipsoid('Pupil_'+side, (x+.001,-.1854,z), (.0015,.0002,.002), pupil, 'head', 16, 8)
+    ellipsoid('Iris_'+side, (x+.001,-.1848,z), (.0055,.0006,.0055), iris, 'head', 24, 12)
+    ellipsoid('Pupil_'+side, (x+.001,-.1854,z), (.0018,.0002,.0023), pupil, 'head', 16, 8)
+    brow=[]
+    for i in range(21):
+        t=i/20
+        px=x+(t-.5)*.034
+        pz=z+.015+.003*math.sin(t*math.pi)
+        hit=head_bvh.ray_cast(Vector((px,-1,pz)),Vector((0,1,0)))[0]
+        brow.append((px,hit.y-.0005 if hit is not None else -.18,pz))
+    tube('Sparse_eyebrow_'+side,brow,.00045,darkskin,'head')
     # Open an anatomical aperture in the continuous face; the eyeball sits behind it.
     bm=bmesh.new();bm.from_mesh(head.data)
     cut=[]
@@ -269,7 +277,7 @@ for row in range(17):
     for col in range(33):
         u = col/32
         x = -.13+(u-.5)*(.117+.010*v)
-        z = 1.465+v*.067 - .007*(1-v)*math.cos((u-.5)*math.pi) + .009*v*math.cos((u-.5)*math.pi)
+        z = 1.465+v*.080 - .007*(1-v)*math.cos((u-.5)*math.pi) + .009*v*math.cos((u-.5)*math.pi)
         y = -.177 - .065*math.cos((u-.5)*math.pi) + .002*math.sin(v*6*math.pi)
         verts.append((x,y,z))
         if row and col:
