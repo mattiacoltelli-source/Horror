@@ -50,7 +50,6 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
     cap.position.set(0, 0, zFar + 0.05); cap.rotation.y = 0; T.group.add(cap);
   }
 
-  loader.load('assets/models/gate.glb', (g) => { const o = g.scene; o.scale.setScalar(2.2); o.position.set(-0.08, 1.02, 0.13); o.rotation.y = Math.PI; door.add(o); });
   // luce che filtra sotto la porta: ventaglio morbido sul pavimento che sfuma su tutti i lati + sottile riga luminosa nella fessura
   const lc = document.createElement('canvas'); lc.width = 256; lc.height = 128; const lg = lc.getContext('2d');
   const img = lg.createImageData(256, 128);
