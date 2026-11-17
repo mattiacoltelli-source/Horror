@@ -9,6 +9,8 @@ import { unseenMover } from './ambient.js';
 import { doorGlow } from '../world/redlight.js';
 import { kitObject } from '../world/props.js';
 import { addExtras, pedestal } from '../world/extra.js';
+import { createWornTableTop } from '../world/worn-steel.js';
+import { addContactShadow } from '../world/contact-shadows.js';
 import { addAtmosphere } from '../world/atmos.js';
 
 export const MORGUE = { z0: -500, w: 9, l: 15, h: 3.0 };
@@ -41,20 +43,22 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
   const chairZ = z0 - 8;
   load('assets/models/mg_chair.glb').then((o) => { if (!o) return; const b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x, b.min.y, c.z)); const g = new THREE.Group(); g.add(o); g.position.set(0.2, 0, chairZ); g.rotation.y = -0.15; M.group.add(g); M.chair = g; });
   // tavolo in acciaio con gli strumenti, contro il muro destro
-  const steel = new THREE.MeshStandardMaterial({ color: 0x8e9496, metalness: 0.75, roughness: 0.38 });
+  const steel = new THREE.MeshStandardMaterial({ color: 0x667066, metalness: 0.6, roughness: 0.76 });
   const tbl = new THREE.Group(); tbl.position.set(w / 2 - 0.9, 0, z0 - 5);
-  const top = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.04, 1.5), steel); top.position.y = 0.9; tbl.add(top);
+  tbl.name='tavolo-strumenti'; tbl.add(createWornTableTop());
   for (const [dx, dz] of [[-0.3, -0.7], [0.3, -0.7], [-0.3, 0.7], [0.3, 0.7]]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.9, 0.04), steel); leg.position.set(dx, 0.45, dz); tbl.add(leg); }
   M.group.add(tbl);
+  for (const [dx,dz] of [[-.3,-.7],[.3,-.7],[-.3,.7],[.3,.7]]) addContactShadow(M.group,{x:tbl.position.x+dx,z:tbl.position.z+dz,w:.13,d:.13,strength:.32});
+  addContactShadow(M.group,{x:.2,z:chairZ,w:.72,d:.95,angle:-.15,strength:.29});
   addExtras(M.group, [['x_micro', 0.46, w / 2 - 0.86, 0.92, z0 - 4.5, -Math.PI / 2 - 0.18], ['x_watch', 0.13, w / 2 - 1.1, 0.92, z0 - 5.66, 0.47, 1, -Math.PI / 2], ['x_screen', 1.7, -w / 2 + 0.5, 0, z0 - 3.4, Math.PI / 2], ['x_basket', 0.32, -w / 2 + 0.7, 0, z0 - 9.5, 0.4, 0.12]]);
   // Disposizione sfalsata, con angoli diversi; la sega resta lontana dal microscopio.
   const toolSpots = [[-0.17, 0.015, 0.48], [0.22, 0.065, -0.62], [0.025, -0.32, 1.30]];
-  ['mg_tool1', 'mg_tool3', 'mg_tool4'].forEach((n, i) => load(`assets/models/${n}.glb`).then((o) => { if (!o) return; const b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x, b.min.y, c.z)); const g = new THREE.Group(); g.name = 'utensile-tavolo-' + n; g.add(o); const [tx, tz, ry] = toolSpots[i]; g.position.set(tx, 0.92, tz); g.rotation.y = ry; tbl.add(g); if (i === 1) M.tool = g; }));
+  ['mg_tool1', 'mg_tool3', 'mg_tool4'].forEach((n, i) => load(`assets/models/${n}.glb`).then((o) => { if (!o) return; const b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x, b.min.y, c.z)); const g = new THREE.Group(); g.name = 'utensile-tavolo-' + n; g.add(o); const [tx, tz, ry] = toolSpots[i]; g.position.set(tx, 0.92, tz); g.rotation.y = ry; tbl.add(g); if (i === 1) M.tool = g; else { const size=b.getSize(new THREE.Vector3()); addContactShadow(tbl,{x:tx,y:.92,z:tz,w:Math.max(.025,size.x*.8),d:Math.max(.025,size.z*.8),angle:ry,strength:.22}); } }));
   // lampada sospesa sopra la sedia
   const lampPos = [[0, 2.8, chairZ]];   // una sola lampada, sopra la sedia: gli angoli restano bui
   load('assets/models/hlamp.glb').then((o) => { if (!o) return; for (const [x, , z] of lampPos) { const c = o.clone(true); c.position.set(x, h, z); M.group.add(c); } });
   addAtmosphere(M.group, { xl: -w / 2, xr: w / 2, z0, z1: zFar, h, seed: 11, lamps: lampPos, shaft: 0xcfe8dc, shaftOpacity: 0.09, stains: 6, puddles: 4, wallInset: 0.3, stainColor: 0x070a06 });
-  M.puddles = M.group.children.filter((c) => c.isMesh && c.geometry.type === 'PlaneGeometry' && c.position.y > 0.005 && c.position.y < 0.02 && c.material && (c.material.metalness > 0.8 || c.material.blending === THREE.AdditiveBlending));   // pozzanghere: visibili solo a lampada accesa (al buio sembrano macchie chiare innaturali)
+  M.puddles = M.group.children.filter((c) => c.userData.wetPatch);   // la regia della lampada controlla anche le zone umide
   M.cones = M.group.children.filter((c) => c.isMesh && c.geometry.type === 'CylinderGeometry' && c.material.isShaderMaterial);   // i fasci di luce sotto la lampada: spenti finche' non entri dal reparto
   // DUE PORTE in fondo: a sinistra filtra una luce rossa, a destra si sente un respiro. Quella che scegli cambia il magazzino (flags.door).
   const doors = []; M.doors = doors;

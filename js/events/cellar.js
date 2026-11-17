@@ -42,6 +42,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const mw = 1.7, mh = 2.4;
   const mirror = new Reflector(new THREE.PlaneGeometry(mw, mh), { textureWidth: globalThis.__quality === 'low' ? 160 : 256, textureHeight: globalThis.__quality === 'low' ? 240 : 384, color: new THREE.Color(0xffffff), clipBias: 0.003 });
   mirror.position.copy(MIRROR); mirror.rotation.y = Math.PI / 2; C.group.add(mirror);
+  mirror.camera.userData.planarReflection = true;
   // nel riflesso lo z-fighting del pavimento (pozzanghere, veli di luce, tombini incassati) fa comparire "quadratini" neri: durante il render dello specchio quegli oggetti sono nascosti
   { const orig = mirror.onBeforeRender; let flat = null;
     mirror.onBeforeRender = function (...a) {

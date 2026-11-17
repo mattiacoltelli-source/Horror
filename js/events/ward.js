@@ -7,6 +7,7 @@ import { buildRoom } from '../world/rooms.js';
 import { PKEY, P } from '../personal.js';
 import { bloodText } from '../world/bloodfont.js';
 import { createElevator } from '../world/elevator.js';
+import { createElectricalPanel } from '../world/electrical-panel.js';
 
 export const WARD = { z0: -480, w: 4, l: 20, h: 2.5 };   // la fine del corridoio coincide con l'ingresso dell'obitorio (z0 -500): un unico ambiente
 const loader = new GLTFLoader(), cache = {};
@@ -31,6 +32,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
   // guscio: pavimento e pareti piastrellate come l'obitorio (le texture di pareti e pavimento del kit non erano nel pacchetto ricevuto); soffitto e arredo: pezzi del kit
   const room = buildRoom(mats, { z0, w, l, h, wall: 'stone', floor: 'mfloor', ceil: 'stone', dark: 0.5, seed: 61, openEnd: true, door: { w: 2, h: 2.5 }, sideDoor: elevator }); R.group.add(room.group);
   createElevator({ group: R.group, mats, x: hw - 0.26, z: elevator.z });
+  createElectricalPanel(R.group,mats,{x:-1.755,y:1.80,z:z0-3.8});
   (async () => {
     const mg = await get('../mg_wall'); // (percorso relativo: assets/models/mg_wall.glb)
     if (mg) {

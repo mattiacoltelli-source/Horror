@@ -124,37 +124,44 @@ export function buildTunnel(mats) {
     }
   }
 
-  // COSTOLONI in pietra (pilastri + arco), con profondità
+  // Costoloni: UV continue sulla faccia, piccoli smussi e pietra consumata.
+  // Tutto resta nello stesso batch 'stone', senza nuove draw call.
   const [su, sv] = TILES.stone;
-  const D = 0.22, T = 0.5; // sporgenza e spessore
+  const D = 0.22, T = 0.5, bevel = 0.007;
   for (const zc of RIBS) {
-    const za = zc + T / 2, zb = zc - T / 2;
-    const c = gray(0.8);
-    // pilastri
-    for (const s of [-1, 1]) {
-      const xi = s * (W - D), xo = s * W;
-      B.quad('stone', [[xi, 0, za], [xi, 0, zb], [xi, H0, zb], [xi, H0, za]],
-        [[0, 0], [T / su, 0], [T / su, H0 / sv], [0, H0 / sv]], [c, c, c, c], [-s, 0, 0]);
-      for (const [zz, nz] of [[za, 1], [zb, -1]]) {
-        B.quad('stone', [[xi, 0, zz], [xo, 0, zz], [xo, H0, zz], [xi, H0, zz]],
-          [[0, 0], [D / su, 0], [D / su, H0 / sv], [0, H0 / sv]], [c, c, c, c], [0, 0, nz]);
+    const za = zc + T / 2, zb = zc - T / 2, Ri = R - D;
+    const noise = (n) => { const v = Math.sin((zc + n * .73) * 127.1) * 43758.5453; return v - Math.floor(v); };
+    const frontUV = (P) => P.map(([x,y]) => [x / su + noise(71) * 3, y / sv + noise(83)]);
+    const front = (P, color, normal) => B.quad('stone', P, frontUV(P), P.map(() => color), normal);
+    for (const side of [-1,1]) for (let j=0;j<4;j++) {
+      const y0=H0*j/4,y1=H0*(j+1)/4,wear=j===3?0:noise(j+side*11)*.004;
+      const xi=side*(Ri+wear),xo=side*R,c=gray((.69+noise(j+side*17)*.10)*(.80+.20*j/3));
+      B.quad('stone',[[xi,y0,za-bevel],[xi,y0,zb+bevel],[xi,y1,zb+bevel],[xi,y1,za-bevel]],
+        [[za/su,y0/sv],[zb/su,y0/sv],[zb/su,y1/sv],[za/su,y1/sv]],[c,c,c,c],[-side,0,0]);
+      for(const [zz,nz]of [[za,1],[zb,-1]]) {
+        front([[xi+side*bevel,y0,zz],[xo,y0,zz],[xo,y1,zz],[xi+side*bevel,y1,zz]],c,[0,0,nz]);
+        front([[xi,y0,zz-nz*bevel],[xi+side*bevel,y0,zz],[xi+side*bevel,y1,zz],[xi,y1,zz-nz*bevel]],gray(c[0]*1.04),[-side*.7,0,nz*.7]);
+        if(j>0) front([[xi+side*bevel,y0,zz+nz*.0005],[xo,y0,zz+nz*.0005],[xo,y0+.0035,zz+nz*.0005],[xi+side*bevel,y0+.0035,zz+nz*.0005]],gray(.30),[0,0,nz]);
       }
     }
-    // arco
-    const Ri = R - D;
-    for (let i = 0; i < SEG; i++) {
-      const a0 = Math.PI - (i / SEG) * Math.PI, a1 = Math.PI - ((i + 1) / SEG) * Math.PI;
-      const pi = (a) => [Ri * Math.cos(a), H0 + Ri * Math.sin(a)];
-      const po = (a) => [R * Math.cos(a), H0 + R * Math.sin(a)];
-      const [xi0, yi0] = pi(a0), [xi1, yi1] = pi(a1), [xo0, yo0] = po(a0), [xo1, yo1] = po(a1);
-      const n = (a) => [-Math.cos(a), -Math.sin(a), 0];
-      const len = (Math.PI / SEG) * Ri / sv;
-      B.quad('stone', [[xi0, yi0, za], [xi1, yi1, za], [xi1, yi1, zb], [xi0, yi0, zb]],
-        [[0, i * len], [0, (i + 1) * len], [T / su, (i + 1) * len], [T / su, i * len]], [c, c, c, c],
-        [n(a0), n(a1), n(a1), n(a0)]);
-      for (const [zz, nz] of [[za, 1], [zb, -1]]) {
-        B.quad('stone', [[xi0, yi0, zz], [xo0, yo0, zz], [xo1, yo1, zz], [xi1, yi1, zz]],
-          [[0, 0], [D / su, 0], [D / su, len], [0, len]], [c, c, c, c], [0, 0, nz]);
+    // Una scheggiatura riduce la pietra verso il muro; non restringe il passaggio.
+    const radius = (i) => Ri + (i===0||i===SEG?0:noise(i+31)>.76?.004+noise(i+41)*.007:noise(i+51)*.0015);
+    for (let i=0;i<SEG;i++) {
+      const a0=Math.PI-i/SEG*Math.PI,a1=Math.PI-(i+1)/SEG*Math.PI;
+      const point=(a,r)=>[r*Math.cos(a),H0+r*Math.sin(a)];
+      const [x0,y0]=point(a0,radius(i)),[x1,y1]=point(a1,radius(i+1));
+      const [bx0,by0]=point(a0,radius(i)+bevel),[bx1,by1]=point(a1,radius(i+1)+bevel);
+      const [ox0,oy0]=point(a0,R),[ox1,oy1]=point(a1,R);
+      const normal=(a)=>[-Math.cos(a),-Math.sin(a),0],c=gray(.70+noise(i+111)*.10);
+      const s0=(H0+i/SEG*Math.PI*Ri)/sv,s1=(H0+(i+1)/SEG*Math.PI*Ri)/sv;
+      B.quad('stone',[[x0,y0,za-bevel],[x1,y1,za-bevel],[x1,y1,zb+bevel],[x0,y0,zb+bevel]],
+        [[za/su,s0],[za/su,s1],[zb/su,s1],[zb/su,s0]],[c,c,c,c],[normal(a0),normal(a1),normal(a1),normal(a0)]);
+      for(const [zz,nz]of [[za,1],[zb,-1]]) {
+        front([[bx0,by0,zz],[ox0,oy0,zz],[ox1,oy1,zz],[bx1,by1,zz]],c,[0,0,nz]);
+        const mid=normal((a0+a1)/2);
+        front([[x0,y0,zz-nz*bevel],[bx0,by0,zz],[bx1,by1,zz],[x1,y1,zz-nz*bevel]],gray(c[0]*1.04),[mid[0]*.7,mid[1]*.7,nz*.7]);
+        if(i>0){const angle=a0-(.0025+noise(i+141)*.0015)/Ri,inner=point(angle,radius(i)+bevel),outer=point(angle,R);
+          front([[bx0,by0,zz+nz*.0005],[ox0,oy0,zz+nz*.0005],[outer[0],outer[1],zz+nz*.0005],[inner[0],inner[1],zz+nz*.0005]],gray(.31),[0,0,nz]);}
       }
     }
   }

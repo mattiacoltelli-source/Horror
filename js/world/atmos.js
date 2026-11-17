@@ -5,7 +5,7 @@ import * as THREE from 'three';
 const rnd0 = (seed) => { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); };
 function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); return t; }
 
-let blobT = null, streakT = null;
+let blobT = null, streakT = null, roughT = null;
 const blobTex = () => blobT ??= canvasTex(128, 128, (g, w, h) => {      // pozzanghera: macchia irregolare dai bordi morbidi
   const r = rnd0(5), n = 9; g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
   for (let i = 0; i < n; i++) { const a = r() * 6.28, d = r() * 22, x = w / 2 + Math.cos(a) * d, y = h / 2 + Math.sin(a) * d, rad = 22 + r() * 22; const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.6, 'rgba(255,255,255,.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }
@@ -29,7 +29,7 @@ export function addAtmosphere(group, o) {
   const avoidHit = (side, z) => (o.avoid || []).some((a) => a.side === side && z < a.z0 + 0.8 && z > a.z1 - 0.8);
   // Nel riflesso dello specchio (render target a bassa precisione di profondità) i piani sottili sovrapposti al pavimento/muro
   // sfarfallano a trattini neri: lì vengono resi invisibili (opacità 0), nella vista normale restano come sono.
-  const add = (m) => { m.userData.decor = true; if (m.material.transparent && !m.material.isShaderMaterial) { const base = m.material.opacity; m.onBeforeRender = (renderer, scene, cam, geo, mat) => { mat.opacity = renderer.getRenderTarget() ? 0 : mat.userData.base ?? base; }; m.material.userData.base = base; } group.add(m); return m; };
+  const add = (m) => { m.userData.decor = true; if (m.material.transparent && !m.material.isShaderMaterial) { const base = m.material.opacity; m.onBeforeRender = (renderer, scene, cam, geo, mat) => { mat.opacity = cam.userData.planarReflection ? 0 : mat.userData.base ?? base; }; m.material.userData.base = base; } group.add(m); return m; };
   // fasci di luce sotto le lampade
   if (o.shaft != null) for (const [x, y, z] of o.lamps || []) {
     const rad = Math.min(1.7, y * 0.36), cone = new THREE.Mesh(new THREE.CylinderGeometry(0.05, rad, y - 0.02, 28, 1, true), shaftMat(o.shaft, o.shaftOpacity ?? 0.085));
@@ -42,13 +42,12 @@ export function addAtmosphere(group, o) {
     const w = 0.7 + r() * 1.3, hh = Math.min(o.h * 0.75, 1.4 + r() * 2.4), m = new THREE.Mesh(new THREE.PlaneGeometry(w, hh), stainMat(side));
     m.position.set(side * ((o.xr - o.xl) / 2 - inset) + (o.xl + o.xr) / 2, o.h - hh / 2 - 0.02, z); m.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2; add(m);
   }
-  // pozzanghere sul pavimento: riflettono le lampade e l'ambiente
-  const pm = new THREE.MeshStandardMaterial({ color: 0x3a4148, roughness: 0.06, metalness: 0.9, alphaMap: blobTex(), transparent: true, opacity: 0.85, depthWrite: false, envMapIntensity: 1.4, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+  // Umidita' sottile: riflesso dielettrico, rugosita' variabile e nessun velo luminoso aggiunto.
+  roughT ??= canvasTex(64,64,(g,w,h)=>{const random=rnd0(81);g.fillStyle='#b8b8b8';g.fillRect(0,0,w,h);for(let i=0;i<28;i++){const x=random()*w,y=random()*h,rad=4+random()*15;const gr=g.createRadialGradient(x,y,0,x,y,rad);gr.addColorStop(0,i%2?'rgba(40,40,40,.32)':'rgba(245,245,245,.38)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(x-rad,y-rad,rad*2,rad*2);}});
+  const pm = new THREE.MeshStandardMaterial({ color: 0x303a35, roughness: 0.45, roughnessMap:roughT, metalness: 0, alphaMap: blobTex(), transparent: true, opacity: 0.48, depthWrite: false, envMapIntensity: 0.55, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
   for (let i = 0; i < (o.puddles ?? 4); i++) {
     const s = 0.9 + r() * 1.6, m = new THREE.Mesh(new THREE.PlaneGeometry(s, s * (0.6 + r() * 0.6)), pm);
-    m.rotation.x = -Math.PI / 2; m.rotation.z = r() * 6.28; m.position.set(o.xl + 1.2 + r() * (o.xr - o.xl - 2.4), 0.012, o.z0 - 2 - r() * (len - 4)); if (o.noPuddleNearEnd && m.position.z < o.z1 + o.noPuddleNearEnd) continue; add(m);   // noPuddleNearEnd: niente pozzanghere nei metri vicino alla porta d'uscita
-    // un velo chiaro additivo sopra: finge il riflesso della luce, così non sembra un buco nero
-    const gl = new THREE.Mesh(m.geometry, new THREE.MeshBasicMaterial({ color: o.shaft ?? 0x8899aa, alphaMap: blobTex(), transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
-    gl.rotation.copy(m.rotation); gl.position.copy(m.position); gl.position.y += 0.002; add(gl);
+    m.rotation.x = -Math.PI / 2; m.rotation.z = r() * 6.28; m.position.set(o.xl + 1.2 + r() * (o.xr - o.xl - 2.4), 0.006, o.z0 - 2 - r() * (len - 4)); if (o.noPuddleNearEnd && m.position.z < o.z1 + o.noPuddleNearEnd) continue;
+    m.name='umidita-pavimento';m.userData.wetPatch=true;add(m);
   }
 }
