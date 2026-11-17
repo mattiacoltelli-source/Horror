@@ -42,7 +42,9 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   { const orig = mirror.onBeforeRender; let flat = null;
     mirror.onBeforeRender = function (...a) {
       flat ??= (() => { const L = []; C.group.traverse((o) => { if (o.isMesh && o !== mirror && o.position.y < 0.035 && ((o.geometry.type === 'PlaneGeometry' && o.position.y > 0.001) || (o.material && /manhole/.test(o.material.name || '')))) L.push(o); }); return L; })();
-      const vis = flat.map((o) => o.visible); flat.forEach((o) => (o.visible = false)); orig.apply(this, a); flat.forEach((o, i) => (o.visible = vis[i]));
+      const vis = flat.map((o) => o.visible); flat.forEach((o) => (o.visible = false));
+      try { C.shrine.withClosedReflection(() => orig.apply(this, a)); }
+      finally { flat.forEach((o, i) => (o.visible = vis[i])); }
     }; }
   const dc = document.createElement('canvas'); dc.width = 256; dc.height = 384; const dg = dc.getContext('2d');
   for (let i = 0; i < 700; i++) { dg.fillStyle = `rgba(18,20,19,${Math.random() * 0.25})`; dg.beginPath(); dg.arc(Math.random() * 256, Math.random() * 384, 0.5 + Math.random() * 2.2, 0, 7); dg.fill(); }

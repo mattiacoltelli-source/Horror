@@ -5,6 +5,7 @@ import { buildRoom } from './rooms.js';
 import { FILMS } from './film-catalog.js';
 import { wornPaper } from './worn-paper.js';
 import { createRustedDoorFrame } from './rusted-door-frame.js';
+import { createReflectionSubstitute } from './reflection-substitute.js';
 import { aged } from './aged.js';
 import { burnDecals, stainDecals, patchDecals } from './blood.js';
 
@@ -58,6 +59,18 @@ export function createFilmShrine({ group, mats, panel }) {
   const box = (parent, material, x, y, z, w, h, d) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material); o.position.set(x, y, z); parent.add(o); return o; };
 
   // La faccia esterna proviene dal muro: identiche texture, UV, luce e fughe.
+  // Nello specchio il vano non esiste: bastano la faccia originale del muro e
+  // un foglio anatomico. Copiare la geometria prima di spostarla nel cardine.
+  const reflectedWall = new THREE.Group(); reflectedWall.name = 'muro-chiuso-solo-specchio';
+  reflectedWall.visible = false; group.add(reflectedWall);
+  const closedPanel = panel.clone();
+  closedPanel.traverse((o) => { if (o.isMesh) o.geometry = o.geometry.clone(); });
+  reflectedWall.add(closedPanel);
+  const anatomyMap = loader.load('assets/tex/pic_anatomy.webp'); anatomyMap.colorSpace = THREE.SRGBColorSpace;
+  const anatomy = new THREE.Mesh(new THREE.PlaneGeometry(0.48, 0.64), new THREE.MeshStandardMaterial({ map: anatomyMap, color: 0x918575, roughness: 1, transparent: true, alphaTest: 0.3, depthWrite: false }));
+  anatomy.name = 'foglio-anatomico-solo-specchio';
+  anatomy.position.set(3.993, 1.42, FILM_DOOR.z); anatomy.rotation.set(0, -Math.PI / 2, 0); anatomy.rotateZ(-0.06);
+  reflectedWall.add(anatomy);
   const hinge = new THREE.Group(); hinge.name = 'pannello-segreto';
   hinge.position.set(4, 0, FILM_DOOR.z + FILM_DOOR.w / 2); group.add(hinge);
   panel.children.forEach((m) => { m.geometry.translate(-hinge.position.x, 0, -hinge.position.z); });
@@ -177,5 +190,6 @@ export function createFilmShrine({ group, mats, panel }) {
   const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.043, 10, 8), new THREE.MeshBasicMaterial({ color: 0x8b5b31 })); bulb.position.copy(light.position); G.add(bulb);
   const shade = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.11, 16, 1, true), iron); shade.position.copy(light.position); shade.position.y += 0.095; G.add(shade);
   const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.22, 5), iron); wire.position.set(0, 2.68, -1.75); G.add(wire);
-  return { group: G, hinge, key, light, bulb, discovery, posters, depth: DEPTH, width: W };
+  const withClosedReflection = createReflectionSubstitute({ room: G, door: hinge, substitute: reflectedWall });
+  return { group: G, hinge, key, light, bulb, discovery, posters, depth: DEPTH, width: W, withClosedReflection };
 }
