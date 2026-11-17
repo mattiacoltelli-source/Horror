@@ -197,7 +197,63 @@ def add_dried_blood(source):
     links.new(roughness.outputs[0], bsdf.inputs['Roughness'])
     return mat
 
-cloth = material('Aged ivory linen', (.61, .52, .36), .86, 190, .00065)
+
+def add_habit_accents(source, veil=False):
+    """Paint ivory accents into the existing garment without adding geometry."""
+    mat = source.copy()
+    mat.name = 'Black veil with ivory coif' if veil else 'Charcoal habit with ivory trim'
+    nodes, links = mat.node_tree.nodes, mat.node_tree.links
+    bsdf = nodes.get('Principled BSDF')
+    base = bsdf.inputs['Base Color'].links[0].from_socket
+    geometry = next(node for node in nodes if node.type == 'NEW_GEOMETRY')
+    axes = nodes.new('ShaderNodeSeparateXYZ')
+    links.new(geometry.outputs['Position'], axes.inputs[0])
+
+    def scalar(operation, first, second=0):
+        node = nodes.new('ShaderNodeMath')
+        node.operation = operation
+        for index, value in enumerate((first, second)):
+            if isinstance(value, (float, int)):
+                node.inputs[index].default_value = value
+            else:
+                links.new(value, node.inputs[index])
+        return node.outputs[0]
+
+    def band(axis, center, half_width):
+        distance = scalar('ABSOLUTE', scalar('SUBTRACT', axes.outputs[axis], center))
+        edge = nodes.new('ShaderNodeMapRange')
+        edge.inputs['From Min'].default_value = half_width - .0007
+        edge.inputs['From Max'].default_value = half_width + .0007
+        edge.inputs['To Min'].default_value = 1
+        edge.inputs['To Max'].default_value = 0
+        links.new(distance, edge.inputs['Value'])
+        return edge.outputs['Result']
+
+    front = scalar('LESS_THAN', axes.outputs['Y'], -.135)
+    if veil:
+        mask = scalar('MULTIPLY', band('X', -.13, .066), front)
+        mask = scalar('MULTIPLY', mask, scalar('GREATER_THAN', axes.outputs['Z'], 1.53))
+    else:
+        side_trim = scalar('MAXIMUM', band('X', -.207, .0025), band('X', .075, .0025))
+        apron_height = scalar('MULTIPLY', scalar('GREATER_THAN', axes.outputs['Z'], .425),
+                              scalar('LESS_THAN', axes.outputs['Z'], 1.035))
+        side_trim = scalar('MULTIPLY', side_trim, apron_height)
+        bottom_trim = scalar('MULTIPLY', band('Z', .425, .0025), band('X', -.066, .143))
+        trim = scalar('MAXIMUM', side_trim, bottom_trim)
+        cross_vertical = scalar('MULTIPLY', band('X', -.112, .0028), band('Z', 1.287, .035))
+        cross_horizontal = scalar('MULTIPLY', band('X', -.112, .016), band('Z', 1.298, .0028))
+        cross = scalar('MAXIMUM', cross_vertical, cross_horizontal)
+        mask = scalar('MULTIPLY', scalar('MAXIMUM', trim, cross), front)
+    mix = nodes.new('ShaderNodeMixRGB')
+    links.new(mask, mix.inputs[0])
+    links.new(base, mix.inputs[1])
+    mix.inputs[2].default_value = (.62, .60, .53, 1)
+    links.new(mix.outputs[0], bsdf.inputs['Base Color'])
+    return mat
+
+cloth = material('Charcoal habit', (.018, .021, .025), .86, 190, .00065)
+whitecloth = material('Aged ivory linen', (.58, .56, .49), .86, 190, .00065)
+face_skin = material('Pallid facial skin', (.49, .465, .425), .70, 1400, .00023)
 maskmat = material('Worn ivory gauze', (.66, .59, .44), .93, 220, .0003)
 skin = material('Agnese aged skin', (.24, .165, .125), .70, 1400, .00023)
 darkskin = material('Orbital shadows', (.12, .055, .047), .74, 110, .0001)
@@ -208,7 +264,8 @@ sclera = material('Clouded sclera', (.48, .44, .32), .22, 80, .00002)
 iris = material('Pale grey iris', (.12, .15, .11), .22, 35, .00005)
 pupil = material('Pupil', (.003, .003, .002), .13, 20, 0)
 
-dress = add_dried_blood(cloth)
+veil = add_habit_accents(cloth, veil=True)
+dress = add_dried_blood(add_habit_accents(cloth))
 
 parts = []
 finger_parts = []
@@ -243,7 +300,7 @@ for obj in list(scene.objects):
     if count == 506:
         head = obj
         obj.name = 'Agnese_face'
-        assign(obj, skin, 'head')
+        assign(obj, face_skin, 'head')
         bm = bmesh.new(); bm.from_mesh(obj.data)
         bmesh.ops.holes_fill(bm, edges=[e for e in bm.edges if e.is_boundary], sides=64)
         bm.to_mesh(obj.data); bm.free()
@@ -263,7 +320,7 @@ for obj in list(scene.objects):
     elif count == 128:
         cornette = obj
         obj.name = 'Historical_cornette'
-        assign(obj, cloth, 'head')
+        assign(obj, veil, 'head')
         # Keep the angular starched construction, with curved, thin edges.
         mod = obj.modifiers.new('Fabric tessellation', 'SUBSURF')
         mod.subdivision_type = 'SIMPLE'
@@ -295,7 +352,7 @@ for obj in list(scene.objects):
         subdivide(obj, 2)
     elif count == 140:
         obj.name = 'Neck'
-        assign(obj, skin, 'neck')
+        assign(obj, face_skin, 'neck')
         subdivide(obj, 2)
     else:
         obj.name = 'Ivory_garment'
@@ -305,6 +362,8 @@ for obj in list(scene.objects):
         elif low > .83 and abs(mid.x+.10) > .18:
             region = 'arm.R' if mid.x > 0 else 'arm.L'
         fabric = maskmat if region.startswith('arm') else (dress if region == 'body' else cloth)
+        if count in (39, 60) or (count == 88 and abs(mid.x + .10) < .13):
+            fabric = whitecloth
         assign(obj, fabric, region)
         subdivide(obj, 1)
         # Actual shallow vertical folds in the lower garment.
@@ -380,7 +439,7 @@ for side, x in [('L', -.160), ('R', -.101)]:
             px=x+.0155*math.cos(t);pz=z+(1 if upper else -1)*.005*math.sin(t)
             hit=head_bvh.ray_cast(Vector((px,-1,pz)),Vector((0,1,0)))[0]
             coords.append((px,hit.y-.0003 if hit is not None else -.183,pz))
-        tube('Anatomical_eyelid_'+side,coords,.0008,skin,'head')
+        tube('Anatomical_eyelid_'+side,coords,.0008,face_skin,'head')
 
 # A separate shaped gauze mask follows the face and has three horizontal pleats.
 verts, faces = [], []
