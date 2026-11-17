@@ -11,7 +11,7 @@ async function scenario(THREE, fps, turn) {
   let now = 0, nextTimer = 0;
   const timers = new Map(), messages = [], distances = [], darks = [], outcomes = [];
   let whispers = 0, nearBreath = 0, pressureStops = 0, pressureStoppedAt = null, breathStartedAt = null;
-  const stages = [], rushes = [];
+  const stages = [], rushes = [], arrivals = [], reveals = [];
   const context = vm.createContext({
     console,
     setTimeout(fn, ms) { const id = ++nextTimer; timers.set(id, { fn, due: now + ms / 1000 }); return id; },
@@ -22,15 +22,15 @@ async function scenario(THREE, fps, turn) {
     duck() {}, doorBang() {}, lightOn() {}, shuffle() {}, bell() {},
     whisper() { whispers++; }, crowdDrone: () => handle,
     hallPressure: () => ({
-      update() {}, setStage(n) { stages.push(n); },
-      rush(from, to, duration) { rushes.push({ from, to, duration, state: E.state, at: now }); },
+      update() {}, setStage(n, z) { stages.push(n); arrivals.push({ n, z, at: now, state: E.state }); },
+      rush(from, to, duration) { rushes.push({ from, to, duration, carried: E.t, state: E.state, at: now }); },
       stop() { pressureStops++; pressureStoppedAt = now; },
     }),
     breath: () => { breathStartedAt = now; return { setPos() {}, stop() {}, setLevel(v) { nearBreath = Math.max(nearBreath, v); } }; },
   };
   const hall = {
     enable() {}, setDist(d) { distances.push({ d, at: now }); },
-    lightOn() {}, lightOff() { darks.push(now); }, lightDim() {},
+    lightOn() { reveals.push({ at: now, distance: distances.at(-1).d }); }, lightOff() { darks.push(now); }, lightDim() {},
     silhouette: () => new THREE.Group(),
   };
   class Loader {
@@ -79,7 +79,10 @@ async function scenario(THREE, fps, turn) {
   assert.deepEqual(distances.map(s => s.d), [26, 14, 7.5], 'Restano i due avvicinamenti');
   assert.deepEqual(stages, [0, 1, 2], 'Il ritmo cresce a ogni apparizione');
   assert.deepEqual(rushes.map(r => [r.from, r.to]), [[-76, -64], [-64, -57.5]]);
-  assert.ok(rushes.every(r => r.state === 'dark' && r.duration === 0.7), 'Passi solo nei due bui di movimento');
+  assert.ok(rushes.every(r => r.state === 'dark' && r.duration > 0 && Math.abs(r.duration + r.carried - 0.7) < 1e-9), 'Passi solo nei due bui di movimento');
+  assert.deepEqual(arrivals.map(a => a.at), reveals.map(r => r.at), 'I rintocchi coincidono con le tre apparizioni');
+  assert.deepEqual(arrivals.map(a => a.z), [-76, -64, -57.5]);
+  assert.ok(arrivals.every(a => a.state === 'lit'));
   assert.equal(pressureStops, 1); assert.ok(pressureStoppedAt < breathStartedAt, 'Il crescendo lascia spazio al respiro');
   assert.equal(note.ms, 7000); assert.ok(darks[0] - note.at >= 6.75, 'Tempo per leggere la nota');
   assert.equal(outcomes.length, 1); assert.equal(outcomes[0].turned, turn);
