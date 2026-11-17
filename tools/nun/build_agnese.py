@@ -127,26 +127,34 @@ def add_dried_blood(source):
     fibers.inputs['Scale'].default_value = 460
     fibers.inputs['Detail'].default_value = 2
     links.new(geometry.outputs['Position'], fibers.inputs['Vector'])
-    edge_noise = scalar('SUBTRACT', scalar('MULTIPLY', coarse.outputs['Fac'], .38), .19)
+    edge_noise = scalar('SUBTRACT', scalar('MULTIPLY', coarse.outputs['Fac'], .56), .28)
     fiber_noise = scalar('SUBTRACT', scalar('MULTIPLY', fibers.outputs['Fac'], .10), .05)
 
     # Main absorbed patches, narrow gravity trails and scattered satellite drops.
     spots = [
-        ((-.105, -.215, 1.225), (.058, .075, .070)),
-        ((-.170, -.263, .755), (.067, .075, .095)),
-        ((.005, -.263, .490), (.054, .075, .058)),
-        ((-.215, -.245, .365), (.034, .090, .030)),
-        ((-.092, -.225, 1.130), (.008, .065, .092)),
-        ((-.126, -.225, 1.155), (.005, .065, .062)),
-        ((-.148, -.265, .645), (.006, .075, .080)),
-        ((-.192, -.275, .659), (.004, .070, .057)),
-        ((.020, -.273, .423), (.004, .065, .046)),
-        ((-.030, -.229, 1.250), (.006, .055, .008)),
-        ((-.047, -.230, 1.190), (.004, .055, .006)),
-        ((-.200, -.257, .860), (.006, .055, .009)),
-        ((-.075, -.266, .695), (.005, .060, .007)),
-        ((.076, -.252, .545), (.005, .055, .007)),
-        ((-.052, -.285, .404), (.004, .065, .006)),
+        ((-.135, -.215, 1.238), (.035, .075, .042)),
+        ((-.110, -.218, 1.205), (.030, .075, .051)),
+        ((-.080, -.218, 1.248), (.035, .065, .015)),
+        ((-.158, -.213, 1.210), (.021, .065, .018)),
+        ((-.190, -.263, .760), (.037, .075, .080)),
+        ((-.150, -.263, .802), (.043, .075, .022)),
+        ((-.165, -.270, .704), (.023, .075, .044)),
+        ((-.212, -.266, .718), (.016, .070, .023)),
+        ((.005, -.263, .490), (.031, .075, .038)),
+        ((.030, -.263, .518), (.027, .075, .017)),
+        ((-.025, -.268, .479), (.036, .075, .014)),
+        ((-.215, -.245, .365), (.027, .090, .014)),
+        ((-.105, -.225, 1.128), (.004, .065, .075)),
+        ((-.145, -.225, 1.170), (.0025, .065, .047)),
+        ((-.164, -.270, .649), (.003, .075, .057)),
+        ((-.196, -.275, .664), (.002, .070, .031)),
+        ((.012, -.273, .431), (.002, .065, .035)),
+        ((-.030, -.229, 1.250), (.004, .055, .006)),
+        ((-.047, -.230, 1.190), (.0025, .055, .004)),
+        ((-.200, -.257, .860), (.004, .055, .006)),
+        ((-.075, -.266, .695), (.003, .060, .005)),
+        ((.076, -.252, .545), (.003, .055, .005)),
+        ((-.052, -.285, .404), (.0025, .065, .004)),
     ]
     core_union, halo_union = 0, 0
     for center, radius in spots:
@@ -162,8 +170,8 @@ def add_dried_blood(source):
         length.operation = 'LENGTH'
         links.new(normalized.outputs[0], length.inputs[0])
         distance = scalar('ADD', scalar('ADD', length.outputs['Value'], edge_noise), fiber_noise)
-        core_union = scalar('MAXIMUM', core_union, falloff(distance, .58, 1.08))
-        halo_union = scalar('MAXIMUM', halo_union, falloff(distance, .92, 1.52))
+        core_union = scalar('MAXIMUM', core_union, falloff(distance, .76, 1.04))
+        halo_union = scalar('MAXIMUM', halo_union, falloff(distance, .98, 1.28))
 
     halo = nodes.new('ShaderNodeMixRGB')
     links.new(scalar('MULTIPLY', halo_union, .30), halo.inputs[0])
@@ -172,9 +180,9 @@ def add_dried_blood(source):
 
     oxidation = nodes.new('ShaderNodeValToRGB')
     oxidation.color_ramp.elements[0].position = .23
-    oxidation.color_ramp.elements[0].color = (.026, .0022, .0011, 1)
+    oxidation.color_ramp.elements[0].color = (.012, .0008, .0003, 1)
     oxidation.color_ramp.elements[1].position = .77
-    oxidation.color_ramp.elements[1].color = (.145, .012, .005, 1)
+    oxidation.color_ramp.elements[1].color = (.065, .004, .0015, 1)
     links.new(coarse.outputs['Fac'], oxidation.inputs[0])
     blood = nodes.new('ShaderNodeMixRGB')
     links.new(core_union, blood.inputs[0])
