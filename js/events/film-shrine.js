@@ -24,7 +24,7 @@ export function createFilmShrineEvent({ group, mats, panel, player, flags, audio
     sync();
     S.angle = Math.min(flags.filmDoorOpen ? 1.55 : 0, S.angle + dt * 0.9);
     S.hinge.rotation.y = -S.angle;
-    const inside = player.pos.x > wallX + 0.2;
+    const inside = player.pos.x > wallX + 0.2 && Math.abs(player.pos.z - center) < S.width / 2;
     S.light.intensity = active && S.angle > 0.1 ? 1.65 : 0;
     S.bulb.material.color.setHex(S.light.intensity ? 0xc49a63 : 0x382b21);
     if (!active) { prompt(null); return; }

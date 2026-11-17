@@ -31,7 +31,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23, exit: { w: 2, h: 2.5 }, sideDoors: [{ side: 1, z: CELLAR.z0 - 15.5, w: 2.0, h: 3.1 }, FILM_DOOR] });
   C.group.add(room.group); decorCellar(C.group, CELLAR.z0); const chapel = createChapel({ group: C.group, mats, zc: CELLAR.z0 - 15.5, P: PROF }); C.bounds = [room.bounds[0], room.bounds[1], CELLAR.z0 - CELLAR.l + 1.4, CELLAR.z0 - 0.6];
   C.shrine = createFilmShrineEvent({ group: C.group, mats, panel: room.sidePanels.film, player, flags, audio, say, actBtn, onSave });
-  const shrineMove = (x, z) => C.group.visible && !C.gone ? C.shrine.move(x, z, C.bounds) : null;
+  const shrineMove = (x, z) => C.group.visible && !C.gone ? (chapel.constrainMove(x, z, C.bounds, player.pos) ?? C.shrine.move(x, z, C.bounds)) : null;
 
   const red = redLight(C.group, { x: CELLAR.w / 2 - 0.1, y: 2.5, z: CELLAR.z0 - 19.5, dir: 1 });   // luce rossa d'emergenza vicino all'uscita
   // specchio
@@ -179,7 +179,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     C.shrine.update(dt, C.group.visible && !C.gone && !story.busy());
     if (C.group.visible) { red.update(dt); bustMove(dt); torch.update(dt); chapel.update(dt); if (!chapel.stamped && Math.hypot(player.pos.x - 4, player.pos.z - (CELLAR.z0 - 15.5)) < 9) { chapel.stamped = true; chapel.stamp(); } }
     if (!C.group.visible || C.gone) return;
-    // La visita all'archivio e' facoltativa: lo specchio aspetta nella cantina.
+    // Le visite laterali sono facoltative: lo specchio aspetta nella cantina.
     if (player.pos.x > 4.2) { mirror.visible = false; if (flash) flash.intensity = 0; return; }
     const P = player.pos;
     // --- specchio ---

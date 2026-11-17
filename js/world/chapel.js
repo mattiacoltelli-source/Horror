@@ -1,4 +1,4 @@
-// MICRO CAPPELLA SCONSACRATA: una nicchia dietro un arco sempre aperto sul muro destro della cantina. Ci si affaccia (non si entra).
+// MICRO CAPPELLA SCONSACRATA: una nicchia dietro un arco sempre aperto sul muro destro della cantina. Si puo' entrare fino ai gradini dell'altare.
 // Tre murales sui tre muri (il quarto e' l'arco), altare di pietra, sedie ribaltate, candele, un rito: nome e data di oggi a sangue sull'altare.
 import * as THREE from 'three';
 import { buildRoom } from './rooms.js';
@@ -6,6 +6,7 @@ import { writingDecals, burnDecals, patchDecals } from './blood.js';
 import { bloodText } from './bloodfont.js';
 import { addExtras } from './extra.js';
 import { PKEY } from '../personal.js';
+import { createChapelApproach } from '../player/chapel-approach.js';
 
 export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h = 3.4 }) {
   const K = { group: new THREE.Group(), t: 0 }; group.add(K.group);
@@ -23,6 +24,7 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
   const altMat = (rx, ry) => new THREE.MeshStandardMaterial({ map: (() => { const t = new THREE.TextureLoader().load('assets/tex/alt_stone.jpg'); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; })(), color: new THREE.Color(0.5, 0.47, 0.45), roughness: 1 });
   const box = (bw, bh, bd, x, y, z, m) => { m ??= altMat(bw / 0.9, bh / 0.9); const o = new THREE.Mesh(new THREE.BoxGeometry(bd, bh, bw), m); o.position.set(x, y, z); G.add(o); return o; };   // bw = lungo z, bd = lungo x
   const aX = xr - 0.5;
+  K.constrainMove = createChapelApproach({ wallX: x0, altarFrontX: aX - 0.8, zc, depth: l });
   box(2.5, 0.14, 1.3, aX - 0.15, 0.07, zc); box(2.1, 0.12, 1.05, aX - 0.1, 0.2, zc);
   box(1.7, 0.95, 0.8, aX, 0.74, zc, undefined); box(1.9, 0.1, 0.92, aX - 0.02, 1.27, zc);   // blocco e piano (mensa)
 
@@ -99,8 +101,8 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
   K.stamp();
   burnDecals(G, [{ k: 'floor', p: [aX - 1.1, 0.012, zc], w: 1.7, h: 1.7, rot: 0.6, a: 0.85 }]);
 
-  // sedie ribaltate (sgabelli di legno)
-  addExtras(G, [['stool', 0.46, x0 + 1.0, 0, zc - 0.95, 0.5, 1, -1.45], ['stool', 0.46, x0 + 1.5, 0, zc + 0.85, 2.2, 1, -1.5], ['stool', 0.46, x0 + 0.55, 0, zc + 0.35, 4.0, 1, 0]]);
+  // Sedie ribaltate e sgabello in piedi nell'angolo accanto all'arco: centro libero.
+  addExtras(G, [['stool', 0.46, x0 + 1.0, 0, zc - 0.95, 0.5, 1, -1.45], ['stool', 0.46, x0 + 1.5, 0, zc + 0.85, 2.2, 1, -1.5], ['stool', 0.46, x0 + 0.4, 0, zc + 1.22, 4.0, 1, 0]]);
 
   // i tre murales: muro di fondo (sopra l'altare), muro di sinistra e di destra (il quarto lato e' l'arco)
   const mur = (img, asp, p, wall, ww) => ({ img: 'assets/tex/' + img, aspect: asp, p, wall, w: ww, rot: 0, a: 0.95, plain: true });
