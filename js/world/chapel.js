@@ -53,8 +53,8 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
     const board = new THREE.Mesh(new THREE.ExtrudeGeometry(outline, { depth: 0.025, bevelEnabled: false }), wood);
     board.scale.x = 1.2;   // Solo la tavoletta: foto e puntine mantengono dimensioni e posizione.
     board.position.z = -0.025; board.name = 'tavoletta-foto-elisa'; tilted.add(board);
-    const base = new THREE.Mesh(new THREE.BoxGeometry(photoW + 0.075, 0.025, 0.2), wood);
-    base.position.set(0, 0.0125, -0.06); base.name = 'base-foto-elisa'; frame.add(base);
+    const base = new THREE.Mesh(new THREE.BoxGeometry(photoW + 0.075, 0.05, 0.2), wood);
+    base.position.set(0, 0.025, -0.06); base.name = 'base-foto-elisa'; frame.add(base);
     const geometry = new THREE.PlaneGeometry(photoW, photoH, 6, 10), pos = geometry.getAttribute('position');
     for (let i = 0; i < pos.count; i++) { const x = pos.getX(i) / photoW, y = pos.getY(i) / photoH; pos.setZ(i, 0.0015 + 0.008 * x * x + 0.004 * (1 - Math.cos(y * Math.PI))); }
     geometry.computeVertexNormals();
