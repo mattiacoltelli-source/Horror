@@ -88,6 +88,107 @@ def material(name, color, roughness, scale, bump_distance):
     links.new(rough.outputs['Result'], bsdf.inputs['Roughness'])
     return mat
 
+
+def add_dried_blood(source):
+    """Bake localized absorbed stains into the dress material in world space."""
+    mat = source.copy()
+    mat.name = 'Ivory dress with absorbed blood'
+    nodes, links = mat.node_tree.nodes, mat.node_tree.links
+    bsdf = nodes.get('Principled BSDF')
+    geometry = next(node for node in nodes if node.type == 'NEW_GEOMETRY')
+    cloth_color = bsdf.inputs['Base Color'].links[0].from_socket
+    cloth_roughness = bsdf.inputs['Roughness'].links[0].from_socket
+
+    def scalar(operation, first, second):
+        node = nodes.new('ShaderNodeMath')
+        node.operation = operation
+        for index, value in enumerate((first, second)):
+            if isinstance(value, (int, float)):
+                node.inputs[index].default_value = value
+            else:
+                links.new(value, node.inputs[index])
+        return node.outputs[0]
+
+    def falloff(distance, inner, outer):
+        node = nodes.new('ShaderNodeMapRange')
+        node.interpolation_type = 'SMOOTHSTEP'
+        node.inputs['From Min'].default_value = inner
+        node.inputs['From Max'].default_value = outer
+        node.inputs['To Min'].default_value = 1
+        node.inputs['To Max'].default_value = 0
+        links.new(distance, node.inputs['Value'])
+        return node.outputs['Result']
+
+    coarse = nodes.new('ShaderNodeTexNoise')
+    coarse.inputs['Scale'].default_value = 67
+    coarse.inputs['Detail'].default_value = 4
+    links.new(geometry.outputs['Position'], coarse.inputs['Vector'])
+    fibers = nodes.new('ShaderNodeTexNoise')
+    fibers.inputs['Scale'].default_value = 460
+    fibers.inputs['Detail'].default_value = 2
+    links.new(geometry.outputs['Position'], fibers.inputs['Vector'])
+    edge_noise = scalar('SUBTRACT', scalar('MULTIPLY', coarse.outputs['Fac'], .38), .19)
+    fiber_noise = scalar('SUBTRACT', scalar('MULTIPLY', fibers.outputs['Fac'], .10), .05)
+
+    # Main absorbed patches, narrow gravity trails and scattered satellite drops.
+    spots = [
+        ((-.105, -.215, 1.225), (.058, .075, .070)),
+        ((-.170, -.263, .755), (.067, .075, .095)),
+        ((.005, -.263, .490), (.054, .075, .058)),
+        ((-.215, -.245, .365), (.034, .090, .030)),
+        ((-.092, -.225, 1.130), (.008, .065, .092)),
+        ((-.126, -.225, 1.155), (.005, .065, .062)),
+        ((-.148, -.265, .645), (.006, .075, .080)),
+        ((-.192, -.275, .659), (.004, .070, .057)),
+        ((.020, -.273, .423), (.004, .065, .046)),
+        ((-.030, -.229, 1.250), (.006, .055, .008)),
+        ((-.047, -.230, 1.190), (.004, .055, .006)),
+        ((-.200, -.257, .860), (.006, .055, .009)),
+        ((-.075, -.266, .695), (.005, .060, .007)),
+        ((.076, -.252, .545), (.005, .055, .007)),
+        ((-.052, -.285, .404), (.004, .065, .006)),
+    ]
+    core_union, halo_union = 0, 0
+    for center, radius in spots:
+        offset = nodes.new('ShaderNodeVectorMath')
+        offset.operation = 'SUBTRACT'
+        offset.inputs[1].default_value = center
+        links.new(geometry.outputs['Position'], offset.inputs[0])
+        normalized = nodes.new('ShaderNodeVectorMath')
+        normalized.operation = 'MULTIPLY'
+        normalized.inputs[1].default_value = tuple(1 / axis for axis in radius)
+        links.new(offset.outputs[0], normalized.inputs[0])
+        length = nodes.new('ShaderNodeVectorMath')
+        length.operation = 'LENGTH'
+        links.new(normalized.outputs[0], length.inputs[0])
+        distance = scalar('ADD', scalar('ADD', length.outputs['Value'], edge_noise), fiber_noise)
+        core_union = scalar('MAXIMUM', core_union, falloff(distance, .58, 1.08))
+        halo_union = scalar('MAXIMUM', halo_union, falloff(distance, .92, 1.52))
+
+    halo = nodes.new('ShaderNodeMixRGB')
+    links.new(scalar('MULTIPLY', halo_union, .30), halo.inputs[0])
+    links.new(cloth_color, halo.inputs[1])
+    halo.inputs[2].default_value = (.18, .060, .024, 1)
+
+    oxidation = nodes.new('ShaderNodeValToRGB')
+    oxidation.color_ramp.elements[0].position = .23
+    oxidation.color_ramp.elements[0].color = (.026, .0022, .0011, 1)
+    oxidation.color_ramp.elements[1].position = .77
+    oxidation.color_ramp.elements[1].color = (.145, .012, .005, 1)
+    links.new(coarse.outputs['Fac'], oxidation.inputs[0])
+    blood = nodes.new('ShaderNodeMixRGB')
+    links.new(core_union, blood.inputs[0])
+    links.new(halo.outputs[0], blood.inputs[1])
+    links.new(oxidation.outputs['Color'], blood.inputs[2])
+    links.new(blood.outputs[0], bsdf.inputs['Base Color'])
+
+    roughness = nodes.new('ShaderNodeMixRGB')
+    links.new(core_union, roughness.inputs[0])
+    links.new(cloth_roughness, roughness.inputs[1])
+    roughness.inputs[2].default_value = (.79, .79, .79, 1)
+    links.new(roughness.outputs[0], bsdf.inputs['Roughness'])
+    return mat
+
 cloth = material('Aged ivory linen', (.61, .52, .36), .86, 190, .00065)
 maskmat = material('Worn ivory gauze', (.66, .59, .44), .93, 220, .0003)
 skin = material('Agnese aged skin', (.24, .165, .125), .70, 1400, .00023)
@@ -98,6 +199,8 @@ seammat = material('Ivory stitching', (.38, .30, .19), .94, 160, .0002)
 sclera = material('Clouded sclera', (.48, .44, .32), .22, 80, .00002)
 iris = material('Pale grey iris', (.12, .15, .11), .22, 35, .00005)
 pupil = material('Pupil', (.003, .003, .002), .13, 20, 0)
+
+dress = add_dried_blood(cloth)
 
 parts = []
 finger_parts = []
@@ -193,7 +296,8 @@ for obj in list(scene.objects):
             region = 'leg.R' if mid.x > 0 else 'leg.L'
         elif low > .83 and abs(mid.x+.10) > .18:
             region = 'arm.R' if mid.x > 0 else 'arm.L'
-        assign(obj, maskmat if region.startswith('arm') else cloth, region)
+        fabric = maskmat if region.startswith('arm') else (dress if region == 'body' else cloth)
+        assign(obj, fabric, region)
         subdivide(obj, 1)
         # Actual shallow vertical folds in the lower garment.
         if count in (442, 81, 56) and low < .4 and high > .7:
