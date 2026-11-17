@@ -217,7 +217,7 @@ async function enter() {
     { room: 'warehouse', parent: wh.group, p: [-5.96, 1.5, WZ - 17], ry: Math.PI / 2 },
     { room: 'tower', parent: tower.group, p: [-6.96, 1.5, TZ - 5], ry: Math.PI / 2 },
   ] });
-  // Disegno in cantina; nell'obitorio Elisa ha una radiografia al posto della foto.
+  // Disegno in cantina; l'obitorio aggiornato e' comune a tutte le versioni.
   // Letto d'ospedale con le sue texture, nel magazzino contro il muro destro
   if (!window.__bed) { window.__bed = true; gl.load('assets/models/hs_bed.glb', (g) => { const o = g.scene, b = new THREE.Box3().setFromObject(o), sz = b.getSize(new THREE.Vector3()), long = Math.max(sz.x, sz.z), k = 2.0 / long; o.scale.setScalar(k); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x, b.min.y, c.z));
       o.traverse((m) => { if (m.isMesh) { m.material.color?.multiplyScalar(0.42).lerp(new THREE.Color(0.3, 0.22, 0.17), 0.15); m.material.roughness = Math.max(0.6, m.material.roughness ?? 0.7); } });
@@ -229,8 +229,8 @@ async function enter() {
     // GRUPPI (stesso criterio in tutte le versioni): cantina = i due disegni dei bambini vicini; obitorio parete destra = anatomia, uomo a carboncino, famiglia + murale largo;
     // magazzino = corridoio, finestra e santo vicini, sopra il letto
     writingDecals(cellar.group, [pic('drawing2', 1.442, 3.96, 1.5, CZ - 5.9, '-x', 1.0, -0.03)]);
-    // Elisa: le tre foto passano vicino all'ingresso; la composizione occupa il loro tratto piu' avanti.
-    const morguePhotoShift = PKEY === 'elisa' ? 4 : 0;
+    // Le tre immagini passano vicino all'ingresso; la composizione occupa il tratto piu' avanti.
+    const morguePhotoShift = 4;
     writingDecals(morgue.group, [pic('anatomy', 0.755, 4.22, 1.5, MZ - 5.8 + morguePhotoShift, '-x', 0.6, 0.02), pic('charcoal', 0.756, 4.22, 1.5, MZ - 7.0 + morguePhotoShift, '-x', 0.55, -0.02), pic('family', 1.287, 4.22, 1.5, MZ - 8.4 + morguePhotoShift, '-x', 0.75, 0.02)]);
     // MURALES GIGANTI (affreschi scrostati), uno per ambiente grande, a riempire una campata intera tra due pilastri (sempre uguali in tutte le versioni)
     writingDecals(scene, [{ ...pic('mural_dog', 3.2200, 1.38, 1.1, -28.5, '-x', 4.8, 0), rot: 0, a: 0.94 }]);                    // tunnel, parete destra
@@ -249,12 +249,8 @@ async function enter() {
     writingDecals(wh.group, [{ ...pic('mural_skull', 1.0, 5.94, 3.4, WZ - 24.6, '-x', 2.8, 0), rot: 0, a: 0.94, glow: 0.2 }]);              // magazzino, parete destra
     writingDecals(tower.group, [{ ...pic('mural_nun', 0.9340, 6.94, 3.2, TZ - 12.6, '-x', 3.2, 0), rot: 0, a: 0.94 }]);       // torre, parete destra
     writingDecals(wh.group, [pic('corridor', 1.369, -5.96, 1.5, WZ - 11.4, '+x', 0.85, 0.02), pic('window', 1.233, -5.96, 1.5, WZ - 12.55, '+x', 0.85, -0.02), pic('saint', 0.789, -5.96, 1.5, WZ - 13.65, '+x', 0.62, 0.02)])
-    if (PKEY === 'elisa') createMorgueWall(morgue.group, mats, { x: 4.255, z: MZ - 8.4 });
-    if (PKEY === 'laya') writingDecals(morgue.group, [{ img: 'assets/tex/pic_laya.jpg', aspect: 0.572, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
-    else if (PKEY === 'alice') writingDecals(morgue.group, [{ img: 'assets/tex/pic_alice.jpg', aspect: 0.788, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.62, rot: -0.03, a: 1, plain: true }]);
-    else if (PKEY === 'steve') writingDecals(morgue.group, [{ img: 'assets/tex/pic_steve.jpg', aspect: 0.762, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.56, rot: -0.03, a: 1, plain: true }]);
-    else if (PKEY === 'rebecca') writingDecals(morgue.group, [{ img: 'assets/tex/pic_rebecca.jpg', aspect: 0.562, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.5, rot: -0.03, a: 1, plain: true }]);
-    else if (PKEY !== 'elisa') writingDecals(morgue.group, [{ img: 'assets/tex/pic_yana.jpg', aspect: 0.741, p: [4.22, 1.5, MZ - 3.2], wall: '-x', w: 0.6, rot: -0.03, a: 1, plain: true }]); }
+    createMorgueWall(morgue.group, mats, { x: 4.255, z: MZ - 8.4 });
+  }
   // SCRITTE DI SANGUE per le versioni personalizzate (frasi con il suo nome; per Yana anche in ucraino), grandi sui muri
   const WRI = {}[PKEY]
     || (P ? null : { t1: ['std_t1', 2.6, 3.1], t3: ['std_t3', 2.361, 3.3], c2: ['std_c2', 1.36, 2.4], w4: ['std_w4', 2.552, 5.0], o: ['std_o', 2.902, 4.6], h: ['std_h', 1.774, 2.65], m: ['std_m', 2.174, 3.7] });   // versione standard: immagini di sangue (Gemini), senza nome
@@ -297,7 +293,8 @@ async function enter() {
     if (PKEY === 'elisa') { const pz = (RIBS[6] + RIBS[7]) / 2, T = 'PAGLIACCINA\nSEXY', ta = bloodText(T).aspect; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.6, pz], wall: '-x', w: Math.min(0.75 * ta, Math.abs(RIBS[6] - RIBS[7]) - 1.0) }]); }
     // solo Yana: frase piccola e bassa, quasi nascosta, sul muro destro del tunnel (poco in vista)
     if (PKEY === 'yana') { const T = 'Я ТЕБЕ\nБАЧУ', ta = bloodText(T).aspect; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.4, (RIBS[6] + RIBS[7]) / 2], wall: '-x', w: Math.min(0.7 * ta, 1.7) }]); }   // Yana: frase ucraina piccola («io ti vedo») con le lettere vere
-    writingDecals(tower.group, [{ ...spec('w4'), p: [0, 4.3, TZ - 0.05], wall: '-z', w: WR.w4[2] }]);   // torre: muro d'ingresso, sopra la porta: la vedi quando ti giri
+    const towerMessage = writingDecals(tower.group, [{ ...spec('w4'), p: [0, 4.3, TZ - 0.05], wall: '-z', w: WR.w4[2] * 2.5 }])[0];   // torre: sopra la porta, 2,5 volte le dimensioni precedenti
+    towerMessage.name = 'scritta-torre-non-sei-solo';
   }
   doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar', true); } });
   $('enter').disabled = true;

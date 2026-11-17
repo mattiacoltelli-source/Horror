@@ -22,6 +22,7 @@ export function buildRoom(mats, o) {
   // muri laterali
   // sideDoor / sideDoors: { side: 1 (destro) | -1 (sinistro), z, w, h }.
   // panel: nome facoltativo della faccia da restituire separata, per una porta nascosta.
+  // reflectionPanel: stessa faccia solo per lo specchio, senza cambiare i colori del muro reale.
   const panels = {};
   const wallQ = (x, nx) => { const holes = (o.sideDoors || (o.sideDoor ? [o.sideDoor] : []))
       .filter((d) => d.side === -nx).sort((a, b) => b.z - a.z);
@@ -38,7 +39,8 @@ export function buildRoom(mats, o) {
         if (ha <= hb) continue;
         seg(cursor, ha, 0, h); seg(ha, hb, hole.h, h);
         // Un pannello segreto conserva UV e colori esatti del muro originale.
-        if (hole.panel) seg(ha, hb, 0, hole.h, panels[hole.panel] ??= new Builder());
+        const panelName = hole.panel || hole.reflectionPanel;
+        if (panelName) seg(ha, hb, 0, hole.h, panels[panelName] ??= new Builder());
         cursor = hb;
       }
       seg(cursor, ze, 0, h);

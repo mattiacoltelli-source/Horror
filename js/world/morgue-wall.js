@@ -4,7 +4,7 @@ import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { mergeGeometries } from '../../vendor/three/utils/BufferGeometryUtils.js';
 
 export function createMorgueWall(parent, mats, { x, z }) {
-  const G = new THREE.Group(); G.name = 'parete-ossessiva-elisa';
+  const G = new THREE.Group(); G.name = 'parete-ossessiva-obitorio';
   G.position.set(x, 0, z); G.rotation.y = -Math.PI / 2; parent.add(G);
   const loader = new THREE.TextureLoader();
   const atlas = loader.load('assets/tex/morgue_wall_atlas.webp');

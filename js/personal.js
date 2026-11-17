@@ -29,7 +29,11 @@ export const CITY = P && /^[A-Za-zÀ-ÖØ-öø-ÿ' -]{2,20}$/.test(_c) ? _c.toLo
 const _BD = { steve: '23/4/88', rebecca: '20/6/97', tommy: '1/11/90', gabriele: '31/12/90', elisa: '2/8/90', alice: '5/9/93' }, _qn = /^(\d{1,2})-(\d{1,2})-(\d{2})$/.exec(qs.get('nasc') || '');
 export const BDAY = P ? (_qn ? _qn[1] + '/' + _qn[2] + '/' + _qn[3] : (_BD[key] || '')) : '';
 // foto con il viso coperto (solo i profili che ne hanno una)
-export const PHOTO = { elisa: 'pic_elisa.jpg', alice: 'pic_alice.jpg', rebecca: 'pic_rebecca.jpg', laya: 'pic_laya.jpg', yana: 'pic_yana.jpg' }[key] || '';
+export const PHOTO = { elisa: 'pic_elisa.jpg', alice: 'pic_alice.jpg', rebecca: 'pic_rebecca.jpg', laya: 'pic_laya.jpg', yana: 'pic_yana.jpg', steve: 'pic_steve.jpg' }[key] || '';
+// Stesso altarino per tutti. Nessuna immagine di un'altra persona come ripiego.
+export const ALTAR_PHOTO = !P || !PHOTO ? null : key === 'elisa'
+  ? { file: 'pic_elisa_altar_burnt.webp', aspect: (0.74 * 0.545 + 0.05) / 0.79, baked: true }
+  : { file: PHOTO, aspect: { alice: 0.788, rebecca: 0.562, laya: 0.572, yana: 0.741, steve: 0.762 }[key] * 0.93 / 0.946, baked: false };
 
 // sussurro con la voce sintetica del telefono: basso, lento, una o due volte in tutta la partita.
 // Se il profilo ha una lingua (es. ucraino) e il telefono ha quella voce, parla in quella lingua; altrimenti dice il nome in italiano (e, per le altre frasi, tace: il testo e' gia' sullo schermo).

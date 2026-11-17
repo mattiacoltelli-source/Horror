@@ -27,6 +27,16 @@ const root = path.resolve(__dirname, '..');
   assert.equal(ray(cut.group, [3, 1.5, -7], [1, 0, 0]).length, 0, 'La cripta resta aperta');
   assert.ok(ray(cut.group, [3, 3, -11], [1, 0, 0]).length, 'Architrave conservato');
   assert.ok(ray(cut.group, [3, 1.5, -12], [1, 0, 0]).length, 'Parete accanto conservata');
+  const arch = { side: 1, z: -7, w: 2, h: 3.1 };
+  const beforeMirror = rooms.namespace.buildRoom(mats, { ...options, sideDoor: arch });
+  const afterMirror = rooms.namespace.buildRoom(mats, { ...options, sideDoor: { ...arch, reflectionPanel: 'chapel' } });
+  for (let i = 0; i < beforeMirror.group.children.length; i++) {
+    for (const attribute of ['position', 'normal', 'uv', 'color']) {
+      assert.deepEqual(afterMirror.group.children[i].geometry.attributes[attribute].array, beforeMirror.group.children[i].geometry.attributes[attribute].array, 'La faccia riflessa non cambia geometria, UV o colori della cantina reale');
+    }
+  }
+  assert.equal(ray(afterMirror.group, [3, 1.5, -7], [1, 0, 0]).length, 0, 'La cripta reale resta aperta');
+  assert.ok(ray(afterMirror.sidePanels.chapel, [3, 1.5, -7], [1, 0, 0]).length, 'Muro separato per il solo riflesso');
   // Aperture non multiple del metro, anche in stanze decentrate.
   const small = rooms.namespace.buildRoom(mats, { z0: 0, cx: 4, w: 3.3, l: 3.4, h: 2.8, door: { w: 1.2, h: 2.3 } });
   for (const x of [3.41, 4, 4.59]) assert.equal(ray(small.group, [x, 1.62, -0.5], [0, 0, 1]).length, 0);

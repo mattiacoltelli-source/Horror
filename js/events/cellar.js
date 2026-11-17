@@ -20,6 +20,7 @@ import { createTorch } from './torch.js';
 import { createChapel } from '../world/chapel.js';
 import { FILM_DOOR } from '../world/film-shrine.js';
 import { createFilmShrineEvent } from './film-shrine.js';
+import { createReflectionSubstitute } from '../world/reflection-substitute.js';
 
 export const CELLAR = { z0: -200, w: 8, l: 24, h: 4.4 };
 const MIRROR = new THREE.Vector3(-3.98, 1.45, -210);
@@ -28,8 +29,11 @@ const DIST = [7, 4.6, 2.6, 1.3, 0.7];
 export function createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash, actBtn, onSave }) {
   const C = { group: new THREE.Group(), state: 'idle', step: -1, gaze: 0, away: 0, started: false, apDone: false };
   C.group.visible = false; scene.add(C.group);
-  const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23, exit: { w: 2, h: 2.5 }, sideDoors: [{ side: 1, z: CELLAR.z0 - 15.5, w: 2.0, h: 3.1 }, FILM_DOOR] });
+  const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23, exit: { w: 2, h: 2.5 }, sideDoors: [{ side: 1, z: CELLAR.z0 - 15.5, w: 2.0, h: 3.1, reflectionPanel: 'chapel' }, FILM_DOOR] });
   C.group.add(room.group); decorCellar(C.group, CELLAR.z0); const chapel = createChapel({ group: C.group, mats, zc: CELLAR.z0 - 15.5, P: PROF }); C.bounds = [room.bounds[0], room.bounds[1], CELLAR.z0 - CELLAR.l + 1.4, CELLAR.z0 - 0.6];
+  const chapelWall = room.sidePanels.chapel; chapelWall.name = 'muro-cripta-solo-specchio';
+  chapelWall.visible = false; C.group.add(chapelWall);
+  const withClosedChapelReflection = createReflectionSubstitute({ room: chapel.group, substitute: chapelWall });
   C.shrine = createFilmShrineEvent({ group: C.group, mats, panel: room.sidePanels.film, player, flags, audio, say, actBtn, onSave });
   const shrineMove = (x, z) => C.group.visible && !C.gone ? (chapel.constrainMove(x, z, C.bounds, player.pos) ?? C.shrine.move(x, z, C.bounds)) : null;
 
@@ -43,7 +47,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     mirror.onBeforeRender = function (...a) {
       flat ??= (() => { const L = []; C.group.traverse((o) => { if (o.isMesh && o !== mirror && o.position.y < 0.035 && ((o.geometry.type === 'PlaneGeometry' && o.position.y > 0.001) || (o.material && /manhole/.test(o.material.name || '')))) L.push(o); }); return L; })();
       const vis = flat.map((o) => o.visible); flat.forEach((o) => (o.visible = false));
-      try { C.shrine.withClosedReflection(() => orig.apply(this, a)); }
+      try { C.shrine.withClosedReflection(() => withClosedChapelReflection(() => orig.apply(this, a))); }
       finally { flat.forEach((o, i) => (o.visible = vis[i])); }
     }; }
   const dc = document.createElement('canvas'); dc.width = 256; dc.height = 384; const dg = dc.getContext('2d');

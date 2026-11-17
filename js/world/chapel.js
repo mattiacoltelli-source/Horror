@@ -5,7 +5,8 @@ import { buildRoom } from './rooms.js';
 import { writingDecals, burnDecals, patchDecals } from './blood.js';
 import { bloodText } from './bloodfont.js';
 import { addExtras } from './extra.js';
-import { PKEY } from '../personal.js';
+import { PKEY, ALTAR_PHOTO } from '../personal.js';
+import { wornPaper } from './worn-paper.js';
 import { createChapelApproach } from '../player/chapel-approach.js';
 
 export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h = 3.4 }) {
@@ -36,13 +37,13 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
     const dt = new THREE.CanvasTexture(c); dt.colorSpace = THREE.SRGBColorSpace;
     const dust = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 1.9), new THREE.MeshBasicMaterial({ map: dt, transparent: true, depthWrite: false, fog: true })); dust.rotation.x = -Math.PI / 2; dust.position.set(aX - 0.02, 1.322, zc); G.add(dust); }
 
-  // Prova solo per Elisa: carta usurata e bruciata, senza cornice, sul piano.
-  if (PKEY === 'elisa') {
-    const frame = new THREE.Group(); frame.name = 'foto-elisa-altare';
+  // Foto personale, se esiste: stesso supporto e posizione della versione Elisa.
+  if (ALTAR_PHOTO) {
+    const frame = new THREE.Group(); frame.name = 'foto-personale-altare'; frame.userData.profile = PKEY;
     frame.position.set(aX + 0.04, 1.324, zc - 0.02); frame.rotation.y = -Math.PI / 2 + 0.17;
     frame.scale.setScalar(0.85 * 0.9 * 0.92); G.add(frame);   // ulteriore riduzione dell'8%, inclusi base e sostegno
     const tilted = new THREE.Group(); tilted.rotation.x = -0.16; frame.add(tilted);
-    const photoH = 0.79 * 0.85, photoW = (0.74 * 0.545 + 0.05) * 0.85;
+    const photoH = 0.79 * 0.85, photoW = photoH * ALTAR_PHOTO.aspect;
     const woodMap = new THREE.TextureLoader().load('assets/tex/floor_planks.jpg'); woodMap.colorSpace = THREE.SRGBColorSpace; woodMap.anisotropy = 4;
     const wood = new THREE.MeshStandardMaterial({ map: woodMap, color: new THREE.Color(0.22, 0.19, 0.15), roughness: 1, envMapIntensity: 0.1 });
     // Tavoletta scheggiata, non una cornice: il legno si vede nei lembi mancanti.
@@ -54,15 +55,24 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
     outline.lineTo(-half + 0.004, photoH * 0.45); outline.closePath();
     const board = new THREE.Mesh(new THREE.ExtrudeGeometry(outline, { depth: 0.025, bevelEnabled: false }), wood);
     board.scale.x = 1.2;   // Solo la tavoletta: foto e puntine mantengono dimensioni e posizione.
-    board.position.z = -0.025; board.name = 'tavoletta-foto-elisa'; tilted.add(board);
+    board.position.z = -0.025; board.name = 'tavoletta-foto'; tilted.add(board);
     const base = new THREE.Mesh(new THREE.BoxGeometry(photoW + 0.075, 0.05, 0.2), wood);
-    base.position.set(0, 0.025, -0.06); base.name = 'base-foto-elisa'; frame.add(base);
+    base.position.set(0, 0.025, -0.06); base.name = 'base-foto'; frame.add(base);
     const geometry = new THREE.PlaneGeometry(photoW, photoH, 6, 10), pos = geometry.getAttribute('position');
     for (let i = 0; i < pos.count; i++) { const x = pos.getX(i) / photoW, y = pos.getY(i) / photoH; pos.setZ(i, 0.0015 + 0.008 * x * x + 0.004 * (1 - Math.cos(y * Math.PI))); }
     geometry.computeVertexNormals();
-    const map = new THREE.TextureLoader().load('assets/tex/pic_elisa_altar_burnt.webp'); map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 4;
-    const photo = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ map, color: new THREE.Color(0.64, 0.59, 0.51), roughness: 1, metalness: 0, envMapIntensity: 0.1, side: THREE.DoubleSide, transparent: true, alphaTest: 0.12 }));
-    photo.name = 'carta-bruciata-elisa'; photo.position.set(0, 0.025 + photoH / 2, 0.002); tilted.add(photo);
+    const map = new THREE.TextureLoader().load('assets/tex/' + ALTAR_PHOTO.file); map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 4;
+    const photoMat = new THREE.MeshStandardMaterial({ map, color: new THREE.Color(0.64, 0.59, 0.51), roughness: 1, metalness: 0, envMapIntensity: 0.1, side: THREE.DoubleSide, transparent: true, alphaTest: 0.12 });
+    if (!ALTAR_PHOTO.baked) {
+      // Taglia il vecchio bordo stampato nelle UV, poi usura e carbonizza la carta
+      // nel materiale, mantenendo la foto e le sue proporzioni originali.
+      const uv = geometry.attributes.uv; geometry.setAttribute('paperUv', uv.clone());
+      geometry.setAttribute('paperSeed', new THREE.Float32BufferAttribute(new Float32Array(uv.count).fill(6.1), 1));
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, 0.035 + uv.getX(i) * 0.93, 0.027 + uv.getY(i) * 0.946);
+      wornPaper(photoMat, { damage: 2.1 });
+    }
+    const photo = new THREE.Mesh(geometry, photoMat);
+    photo.name = 'carta-bruciata-personale'; photo.userData.profile = PKEY; photo.position.set(0, 0.025 + photoH / 2, 0.002); tilted.add(photo);
     const pinMat = new THREE.MeshStandardMaterial({ color: 0x77604a, roughness: 0.9, metalness: 0.4 });
     for (const side of [-1, 1]) {
       const pin = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 6), pinMat);
@@ -71,7 +81,7 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
       shank.rotation.x = Math.PI / 2; shank.position.set(pin.position.x, pin.position.y, 0.0045); tilted.add(shank);
     }
     const stand = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.38, 0.02), wood);
-    stand.name = 'sostegno-posteriore-foto-elisa';
+    stand.name = 'sostegno-posteriore-foto';
     stand.position.set(0, 0.17, -0.16); stand.rotation.x = 0.38; frame.add(stand);
   }
 
@@ -82,20 +92,20 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
   for (const [dx, dz, ch] of [[-0.55, -1.0, 0.2], [-0.5, 0.95, 0.14], [-0.6, -0.4, 0.24], [-0.52, 0.45, 0.12]]) candle(aX + dx, 0.26, zc + dz, ch);   // sul secondo gradino
   for (const [x, z, ch] of [[x0 + 1.55, zc - 0.55, 0.3], [x0 + 1.7, zc + 0.5, 0.22], [x0 + 0.95, zc - 1.25, 0.16], [x0 + 0.9, zc + 1.2, 0.26]]) candle(x, 0, z, ch);   // sul pavimento, davanti all'altare
   K.light = new THREE.PointLight(0xff8a3a, 2.2, 3.4, 1.3); K.light.position.set(aX - 0.8, 2.1, zc);
-  // Nella prova di Elisa la luce alta delle candele raggiunge anche il fronte.
-  if (PKEY === 'elisa') G.add(K.light);
+  // La luce alta delle candele raggiunge anche il fronte in tutte le versioni.
+  G.add(K.light);
   K.light2 = new THREE.PointLight(0xff7a30, 1.3, 2.6, 1.4); K.light2.position.set(x0 + 2.0, 0.8, zc); G.add(K.light2);   // candele sul pavimento: schiariscono i muri laterali
 
-  // Il rito resta sul davanti dell'altare; la foto di prova di Elisa e' sul piano.
+  // Il rito resta sul davanti dell'altare; l'eventuale foto personale e' sul piano.
   // la minaccia di suor Agnese, a sangue sul davanti dell'altare (uguale in tutte le versioni, senza nome): data e ORA del giocatore (quelle del suo telefono) e «tra sette minuti».
   // La scritta si rifà quando ci si avvicina, quindi l'ora è quella dell'arrivo.
   let stampMesh = null;
   K.stamp = () => {
     if (stampMesh) { G.remove(stampMesh); stampMesh.geometry.dispose(); stampMesh.material.dispose(); stampMesh = null; }
-    const elisa = PKEY === 'elisa', bloodLayout = elisa ? { lineHeight: 180, bottomPadding: 60 } : undefined;
-    const nw = new Date(), p2 = (n) => String(n).padStart(2, '0'), T = 'È IL ' + nw.getDate() + '/' + (nw.getMonth() + 1) + '/' + String(nw.getFullYear()).slice(2) + '.\nSONO LE ' + p2(nw.getHours()) + ':' + p2(nw.getMinutes()) + '.\nTRA 3 MINUTI\nTI PORTO VIA.\n- SUOR AGNESE', ta = bloodText(T, bloodLayout).aspect, ww = Math.min(1.62, (elisa ? 0.92 : 0.9) * ta);
-    stampMesh = writingDecals(G, [{ text: T, bloodLayout, aspect: ta, p: [aX - 0.405, elisa ? 0.75 : 0.615, zc], wall: '-x', w: ww, dry: true }])[0];
-    const mt = stampMesh.material; mt.emissiveMap = mt.map; mt.emissive = new THREE.Color(0.5, 0.07, 0.05); mt.emissiveIntensity = elisa ? 0.18 : 0.55;
+    const bloodLayout = { lineHeight: 180, bottomPadding: 60 };
+    const nw = new Date(), p2 = (n) => String(n).padStart(2, '0'), T = 'È IL ' + nw.getDate() + '/' + (nw.getMonth() + 1) + '/' + String(nw.getFullYear()).slice(2) + '.\nSONO LE ' + p2(nw.getHours()) + ':' + p2(nw.getMinutes()) + '.\nTRA 3 MINUTI\nTI PORTO VIA.\n- SUOR AGNESE', ta = bloodText(T, bloodLayout).aspect, ww = Math.min(1.62, 0.92 * ta);
+    stampMesh = writingDecals(G, [{ text: T, bloodLayout, aspect: ta, p: [aX - 0.405, 0.75, zc], wall: '-x', w: ww, dry: true }])[0];
+    const mt = stampMesh.material; mt.emissiveMap = mt.map; mt.emissive = new THREE.Color(0.5, 0.07, 0.05); mt.emissiveIntensity = 0.18;
     stampMesh.name = 'scritta-altare';
   };
   K.stamp();
