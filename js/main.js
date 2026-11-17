@@ -146,7 +146,7 @@ const loadRooms = () => { try {
   return rooms;
 } catch (_) { return {}; } };
 const loadCkpt = (room) => { try { if (room) { const c = loadRooms()[room]; return c && CK_ST[c.room] ? c : null; } const c = JSON.parse(localStorage.getItem(CK) || 'null'); return c && CK_ST[c.room] ? c : null; } catch (_) { return null; } };
-function saveCkpt(room) { if (!CK_ST[room]) return; try { const snap = { room, turned: !!flags.turned, door: flags.door || null, weapon: flags.weapon || null, noGun: !!flags.noGun, filmKey: !!flags.filmKey, filmDoorOpen: !!flags.filmDoorOpen, notes: [...(notes?.found || [])] }; localStorage.setItem(CK, JSON.stringify(snap)); const r = loadRooms(); r[room] = snap; localStorage.setItem(RK, JSON.stringify(r)); } catch (_) {} }
+function saveCkpt(room) { if (!CK_ST[room]) return; try { const snap = { room, turned: !!flags.turned, door: flags.door || null, weapon: flags.weapon || null, noGun: !!flags.noGun, notes: [...(notes?.found || [])] }; localStorage.setItem(CK, JSON.stringify(snap)); const r = loadRooms(); r[room] = snap; localStorage.setItem(RK, JSON.stringify(r)); } catch (_) {} }
 let restoreCk = false, restoreRoom = null;
 { const last = loadCkpt(), b = document.getElementById('ckpt'), menu = document.getElementById('cmenu');
   if (last && b && menu) {
@@ -318,7 +318,8 @@ async function enter() {
   if (q.get('start') === 'porta') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, Z_END + 10); }
   // scorciatoie di prova: ?start=cantina | torre  (&turned=1 / &mirror=1 per simulare le scelte)
   { const ck = restoreCk ? loadCkpt(restoreRoom) : null, st = ck ? CK_ST[ck.room] : q.get('start'); flags.turned = ck ? ck.turned : q.get('turned') === '1'; flags.mirror = q.get('mirror') === '1'; flags.noGun = ck ? ck.noGun : q.get('nogun') === '1'; flags.weapon = ck ? ck.weapon : (q.get('weapon') === 'axe' ? 'axe' : null); flags.door = ck ? ck.door : (q.get('door') === 'red' ? 'red' : q.get('door') === 'breath' ? 'breath' : null);
-    flags.filmKey = !!ck?.filmKey; flags.filmDoorOpen = !!ck?.filmDoorOpen;
+    // Chiave e pannello ripartono da zero a ogni visita; ignora i campi dei vecchi checkpoint.
+    flags.filmKey = false; flags.filmDoorOpen = false;
     if (ck) { ck.notes.forEach((i) => notes.found.add(i)); flags.notes = notes.found.size; }
     if (st === 'epilogo') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; dawn.start(q.get('turned') === '1' ? 'ti sei girato.\ntua sorella non c\'è più.\nl\'incendio l\'hai acceso tu.\nsuor Agnese lo sa. ti tiene qui.' : 'non ti sei girato.\nera già davanti a te.\nsuor Agnese non ti ha salvato:\nti ha tenuto qui.'); }
     if (st === 'reparto') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; story.goto('ward'); }

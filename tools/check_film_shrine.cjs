@@ -57,8 +57,8 @@ const root = path.resolve(__dirname, '..');
   look([3.5, 1.62, z - 1.3], [4, 1.62, z - 1.3]); assert.equal(S.near, null, 'Non apre guardando il muro accanto');
   look([3, 1.62, z], [3.98, 1.15, z - .45]); assert.equal(S.near, 'door');
   // Un tasto vecchio non puo' aprire da lontano o quando il gioco congela il giocatore.
-  player.pos.set(0, 1.62, -202); S.act(); assert.equal(flags.filmDoorOpen, undefined);
-  look([3, 1.62, z], [3.98, 1.15, z - .45]); player.frozen = true; S.act(); assert.equal(flags.filmDoorOpen, undefined);
+  player.pos.set(0, 1.62, -202); S.act(); assert.equal(flags.filmDoorOpen, false);
+  look([3, 1.62, z], [3.98, 1.15, z - .45]); player.frozen = true; S.act(); assert.equal(flags.filmDoorOpen, false);
   player.frozen = false; S.update(0, true); S.act(); assert.ok(flags.filmDoorOpen); assert.equal(saves, 2);
   move(4.5, z); assert.ok(player.pos.x <= 3.5, 'Attende l’apertura dell’anta');
   for (let i = 0; i < 120; i++) S.update(.02, true);
@@ -73,7 +73,19 @@ const root = path.resolve(__dirname, '..');
   assert.ok(player.pos.z < z + .3, 'L’anta aperta ha una collisione');
   player.pos.set(6, 1.62, z); for (let i = 0; i < 100; i++) move(player.pos.x + .05, z);
   assert.ok(player.pos.x <= 7.08, 'Parete di fondo invalicabile');
-  S.reset(); assert.equal(S.angle, 1.55); assert.equal(S.key.visible, false);
+  // Uscire dal solo stanzino mantiene il passaggio aperto durante la visita.
+  assert.ok(flags.filmKey && flags.filmDoorOpen); assert.equal(S.angle, 1.55);
+  S.entered = true; S.light.intensity = 1.65;
+  S.reset(); assert.equal(S.angle, 0); assert.equal(S.hinge.rotation.y, 0);
+  assert.equal(flags.filmKey, false); assert.equal(flags.filmDoorOpen, false);
+  assert.equal(S.key.visible, true); assert.equal(S.discovery.visible, false); assert.equal(S.entered, false); assert.equal(S.light.intensity, 0);
+  look([3.5, 1.62, z], [4, 1.62, z]); assert.equal(S.near, null, 'Serve nuovamente la chiave');
+  player.pos.set(3.4,1.62,z); move(4.5,z); assert.ok(player.pos.x <= 3.5, 'Il nuovo ingresso richiude anche il passaggio');
+  // Anche una visita interrotta dopo il solo ritrovamento riposiziona la chiave.
+  look([-2.8,1.62,-212],[-3.88,1.3,-212]); S.act(); assert.equal(flags.filmKey,true);
+  S.reset(); assert.equal(flags.filmKey,false); assert.equal(S.key.visible,true);
+  // Vecchi salvataggi che riportavano entrambi i valori a true vengono ignorati.
+  flags.filmKey = flags.filmDoorOpen = true; S.reset(); assert.equal(S.key.visible,true); assert.equal(S.angle,0);
   S.update(.1, false); assert.equal(S.near, null); assert.equal(S.light.intensity, 0); assert.ok(hidden.has('hidden'));
   const handlers = {}, uiContext = vm.createContext({ paused: true, state: 'play', cellar: { shrine: { near: 'key', act() { uiContext.picked++; } } }, picked: 0, combat: null,
     $(id) { return { addEventListener(type, fn) { handlers[type] = fn; } }; }, addEventListener(type, fn) { handlers[type] = fn; } });

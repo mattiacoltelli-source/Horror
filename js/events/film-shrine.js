@@ -14,7 +14,12 @@ export function createFilmShrineEvent({ group, mats, panel, player, flags, audio
     else if (owned) actBtn.classList.add('hidden');
   };
   const sync = () => { S.key.visible = !flags.filmKey && !flags.filmDoorOpen; S.discovery.visible = !!flags.filmKey && !flags.filmDoorOpen; };
-  S.reset = () => { prompt(null); sync(); S.angle = flags.filmDoorOpen ? 1.55 : 0; S.hinge.rotation.y = -S.angle; S.entered = false; };
+  // Ogni ingresso nella cantina ricomincia la scoperta, anche dai vecchi checkpoint.
+  S.reset = () => {
+    flags.filmKey = false; flags.filmDoorOpen = false;
+    prompt(null); sync(); S.angle = 0; S.hinge.rotation.y = 0; S.entered = false;
+    S.light.intensity = 0; S.bulb.material.color.setHex(0x382b21);
+  };
   S.update = (dt, active) => {
     sync();
     S.angle = Math.min(flags.filmDoorOpen ? 1.55 : 0, S.angle + dt * 0.9);
