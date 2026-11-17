@@ -80,15 +80,34 @@ export function createMorgueWall(parent, mats, { x, z }) {
   const gl = new GLTFLoader(), models = new Map(); G.userData.toolsLoaded = 0;
   tools.forEach(([name, px, size, r]) => {
     const hookY = 2.17 - (px + 1.72) * 0.014, py = hookY - size / 2 + 0.018;
-    stroke([[px, hookY + 0.025, 0.066], [px, hookY + 0.007, 0.13], [px, hookY - 0.025, 0.145], [px, hookY - 0.015, 0.155]], 0.004, iron);
+    if (name === 'mg_tool1') {
+      // Chiodo attraverso un solo anello: gambo e testa davanti al metallo delle forbici.
+      put(new THREE.CylinderGeometry(0.0033, 0.0033, 0.07, 8).rotateX(Math.PI / 2), iron, [px, hookY, 0.0735]);
+      put(new THREE.CylinderGeometry(0.0067, 0.0067, 0.004, 10).rotateX(Math.PI / 2), iron, [px, hookY, 0.111]);
+    } else stroke([[px, hookY + 0.025, 0.066], [px, hookY + 0.007, 0.13], [px, hookY - 0.025, 0.145], [px, hookY - 0.015, 0.155]], 0.004, iron);
     if (!models.has(name)) models.set(name, new Promise(resolve => gl.load(`assets/models/${name}.glb`, g => resolve(g.scene), undefined, () => resolve(null))));
     models.get(name).then(src => {
       if (!src) return;
       const obj = src.clone(true); obj.rotation.x = -Math.PI / 2; obj.updateMatrixWorld(true);
-      let box = new THREE.Box3().setFromObject(obj); const s = box.getSize(new THREE.Vector3()); obj.scale.multiplyScalar(size / Math.max(s.x, s.y, s.z));
+      let box = new THREE.Box3().setFromObject(obj); const s = box.getSize(new THREE.Vector3()), scale = size / Math.max(s.x, s.y, s.z); obj.scale.multiplyScalar(scale);
       box = new THREE.Box3().setFromObject(obj); const center = box.getCenter(new THREE.Vector3()); obj.position.sub(center);
       obj.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.color.multiplyScalar(0.53); o.material.roughness = Math.max(0.75, o.material.roughness || 0); } });
-      const holder = new THREE.Group(); holder.name = 'strumento-appeso'; holder.position.set(px, py, 0.13); holder.rotation.z = Math.PI + r; holder.add(obj); G.add(holder); G.userData.toolsLoaded++;
+      const holder = new THREE.Group(); holder.name = 'strumento-appeso'; holder.position.set(px, py, 0.13); holder.rotation.z = Math.PI + r;
+      if (name === 'mg_tool1') {
+        // Centri e raggi interni dei due anelli nell'asset originale; il baricentro e' ricavato dalla sua superficie.
+        const loop = px < -1.8 ? [-0.04740, -0.07887, 0.02105, 0.02436] : [0.04783, -0.07993, 0.02096, 0.02407];
+        const hole = new THREE.Vector3(loop[0], loop[1], -0.0052).multiplyScalar(scale).sub(center);
+        const mass = new THREE.Vector3(0.000894, -0.024142, -0.005224).multiplyScalar(scale).sub(center);
+        const down = mass.clone().sub(hole); down.z = 0; down.normalize();
+        const radius = scale / Math.hypot(down.x / loop[2], down.y / loop[3]);
+        const pivot = hole.clone().addScaledVector(down, -(radius - 0.0033));
+        // Il peso cade sotto il chiodo; il bordo interno dell'anello appoggia sul gambo.
+        obj.position.sub(pivot); holder.position.set(px, hookY, 0.096);
+        holder.rotation.z = -Math.PI / 2 - Math.atan2(down.y, down.x);
+        holder.userData.hangingHole = hole.sub(pivot).toArray();
+        holder.userData.hangingMass = mass.sub(pivot).toArray();
+      }
+      holder.add(obj); G.add(holder); G.userData.toolsLoaded++;
     });
   });
   // Testa di bambola: volume curvo, faccia in ceramica e cordino fissato in alto.
