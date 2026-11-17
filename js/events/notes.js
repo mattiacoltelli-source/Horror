@@ -20,7 +20,7 @@ const NOTE_PER = [
   'paziente n. 17: ' + (P?.name ?? '') + '.\ningresso: notte del 3 novembre.\n' + (CITY ? 'proveniente da ' + CITY + '.\n' : '') + (P?.joke ?? ''),
   'ha rotto lo specchio ogni mattina.\nogni mattina lo rimettiamo.\ndice che ' + (P?.detail ?? '') + '.',
   'terapia della sedia: sospesa.\nchiede ogni giorno di sua sorella, ' + (P?.sister ?? '') + '.\nsorella: deceduta. ' + (P?.name ?? '') + ' era in casa, quando è bruciata.',
-  'incendio partito dal magazzino.\ninnesco volontario. benzina sui registri.\nun solo sopravvissuto: ' + (P?.name ?? '') + '.\nil cane della struttura no.' + (CITY ? '\nil giornale di ' + CITY + ' ha scritto: guasto elettrico.' : ''),
+  'incendio partito dal magazzino.\ninnesco volontario. benzina sui registri.\nun solo sopravvissuto: ' + (P?.name ?? '') + '.\nil cane della struttura no.' + '\nil giornale ha scritto: guasto elettrico.',
   'non l\'ho mai lasciata sola.\nl\'ho tirata fuori io, dal fuoco.\nho scritto che è stato un guasto.\nnon la lascerò nemmeno ora.\n' + NOW + (P?.nurse ? '\n' + P.nurse : '') + '\n— suor Agnese',
 ];
 export const NOTE_TEXT = P ? NOTE_PER : NOTE_STD;

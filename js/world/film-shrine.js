@@ -67,9 +67,9 @@ export function createFilmShrine({ group, mats, panel }) {
   const lock = box(hinge, brass, -0.006, 1.25, -FILM_DOOR.w + 0.14, 0.012, 0.1, 0.06);
   lock.name = 'serratura-nascosta';
   box(hinge, new THREE.MeshBasicMaterial({ color: 0x080706 }), -0.014, 1.25, -FILM_DOOR.w + 0.14, 0.003, 0.032, 0.01);
-  // Un labbro di pochi millimetri si confonde col muro da chiuso; aprendo,
+  // Labbro esterno di 2,1 cm (triplo rispetto al primo telaio); aprendo,
   // si vedono i risvolti di ferro corroso che rivestono il vano e l'anta.
-  const doorFrame = createRustedDoorFrame({ width: FILM_DOOR.w, height: FILM_DOOR.h, depth: 0.15, lip: 0.007, material: mats.rust });
+  const doorFrame = createRustedDoorFrame({ width: FILM_DOOR.w, height: FILM_DOOR.h, depth: 0.15, lip: 0.021, material: mats.rust });
   doorFrame.name = 'telaio-ferro-porta-segreta'; G.add(doorFrame);
   const leafFrame = createRustedDoorFrame({ width: FILM_DOOR.w - 0.012, height: FILM_DOOR.h - 0.013, depth: 0.108, lip: 0.004, material: mats.rust, bottom: true });
   leafFrame.name = 'bordo-ferro-anta'; leafFrame.rotation.y = -Math.PI / 2; leafFrame.position.set(0, 0.006, -FILM_DOOR.w / 2); hinge.add(leafFrame);
