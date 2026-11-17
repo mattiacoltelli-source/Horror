@@ -10,10 +10,12 @@ export function createScare({ scene, camera, player, audio, lights, instab, fini
   let apparition = null;
   const loader = new GLTFLoader();
   const original = new URLSearchParams(location.search).get('agnese') === 'original';
+  let legacyMaterials = original;
   const load = (url, fallback = false) => new Promise((resolve, reject) => {
     loader.load(url, resolve, undefined, reject);
   }).then(({ scene: model, animations }) => {
-    if (fallback || original) grimeNun(model);
+    legacyMaterials = fallback || original;
+    if (legacyMaterials) grimeNun(model);
     model.updateMatrixWorld(true);
     const bounds = new THREE.Box3().setFromObject(model);
     const center = bounds.getCenter(new THREE.Vector3());
@@ -76,7 +78,7 @@ export function createScare({ scene, camera, player, audio, lights, instab, fini
         apparition.reset().setEffectiveTimeScale(1.5).play();
       }
       audio.scare(); player.addShake(1.6); try { navigator.vibrate?.([120, 40, 160]); } catch (_) {}
-      lights.override = 26;
+      lights.override = legacyMaterials ? 26 : 8;
     }
     if (S.fired) {
       const e = t - 0.95;
@@ -89,7 +91,10 @@ export function createScare({ scene, camera, player, audio, lights, instab, fini
       kick = Math.max(0, kick - dt * 5.5);
       camera.fov = baseFov() + kick * 22; camera.updateProjectionMatrix();
       // il flash di luce dura pochissimo, la torcia balbetta
-      lights.override = e < 0.14 ? 26 : (Math.sin(e * 110) > 0 ? 14 : 2);
+      const peak = legacyMaterials ? 26 : 8;
+      const flicker = legacyMaterials ? 14 : 4;
+      const low = legacyMaterials ? 2 : 0.6;
+      lights.override = e < 0.14 ? peak : (Math.sin(e * 110) > 0 ? flicker : low);
       if (e > 0.42 && !S.cut) { S.cut = true; ent.visible = false; lights.override = 0; audio.cut(0.03); }
       if (e > 1.6 && !S.done) {
         S.done = true; camera.fov = baseFov(); camera.updateProjectionMatrix();
