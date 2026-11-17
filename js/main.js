@@ -330,6 +330,11 @@ async function enter() {
   if (!q.get('start') && !restoreCk) setTimeout(() => story?.tell('tunnel'), 13500);   // il registro dell'infermiera comincia dal tunnel
   if (!q.get('start')) { setTimeout(() => { if (story?.current() === 'tunnel') say(P ? P.name + '. non fermarti, dicevano.' : 'corridoio di servizio. non fermarti, dicevano.', 5200); }, 9500); setTimeout(() => { if (story?.current() === 'tunnel') say('qualcuno ti segue da prima che entrassi.', 5200); }, 17500); }
   last = performance.now();
+  // Explicit review link exercises the real scare inside the existing tower.
+  if (q.has('debug') && q.get('agneseFinale') === '1') {
+    await scare.loading;
+    if (scare.ready) setTimeout(() => scare.trigger(flags.turned ? 'behind' : 'ahead'), 1800);
+  }
 }
 $('enter').addEventListener('click', enter);
 // il pulsante dice cosa sta succedendo: "caricamento…" finche' e' spento, poi "entra nel gioco"

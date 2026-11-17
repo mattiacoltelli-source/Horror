@@ -1,0 +1,60 @@
+name: Suor Agnese - build and mobile checks
+on:
+  push:
+    branches: [feature/nun-3d-upgrade]
+    paths:
+      - '.github/workflows/nun-upgrade.yml'
+      - 'tools/nun/build_agnese.py'
+      - 'tools/nun/check_browser.py'
+      - 'js/events/scare.js'
+      - 'js/main.js'
+      - 'agnese-preview.html'
+permissions:
+  contents: write
+concurrency:
+  group: agnese-upgrade
+  cancel-in-progress: true
+jobs:
+  build-and-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Blender and browser tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender python3-numpy
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Build model, rig, PBR atlas and review renders
+        run: blender -b -t 4 --python-exit-code 1 --python tools/nun/build_agnese.py
+      - name: Check the preview and both real endings on a touch viewport
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 > /tmp/agnese-http.log 2>&1 &
+          python tools/nun/check_browser.py
+      - name: Refresh offline cache and save tested assets on the feature branch
+        run: |
+          bash tools/bump.sh
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/models/agnese/suor-agnese.glb assets/models/agnese/metrics.json tools/nun/review sw.js
+          if ! git diff --cached --quiet; then
+            git commit -m 'Add generated and browser-checked Suor Agnese assets'
+            git push origin HEAD:feature/nun-3d-upgrade
+          fi
+      - name: Package a playable copy of the existing game
+        run: zip -qr tools/nun/versione-giocabile.zip index.html agnese-preview.html sw.js manifest.webmanifest css js vendor assets icons
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: suor-agnese-completa
+          path: |
+            tools/nun/source/
+            tools/nun/review/
+            tools/nun/versione-giocabile.zip
+            assets/models/agnese/
+            tools/nun/build_agnese.py
+          if-no-files-found: error

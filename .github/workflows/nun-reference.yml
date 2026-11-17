@@ -4,7 +4,7 @@ on:
     branches: [feature/nun-3d-upgrade]
     paths:
       - '.github/workflows/nun-reference.yml'
-      - 'tools/nun/**'
+      - 'tools/nun/render_reference.py'
 permissions:
   contents: read
 jobs:
