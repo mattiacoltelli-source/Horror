@@ -21,7 +21,7 @@ const TEXT = {   // finale: la suora e' suor Agnese, l'infermiera che ti ha tira
   B: 'ti sei girat' + _o + _n + '.\ntua sorella non c\'è più.\nl\'incendio l\'hai acceso tu.\n' + 'suor Agnese lo sa. ti tiene qui.',
 };
 
-const BLADE_TEXT = 'la lama l’ha tagliata.\nsuor Agnese è svanita come un’ombra.\nnon ti tiene più qui.';
+const BLADE_TEXT = 'l’onda l’ha spazzata via.\nsuor Agnese è svanita come un’ombra.\nnon ti tiene più qui.';
 export function createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn, combat }) {
   const T = { group: new THREE.Group(), opened: false, near: false };
   T.group.visible = false; scene.add(T.group);
