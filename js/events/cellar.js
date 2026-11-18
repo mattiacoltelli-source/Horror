@@ -19,6 +19,7 @@ import { createFingerWriter } from '../world/fingerwrite.js';
 import { rgbPulse } from '../ui/rgbshift.js';
 import { createTorch } from './torch.js';
 import { createChapel } from '../world/chapel.js';
+import { createKeypad } from './keypad.js';
 import { FILM_DOOR } from '../world/film-shrine.js';
 import { createFilmShrineEvent } from './film-shrine.js';
 import { createReflectionSubstitute } from '../world/reflection-substitute.js';
@@ -35,6 +36,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const chapelWall = room.sidePanels.chapel; chapelWall.name = 'muro-cripta-solo-specchio';
   chapelWall.visible = false; C.group.add(chapelWall);
   const withClosedChapelReflection = createReflectionSubstitute({ room: chapel.group, substitute: chapelWall });
+  C.keypad = createKeypad({ group: C.group, player, audio, say, actBtn, flags, x: CELLAR.w / 2, y: 1.32, z: CELLAR.z0 - 20.7, onOpen: () => chapel.openPortal() });   // muro destro, sotto la luce rossa, a ~4 m dall'arco della cripta
   C.shrine = createFilmShrineEvent({ group: C.group, mats, panel: room.sidePanels.film, player, flags, audio, say, actBtn, onSave });
   const shrineMove = (x, z) => C.group.visible && !C.gone ? (chapel.constrainMove(x, z, C.bounds, player.pos) ?? C.shrine.move(x, z, C.bounds)) : null;
 
@@ -172,8 +174,10 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const shade = hall.silhouette(0); shade.visible = false; C.group.add(shade);
   let ap = -1;
 
+  // portale: per ora il viaggio non c'e' ancora (prossimo passo: caduta nello spazio e uscita nella torre)
+  C.onPortal = () => { say('Il pavimento ti chiama.\nIl resto del viaggio non è ancora pronto.', 4200); setTimeout(() => { C.portalUsed = false; }, 6000); };
   C.enter = () => {
-    torch.reset(); chapel.stamped = false; C.gone = false; C.warmWard = false; C.exitStarted = false; if (exCap) exCap.visible = true; if (exL) { exL.rotation.y = 0; exR.rotation.y = 0; } C.group.position.z = 0; C.bounds[2] = CELLAR.z0 - CELLAR.l + 1.4; if (C.bx) { C.bounds[0] = C.bx[0]; C.bounds[1] = C.bx[1]; }
+    torch.reset(); chapel.stamped = false; C.gone = false; C.portalUsed = false; chapel.closePortal(); C.keypad.reset(); C.warmWard = false; C.exitStarted = false; if (exCap) exCap.visible = true; if (exL) { exL.rotation.y = 0; exR.rotation.y = 0; } C.group.position.z = 0; C.bounds[2] = CELLAR.z0 - CELLAR.l + 1.4; if (C.bx) { C.bounds[0] = C.bx[0]; C.bounds[1] = C.bx[1]; }
     C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; cornerDone = false; cornerT = -1; corner.visible = false; runDone = false; runT = -1; runM.visible = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.uniforms.uA.value = 0; mist.material.opacity = 0; shNear.material.uniforms.uA.value = 0; fogMat.uniforms.uM.value = 0; fogMat.uniforms.uW.value = 0; fogMat.uniforms.uMask.value = blankTex; fogMat.uniforms.uTip.value.set(0, 0, 0); fogMat.uniforms.uR.value = 0.36; fogMat.uniforms.uB.value.set(0.47, 0.52); C.wr = null; C.wName = false; C.b1 = C.b2 = C.sw = C.sw2 = C.clean = false; C.farT = -1; C.farN = 0; far1.visible = false;
     player.box = C.bounds; player.pos.set(0.4, 1.62, CELLAR.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     player.constrainMove = shrineMove; C.shrine.reset();
@@ -190,6 +194,8 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     // Le visite laterali sono facoltative: lo specchio aspetta nella cantina.
     if (player.pos.x > 4.2) { mirror.visible = false; if (flash) flash.intensity = 0; return; }
     const P = player.pos;
+    C.keypad.update(dt, !C.gone && !story.busy() && !C.shrine.near);
+    if (chapel.portal.open && !C.portalUsed && chapel.portal.t > 2 && Math.hypot(P.x - chapel.portal.x, P.z - chapel.portal.z) < chapel.portal.enterR) { C.portalUsed = true; C.onPortal?.(); }
     if (!C.warmWard && P.z < CELLAR.z0 - 13) { C.warmWard = true; story.warm?.('ward'); }   // a meta' cantina si precompila il reparto
     // --- specchio ---
     d.set(MIRROR.x - P.x, 0, MIRROR.z - P.z); const dm = d.length(); d.normalize();
@@ -297,6 +303,6 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     }
     if (C.exitStarted && P.z < CELLAR.z0 - CELLAR.l - 0.7 && C.state === 'play') { C.state = 'leaving'; story.cross('cellar', 'ward', (CELLAR.z0 - CELLAR.l) - WARD.z0); }
   };
-  C.leave = () => { C.shrine.leave(); if (player.constrainMove === shrineMove) player.constrainMove = null; C.group.visible = false; mirror.visible = false; };
+  C.leave = () => { C.keypad.reset(); C.shrine.leave(); if (player.constrainMove === shrineMove) player.constrainMove = null; C.group.visible = false; mirror.visible = false; };
   return C;
 }
