@@ -38,6 +38,13 @@ Velocità: 1,45 m/s, oppure 0,8 m/s in movimento ridotto. Nessun head-bob o lamp
 
 La porta finale delimita la prova: **il laboratorio non avvia la storia dell'obitorio**. Le porte laterali sono decorative, chiuse e non interattive; non includiamo letto, sedia a rotelle, montacarichi, nemici e relativi eventi del reparto di produzione.
 
+## Aggiunte della seconda prova (solo nel laboratorio)
+
+- **Corridoio di 10 m dritti** prima della piega (prima erano 4): lunghezza totale 30 m (10 dritti, 12 di piega, 8 stabili). Due porte e tre lampade in più nel tratto dritto.
+- **Sedia a rotelle che scivola**: ferma in fondo; quando la piega supera ~40° si stacca e rotola verso il giocatore lungo il pavimento (gravità ridotta, attrito, 4,8 m/s al massimo), con un rumore metallico che cresce con la velocità. Si ferma vicino all'inizio.
+- **Rotazione sull'asse**: dopo la piega, quando si arriva a ~23,5 m, la sezione del corridoio gira su se stessa fino a 180° in 10 s (20 s con movimento ridotto). Il pavimento resta sotto i piedi; il fondo si capovolge. `?roll=0` la disattiva.
+- **Effetto vertigine**: dopo l'inizio della piega il campo visivo si allarga fino a +9° mentre ci si avvicina al fondo, quindi il fondo sembra ritrarsi. Disattivato con «movimento ridotto».
+
 ## Disattivazione completa
 
 - Senza `spaceFold=1`, oppure con `spaceFold=0`, nessun renderer, asset, audio o controller viene caricato.

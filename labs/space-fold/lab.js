@@ -15,7 +15,7 @@ export async function startLab(flags) {
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x050a08);
   scene.fog=new THREE.FogExp2(0x050a08,.047);
   const camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.05,42);scene.add(camera);
-  const path=new FoldPath(),sequence=new FoldSequence(true,flags.reduced),walker=new FoldWalker(path,flags.reduced);
+  const path=new FoldPath(),sequence=new FoldSequence(true,flags.reduced,flags.roll),walker=new FoldWalker(path,flags.reduced);
   const controls=createControls(canvas),audio=createFoldAudio();
   const hemi=new THREE.HemisphereLight(0x6b9988,0x0c100c,.72);scene.add(hemi);
   const torch=new THREE.SpotLight(0xffeed7,29,23,.62,.8,1.8);
@@ -25,13 +25,14 @@ export async function startLab(flags) {
   manager.onProgress=(_,loaded,total)=>{$('status').textContent=`Preparazione del reparto · ${loaded}/${total}`;};
   const corridor=await createCorridor(scene,path,manager);
   const frame={},floorQuaternion=new THREE.Quaternion(),lookQuaternion=new THREE.Quaternion();
-  const xAxis=new THREE.Vector3(1,0,0),euler=new THREE.Euler(0,0,0,'YXZ');
-  let running=false,started=false,lost=false,manual=false,last=0,request=0,disposed=false;
+  const xAxis=new THREE.Vector3(1,0,0),zAxis=new THREE.Vector3(0,0,1),rollQuaternion=new THREE.Quaternion(),euler=new THREE.Euler(0,0,0,'YXZ');
+  let running=false,started=false,lost=false,manual=false,last=0,request=0,disposed=false,baseFov=68,appliedFov=68;
   let frames=0,seconds=0,publishedPhase='',audioError=false;
   const timings=[],on=(el,type,handler,options)=>el.addEventListener(type,handler,options);
+  const smoothstep=v=>{const u=Math.max(0,Math.min(1,v));return u*u*(3-2*u);};
   function resize() {
     renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;
-    camera.fov=camera.aspect<.8?68:58;camera.updateProjectionMatrix();adaptive.reset();
+    baseFov=camera.aspect<.8?68:58;camera.fov=appliedFov=baseFov;camera.updateProjectionMatrix();adaptive.reset();
   }
   on(window,'resize',resize);resize();
   function pose() {
@@ -39,7 +40,12 @@ export async function startLab(flags) {
     camera.position.set(p.x,p.y,p.z);
     floorQuaternion.setFromAxisAngle(xAxis,p.followAngle);
     lookQuaternion.setFromEuler(euler.set(p.pitch,p.yaw,0));
-    camera.quaternion.copy(floorQuaternion).multiply(lookQuaternion);
+    rollQuaternion.setFromAxisAngle(zAxis,p.followRoll);
+    camera.quaternion.copy(floorQuaternion).multiply(rollQuaternion).multiply(lookQuaternion);
+    // Effetto vertigine: il campo visivo si allarga di qualche grado mentre ci si avvicina al fondo, quindi il fondo sembra tirarsi indietro.
+    // Con «movimento ridotto» e' disattivato (puo' dare fastidio).
+    const fovTarget=(sequence.enabled&&!walker.reduced)?baseFov+9*smoothstep((walker.s-12)/12)*(sequence.phase==='idle'||sequence.phase==='warning'?0:1):baseFov;
+    if(Math.abs(fovTarget-appliedFov)>.02){appliedFov+=(fovTarget-appliedFov)*.12;camera.fov=appliedFov;camera.updateProjectionMatrix();}
     // Two fixed light slots, selected by floor distance. Positions follow the fold.
     const nearest=[...corridor.lampPositions].sort((a,b)=>Math.abs(a.s-walker.s)-Math.abs(b.s-walker.s));
     nearest.slice(0,2).forEach((a,i)=>{
@@ -49,14 +55,15 @@ export async function startLab(flags) {
   }
   function step(dt,axes,look) {
     // One ordered update: shape -> shared path -> walker -> camera -> sound.
-    const angle=sequence.update(dt,walker.s),changed=path.setAngle(angle);
-    if(changed)corridor.update();
+    const angle=sequence.update(dt,walker.s),changed=path.setAngle(angle),rollChanged=path.setRoll(sequence.roll);
+    if(changed||rollChanged)corridor.update();
     const moved=walker.update(dt,axes??controls.axes(),look??controls.consumeLook());
-    pose();audio.update(dt,sequence,moved);
-    const phase=sequence.finished?'complete':sequence.phase;
+    const chairSpeed=corridor.chair.update(dt,sequence.angle);
+    pose();audio.update(dt,sequence,moved);audio.setWheel(chairSpeed);
+    const phase=sequence.rollPhase==='rolling'?'rolling':sequence.rollPhase==='done'?'rolled':sequence.finished?'complete':sequence.phase;
     if(phase!==publishedPhase) {
       publishedPhase=phase;
-      const text={idle:'Avanza nel reparto. Puoi sempre tornare indietro.',warning:'',folding:'',stable:'La struttura si è fermata. Continua.',complete:'Tratto stabile raggiunto. Puoi esplorare o tornare indietro.'};
+      const text={idle:'Avanza nel reparto. Puoi sempre tornare indietro.',warning:'',folding:'',stable:'La struttura si è fermata. Continua.',complete:'Tratto stabile raggiunto. Puoi esplorare o tornare indietro.',rolling:'',rolled:'Il corridoio si è capovolto. Puoi tornare indietro.'};
       $('hint').textContent=text[phase];
     }
   }
@@ -104,7 +111,7 @@ export async function startLab(flags) {
   }
   on($('start'),'click',begin);on($('pause'),'click',pause);
   on($('restart'),'click',()=>{
-    sequence.reset();path.setAngle(0);corridor.update();walker.reset();pose();audio.reset();
+    sequence.reset();path.setAngle(0);path.setRoll(0);corridor.chair.reset();corridor.update();walker.reset();appliedFov=baseFov;camera.fov=baseFov;camera.updateProjectionMatrix();pose();audio.reset();audio.setWheel(0);
     publishedPhase='';begin();
   });
   on(window,'blur',()=>{if(running)pause();});
@@ -134,7 +141,7 @@ export async function startLab(flags) {
       set manual(value){manual=value;},get running(){return running;},
       step(dt,axes={x:0,y:0},look={x:0,y:0}){step(Math.min(.05,dt),axes,look);render();},
       advance(frames,dt,axes={x:0,y:0}) {for(let i=0;i<frames;i++)step(Math.min(.05,dt),axes,{x:0,y:0});render();},
-      render,pause,snapshot:()=>({phase:sequence.phase,angle:sequence.angle,s:walker.s,x:walker.x,
+      render,pause,snapshot:()=>({phase:sequence.phase,angle:sequence.angle,roll:sequence.roll,rollPhase:sequence.rollPhase,chairS:corridor.chair.speed,chairPos:corridor.chair.s,s:walker.s,x:walker.x,
         pose:{...walker.pose},ratio,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
         textures:renderer.info.memory.textures,geometries:renderer.info.memory.geometries,audio:audio.state})};
   }

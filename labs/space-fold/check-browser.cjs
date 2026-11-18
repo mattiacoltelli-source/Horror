@@ -48,7 +48,7 @@ const artifacts=process.env.SPACE_FOLD_ARTIFACTS||'/tmp/space-fold-artifacts';fs
     assert.ok(!requests.slice(beforeKill).some(u=>/\/vendor\/|\/assets\/|\/lab\.js/.test(u)));
     await page.unroute('**/labs/space-fold/config.js');
     await page.emulateMedia({reducedMotion:'reduce'});
-    await page.goto(base+'labs/space-fold/?spaceFold=1&debug=1',{waitUntil:'networkidle'});
+    await page.goto(base+'labs/space-fold/?spaceFold=1&debug=1&roll=0',{waitUntil:'networkidle'});
     await page.waitForFunction(()=>window.__spaceFold,{timeout:90000});
     assert.equal(await page.locator('#reduced').isChecked(),true,'honor OS reduced motion');
     await page.locator('#reduced').uncheck();await page.locator('#start').click();await page.waitForFunction(()=>window.__spaceFold.running);
@@ -57,16 +57,16 @@ const artifacts=process.env.SPACE_FOLD_ARTIFACTS||'/tmp/space-fold-artifacts';fs
     const startRequests=requests.length;
     await page.evaluate(()=>{
       const g=window.__spaceFold;
-      g.advance(28,.05,{x:0,y:-1}); // trigger, before any appreciable deformation
+      g.advance(112,.05,{x:0,y:-1}); // trigger, before any appreciable deformation
       window.__floorBefore=g.corridor.deformables[0].geo.attributes.position.array.slice();
-      window.__doorBefore=g.corridor.deformables[4].geo.attributes.position.array.slice();
+      window.__doorBefore=g.corridor.deformables.slice(4).map(d=>d.geo.attributes.position.array.slice());
       window.__stoppedAt=g.walker.s;
       g.advance(200,.05); // parked while the floor bends
     });
     const mid=await page.evaluate(()=>{
       const g=window.__spaceFold;return {...g.snapshot(),stoppedAt:window.__stoppedAt,
         floorDelta:Math.max(...g.corridor.deformables[0].geo.attributes.position.array.map((v,i)=>Math.abs(v-window.__floorBefore[i]))),
-        doorDelta:Math.max(...g.corridor.deformables[4].geo.attributes.position.array.map((v,i)=>Math.abs(v-window.__doorBefore[i])))};
+        doorDelta:Math.max(...g.corridor.deformables.slice(4).map((d,k)=>Math.max(...d.geo.attributes.position.array.map((v,i)=>Math.abs(v-window.__doorBefore[k][i])))))};
     });
     assert.equal(mid.s,mid.stoppedAt);assert.ok(mid.angle>.5&&mid.angle<Math.PI/2);
     assert.ok(mid.floorDelta>3&&mid.doorDelta>.01,'geometry changes independently of camera');
@@ -86,7 +86,7 @@ const artifacts=process.env.SPACE_FOLD_ARTIFACTS||'/tmp/space-fold-artifacts';fs
     const traversal=await page.evaluate(async()=>{
       const g=window.__spaceFold,THREE=await import(new URL('vendor/three/three.module.min.js',document.baseURI));
       const checks=[];
-      for(const s of [5,8,10,13,16,20,22]) {
+      for(const s of [12,15,18,21,24,26,28]) {
         g.advance(Math.ceil((s-g.walker.s)/(g.walker.speedLimit*.05)),.05,{x:0,y:-1});g.advance(50,.016);
         const f=g.path.frame(g.walker.s),floor=g.corridor.root.getObjectByName('pavimento-parametrico');
         g.scene.updateMatrixWorld(true);
@@ -109,9 +109,9 @@ const artifacts=process.env.SPACE_FOLD_ARTIFACTS||'/tmp/space-fold-artifacts';fs
       return {anchorError,normalError};
     });
     assert.ok(integrity.anchorError<1e-8&&integrity.normalError<1e-5);
-    await page.evaluate(()=>window.__spaceFold.advance(900,.05,{x:1,y:1}));
+    await page.evaluate(()=>window.__spaceFold.advance(1400,.05,{x:1,y:1}));
     const back=await page.evaluate(()=>window.__spaceFold.snapshot());
-    assert.ok(back.s<2);assert.equal(back.x,1.3);
+    assert.ok(back.s<2,JSON.stringify(back));assert.equal(back.x,1.3);
     // Return to curve for a gameplay screenshot; no debug camera is used.
     await page.evaluate(()=>{const g=window.__spaceFold;g.advance(180,.05,{x:-.15,y:-1});g.advance(50,.016);document.getElementById('metrics').hidden=true;});
     await page.screenshot({path:path.join(artifacts,'03-camminare-sulla-curva.png'),timeout:90000});
@@ -158,7 +158,7 @@ const artifacts=process.env.SPACE_FOLD_ARTIFACTS||'/tmp/space-fold-artifacts';fs
       const g=window.__spaceFold,THREE=await import(new URL('vendor/three/three.module.min.js',document.baseURI));
       g.manual=true;await g.audio.pause();g.walker.reduced=g.sequence.reduced=false;
       const result=[];
-      for(let i=0;i<35;i++) {
+      for(let i=0;i<65;i++) {
         g.advance(10,.05,{x:0,y:-1});g.scene.updateMatrixWorld(true);
         const f=g.path.frame(g.walker.s),ray=new THREE.Raycaster(g.camera.position.clone(),new THREE.Vector3(0,-f.cos,-f.sin),0,3);
         const hit=ray.intersectObject(g.corridor.root.getObjectByName('pavimento-parametrico'))[0];

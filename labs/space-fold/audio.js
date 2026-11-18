@@ -1,6 +1,6 @@
 // Original procedural sound, no downloads and no production audio singleton.
 export function createFoldAudio() {
-  let context,master,rumble,oscillators=[],muted=false,lastPhase='idle',nextCrack=0,stepDistance=0;
+  let context,master,rumble,wheel,oscillators=[],muted=false,lastPhase='idle',nextCrack=0,stepDistance=0;
   const api={
     async unlock() {
       if(!context) {
@@ -16,6 +16,11 @@ export function createFoldAudio() {
         const source=context.createBufferSource();source.buffer=noise;source.loop=true;
         const filter=context.createBiquadFilter();filter.type='lowpass';filter.frequency.value=165;
         source.connect(filter);filter.connect(rumble);source.start();oscillators.push(source);
+        // rotolio metallico della sedia a rotelle: rumore a banda stretta, livello legato alla velocita'
+        wheel=context.createGain();wheel.gain.value=0;wheel.connect(master);
+        const ws=context.createBufferSource();ws.buffer=noise;ws.loop=true;ws.playbackRate.value=1.7;
+        const bp=context.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1250;bp.Q.value=2.2;
+        ws.connect(bp);bp.connect(wheel);ws.start();oscillators.push(ws);
         for(const hz of [43,51.3]) {
           const o=context.createOscillator(),g=context.createGain();o.type='sine';o.frequency.value=hz;g.gain.value=.14;
           o.connect(g);g.connect(rumble);o.start();oscillators.push(o);
@@ -23,6 +28,7 @@ export function createFoldAudio() {
       }
       if(context.state!=='running')await context.resume();
     },
+    setWheel(speed) {if(wheel&&context)wheel.gain.setTargetAtTime(Math.min(.5,speed*.11),context.currentTime,.08);},
     setMuted(value) {muted=value;if(master)master.gain.setTargetAtTime(muted?0:.22,context.currentTime,.12);},
     update(dt,sequence,moved) {
       if(!context||context.state!=='running')return;

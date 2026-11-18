@@ -7,5 +7,6 @@ export function readFlags(search, reducedPreference = false) {
     enabled: SPACE_FOLD_AVAILABLE && q.get('spaceFold') === '1',
     reduced: q.has('reducedMotion') ? q.get('reducedMotion') === '1' : reducedPreference,
     debug: q.get('debug') === '1',
+    roll: q.get('roll') !== '0',   // rotazione sull'asse del corridoio dopo la piega (?roll=0 la disattiva)
   };
 }

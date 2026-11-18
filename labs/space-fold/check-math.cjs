@@ -24,10 +24,10 @@ const path=require('node:path');
       assert.ok(p.y>=previous.y-1e-8&&p.z<=previous.z+1e-8,'path never doubles back');
       length+=Math.hypot(p.y-previous.y,p.z-previous.z);previous=p;
     }
-    near(length,23.99,.02);
-    for(const s of [4,16])near(track.theta(s-1e-5),track.theta(s+1e-5),1e-8);
+    near(length,FOLD.length-.01,.02);
+    for(const s of [FOLD.curveStart,FOLD.curveStart+FOLD.curveLength])near(track.theta(s-1e-5),track.theta(s+1e-5),1e-8);
   }
-  track.setAngle(Math.PI/2);near(track.theta(20),Math.PI/2);near(track.frame(20).cos,0);
+  track.setAngle(Math.PI/2);near(track.theta(26),Math.PI/2);near(track.frame(26).cos,0);
   // Forward, diagonal, backwards, boundaries and turn-relative movement.
   const walker=new FoldWalker(track),start={...walker.pose},startS=walker.s;
   for(let i=0;i<500;i++)walker.update(.016,{x:0,y:-1});
@@ -47,21 +47,29 @@ const path=require('node:path');
   walker.reset();const before=walker.s;walker.update(.05,{x:1,y:-1});
   near(Math.hypot(walker.s-before,walker.x),1.45*.05);
   // A parked player is transported continuously by the deforming surface.
-  const seq=new FoldSequence(),w=new FoldWalker(track);w.s=10;track.setAngle(0);w.updatePose(0);
+  const seq=new FoldSequence(),w=new FoldWalker(track);w.s=16;track.setAngle(0);w.updatePose(0);
   let prev={...w.pose},maxAngleDelta=0,maxPositionDelta=0;
   for(let i=0;i<1700;i++) {
     if(i===350)seq.reduced=true; // changing accessibility mid-fold cannot reverse it.
     const last=seq.angle;track.setAngle(seq.update(.016,w.s));w.update(.016,{x:0,y:0});
     assert.ok(seq.angle>=last-1e-10);
-    near(w.s,10);maxAngleDelta=Math.max(maxAngleDelta,Math.abs(w.pose.followAngle-prev.followAngle));
+    near(w.s,16);maxAngleDelta=Math.max(maxAngleDelta,Math.abs(w.pose.followAngle-prev.followAngle));
     maxPositionDelta=Math.max(maxPositionDelta,Math.hypot(w.pose.y-prev.y,w.pose.z-prev.z));prev={...w.pose};
   }
   assert.equal(seq.phase,'stable');near(seq.angle,Math.PI/2);
   assert.ok(maxAngleDelta<.01&&maxPositionDelta<.04,'no camera snap for parked player');
   const off=new FoldSequence(false);for(let i=0;i<4000;i++)off.update(.016,23);
   near(off.angle,0);assert.equal(off.phase,'idle');
+  // Rotazione sull'asse: la sezione ruota attorno al suo centro (0,1.25); il pavimento a roll=PI e' a 2,5 m dall'asse del pavimento originale.
+  { const rp=new FoldPath();rp.setAngle(Math.PI/2);rp.setRoll(Math.PI);const f=rp.frame(FOLD.length),q=rp.point(0,0,FOLD.length);
+    near(q.x,0,1e-6);near(Math.hypot(q.y-f.y,q.z-f.z),FOLD.height,1e-6);
+    near(rp.rho(FOLD.rollStart-1),0);near(rp.rho(FOLD.length),Math.PI);
+    const eye=rp.point(0,FOLD.eye,FOLD.length);near(Math.hypot(eye.y-q.y,eye.z-q.z),FOLD.eye,1e-6);
+    const rs=new FoldSequence();const rw=new FoldWalker(new FoldPath());
+    for(let i=0;i<4000;i++)rs.update(.016,25);near(rs.roll,Math.PI);assert.equal(rs.rollPhase,'done');
+    const rn=new FoldSequence(true,false,false);for(let i=0;i<4000;i++)rn.update(.016,25);near(rn.roll,0); }
   const normal=new FoldSequence(),reduced=new FoldSequence(true,true);
-  for(let i=0;i<1100;i++){normal.update(.016,4);reduced.update(.016,4);}
+  for(let i=0;i<1100;i++){normal.update(.016,9);reduced.update(.016,9);}
   assert.equal(normal.phase,'stable');assert.equal(reduced.phase,'folding');
   reduced.reset();assert.equal(reduced.phase,'idle');near(reduced.angle,0);
   for(const reducedMotion of [false,true]) {

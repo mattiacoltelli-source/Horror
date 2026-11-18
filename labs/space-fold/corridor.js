@@ -6,14 +6,16 @@ import { FOLD } from './path.js';
 export async function createCorridor(scene,path,manager) {
   const root=new THREE.Group(); root.name='space-fold-reparto'; scene.add(root);
   const gltf=new GLTFLoader(manager), textures=new THREE.TextureLoader(manager);
-  const [wallAsset,doorAsset,lampAsset,floorMap,ceilingMap]=await Promise.all([
+  const [wallAsset,doorAsset,lampAsset,floorMap,ceilingMap,chairAsset]=await Promise.all([
     gltf.loadAsync('assets/models/mg_wall.glb'),
     gltf.loadAsync('assets/models/hw_door_1.glb'),
     gltf.loadAsync('assets/models/wlamp.glb'),
     textures.loadAsync('assets/tex/mg_floor.jpg'),
     textures.loadAsync('assets/tex/ward_ceiling.jpg'),
+    gltf.loadAsync('assets/models/hw_wheel_chair.glb'),
   ]);
   const deformables=[],anchors=[],frame={};
+  const ax=new THREE.Vector3(1,0,0),az=new THREE.Vector3(0,0,1),qa=new THREE.Quaternion(),qb=new THREE.Quaternion(),qc=new THREE.Quaternion();
   let stationS=null,stationFrames=null;
   const wallMat=wallAsset.scene.children[0].material?.clone() ?? (()=>{
     let m; wallAsset.scene.traverse(o=>{if(o.isMesh&&!m)m=o.material.clone();});return m;
@@ -36,8 +38,9 @@ export async function createCorridor(scene,path,manager) {
     mesh.frustumCulled=false; root.add(mesh);
     // Imported/rest-pose bounds become invalid when the floor goes vertical.
     // Conservative bounds also keep ray tests correct without rescanning vertices.
-    geo.boundingBox=new THREE.Box3(new THREE.Vector3(-3,-.5,-FOLD.length-.5),
-      new THREE.Vector3(3,FOLD.length+FOLD.height,FOLD.height+.5));
+    // Con la rotazione sull'asse la sezione puo' ruotare di 180°: i limiti coprono tutta la corona.
+    geo.boundingBox=new THREE.Box3(new THREE.Vector3(-3.6,-3,-FOLD.length-3),
+      new THREE.Vector3(3.6,FOLD.length+FOLD.height+2,FOLD.height+3));
     geo.boundingSphere=geo.boundingBox.getBoundingSphere(new THREE.Sphere());
     pos.setUsage(THREE.DynamicDrawUsage);norm.setUsage(THREE.DynamicDrawUsage);
     deformables.push({geo,rest:pos.array.slice(),normals:norm.array.slice()});return mesh;
@@ -102,7 +105,8 @@ export async function createCorridor(scene,path,manager) {
       register(subdivide(geo,.12),mat,'porta-reparto-ancorata');geo.dispose();
     });
   }
-  bakeDoor(-1.72,7.5,Math.PI/2);bakeDoor(1.72,13,-Math.PI/2);
+  bakeDoor(-1.72,5,Math.PI/2);bakeDoor(1.72,8,-Math.PI/2);   // due nel tratto dritto (10 m)
+  bakeDoor(-1.72,13.5,Math.PI/2);bakeDoor(1.72,19,-Math.PI/2);
   // Terminal door is a physical end to the isolated vestibule, not a teleport.
   bakeDoor(0,FOLD.length-.04,0);
   // Simple transverse jamb above the final door, transported with the landing.
@@ -112,7 +116,7 @@ export async function createCorridor(scene,path,manager) {
   root.add(end);anchors.push({object:end,x:0,y:0,s:FOLD.length});
 
   const lampPositions=[];
-  for(const [i,s] of [2.5,8.0,13.5,19.5,23].entries()) {
+  for(const [i,s] of [2.5,8.0,13.5,19.0,24.5,28.5].entries()) {
     const mount=new THREE.Group();mount.name='lampada-ancorata-'+i;
     const fixture=lampAsset.scene.clone(true);
     fixture.traverse(m=>{
@@ -148,34 +152,69 @@ export async function createCorridor(scene,path,manager) {
         for(let i=0;i<d.rest.length;i+=3) {
           const s=-d.rest[i+2];let id=ids.get(s);
           if(id===undefined){id=positions.length;ids.set(s,id);positions.push(s);}
-          d.stations[i/3]=id*5;
+          d.stations[i/3]=id*7;
         }
       }
-      stationS=new Float64Array(positions);stationFrames=new Float64Array(positions.length*5);
+      stationS=new Float64Array(positions);stationFrames=new Float64Array(positions.length*7);
     }
     for(let i=0;i<stationS.length;i++) {
-      path.frame(stationS[i],frame);const k=i*5;
+      path.frame(stationS[i],frame);const k=i*7;
       stationFrames[k]=frame.y;stationFrames[k+1]=frame.z;
       stationFrames[k+2]=frame.cos;stationFrames[k+3]=frame.sin;stationFrames[k+4]=frame.curvature;
+      stationFrames[k+5]=frame.cr;stationFrames[k+6]=frame.sr;
     }
     for(const {geo,rest,normals,stations} of deformables) {
       const p=geo.attributes.position.array,n=geo.attributes.normal.array;
+      const cy0=FOLD.rollCenter;
       for(let i=0;i<rest.length;i+=3) {
-        const y=rest[i+1],k=stations[i/3],cos=stationFrames[k+2],sin=stationFrames[k+3];
-        p[i]=rest[i];p[i+1]=stationFrames[k]+y*cos;p[i+2]=stationFrames[k+1]+y*sin;
-        // Inverse transpose of the actual deformation Jacobian.
-        const nx=normals[i],ny=normals[i+1],nz=normals[i+2]/Math.max(.15,1-y*stationFrames[k+4]);
+        const x=rest[i],y=rest[i+1],k=stations[i/3],cos=stationFrames[k+2],sin=stationFrames[k+3],cr=stationFrames[k+5],sr=stationFrames[k+6];
+        // La sezione ruota attorno al suo centro (rotazione sull'asse), poi si piega nel telaio (X,N).
+        const dy=y-cy0,xr=x*cr-dy*sr,yr=cy0+x*sr+dy*cr;
+        p[i]=xr;p[i+1]=stationFrames[k]+yr*cos;p[i+2]=stationFrames[k+1]+yr*sin;
+        // Inverse transpose of the actual deformation Jacobian (la distanza dalla curva e' yr).
+        const nxr=normals[i]*cr-normals[i+1]*sr,nyr=normals[i]*sr+normals[i+1]*cr;
+        const nx=nxr,ny=nyr,nz=normals[i+2]/Math.max(.15,1-yr*stationFrames[k+4]);
         const inv=normals[i+2]===0?1:1/Math.hypot(nx,ny,nz);
         n[i]=nx*inv;n[i+1]=(ny*cos-nz*sin)*inv;n[i+2]=(ny*sin+nz*cos)*inv;
       }
       geo.attributes.position.needsUpdate=true;geo.attributes.normal.needsUpdate=true;
     }
     for(const a of anchors) {
-      path.point(a.x,a.y,a.s,frame);a.object.position.set(frame.x,frame.y,frame.z);a.object.rotation.x=frame.theta;
+      path.point(a.x,a.y,a.s,frame);a.object.position.set(frame.x,frame.y,frame.z);
+      qa.setFromAxisAngle(ax,frame.theta);qb.setFromAxisAngle(az,frame.roll);a.object.quaternion.copy(qa).multiply(qb);
     }
   }
+  // SEDIA A ROTELLE: ferma in fondo, nel tratto che diventa verticale; quando la piega supera ~40° si stacca e rotola verso di te
+  // lungo il pavimento (gravita' ridotta, attrito di rotolamento, velocita' massima 4,8 m/s), poi si ferma vicino all'inizio.
+  const chairObj=new THREE.Group();chairObj.name='sedia-a-rotelle-scivola';
+  { const o=chairAsset.scene.clone(true);const box=new THREE.Box3().setFromObject(o),size=box.getSize(new THREE.Vector3()),c=box.getCenter(new THREE.Vector3());
+    const k=.95/size.y;o.scale.setScalar(k);o.position.set(-c.x*k,-box.min.y*k,-c.z*k);
+    o.traverse(m=>{if(!m.isMesh)return;m.material=m.material.clone();m.material.color.multiplyScalar(.55);m.frustumCulled=false;});
+    chairObj.add(o);root.add(chairObj); }
+  const CH={s0:26.2,x:.8,s:26.2,v:0,released:false,yaw:Math.PI,t:0};
+  function placeChair() {
+    path.point(CH.x,0,CH.s,frame);chairObj.position.set(frame.x,frame.y,frame.z);
+    qa.setFromAxisAngle(ax,frame.theta);qb.setFromAxisAngle(az,frame.roll);
+    qc.setFromAxisAngle(new THREE.Vector3(0,1,0),CH.yaw+Math.sin(CH.t*7)*Math.min(.09,CH.v*.03));
+    chairObj.quaternion.copy(qa).multiply(qb).multiply(qc);
+  }
+  const chair={
+    reset(){CH.s=CH.s0;CH.v=0;CH.released=false;CH.t=0;placeChair();},
+    update(dt,angle) {
+      CH.t+=dt;
+      if(!CH.released&&angle>.7)CH.released=true;
+      if(CH.released&&CH.s>1.3) {
+        const sin=Math.sin(path.theta(CH.s));
+        CH.v=Math.max(0,Math.min(4.8,CH.v+(3.6*sin-(CH.v>.05?.5:0))*dt));
+        CH.s=Math.max(1.3,CH.s-CH.v*dt);if(CH.s<=1.3)CH.v=0;
+      }
+      placeChair();return CH.v;
+    },
+    get speed(){return CH.v;},get s(){return CH.s;},
+  };
+  placeChair();
   update();
-  return {root,update,anchors,lampPositions,deformables};
+  return {root,update,anchors,lampPositions,deformables,chair};
 }
 
 // Split imported triangles by s slices, interpolating normals and UVs. Existing
