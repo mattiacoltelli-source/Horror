@@ -18,6 +18,7 @@ import { createDawn } from './events/dawn.js';
 import { createCellar } from './events/cellar.js';
 import { createTower } from './events/tower.js';
 import { createHound } from './events/hound.js';
+import { createBreath } from './world/breath.js';
 import { createStory } from './story.js';
 import { createDust } from './world/dust.js';
 import { decorTunnel } from './world/decor.js';
@@ -134,7 +135,7 @@ try {
   nx.putImageData(im, 0, 0); $('grain').style.backgroundImage = `url(${nc.toDataURL('image/png')})`;
 } catch (_) {}
 // ---------- flusso ----------
-let dawn = null, doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null, wh = null, morgue = null, ward = null, ambient = null, notes = null, combat = null;
+let breath = null, dawn = null, doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null, wh = null, morgue = null, ward = null, ambient = null, notes = null, combat = null;
 const flags = { turned: false, mirror: false, door: null, notes: 0, filmKey: false, filmDoorOpen: false };
 // CHECKPOINT: a ogni stanza si salva dove sei e le scelte fatte. Dalla schermata iniziale puoi ripartire da lì.
 const CK = 'ng_ckpt', CK_ST = { cellar: 'cantina', ward: 'reparto', morgue: 'obitorio', warehouse: 'magazzino', tower: 'torre' }, CK_NAME = { cellar: 'dalla cantina', ward: 'dal reparto', morgue: "dall'obitorio", warehouse: 'dal magazzino', tower: 'dalla torre' };
@@ -317,6 +318,7 @@ async function enter() {
   try { await audio.start(); audio.heartbeat?.(); navigator.vibrate?.(30); } catch (_) {}
   try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el, { navigationUI: 'hide' })?.catch?.(() => {}); } catch (_) {}
   try { await screen.orientation?.lock?.('portrait'); } catch (_) {}
+  if (q.get('respiro') !== '0') { breath = createBreath({ scene, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches }); breath.refresh(); setTimeout(() => breath?.refresh(), 3000); }   // respiro delle pareti nel tunnel (?respiro=0 lo spegne)
   if (!restoreCk && (!q.get('start') || q.get('start') === 'porta')) await prepareScene();
   $('intro').classList.add('hidden');
   // I programmi e le texture della stanza vengono preparati durante il
@@ -396,6 +398,7 @@ function tick(dt, hallDt = dt) {
   combat?.update(dt, time);
   time += dt;
   player.update(dt, time);
+  breath?.update(dt, player.pos.z);
   if (ward?.bend?.active) ward.bend.applyCamera(dt);   // ?piega=1: la camera segue il reparto piegato
   audio.setListener(camera);
   lights.update(hall?.active ? hallDt : dt, time, player.pos.z, player.pos.x);
