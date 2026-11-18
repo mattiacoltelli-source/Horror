@@ -20,6 +20,7 @@ import { rgbPulse } from '../ui/rgbshift.js';
 import { createTorch } from './torch.js';
 import { createChapel } from '../world/chapel.js';
 import { createKeypad } from './keypad.js';
+import { createPortal } from '../world/portal.js';
 import { FILM_DOOR } from '../world/film-shrine.js';
 import { createFilmShrineEvent } from './film-shrine.js';
 import { createReflectionSubstitute } from '../world/reflection-substitute.js';
@@ -36,7 +37,8 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const chapelWall = room.sidePanels.chapel; chapelWall.name = 'muro-cripta-solo-specchio';
   chapelWall.visible = false; C.group.add(chapelWall);
   const withClosedChapelReflection = createReflectionSubstitute({ room: chapel.group, substitute: chapelWall });
-  C.keypad = createKeypad({ group: C.group, player, audio, say, actBtn, flags, x: CELLAR.w / 2, y: 1.32, z: CELLAR.z0 - 20.7, onOpen: () => chapel.openPortal() });   // muro destro, sotto la luce rossa, a ~4 m dall'arco della cripta
+  const portal = C.portal = createPortal({ group: C.group, x: 1.55, z: CELLAR.z0 - 20.1 });   // sul pavimento della cantina, fuori dalla cripta, davanti al tastierino
+  C.keypad = createKeypad({ group: C.group, player, audio, say, actBtn, flags, x: CELLAR.w / 2, y: 1.32, z: CELLAR.z0 - 20.7, onOpen: () => portal.openIt() });   // muro destro, sotto la luce rossa, a ~4 m dall'arco della cripta
   C.shrine = createFilmShrineEvent({ group: C.group, mats, panel: room.sidePanels.film, player, flags, audio, say, actBtn, onSave });
   const shrineMove = (x, z) => C.group.visible && !C.gone ? (chapel.constrainMove(x, z, C.bounds, player.pos) ?? C.shrine.move(x, z, C.bounds)) : null;
 
@@ -177,7 +179,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   // portale: arrivo diretto nella torre (la caduta nello spazio e' un possibile prossimo passo)
   C.onPortal = () => { flags.bladeEnding = true; story.goto('tower'); };   // il portale porta direttamente nella torre, con la lama di luce
   C.enter = () => {
-    torch.reset(); chapel.stamped = false; C.gone = false; C.portalUsed = false; chapel.closePortal(); C.keypad.reset(); C.warmWard = false; C.exitStarted = false; if (exCap) exCap.visible = true; if (exL) { exL.rotation.y = 0; exR.rotation.y = 0; } C.group.position.z = 0; C.bounds[2] = CELLAR.z0 - CELLAR.l + 1.4; if (C.bx) { C.bounds[0] = C.bx[0]; C.bounds[1] = C.bx[1]; }
+    torch.reset(); chapel.stamped = false; C.gone = false; C.portalUsed = false; portal.close(); C.keypad.reset(); C.warmWard = false; C.exitStarted = false; if (exCap) exCap.visible = true; if (exL) { exL.rotation.y = 0; exR.rotation.y = 0; } C.group.position.z = 0; C.bounds[2] = CELLAR.z0 - CELLAR.l + 1.4; if (C.bx) { C.bounds[0] = C.bx[0]; C.bounds[1] = C.bx[1]; }
     C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; cornerDone = false; cornerT = -1; corner.visible = false; runDone = false; runT = -1; runM.visible = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.uniforms.uA.value = 0; mist.material.opacity = 0; shNear.material.uniforms.uA.value = 0; fogMat.uniforms.uM.value = 0; fogMat.uniforms.uW.value = 0; fogMat.uniforms.uMask.value = blankTex; fogMat.uniforms.uTip.value.set(0, 0, 0); fogMat.uniforms.uR.value = 0.36; fogMat.uniforms.uB.value.set(0.47, 0.52); C.wr = null; C.wName = false; C.b1 = C.b2 = C.sw = C.sw2 = C.clean = false; C.farT = -1; C.farN = 0; far1.visible = false;
     player.box = C.bounds; player.pos.set(0.4, 1.62, CELLAR.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     player.constrainMove = shrineMove; C.shrine.reset();
@@ -195,7 +197,8 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     if (player.pos.x > 4.2) { mirror.visible = false; if (flash) flash.intensity = 0; return; }
     const P = player.pos;
     C.keypad.update(dt, !C.gone && !story.busy() && !C.shrine.near);
-    if (chapel.portal.open && !C.portalUsed && chapel.portal.t > 2 && Math.hypot(P.x - chapel.portal.x, P.z - chapel.portal.z) < chapel.portal.enterR) { C.portalUsed = true; C.onPortal?.(); }
+    portal.update(dt, C.tt || 0);
+    if (portal.open && !C.portalUsed && portal.u > 0.7 && Math.hypot(P.x - portal.x, P.z - portal.z) < portal.enterR) { C.portalUsed = true; C.onPortal?.(); }
     if (!C.warmWard && P.z < CELLAR.z0 - 13) { C.warmWard = true; story.warm?.('ward'); }   // a meta' cantina si precompila il reparto
     // --- specchio ---
     d.set(MIRROR.x - P.x, 0, MIRROR.z - P.z); const dm = d.length(); d.normalize();

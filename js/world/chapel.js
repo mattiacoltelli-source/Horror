@@ -116,25 +116,6 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
   K.stamp();
   burnDecals(G, [{ k: 'floor', p: [aX - 1.1, 0.012, zc], w: 1.7, h: 1.7, rot: 0.6, a: 0.85 }]);
 
-  // PORTALE A TERRA: si apre sul pavimento bruciato davanti ai gradini quando si inserisce il codice. Shader senza luci (nessuna ricompilazione degli altri materiali).
-  K.portal = { open: false, t: 0, x: aX - 1.45, z: zc, r: 0.55, enterR: 0.5 };
-  { const mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, fog: false,
-      uniforms: { uT: { value: 0 }, uOpen: { value: 0 } },
-      vertexShader: 'varying vec2 vP; void main() { vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: `varying vec2 vP; uniform float uT, uOpen;
-        void main() { float r = length(vP) / ${K.portal.r.toFixed(2)}; if (r > 1.0) discard; float a = atan(vP.y, vP.x);
-          float swirl = sin(a * 5.0 + r * 9.0 - uT * 2.6) * 0.5 + 0.5, swirl2 = sin(a * 3.0 - r * 14.0 + uT * 1.7) * 0.5 + 0.5;
-          float edge = smoothstep(1.0, 0.82, r) * smoothstep(0.55, 0.9, r), core = (1.0 - smoothstep(0.0, 0.7, r));
-          vec3 col = vec3(0.35, 0.55, 1.0) * (edge * (0.55 + 0.7 * swirl) + core * swirl2 * 0.25) + vec3(0.9, 0.95, 1.0) * edge * edge * 0.5;
-          float reveal = smoothstep(0.0, 1.0, uOpen * 1.15 - (1.0 - r) * 0.15); float hole = (1.0 - smoothstep(0.0, 0.6, r)) * 0.0;
-          gl_FragColor = vec4(col * reveal, reveal * (0.55 + core * 0.4)); }` });
-    const disc = new THREE.Mesh(new THREE.CircleGeometry(K.portal.r, 56), mat); disc.rotation.x = -Math.PI / 2; disc.position.set(K.portal.x, 0.024, zc); disc.visible = false; disc.name = 'portale-a-terra'; disc.frustumCulled = false; G.add(disc);
-    const dark = new THREE.Mesh(new THREE.CircleGeometry(K.portal.r * 0.9, 40), new THREE.MeshBasicMaterial({ color: 0x02030a, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 })); dark.rotation.x = -Math.PI / 2; dark.position.set(K.portal.x, 0.022, zc); dark.visible = false; G.add(dark);
-    K.portal.disc = disc; K.portal.dark = dark; K.portal.mat = mat;
-    K.openPortal = () => { if (K.portal.open) return; K.portal.open = true; K.portal.t = 0; disc.visible = dark.visible = true; };
-    K.closePortal = () => { K.portal.open = false; K.portal.t = 0; disc.visible = dark.visible = false; mat.uniforms.uOpen.value = 0; };
-  }
-
   // Sedie ribaltate e sgabello in piedi nell'angolo accanto all'arco: centro libero.
   addExtras(G, [['stool', 0.46, x0 + 1.0, 0, zc - 0.95, 0.5, 1, -1.45], ['stool', 0.46, x0 + 1.5, 0, zc + 0.85, 2.2, 1, -1.5], ['stool', 0.46, x0 + 0.4, 0, zc + 1.22, 4.0, 1, 0]]);
 
@@ -146,6 +127,6 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
     mur('pic_chapel_hell.webp', 0.5392, [x0 + w / 2, 1.75, z0 - 0.012], '-z', 1.4),    // lato +z
   ]);
 
-  K.update = (dt) => { K.t += dt; if (K.portal.open) { K.portal.t += dt; const o = Math.min(1, K.portal.t / 2.2); K.portal.mat.uniforms.uOpen.value = o * o * (3 - 2 * o); K.portal.mat.uniforms.uT.value = K.t; K.portal.dark.material.opacity = 0.9 * K.portal.mat.uniforms.uOpen.value; } candles.update(K.t); K.light.intensity = 2.1 + Math.sin(K.t * 11.3) * 0.14 + Math.sin(K.t * 27.1) * 0.08 + (Math.sin(K.t * 3.1) > 0.97 ? -0.3 : 0); K.light2.intensity = 1.25 + Math.sin(K.t * 9.1 + 1) * 0.12 + Math.sin(K.t * 23.3) * 0.07; };
+  K.update = (dt) => { K.t += dt; candles.update(K.t); K.light.intensity = 2.1 + Math.sin(K.t * 11.3) * 0.14 + Math.sin(K.t * 27.1) * 0.08 + (Math.sin(K.t * 3.1) > 0.97 ? -0.3 : 0); K.light2.intensity = 1.25 + Math.sin(K.t * 9.1 + 1) * 0.12 + Math.sin(K.t * 23.3) * 0.07; };
   return K;
 }
