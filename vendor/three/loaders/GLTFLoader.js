@@ -1073,7 +1073,9 @@ class GLTFMaterialsTransmissionExtension {
 
 		if ( extension.transmissionFactor !== undefined ) {
 
-			materialParams.transmission = extension.transmissionFactor;
+			// MODIFICA DEL PROGETTO: la trasmissione vera costringe a ridisegnare tutta la scena in un secondo passaggio a ogni fotogramma (molto pesante su telefono).
+			// Il vetro diventa un materiale semplicemente semitrasparente (stesso aspetto da lontano, un passaggio in meno).
+			materialParams.transparent = true; materialParams.opacity = Math.max( 0.3, 1 - 0.55 * extension.transmissionFactor ); materialParams.depthWrite = false;
 
 		}
 

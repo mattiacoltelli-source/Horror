@@ -415,7 +415,8 @@ function frame(now) {
   const elapsed = Math.max(0, (now - last) / 1000), dt = Math.min(0.05, elapsed); last = now;
   if (paused || state === 'loading') { if (state === 'loading') { updateVisibleWorldMatrices(scene); renderer.render(scene, camera); } return; }
   // caduta nello spazio (dopo il portale): scena a parte, si guarda intorno ma non ci si muove
-  if (space?.active) { time += dt; player.update(dt, time); space.update(dt); audio.setListener(camera); space.render(); return; }
+  if (space?.active) { time += dt; player.update(dt, time); space.update(dt); audio.setListener(camera); space.render(); space.perf(elapsed); return; }
+  space?.warm(dt);   // cottura delle texture dello spazio, una striscia per fotogramma (solo dopo space.prepare)
   // La regia della sala usa il tempo reale; movimento e collisioni mantengono il passo limitato.
   if (!(window.__g && window.__g.hold)) tick(dt, elapsed);
   updateVisibleWorldMatrices(scene);
