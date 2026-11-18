@@ -19,6 +19,7 @@ import { createCellar } from './events/cellar.js';
 import { createTower } from './events/tower.js';
 import { createHound } from './events/hound.js';
 import { createBreath } from './world/breath.js';
+import { createSpaceFall } from './events/space.js';
 import { createStory } from './story.js';
 import { createDust } from './world/dust.js';
 import { decorTunnel } from './world/decor.js';
@@ -135,7 +136,7 @@ try {
   nx.putImageData(im, 0, 0); $('grain').style.backgroundImage = `url(${nc.toDataURL('image/png')})`;
 } catch (_) {}
 // ---------- flusso ----------
-let breath = null, dawn = null, doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null, wh = null, morgue = null, ward = null, ambient = null, notes = null, combat = null;
+let space = null, breath = null, dawn = null, doorEvent = null, scare = null, hall = null, cellar = null, tower = null, story = null, wh = null, morgue = null, ward = null, ambient = null, notes = null, combat = null;
 const flags = { turned: false, mirror: false, door: null, notes: 0, filmKey: false, filmDoorOpen: false };
 // CHECKPOINT: a ogni stanza si salva dove sei e le scelte fatte. Dalla schermata iniziale puoi ripartire da lì.
 const CK = 'ng_ckpt', CK_ST = { cellar: 'cantina', ward: 'reparto', morgue: 'obitorio', warehouse: 'magazzino', tower: 'torre' }, CK_NAME = { cellar: 'dalla cantina', ward: 'dal reparto', morgue: "dall'obitorio", warehouse: 'dal magazzino', tower: 'dalla torre' };
@@ -210,7 +211,8 @@ async function enter() {
   morgue ??= createMorgue({ scene, mats, player, camera, audio, lights, instab, say, hall, story, flags, actBtn: $('act') });
   ambient ??= createAmbient({ player, audio, story, combat });
   wh ??= createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, flags, actBtn: $('act') });
-  cellar ??= createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash, actBtn: $('act'), onSave: () => saveCkpt('cellar') });
+  space ??= createSpaceFall({ renderer, camera, player, audio, say });
+  cellar ??= createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash, space, actBtn: $('act'), onSave: () => saveCkpt('cellar') });
   tower ??= createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish: (m, f, l) => (dawn ? dawn.start(m) : finish(m, f, l)), warm, actBtn: $('act'), combat });
   // topi: vicino ai muri e alle cose, scappano di scatto quando ti avvicini (una volta sola ciascuno)
   if (!window.__ratsDone) { window.__ratsDone = true;
@@ -412,6 +414,8 @@ function frame(now) {
   requestAnimationFrame(frame);
   const elapsed = Math.max(0, (now - last) / 1000), dt = Math.min(0.05, elapsed); last = now;
   if (paused || state === 'loading') { if (state === 'loading') { updateVisibleWorldMatrices(scene); renderer.render(scene, camera); } return; }
+  // caduta nello spazio (dopo il portale): scena a parte, si guarda intorno ma non ci si muove
+  if (space?.active) { time += dt; player.update(dt, time); space.update(dt); audio.setListener(camera); space.render(); return; }
   // La regia della sala usa il tempo reale; movimento e collisioni mantengono il passo limitato.
   if (!(window.__g && window.__g.hold)) tick(dt, elapsed);
   updateVisibleWorldMatrices(scene);
@@ -429,7 +433,7 @@ requestAnimationFrame((n) => { last = n; frame(n); });
 
 // debug/test: ?debug=1 espone il gioco e permette di saltare avanti
 if (q.has('debug')) {
-  window.__g = { get breath() { return breath; }, rats, say, get notes() { return notes; }, get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get ward() { return ward; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
+  window.__g = { get space() { return space; }, get breath() { return breath; }, rats, say, get notes() { return notes; }, get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get ward() { return ward; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
     sim(sec, dt = 0.05) { for (let t = 0; t < sec; t += dt) tick(dt); },
     tp(z, yaw = 0) { player.pos.set(0.1, 1.62, z); player.yaw = yaw; player.pitch = 0; } };
 }

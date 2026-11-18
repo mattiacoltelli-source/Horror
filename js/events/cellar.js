@@ -29,7 +29,7 @@ export const CELLAR = { z0: -200, w: 8, l: 24, h: 4.4 };
 const MIRROR = new THREE.Vector3(-3.98, 1.45, -210);
 const DIST = [7, 4.6, 2.6, 1.3, 0.7];
 
-export function createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash, actBtn, onSave }) {
+export function createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash, space, actBtn, onSave }) {
   const C = { group: new THREE.Group(), state: 'idle', step: -1, gaze: 0, away: 0, started: false, apDone: false };
   C.group.visible = false; scene.add(C.group);
   const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23, exit: { w: 2, h: 2.5 }, sideDoors: [{ side: 1, z: CELLAR.z0 - 15.5, w: 2.0, h: 3.1, reflectionPanel: 'chapel' }, FILM_DOOR] });
@@ -177,7 +177,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   let ap = -1;
 
   // portale: arrivo diretto nella torre (la caduta nello spazio e' un possibile prossimo passo)
-  C.onPortal = () => { flags.bladeEnding = true; story.goto('tower'); };
+  C.onPortal = () => { const go = () => { flags.bladeEnding = true; story.goto('tower', true); }; if (space && new URLSearchParams(location.search).get('spazio') !== '0') space.start(go); else go(); };   // portale -> caduta tra le stelle -> torre con il plasma
   C.enterPortal = () => { if (!C.portalNear || C.portalUsed) return; C.portalUsed = true; C.portalNear = false; actBtn.classList.add('hidden'); C.onPortal(); };   // il portale porta direttamente nella torre, con la lama di luce
   C.enter = () => {
     torch.reset(); chapel.stamped = false; C.gone = false; C.portalUsed = false; portal.close(); C.portalNear = false; C.keypad.reset(); C.warmWard = false; C.exitStarted = false; if (exCap) exCap.visible = true; if (exL) { exL.rotation.y = 0; exR.rotation.y = 0; } C.group.position.z = 0; C.bounds[2] = CELLAR.z0 - CELLAR.l + 1.4; if (C.bx) { C.bounds[0] = C.bx[0]; C.bounds[1] = C.bx[1]; }

@@ -51,10 +51,10 @@ export function createKeypad({ group, player, audio, say, actBtn, flags, x, y, z
     if (k === 'x') { hide(); return; }
     if (k === 'del') { K.code = K.code.slice(0, -1); paint(); return; }
     if (!/^\d$/.test(k) || K.code.length >= 6) return;
-    K.code += k; paint(); audio.tinkle?.();
+    K.code += k; paint(); audio.keypad?.(k);
     if (K.code.length === 6) {
-      if (djb2(K.code) === HASH) { K.open = true; setLed(0x2bff5a); setTimeout(hide, 450); setTimeout(() => { audio.swell?.(2.4, 0.4); say('Qualcosa si apre nella cripta.', 3600); onOpen?.(); }, 600); }
-      else { setLed(0xff2a1c); scr.classList.add('bad'); audio.dry?.(); setTimeout(() => { K.code = ''; paint(); setLed(0x5a0b08); }, 650); }
+      if (djb2(K.code) === HASH) { K.open = true; setLed(0x2bff5a); audio.keypadOk?.(); setTimeout(hide, 450); setTimeout(() => { audio.swell?.(2.4, 0.4); say('Qualcosa si apre nella cripta.', 3600); onOpen?.(); }, 600); }
+      else { setLed(0xff2a1c); scr.classList.add('bad'); audio.keypadBad?.(); setTimeout(() => { K.code = ''; paint(); setLed(0x5a0b08); }, 650); }
     }
   };
   pad.addEventListener('click', (e) => { const b = e.target.closest('button[data-k]'); if (b) press(b.dataset.k); else if (e.target === pad) hide(); });

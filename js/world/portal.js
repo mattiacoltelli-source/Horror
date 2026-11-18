@@ -2,10 +2,8 @@
 // che si diramano tutto intorno e pulsano di continuo, con onde che si allontanano dal centro. Un solo shader senza luci (nessuna ricompilazione degli altri materiali).
 import * as THREE from 'three';
 
-export function createPortal({ group, x, z, r = 1.05, reach = 2.7, wallX = 3.97, zMin = -223.9 }) {
-  const P = { open: false, t: 0, x, z, r, enterR: 0.6, u: 0 };
-  const S = reach * 2;
-  const mat = new THREE.ShaderMaterial({
+export function portalMaterial({ r = 1.05, reach = 2.7, wallX = 3.97, zMin = -223.9 } = {}) {
+  return new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, fog: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
     polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5,
     uniforms: { uT: { value: 0 }, uOpen: { value: 0 } },
@@ -53,6 +51,11 @@ export function createPortal({ group, x, z, r = 1.05, reach = 2.7, wallX = 3.97,
         gl_FragColor = vec4(col * min(1.0, alpha * 1.05 + 0.0) / max(alpha, 0.001) * alpha, alpha);
       }`,
   });
+}
+
+export function createPortal({ group, x, z, r = 1.05, reach = 2.7, wallX = 3.97, zMin = -223.9 }) {
+  const P = { open: false, t: 0, x, z, r, enterR: 0.6, u: 0 };
+  const S = reach * 2, mat = portalMaterial({ r, reach, wallX, zMin });
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(S, S), mat); mesh.rotation.x = -Math.PI / 2; mesh.position.set(x, 0.026, z); mesh.visible = false; mesh.frustumCulled = false; mesh.name = 'portale-a-terra'; group.add(mesh);
   P.mesh = mesh;
   P.openIt = () => { if (P.open) return; P.open = true; P.t = 0; mesh.visible = true; };

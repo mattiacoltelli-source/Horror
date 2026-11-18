@@ -318,6 +318,26 @@ export function createAudio() {
       const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sine'; o.frequency.value = 15734; og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(0.012 * level, t + 0.2); og.gain.setValueAtTime(0.012 * level, t + dur - 0.1); og.gain.linearRampToValueAtTime(0, t + dur); o.connect(og); og.connect(out); o.start(t); o.stop(t + dur + 0.05);   // ronzio da tubo catodico
       for (const tt of [0, dur - 0.04]) { const c = ctx.createOscillator(), cg = ctx.createGain(); c.type = 'square'; c.frequency.value = 180; cg.gain.setValueAtTime(0.09 * level, t + tt); cg.gain.exponentialRampToValueAtTime(0.0008, t + tt + 0.05); c.connect(cg); cg.connect(out); c.start(t + tt); c.stop(t + tt + 0.06); }
     },
+    // TASTIERINO: bip a due toni (come i tastierini veri, righe/colonne DTMF) con un piccolo clic di plastica; ogni cifra ha la sua coppia di frequenze
+    keypad(digit = '5') {
+      if (!ok) return; const t = ctx.currentTime, rows = [697, 770, 852, 941], cols = [1209, 1336, 1477], d = /^\d$/.test(digit) ? +digit : 5, idx = d === 0 ? 10 : d - 1;
+      const fr = rows[Math.floor(idx / 3)], fc = cols[idx % 3];
+      for (const [f, v] of [[fr, 0.06], [fc, 0.06]]) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.004); g.gain.setValueAtTime(v, t + 0.05); g.gain.linearRampToValueAtTime(0, t + 0.075); o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.09); }
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf; const hp = ctx.createBiquadFilter(); hp.type = 'bandpass'; hp.frequency.value = 2600; hp.Q.value = 1.2; const g2 = ctx.createGain();
+      g2.gain.setValueAtTime(0.1, t); g2.gain.exponentialRampToValueAtTime(0.0008, t + 0.02); s.connect(hp); hp.connect(g2); g2.connect(master); s.start(t); s.stop(t + 0.03);
+    },
+    // codice esatto: due bip che salgono; sbagliato: due bip bassi
+    keypadOk() { if (!ok) return; const t = ctx.currentTime; [[880, 0], [1320, 0.11], [1760, 0.22]].forEach(([f, dt]) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'square'; o.frequency.value = f; g.gain.setValueAtTime(0, t + dt); g.gain.linearRampToValueAtTime(0.035, t + dt + 0.004); g.gain.linearRampToValueAtTime(0, t + dt + 0.09); o.connect(g); g.connect(master); o.start(t + dt); o.stop(t + dt + 0.1); }); },
+    keypadBad() { if (!ok) return; const t = ctx.currentTime; [0, 0.17].forEach((dt) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'square'; o.frequency.value = 196; g.gain.setValueAtTime(0, t + dt); g.gain.linearRampToValueAtTime(0.045, t + dt + 0.004); g.gain.setValueAtTime(0.045, t + dt + 0.1); g.gain.linearRampToValueAtTime(0, t + dt + 0.13); o.connect(g); g.connect(master); o.start(t + dt); o.stop(t + dt + 0.14); }); },
+    // CADUTA NELLO SPAZIO (durata dur): fruscio sordo che si apre, due toni bassi che salgono piano e, alla fine, un risucchio che cresce
+    space(dur = 10) {
+      if (!ok) return; const t = ctx.currentTime;
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(140, t); lp.frequency.linearRampToValueAtTime(520, t + dur * 0.85); lp.frequency.linearRampToValueAtTime(2400, t + dur);
+      const ng = ctx.createGain(); ng.gain.setValueAtTime(0, t); ng.gain.linearRampToValueAtTime(0.18, t + 2.5); ng.gain.linearRampToValueAtTime(0.3, t + dur * 0.9); ng.gain.linearRampToValueAtTime(0, t + dur + 0.5);
+      s.connect(lp); lp.connect(ng); ng.connect(master); s.start(t); s.stop(t + dur + 0.6);
+      for (const [f0, f1, v] of [[46, 82, 0.2], [46.9, 83.5, 0.16], [92, 220, 0.05]]) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 3); g.gain.linearRampToValueAtTime(v * 1.6, t + dur * 0.9); g.gain.linearRampToValueAtTime(0, t + dur + 0.5); o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.6); }
+    },
     // oggetto piccolo di metallo che cade su piastrelle: 3 tintinnii acuti, sempre piu' brevi e deboli
     tinkle() {
       if (!ok) return; const t = ctx.currentTime;
