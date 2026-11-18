@@ -76,7 +76,7 @@ Apri `http://localhost:8123` (su desktop: WASD + trascinamento a destra).
 Di default (in tutte le versioni; `?piega=0` la spegne) il corridoio del reparto si flette a S e si torce un po' sul proprio asse (circa 27° al massimo) per un attimo (circa 11 s), poi torna dritto prima dell'obitorio. Collisioni, posizioni ed eventi non cambiano: cambia solo il disegno (`js/world/bend.js`, stessa matematica di `labs/space-fold`). Con `?piega=0` non viene caricato niente. Con «movimento ridotto» del sistema l'effetto è più piccolo e senza allargamento del campo visivo.
 
 ## Allungamento del tunnel
-Nel primo tunnel, tra 9 e 14 m dall'ingresso, il corridoio diventa lunghissimo per un attimo (il fondo schizza lontano, circa 2 s in tutto) e poi torna com'era. Solo disegno (`js/world/breath.js`): collisioni e posizioni non cambiano. `?allunga=0` lo spegne; con «movimento ridotto» è più lieve.
+Nel primo tunnel, tra 9 e 14 m dall'ingresso, il corridoio diventa lunghissimo per un attimo (il fondo schizza lontano, circa 2 s in tutto) e poi torna com'era. Solo disegno (`js/world/breath.js`): collisioni e posizioni non cambiano. Spento di default (non convinceva): si attiva solo con `?allunga=1`.
 
 ## App installabile e aggiornamenti
 Il gioco è una PWA: icona sulla home, schermo intero, funziona offline dopo il primo avvio. Quando esce una nuova versione compare il banner **«Aggiornamento disponibile · AGGIORNA»** (controllo a ogni apertura e ogni 30 minuti).

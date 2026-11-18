@@ -318,7 +318,7 @@ async function enter() {
   try { await audio.start(); audio.heartbeat?.(); navigator.vibrate?.(30); } catch (_) {}
   try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el, { navigationUI: 'hide' })?.catch?.(() => {}); } catch (_) {}
   try { await screen.orientation?.lock?.('portrait'); } catch (_) {}
-  if (q.get('allunga') !== '0') { breath = createBreath({ scene, audio, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches }); breath.refresh(); setTimeout(() => breath?.refresh(), 3000); }   // allungamento del tunnel (?allunga=0 lo spegne)
+  if (q.get('allunga') === '1') { breath = createBreath({ scene, audio, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches }); breath.refresh(); setTimeout(() => breath?.refresh(), 3000); }   // allungamento del tunnel: spento di default, solo con ?allunga=1 (provato e scartato)
   if (!restoreCk && (!q.get('start') || q.get('start') === 'porta')) await prepareScene();
   $('intro').classList.add('hidden');
   // I programmi e le texture della stanza vengono preparati durante il
