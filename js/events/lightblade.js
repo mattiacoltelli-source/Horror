@@ -69,6 +69,29 @@ export function createLightBlade({ group, camera, player, audio, say, warm, fini
   const NB = 48, bPos = new Float32Array(NB * 3), bVel = Array.from({ length: NB }, () => new THREE.Vector3());
   const bursts = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(bPos, 3)), new THREE.PointsMaterial({ map: glowTex, color: 0xcfe6ff, size: 0.12, sizeAttenuation: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0 })); bursts.visible = false; bursts.frustumCulled = false; bursts.renderOrder = 12; group.add(bursts);
   const bStart = new THREE.Vector3(), bTarget = new THREE.Vector3(), bDir = new THREE.Vector3(); let bDur = 0.7, hot = -1;
+  // ---- morphing: la suora si scioglie in una spirale di fumo, dai piedi alla testa, con un bordo di plasma che la consuma ----
+  const DIS = { uDis: { value: 0 }, uC: { value: new THREE.Vector3() }, uImp: { value: new THREE.Vector3(0, 1.3, 0) }, uTop: { value: 1.95 } };
+  const patchDissolve = (mt) => {
+    mt.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, DIS);
+      sh.vertexShader = 'uniform float uDis, uTop; uniform vec3 uC, uImp; varying float vP; varying vec3 vW;\nfloat dh(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }\n' + sh.vertexShader.replace('#include <skinning_vertex>', `#include <skinning_vertex>
+        { vec4 wp = modelMatrix * vec4(transformed, 1.0); float h = clamp(wp.y / uTop, 0.0, 1.2);
+          float n = dh(floor(wp.xyz * 14.0)) * 0.5 + dh(floor(wp.xyz * 5.0)) * 0.5;
+          float fp = uDis * 1.55 - h + (n - 0.5) * 0.3; float p = clamp(fp / 0.42, 0.0, 1.0); vP = p; p = p * p * (3.0 - 2.0 * p);
+          vec2 d = wp.xz - uC.xz; float r = length(d), a = atan(d.y, d.x) + p * (2.2 + h * 4.0) * (0.5 + n);
+          r *= 1.0 - 0.55 * p; wp.x = uC.x + cos(a) * r; wp.z = uC.z + sin(a) * r;
+          wp.y += p * p * (0.35 + h * 1.1 + n * 0.5);
+          wp.xyz = mix(wp.xyz, uImp + (wp.xyz - uImp) * 0.5, p * 0.35 * (1.0 - h * 0.5));
+          vW = wp.xyz; transformed = (inverse(modelMatrix) * wp).xyz; }`);
+      sh.fragmentShader = 'varying float vP; varying vec3 vW;\nfloat fh(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }\n' + sh.fragmentShader
+        .replace('#include <alphatest_fragment>', `#include <alphatest_fragment>
+          float fn = fh(floor(vW * 38.0)) * 0.6 + fh(floor(vW * 15.0)) * 0.4;
+          if (vP > 0.02 && vP + (fn - 0.5) * 0.5 > 0.92) discard;`)
+        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+          { float ed = smoothstep(0.0, 0.1, vP) * (1.0 - smoothstep(0.35, 0.8, vP)); totalEmissiveRadiance += vec3(0.35, 0.7, 1.0) * ed * 2.6; diffuseColor.rgb *= 1.0 - 0.7 * smoothstep(0.3, 0.9, vP); }`);
+    };
+    mt.customProgramCacheKey = () => 'nun-dissolve';
+  };
   // ---- la suora ----
   const nun = new THREE.Group(); nun.visible = false; group.add(nun); let mixer = null, clips = {}, model = null, mats = [];
   B.load = () => B.loading ||= new GLTFLoader().loadAsync('assets/models/agnese/suor-agnese.glb').then((g) => {
@@ -76,7 +99,7 @@ export function createLightBlade({ group, camera, player, audio, say, warm, fini
     m.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(m), c = b.getCenter(new THREE.Vector3()), sc = 1.95 / Math.max(0.001, b.max.y - b.min.y);
     m.scale.setScalar(sc); m.position.set(-c.x * sc, -b.min.y * sc, -c.z * sc); mixer = new THREE.AnimationMixer(m);
     for (const a of g.animations) clips[a.name] = mixer.clipAction(a);
-    m.traverse((o) => { if (o.isMesh) { o.material = [].concat(o.material).map((mt) => { const k = mt.clone(); k.transparent = true; mats.push(k); return k; }); if (o.material.length === 1) o.material = o.material[0]; } });
+    m.traverse((o) => { if (o.isMesh) { o.material = [].concat(o.material).map((mt) => { const k = mt.clone(); k.transparent = true; patchDissolve(k); mats.push(k); return k; }); if (o.material.length === 1) o.material = o.material[0]; } });
     nun.add(m); model = m; B.ready = true;
   }).catch((e) => { console.warn('onda di plasma: modello della suora non disponibile', e); B.failed = true; });
   // ---- fumo d'ombra ----
@@ -99,7 +122,7 @@ export function createLightBlade({ group, camera, player, audio, say, warm, fini
     const b = btn(); if (b) { B.onBtn = (e) => { e.preventDefault(); release(); }; b.addEventListener('pointerdown', B.onBtn); }
     await B.load();
     if (B.failed) { B.state = 'end'; B.t = 2.5; return; }
-    nun.position.set(0, 0, player.pos.z - 9.5); nun.rotation.y = 0; nun.visible = true; for (const m of mats) { m.opacity = 1; m.color.setScalar(1); }
+    nun.position.set(0, 0, player.pos.z - 9.5); nun.rotation.y = 0; nun.visible = true; for (const m of mats) { m.opacity = 1; m.color.setScalar(1); } DIS.uDis.value = 0;
     nun.scale.set(1, 1, 1); clips.Idle?.stop(); clips.Apparition?.reset().setLoop(THREE.LoopOnce, 1).play(); if (clips.Apparition) clips.Apparition.clampWhenFinished = true;
     audio.swell?.(3, 0.5); say('Hai accumulato potere al plasma.', 3200); B.state = 'come'; B.t = 0;
   };
@@ -157,13 +180,13 @@ export function createLightBlade({ group, camera, player, audio, say, warm, fini
       warm.position.set(waveO.x, 1.6, waveO.z + 0.8); warm.intensity = 18 * (1 - k) + 1;
       if (B.t >= 1.1) { wave.visible = ring.visible = burst.visible = bursts.visible = false; B.state = 'after'; B.t = 0; }
     }
-    if (dis >= 0) {   // la suora evapora: trasparente, si assottiglia e si allunga, fumo nero che sale
-      dis += dt; const k = Math.min(1, dis / 2.4), e = k * k * (3 - 2 * k);
-      const h = Math.max(0, 1 - dis / 0.45); for (const m of mats) { m.opacity = 1 - e; m.color.setScalar(h > 0 ? 1 + 2.2 * h : 1 - 0.85 * e); }
-      nun.scale.set(1 - 0.5 * e, 1 + 0.18 * e, 1 - 0.5 * e); nun.position.y = 0.25 * e; nun.position.addScaledVector(away, dt * 0.5 * (1 - e)); nun.rotation.y += dt * (0.4 + e * 1.4);
+    if (dis >= 0) {   // la suora si scioglie: spirale di fumo dai piedi alla testa, bordo di plasma, particelle nere che salgono
+      dis += dt; const k = Math.min(1, dis / 2.9); DIS.uDis.value = k * k * (3 - 2 * k) * 0.35 + k * 0.65; DIS.uC.value.set(nun.position.x, 0, nun.position.z); DIS.uImp.value.copy(waveO);
+      const h = Math.max(0, 1 - dis / 0.35); for (const m of mats) m.color.setScalar(1 + 1.8 * h);
+      nun.position.addScaledVector(away, dt * 0.15 * (1 - k)); nun.rotation.y += dt * (0.3 + k * 0.6);
       for (let i = 0; i < N; i++) { smoke.pos[i * 3] += smoke.vel[i].x * dt; smoke.pos[i * 3 + 1] += smoke.vel[i].y * dt; smoke.pos[i * 3 + 2] += smoke.vel[i].z * dt; }
-      smoke.pts.geometry.attributes.position.needsUpdate = true; smoke.pts.material.opacity = 0.8 * (1 - Math.max(0, (k - 0.55) / 0.45));
-      if (dis >= 2.6) { nun.visible = false; smoke.pts.visible = false; dis = -2; }
+      smoke.pts.geometry.attributes.position.needsUpdate = true; smoke.pts.material.opacity = 0.8 * (1 - Math.max(0, (k - 0.6) / 0.4));
+      if (dis >= 3.2) { nun.visible = false; smoke.pts.visible = false; dis = -2; DIS.uDis.value = 0; }
     }
     if (st === 'after') { flash.material.opacity = Math.max(0, flash.material.opacity - dt * 2); charge = Math.max(0, charge - dt * 1.5); B.lightUp(0.6);
       if (dis === -2) { B.state = 'end'; B.t = 0; } }
