@@ -5,17 +5,18 @@
 // (con un leggero allungamento k nel tratto curvo) e il fondo del reparto resta attaccato all'obitorio, che non viene toccato.
 import * as THREE from 'three';
 
-const S0 = 2, SL = 13, N = 40, STEP = 0.5;      // la piega occupa s da 2 a 15 m dall'ingresso del reparto; campioni ogni 0,5 m su 20 m
+const S0 = 2, SL = 13, N = 40, STEP = 0.5, ROLLK = 0.8, CY = 1.25;   // torsione massima = ROLLK x ampiezza della piega (circa 27°), attorno all'asse a 1,25 m      // la piega occupa s da 2 a 15 m dall'ingresso del reparto; campioni ogni 0,5 m su 20 m
 const smooth5 = (v) => { const u = Math.max(0, Math.min(1, v)); return u * u * u * (10 + u * (-15 + 6 * u)); };
 const smoothstep = (a, b, v) => { const u = Math.max(0, Math.min(1, (v - a) / (b - a))); return u * u * (3 - 2 * u); };
 
 export function createBend({ group, z0, length = 20, camera, lights, audio, reduced = false }) {
-  const B = { active: false, state: 'idle', t: 0, A: 0, follow: 0, k: 1 };
+  const B = { active: false, state: 'idle', t: 0, A: 0, follow: 0, followR: 0, k: 1 };
   const AMAX = reduced ? 0.4 : 0.6, SLOW = reduced ? 2 : 1;
   const U = { uBA: { value: 0 }, uBY: { value: new Float32Array(N + 1) }, uBZ: { value: new Float32Array(N + 1) } };
   const cy = U.uBY.value, cz = U.uBZ.value;
   for (let i = 0; i <= N; i++) cz[i] = -i * STEP;
 
+  const rho = (s, A) => { const u = (s - S0) / SL; return u <= 0 || u >= 1 ? 0 : A * ROLLK * Math.sin(Math.PI * u); };   // torsione: onda a campana, zero agli estremi
   const theta = (s, A) => { const u = (s - S0) / SL; return u <= 0 || u >= 1 ? 0 : A * Math.sin(2 * Math.PI * u); };
   // Ricostruisce la tabella del centro dell'asse per l'ampiezza A: integrazione numerica, k normalizza la lunghezza longitudinale della piega a SL.
   function rebuild(A) {
@@ -39,22 +40,25 @@ export function createBend({ group, z0, length = 20, camera, lights, audio, redu
   B.mapPoint = (v) => {
     const sr = z0 - v.z, s = Math.max(0, Math.min(length, sr)), f = s / STEP, i = Math.min(N - 1, Math.floor(f)), t = f - i;
     const yy = cy[i] + (cy[i + 1] - cy[i]) * t, zz = cz[i] + (cz[i + 1] - cz[i]) * t, th = theta(s, B.A), c = Math.cos(th), sn = Math.sin(th);
-    const y = v.y, rest = v.z - (z0 - s);
-    v.y = yy + y * c; v.z = z0 + zz + y * sn + rest; return v;
+    const ro = rho(s, B.A), rc = Math.cos(ro), rs = Math.sin(ro), dx = v.x, dy = v.y - CY;   // prima la torsione della sezione, poi la piega
+    const xr = dx * rc - dy * rs, y = CY + dx * rs + dy * rc, rest = v.z - (z0 - s);
+    v.x = xr; v.y = yy + y * c; v.z = z0 + zz + y * sn + rest; return v;
   };
 
   // ---------- shader: vertici piegati, normali ruotate ----------
   const f1 = (x) => (Number.isInteger(x) ? x.toFixed(1) : String(x));
   const GLSL_FN = `
 uniform float uBA; uniform float uBY[${N + 1}]; uniform float uBZ[${N + 1}];
+float bRho(float s) { float u = (s - ${f1(S0)}) / ${f1(SL)}; return (u <= 0.0 || u >= 1.0) ? 0.0 : uBA * ${f1(ROLLK)} * sin(3.14159265 * u); }
 float bTheta(float s) { float u = (s - ${f1(S0)}) / ${f1(SL)}; return (u <= 0.0 || u >= 1.0) ? 0.0 : uBA * sin(6.2831853 * u); }
-vec3 bPos(vec3 w, out float th) {
+vec3 bPos(vec3 w, out float th, out float ro) {
   float s;
   s = clamp(${f1(z0)} - w.z, 0.0, ${f1(length)});
   float f = s * ${f1(1 / STEP)}; int i = int(min(floor(f), ${f1(N - 1)})); float t = f - float(i);
   float yy = mix(uBY[i], uBY[i + 1], t), zz = mix(uBZ[i], uBZ[i + 1], t);
-  th = bTheta(s); float c = cos(th), sn = sin(th);
-  return vec3(w.x, yy + w.y * c, ${f1(z0)} + zz + w.y * sn + (w.z - (${f1(z0)} - s)));
+  th = bTheta(s); ro = bRho(s); float c = cos(th), sn = sin(th), cr = cos(ro), sr = sin(ro);
+  float dx = w.x, dy = w.y - ${f1(CY)}, xr = dx * cr - dy * sr, y = ${f1(CY)} + dx * sr + dy * cr;
+  return vec3(xr, yy + y * c, ${f1(z0)} + zz + y * sn + (w.z - (${f1(z0)} - s)));
 }
 `;
   function inject(shader, material) {
@@ -62,11 +66,12 @@ vec3 bPos(vec3 w, out float th) {
     let v = shader.vertexShader.replace('#include <common>', '#include <common>\n' + GLSL_FN);
     if (!material.isMeshBasicMaterial && v.includes('#include <defaultnormal_vertex>')) {
       v = v.replace('#include <defaultnormal_vertex>', `#include <defaultnormal_vertex>
-  { vec3 bw = (modelMatrix * vec4(position, 1.0)).xyz; float bth; bPos(bw, bth); float bc = cos(bth), bs = sin(bth);
-    vec3 vn = transpose(mat3(viewMatrix)) * transformedNormal; vn = vec3(vn.x, vn.y * bc - vn.z * bs, vn.y * bs + vn.z * bc); transformedNormal = mat3(viewMatrix) * vn; }`);
+  { vec3 bw = (modelMatrix * vec4(position, 1.0)).xyz; float bth, bro; bPos(bw, bth, bro); float bc = cos(bth), bs = sin(bth), rc = cos(bro), rs = sin(bro);
+    vec3 vn = transpose(mat3(viewMatrix)) * transformedNormal; vn = vec3(vn.x * rc - vn.y * rs, vn.x * rs + vn.y * rc, vn.z);
+    vn = vec3(vn.x, vn.y * bc - vn.z * bs, vn.y * bs + vn.z * bc); transformedNormal = mat3(viewMatrix) * vn; }`);
     }
     v = v.replace('#include <project_vertex>', `vec4 mvPosition = vec4(transformed, 1.0);
-  { vec3 bw = (modelMatrix * mvPosition).xyz; float bth; vec3 bb = bPos(bw, bth); mvPosition = viewMatrix * vec4(bb, 1.0); }
+  { vec3 bw = (modelMatrix * mvPosition).xyz; float bth, bro; vec3 bb = bPos(bw, bth, bro); mvPosition = viewMatrix * vec4(bb, 1.0); }
   gl_Position = projectionMatrix * mvPosition;`);
     shader.vertexShader = v;
   }
@@ -132,7 +137,7 @@ vec3 bPos(vec3 w, out float th) {
   };
 
   // ---------- sequenza: sale in ~4 s, resta ~2,5 s, torna dritta in ~4,5 s; sparisce comunque man mano che ci si avvicina all'obitorio ----------
-  B.reset = () => { B.state = 'idle'; B.t = 0; B.setA(0); B.follow = 0; };
+  B.reset = () => { B.state = 'idle'; B.t = 0; B.setA(0); B.follow = 0; B.followR = 0; };
   B.setA = (A) => {
     if (Math.abs(A - B.A) < 1e-4 && !(A === 0 && B.A !== 0)) return;
     const was = B.active; B.A = A; rebuild(A); B.active = A > 1e-4;
@@ -150,12 +155,13 @@ vec3 bPos(vec3 w, out float th) {
     } else if (B.state === 'done' || B.state === 'idle') { if (B.A !== 0) B.setA(0); }
   };
   // la camera segue il pavimento piegato: posizione mappata, orientamento ruotato dell'angolo locale (con un piccolo ritardo)
-  const qx = new THREE.Quaternion(), ax = new THREE.Vector3(1, 0, 0);
+  const qx = new THREE.Quaternion(), qz = new THREE.Quaternion(), ax = new THREE.Vector3(1, 0, 0), az = new THREE.Vector3(0, 0, 1);
   B.applyCamera = (dt) => {
     const s = Math.max(0, Math.min(length, z0 - camera.position.z)), th = theta(s, B.A);
     B.follow += (th * 0.5 - B.follow) * (1 - Math.exp(-dt / 0.1));   // segue solo meta' dell'inclinazione: guardando lungo la tangente su una collina si vedrebbe il vuoto sopra la cresta
+    B.followR += (rho(s, B.A) * 0.6 - B.followR) * (1 - Math.exp(-dt / 0.1));   // la camera segue il 60% della torsione
     B.mapPoint(camera.position);
-    camera.quaternion.premultiply(qx.setFromAxisAngle(ax, B.follow));
+    camera.quaternion.premultiply(qz.setFromAxisAngle(az, B.followR)).premultiply(qx.setFromAxisAngle(ax, B.follow));
     if (!reduced) {   // effetto vertigine: il campo visivo si allarga di qualche grado quando la piega e' al massimo
       const base = camera.userData.baseFov ?? 68, fov = base + 6 * (B.A / AMAX);
       if (Math.abs(camera.fov - fov) > 0.02) { camera.fov = fov; camera.updateProjectionMatrix(); }
