@@ -11,6 +11,7 @@ import { addExtras, pedestal, turnToward } from '../world/extra.js';
 import { unseenMover } from './ambient.js';
 import { addAtmosphere } from '../world/atmos.js';
 import { createBedroom } from '../world/bedroom.js';
+import { createLightBlade } from './lightblade.js';
 import { P } from '../personal.js';
 
 export const TOWER = { z0: -300, w: 14, l: 18, h: 8.5 };
@@ -20,9 +21,11 @@ const TEXT = {   // finale: la suora e' suor Agnese, l'infermiera che ti ha tira
   B: 'ti sei girat' + _o + _n + '.\ntua sorella non c\'è più.\nl\'incendio l\'hai acceso tu.\n' + 'suor Agnese lo sa. ti tiene qui.',
 };
 
+const BLADE_TEXT = 'la lama l’ha tagliata.\nsuor Agnese è svanita come un’ombra.\nnon ti tiene più qui.';
 export function createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn, combat }) {
   const T = { group: new THREE.Group(), opened: false, near: false };
   T.group.visible = false; scene.add(T.group);
+  const blade = T.blade = createLightBlade({ group: T.group, camera, player, audio, say, warm, finish, z0: TOWER.z0, text: BLADE_TEXT });   // finale alternativo dal portale della cripta
   const room = buildRoom(mats, { z0: TOWER.z0, w: TOWER.w, l: TOWER.l, h: TOWER.h, wall: 'stone', floor: 'floorA', ceil: 'brick', pillarEvery: 6, dark: 0.95, seed: 31, door: { w: 2, h: 2.6 }, sideDoor: { side: 1, z: TOWER.z0 - 6.6, w: 2.0, h: 3.1 } });
   T.group.add(room.group); const bedroom = createBedroom({ group: T.group, mats, zc: TOWER.z0 - 6.6 }); T.entry = decorTower(T.group, TOWER.z0); T.bounds = [room.bounds[0], room.bounds[1], TOWER.z0 - TOWER.l + 1.6, TOWER.z0 - 0.6];
   const zFar = TOWER.z0 - TOWER.l, loader = new GLTFLoader();
@@ -72,11 +75,12 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
 
   T.onPreview = () => { if (T.entry) T.entry.visible = false; lights.addLamp(0, 5.4, TOWER.z0 - 7 + T.pdz, 0xffd4a0); };   // dal magazzino la soglia e' aperta finche' non entri
   T.enter = (seamless = false) => {
+    blade.abort(); T.bladeT = 0; if (flags.bladeEnding) blade.load(); else flags.bladeEnding = false;
     T.group.visible = true; T.opened = false; player.box = T.bounds; if (T.entry) T.entry.visible = true; if (seamless) audio.doorBang?.(new THREE.Vector3(0, 1.3, TOWER.z0 + 0.5), 0.8); else { player.pos.set(0.3, 1.62, TOWER.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false; }   // seamless: la porta si chiude alle tue spalle
     lights.setLamps(lampPos, 2.4, 0xffd4a0); fixtures.forEach((fixture, i) => { lights.lamps[i].mesh = fixture; }); lights.grade({ fog: 0x0a0503, hemi: [0x6a3e22, 0x120804, 0.42] }); scene.fog.density = 0.04; audio.duck(1, 1.5); instab.set(0.05, 6);
     warm.position.set(stovePos.x + 0.1, 1.0, stovePos.z + 0.2); warm.intensity = 36;
   };
-  T.leave = () => { T.group.visible = false; warm.intensity = 0; };
+  T.leave = () => { blade.abort(); T.group.visible = false; warm.intensity = 0; };
 
   const dv = new THREE.Vector3(), fw = new THREE.Vector3(), ep = new THREE.Vector3(); let wt = 0, open = 0, st = 'idle';
   const bustMove = unseenMover({ camera, getObj: () => T.bust, max: 3, gap: 7, move: (n) => { turnToward(T.bust, player.pos, n); audio.shuffle?.(0.5, 0.22); } });
@@ -103,6 +107,9 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
     // pulsante contestuale vicino alla porta
     dv.set(0 - player.pos.x, 0, zFar - player.pos.z); const dd = dv.length(); dv.normalize(); fw.set(player.forward.x, 0, player.forward.z).normalize();
     const near = dd < 3.2 && fw.dot(dv) > 0.6 && st === 'idle'; if (near !== T.near) { T.near = near; actBtn.textContent = 'APRI'; actBtn.classList.toggle('hidden', !near); }
+    // arrivo dal portale: dopo la dissolvenza compare la lama e poi la suora
+    if (flags.bladeEnding && !blade.active && st === 'idle') { T.bladeT = (T.bladeT || 0) + dt; if (T.bladeT > 3) { flags.bladeEnding = false; st = 'blade'; T.near = false; T.opened = true; actBtn.classList.add('hidden'); blade.start(); } }
+    if (blade.active) blade.update(dt);
   };
 
   // APRI: il finale dipende dalle scelte
