@@ -10,20 +10,33 @@ export function createKeypad({ group, player, audio, say, actBtn, flags, x, y, z
   const K = { near: false, open: false, code: '' };
   // ---- modello: placca di metallo scuro con la faccia disegnata (tasti consumati, display) e un LED ----
   const root = new THREE.Group(); root.name = 'tastierino-codice'; root.position.set(x - 0.016, y, z); root.rotation.y = -Math.PI / 2; group.add(root);
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.44, 0.03), new THREE.MeshStandardMaterial({ color: 0x1c1d1b, roughness: 0.75, metalness: 0.6 })); body.position.z = -0.015; root.add(body);
-  const c = document.createElement('canvas'); c.width = 256; c.height = 376; const g = c.getContext('2d');
-  g.fillStyle = '#2a2b27'; g.fillRect(0, 0, 256, 376);
-  for (let i = 0; i < 900; i++) { g.fillStyle = 'rgba(' + (60 + Math.random() * 60 | 0) + ',' + (40 + Math.random() * 30 | 0) + ',25,' + Math.random() * 0.12 + ')'; g.fillRect(Math.random() * 256, Math.random() * 376, 1 + Math.random() * 3, 1 + Math.random() * 3); }
-  g.fillStyle = '#0a0c0a'; g.fillRect(24, 22, 208, 52);   // display spento
-  g.strokeStyle = '#4a4a44'; g.lineWidth = 3; g.strokeRect(24, 22, 208, 52);
-  g.font = 'bold 44px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  const labels = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', ''];
-  labels.forEach((t, i) => { const cx = 24 + (i % 3) * 72 + 8, cy = 98 + Math.floor(i / 3) * 66, w = 56, h = 50;
-    if (!t) return; g.fillStyle = '#3a3b36'; g.fillRect(cx, cy, w, h); g.strokeStyle = '#161714'; g.lineWidth = 3; g.strokeRect(cx, cy, w, h);
-    g.fillStyle = '#b9b4a2'; g.fillText(t, cx + w / 2, cy + h / 2 + 2); });
+  // modello moderno (stona apposta col resto): placca in alluminio nero spazzolato, vetro scuro, display OLED, tasti retroilluminati
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.32, 0.034), new THREE.MeshStandardMaterial({ color: 0x111214, roughness: 0.35, metalness: 0.85 })); body.position.z = -0.017; root.add(body);
+  const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.206, 0.326, 0.006), new THREE.MeshStandardMaterial({ color: 0x3c3e43, roughness: 0.45, metalness: 0.7 })); bezel.position.z = -0.003; root.add(bezel);
+  const W = 512, H = 800, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  const ce = document.createElement('canvas'); ce.width = W; ce.height = H; const ge = ce.getContext('2d');   // mappa emissiva: cio' che si illumina da solo
+  const rr = (k, x, y, w, h, r) => { k.beginPath(); k.roundRect(x, y, w, h, r); };
+  g.fillStyle = '#0b0c0e'; g.fillRect(0, 0, W, H); ge.fillStyle = '#000'; ge.fillRect(0, 0, W, H);
+  for (let i = 0; i < 260; i++) { g.fillStyle = 'rgba(255,255,255,' + Math.random() * 0.035 + ')'; g.fillRect(0, Math.random() * H, W, 1); }   // spazzolatura
+  // display OLED
+  rr(g, 40, 44, 432, 118, 14); g.fillStyle = '#020305'; g.fill(); g.strokeStyle = '#26282d'; g.lineWidth = 3; g.stroke();
+  g.font = '500 26px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#5d7c8c'; g.fillText('INSERIRE CODICE', 256, 84);
+  ge.font = g.font; ge.textAlign = 'center'; ge.textBaseline = 'middle'; ge.fillStyle = '#5d7c8c'; ge.fillText('INSERIRE CODICE', 256, 84);
+  for (let i = 0; i < 6; i++) { const cx = 96 + i * 64; rr(g, cx - 18, 128, 36, 5, 2); g.fillStyle = '#2d4452'; g.fill(); rr(ge, cx - 18, 128, 36, 5, 2); ge.fillStyle = '#2d4452'; ge.fill(); }
+  // tasti: vetro scuro con cifra luminosa
+  const labels = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
+  g.font = '600 56px sans-serif'; ge.font = g.font;
+  labels.forEach((t, i) => { const cx = 46 + (i % 3) * 144, cy = 204 + Math.floor(i / 3) * 128, w = 128, h = 108;
+    rr(g, cx, cy, w, h, 22); const gr = g.createLinearGradient(0, cy, 0, cy + h); gr.addColorStop(0, '#2a2c31'); gr.addColorStop(1, '#17181b'); g.fillStyle = gr; g.fill(); g.strokeStyle = '#3b3e44'; g.lineWidth = 2; g.stroke();
+    g.fillStyle = '#e8f3f8'; g.fillText(t, cx + w / 2, cy + h / 2 + 3); ge.fillStyle = '#9fd8ec'; ge.fillText(t, cx + w / 2, cy + h / 2 + 3);
+    rr(ge, cx + 20, cy + h - 10, w - 40, 3, 2); ge.fillStyle = '#143c4a'; ge.fill(); });
+  // striscia di stato in basso
+  g.fillStyle = '#2c2f34'; g.fillRect(46, 738, 420, 2); g.font = '500 20px sans-serif'; g.fillStyle = '#6f757c'; g.fillText('ACCESS CONTROL  ·  SERIES 7', 256, 768);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(0.27, 0.27 * 376 / 256 * 0.9), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, metalness: 0.2, color: new THREE.Color(0.8, 0.78, 0.74) })); face.position.set(0, -0.005, 0.0005); root.add(face);
-  const led = new THREE.Mesh(new THREE.SphereGeometry(0.009, 8, 6), new THREE.MeshBasicMaterial({ color: 0x5a0b08 })); led.position.set(0.105, 0.178, 0.004); root.add(led);
+  const etex = new THREE.CanvasTexture(ce); etex.colorSpace = THREE.SRGBColorSpace; etex.anisotropy = 4;
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(0.19, 0.19 * H / W), new THREE.MeshStandardMaterial({ map: tex, emissiveMap: etex, emissive: 0xffffff, emissiveIntensity: 0.9, roughness: 0.18, metalness: 0.5 })); face.position.set(0, 0, 0.0005); root.add(face);
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.0075, 10, 8), new THREE.MeshBasicMaterial({ color: 0x5a0b08 })); led.position.set(0.082, 0.147, 0.002); root.add(led);
+  const ledRing = new THREE.Mesh(new THREE.RingGeometry(0.0085, 0.0115, 16), new THREE.MeshStandardMaterial({ color: 0x777b80, metalness: 1, roughness: 0.3 })); ledRing.position.set(0.082, 0.147, 0.0015); root.add(ledRing);
   const setLed = (col) => led.material.color.setHex(col);
   K.reset = () => { K.open = false; K.code = ''; setLed(0x5a0b08); hide(); K.near = false; actBtn.classList.add('hidden'); };
 
@@ -31,12 +44,12 @@ export function createKeypad({ group, player, audio, say, actBtn, flags, x, y, z
   const css = document.createElement('style'); css.textContent = `
 #codepad{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.72);-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 #codepad.on{display:flex}
-#codepad .box{background:#161713;border:1px solid #4a4b43;padding:18px 18px 14px;width:min(300px,86vw);box-shadow:0 0 40px #000}
-#codepad .scr{font:600 34px/1 ui-monospace,monospace;letter-spacing:.35em;text-align:center;color:#c9d3b8;background:#070907;border:1px solid #2c2f2a;padding:14px 0 14px .35em;margin-bottom:14px;min-height:36px}
+#codepad .box{background:linear-gradient(#17181b,#0d0e10);border:1px solid #3a3d43;border-radius:18px;padding:20px 18px 16px;width:min(300px,86vw);box-shadow:0 0 50px #000}
+#codepad .scr{font:600 34px/1 ui-monospace,monospace;letter-spacing:.35em;text-align:center;color:#9fd8ec;background:#020305;border:1px solid #26282d;border-radius:10px;padding:14px 0 14px .35em;margin-bottom:14px;min-height:36px}
 #codepad .scr.bad{color:#c2362a;animation:cpshake .35s}@keyframes cpshake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 #codepad .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-#codepad button{min-height:62px;font:600 24px ui-monospace,monospace;color:#cfcab8;background:#2b2c27;border:1px solid #4a4b43;border-radius:4px}
-#codepad button:active{background:#3b3c35}
+#codepad button{min-height:62px;font:600 24px ui-monospace,monospace;color:#e8f3f8;background:linear-gradient(#2a2c31,#17181b);border:1px solid #3b3e44;border-radius:12px}
+#codepad button:active{background:#33363c;color:#9fd8ec}
 #codepad .ex{grid-column:1/4;margin-top:4px;min-height:48px;font-size:14px;letter-spacing:.2em;color:#8a8e84}`;
   document.head.appendChild(css);
   const pad = document.createElement('div'); pad.id = 'codepad'; pad.setAttribute('role', 'dialog');

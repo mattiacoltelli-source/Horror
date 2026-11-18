@@ -57,6 +57,18 @@ export function createLightBlade({ group, camera, player, audio, say, warm, fini
   const wave = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 28), waveMat); wave.visible = false; wave.frustumCulled = false; wave.renderOrder = 8; group.add(wave);
   const ringMat = new THREE.MeshBasicMaterial({ color: 0xdfeeff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false, toneMapped: false });
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.93, 1.0, 96), ringMat); ring.rotation.x = -Math.PI / 2; ring.visible = false; ring.frustumCulled = false; group.add(ring);
+  // ---- il proiettile di plasma: parte dalla mano, vola verso la suora lasciando una scia, esplode sul suo petto ----
+  const boltMat = coreMat.clone(); boltMat.depthTest = true; boltMat.uniforms = { uT: { value: 0 }, uK: { value: 1.2 } };
+  const bolt = new THREE.Group(); bolt.visible = false; group.add(bolt);
+  const boltCore = new THREE.Mesh(new THREE.SphereGeometry(0.11, 24, 16), boltMat); boltCore.renderOrder = 12; boltCore.frustumCulled = false; bolt.add(boltCore);
+  const boltHalo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.85 })); boltHalo.scale.setScalar(1.1); boltHalo.renderOrder = 12; boltHalo.frustumCulled = false; bolt.add(boltHalo);
+  const NT = 22, trailPos = new Float32Array(NT * 3);
+  const trail = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(trailPos, 3)), new THREE.PointsMaterial({ map: glowTex, color: 0x9fcfff, size: 0.3, sizeAttenuation: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.9 })); trail.frustumCulled = false; trail.renderOrder = 11; bolt.add(trail);
+  // esplosione: alone + scintille radiali sul punto d'impatto
+  const burst = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0 })); burst.visible = false; burst.renderOrder = 12; burst.frustumCulled = false; group.add(burst);
+  const NB = 48, bPos = new Float32Array(NB * 3), bVel = Array.from({ length: NB }, () => new THREE.Vector3());
+  const bursts = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(bPos, 3)), new THREE.PointsMaterial({ map: glowTex, color: 0xcfe6ff, size: 0.12, sizeAttenuation: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0 })); bursts.visible = false; bursts.frustumCulled = false; bursts.renderOrder = 12; group.add(bursts);
+  const bStart = new THREE.Vector3(), bTarget = new THREE.Vector3(), bDir = new THREE.Vector3(); let bDur = 0.7, hot = -1;
   // ---- la suora ----
   const nun = new THREE.Group(); nun.visible = false; group.add(nun); let mixer = null, clips = {}, model = null, mats = [];
   B.load = () => B.loading ||= new GLTFLoader().loadAsync('assets/models/agnese/suor-agnese.glb').then((g) => {
@@ -93,9 +105,11 @@ export function createLightBlade({ group, camera, player, audio, say, warm, fini
   };
   B.lightUp = (k) => { const v = new THREE.Vector3(0.1, -0.1, -0.5); camera.localToWorld(v); warm.position.copy(v); warm.intensity = 14 * k * (1 + Math.sin(performance.now() * 0.02) * 0.05); };
   let tAll = 0;
+  // la visuale si gira piano verso la suora, cosi' si vede il colpo partire e arrivare
+  const aim = (dt, rate) => { const dx = nun.position.x - player.pos.x, dz = nun.position.z - player.pos.z; const ty = Math.atan2(-dx, -dz); let d = ty - player.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); player.yaw += d * Math.min(1, dt * rate); player.pitch += (0.05 - player.pitch) * Math.min(1, dt * rate); };
   const startDissolve = () => {
     dis = 0; audio.whisper?.(1.6, 0.18); smoke.pts.visible = true; smoke.pts.material.opacity = 0.8;
-    away.set(nun.position.x - waveO.x, 0, nun.position.z - waveO.z).normalize();
+    away.set(nun.position.x - player.pos.x, 0, nun.position.z - player.pos.z).normalize();
     for (let i = 0; i < N; i++) { const a = Math.random() * 6.28, r = Math.random() * 0.35;
       smoke.pos[i * 3] = nun.position.x + Math.cos(a) * r; smoke.pos[i * 3 + 1] = 0.2 + Math.random() * 1.7; smoke.pos[i * 3 + 2] = nun.position.z + Math.sin(a) * r;
       smoke.vel[i].set((Math.random() - 0.5) * 0.35 + away.x * 0.4, 0.5 + Math.random() * 0.9, (Math.random() - 0.5) * 0.35 + away.z * 0.4); }
@@ -115,19 +129,37 @@ export function createLightBlade({ group, camera, player, audio, say, warm, fini
     if (st === 'charge') {
       charge = Math.min(1, B.t / 0.55); B.lightUp(0.8 + charge * 2.4);
       flash.material.opacity = Math.max(0, (charge - 0.7) / 0.3) * 0.5;
-      if (B.t >= 0.55) { B.state = 'wave'; B.t = 0; B.hit = false; waveO.copy(player.pos); waveO.y = 1.3; wave.position.copy(waveO); ring.position.set(waveO.x, 0.03, waveO.z); wave.visible = ring.visible = true; player.addShake?.(1.0); audio.swell?.(1.8, 0.7); audio.scare?.(); }
+      aim(dt, 4);
+      if (B.t >= 0.55) { B.state = 'bolt'; B.t = 0; camera.updateMatrixWorld(true); hand.getWorldPosition(bStart); bTarget.set(nun.position.x, 1.3, nun.position.z); bDur = THREE.MathUtils.clamp(bStart.distanceTo(bTarget) / 8, 0.75, 1.1); bolt.visible = true; hand.visible = false; bolt.position.copy(bStart); player.addShake?.(0.5); audio.swell?.(1.2, 0.6); audio.scare?.(); }
+      return;
+    }
+    if (st === 'bolt') {
+      aim(dt, 3); bTarget.set(nun.position.x, 1.3, nun.position.z); charge = Math.max(0, charge - dt * 3);
+      const k = Math.min(1, B.t / bDur), e = Math.pow(k, 1.7);
+      bDir.copy(bTarget).sub(bStart).normalize(); bolt.position.lerpVectors(bStart, bTarget, e); boltMat.uniforms.uT.value = tAll * 1.5;
+      const sc = 0.7 + 0.5 * k; boltCore.scale.setScalar(sc); boltHalo.scale.setScalar(1.0 + 0.5 * k + 0.1 * Math.sin(tAll * 40));
+      for (let i = 0; i < NT; i++) { const back = i * (0.07 + 0.05 * k), j = (i / NT) * 0.1; trailPos[i * 3] = -bDir.x * back + (Math.random() - 0.5) * j; trailPos[i * 3 + 1] = -bDir.y * back + (Math.random() - 0.5) * j; trailPos[i * 3 + 2] = -bDir.z * back + (Math.random() - 0.5) * j; }
+      trail.geometry.attributes.position.needsUpdate = true;
+      warm.position.copy(bolt.position); warm.intensity = 16 + Math.sin(tAll * 50) * 2; flash.material.opacity = Math.max(0, flash.material.opacity - dt * 3);
+      if (k >= 1) {   // impatto sul petto della suora
+        B.state = 'wave'; B.t = 0; B.hit = true; bolt.visible = false; waveO.copy(bTarget); wave.position.copy(waveO); ring.position.set(waveO.x, 0.03, waveO.z); wave.visible = ring.visible = true;
+        burst.position.copy(waveO); burst.visible = true; bursts.visible = true; hot = 0;
+        for (let i = 0; i < NB; i++) { bPos[i * 3] = waveO.x; bPos[i * 3 + 1] = waveO.y; bPos[i * 3 + 2] = waveO.z; const a = Math.random() * 6.28, u = Math.random() * 2 - 1, s2 = Math.sqrt(1 - u * u), sp = 2 + Math.random() * 4; bVel[i].set(Math.cos(a) * s2 * sp, u * sp, Math.sin(a) * s2 * sp); }
+        startDissolve(); flash.material.opacity = 0.85; player.addShake?.(1.1); audio.swell?.(1.6, 0.8);
+      }
       return;
     }
     if (st === 'wave') {
-      const k = Math.min(1, B.t / 1.25), e = 1 - Math.pow(1 - k, 2.6), r = 0.3 + 15.5 * e;
-      wave.scale.setScalar(r); waveMat.uniforms.uFade.value = Math.pow(1 - k, 1.4); waveMat.uniforms.uT.value = tAll; ring.scale.setScalar(r * 1.0); ringMat.opacity = 0.9 * Math.pow(1 - k, 1.2);
-      charge = Math.max(0, charge - dt * 2.2); flash.material.opacity = Math.max(0, 0.9 * (1 - B.t / 0.5)); B.lightUp(3.2 * (1 - k) + 0.6);
-      if (!B.hit && r >= nunDist) { B.hit = true; startDissolve(); }
-      if (B.t >= 1.3) { wave.visible = ring.visible = false; if (!B.hit) { B.hit = true; startDissolve(); } B.state = 'after'; B.t = 0; }
+      const k = Math.min(1, B.t / 1.1), e = 1 - Math.pow(1 - k, 2.4), r = 0.2 + 6.5 * e;
+      wave.scale.setScalar(r); waveMat.uniforms.uFade.value = Math.pow(1 - k, 1.3); waveMat.uniforms.uT.value = tAll; ring.scale.setScalar(r); ringMat.opacity = 0.9 * Math.pow(1 - k, 1.2);
+      flash.material.opacity = Math.max(0, flash.material.opacity - dt * 2.4); burst.material.opacity = Math.pow(1 - k, 1.5); burst.scale.setScalar(1.2 + 3.2 * e);
+      bursts.material.opacity = 1 - k; for (let i = 0; i < NB; i++) { bPos[i * 3] += bVel[i].x * dt; bPos[i * 3 + 1] += bVel[i].y * dt - dt * dt * 4; bPos[i * 3 + 2] += bVel[i].z * dt; bVel[i].multiplyScalar(1 - dt * 2); } bursts.geometry.attributes.position.needsUpdate = true;
+      warm.position.set(waveO.x, 1.6, waveO.z + 0.8); warm.intensity = 18 * (1 - k) + 1;
+      if (B.t >= 1.1) { wave.visible = ring.visible = burst.visible = bursts.visible = false; B.state = 'after'; B.t = 0; }
     }
     if (dis >= 0) {   // la suora evapora: trasparente, si assottiglia e si allunga, fumo nero che sale
       dis += dt; const k = Math.min(1, dis / 2.4), e = k * k * (3 - 2 * k);
-      for (const m of mats) { m.opacity = 1 - e; m.color.setScalar(1 - 0.85 * e); }
+      const h = Math.max(0, 1 - dis / 0.45); for (const m of mats) { m.opacity = 1 - e; m.color.setScalar(h > 0 ? 1 + 2.2 * h : 1 - 0.85 * e); }
       nun.scale.set(1 - 0.5 * e, 1 + 0.18 * e, 1 - 0.5 * e); nun.position.y = 0.25 * e; nun.position.addScaledVector(away, dt * 0.5 * (1 - e)); nun.rotation.y += dt * (0.4 + e * 1.4);
       for (let i = 0; i < N; i++) { smoke.pos[i * 3] += smoke.vel[i].x * dt; smoke.pos[i * 3 + 1] += smoke.vel[i].y * dt; smoke.pos[i * 3 + 2] += smoke.vel[i].z * dt; }
       smoke.pts.geometry.attributes.position.needsUpdate = true; smoke.pts.material.opacity = 0.8 * (1 - Math.max(0, (k - 0.55) / 0.45));
@@ -141,7 +173,7 @@ export function createLightBlade({ group, camera, player, audio, say, warm, fini
       if (B.t >= 3.2) B.finish();
     }
   };
-  const cleanup = () => { hand.visible = false; showBtn(false); wave.visible = ring.visible = false; flash.material.opacity = 0; if (onKey) removeEventListener('keydown', onKey); const b = btn(); if (b && B.onBtn) b.removeEventListener('pointerdown', B.onBtn); if (saved) { warm.color.setHex(saved.c); warm.intensity = saved.i; } };
+  const cleanup = () => { hand.visible = false; showBtn(false); wave.visible = ring.visible = bolt.visible = burst.visible = bursts.visible = false; flash.material.opacity = 0; if (onKey) removeEventListener('keydown', onKey); const b = btn(); if (b && B.onBtn) b.removeEventListener('pointerdown', B.onBtn); if (saved) { warm.color.setHex(saved.c); warm.intensity = saved.i; } };
   B.finish = () => { if (!B.active) return; B.active = false; B.state = 'done'; cleanup(); finish?.(text); };
   B.abort = () => { if (!B.active) return; B.active = false; nun.visible = false; smoke.pts.visible = false; dis = -1; cleanup(); };
   return B;
