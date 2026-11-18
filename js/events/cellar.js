@@ -45,7 +45,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const red = redLight(C.group, { x: CELLAR.w / 2 - 0.1, y: 2.5, z: CELLAR.z0 - 19.5, dir: 1 });   // luce rossa d'emergenza vicino all'uscita
   // specchio
   const mw = 1.7, mh = 2.4;
-  const mirror = new Reflector(new THREE.PlaneGeometry(mw, mh), { textureWidth: globalThis.__quality === 'low' ? 160 : 256, textureHeight: globalThis.__quality === 'low' ? 240 : 384, color: new THREE.Color(0xffffff), clipBias: 0.003 });
+  const mirror = new Reflector(new THREE.PlaneGeometry(mw, mh), { textureWidth: globalThis.__quality === 'low' ? 128 : 192, textureHeight: globalThis.__quality === 'low' ? 192 : 288, color: new THREE.Color(0x6b6e69), clipBias: 0.003 });
   mirror.position.copy(MIRROR); mirror.rotation.y = Math.PI / 2; C.group.add(mirror);
   mirror.camera.userData.planarReflection = true;
   // nel riflesso lo z-fighting del pavimento (pozzanghere, veli di luce, tombini incassati) fa comparire "quadratini" neri: durante il render dello specchio quegli oggetti sono nascosti
@@ -57,7 +57,9 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
       finally { flat.forEach((o, i) => (o.visible = vis[i])); }
     }; }
   const dc = document.createElement('canvas'); dc.width = 256; dc.height = 384; const dg = dc.getContext('2d');
-  for (let i = 0; i < 700; i++) { dg.fillStyle = `rgba(18,20,19,${Math.random() * 0.25})`; dg.beginPath(); dg.arc(Math.random() * 256, Math.random() * 384, 0.5 + Math.random() * 2.2, 0, 7); dg.fill(); }
+  dg.fillStyle = 'rgba(38,40,35,.34)'; dg.fillRect(0, 0, 256, 384);   // velo di polvere e unto: specchio opaco, poco riflettente
+  for (let i = 0; i < 70; i++) { dg.fillStyle = `rgba(${150 + Math.random() * 40 | 0},${145 + Math.random() * 40 | 0},${125 + Math.random() * 30 | 0},${Math.random() * 0.1})`; dg.beginPath(); dg.ellipse(Math.random() * 256, Math.random() * 384, 8 + Math.random() * 30, 5 + Math.random() * 22, Math.random() * 3, 0, 7); dg.fill(); }   // aloni di sporco chiaro
+  for (let i = 0; i < 1100; i++) { dg.fillStyle = `rgba(18,20,19,${Math.random() * 0.3})`; dg.beginPath(); dg.arc(Math.random() * 256, Math.random() * 384, 0.5 + Math.random() * 2.2, 0, 7); dg.fill(); }
   for (let i = 0; i < 14; i++) { const x = Math.random() * 256, y = Math.random() * 200, g2 = dg.createLinearGradient(0, y, 0, y + 150 + Math.random() * 150); g2.addColorStop(0, 'rgba(15,18,16,.28)'); g2.addColorStop(1, 'rgba(15,18,16,0)'); dg.fillStyle = g2; dg.fillRect(x, y, 1.5 + Math.random() * 3, 330); }
   const grad = dg.createLinearGradient(0, 0, 0, 384); grad.addColorStop(0, 'rgba(0,0,0,.45)'); grad.addColorStop(.3, 'rgba(0,0,0,0)'); grad.addColorStop(1, 'rgba(0,0,0,.55)'); dg.fillStyle = grad; dg.fillRect(0, 0, 256, 384);
   const dirt = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(dc), transparent: true, depthWrite: false }));
