@@ -25,6 +25,25 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   const room = buildRoom(mats, { z0: TOWER.z0, w: TOWER.w, l: TOWER.l, h: TOWER.h, wall: 'stone', floor: 'floorA', ceil: 'brick', pillarEvery: 6, dark: 0.95, seed: 31, door: { w: 2, h: 2.6 }, sideDoor: { side: 1, z: TOWER.z0 - 6.6, w: 2.0, h: 3.1 } });
   T.group.add(room.group); const bedroom = createBedroom({ group: T.group, mats, zc: TOWER.z0 - 6.6 }); T.entry = decorTower(T.group, TOWER.z0); T.bounds = [room.bounds[0], room.bounds[1], TOWER.z0 - TOWER.l + 1.6, TOWER.z0 - 0.6];
   const zFar = TOWER.z0 - TOWER.l, loader = new GLTFLoader();
+  const lampPos = [[0, 5.4, TOWER.z0 - 7], [0, 5.4, TOWER.z0 - 13]];
+  const fixtures = lampPos.map(([x, y, z]) => {
+    const fixture = new THREE.Group(); fixture.name = 'tower-hanging-lamp'; fixture.position.set(x, y, z); T.group.add(fixture);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd4a0, toneMapped: false }));
+    bulb.position.y = 0.13; fixture.add(bulb);
+    fixture.userData.setGlow = (level) => { bulb.visible = level > 0.01; bulb.material.color.setHex(0xffd4a0).multiplyScalar(1.4 * level); };
+    const length = TOWER.h - y - 0.42;
+    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, length, 5), new THREE.MeshStandardMaterial({ color: 0x17130f, roughness: 0.9 }));
+    cord.position.set(x, y + 0.42 + length / 2, z); T.group.add(cord);
+    return fixture;
+  });
+  loader.load('assets/models/lamp.glb', (g) => {
+    for (const fixture of fixtures) {
+      const model = g.scene.clone(true), bounds = new THREE.Box3().setFromObject(model);
+      model.scale.multiplyScalar(0.42 / Math.max(0.001, bounds.max.y - bounds.min.y));
+      bounds.setFromObject(model); const center = bounds.getCenter(new THREE.Vector3());
+      model.position.set(-center.x, -bounds.min.y, -center.z); fixture.add(model);
+    }
+  }, undefined, (error) => console.warn('tower lamp fixture', error));
   const stovePos = new THREE.Vector3(-2.4, 0, TOWER.z0 - 6.5);
 
   patchDecals(T.group, [{ img: 'assets/tex/pt_gravel.webp', p: [-2.2, 0.012, TOWER.z0 - 8], wall: 'floor', w: 3.4, h: 3.0, rot: 0.3 }, { img: 'assets/tex/pt_layers.webp', p: [3.2, 0.012, TOWER.z0 - 13], wall: 'floor', w: 3.0, h: 2.6, rot: -0.4 }, { img: 'assets/tex/pt_layers.webp', p: [0, 8.49, TOWER.z0 - 7], wall: 'ceil', w: 5, h: 3.4, rot: 0.2, a: 0.5, tint: 0.28 }, { img: 'assets/tex/pt_stain.webp', p: [0, 8.49, TOWER.z0 - 13], wall: 'ceil', w: 3.6, h: 2.6, rot: -0.3, a: 0.45, tint: 0.28 }]);   // torre: cemento grezzo sul pavimento e soffitto macchiato
@@ -37,7 +56,7 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   prop('assets/models/can.glb', 0.12, 2.8, TOWER.z0 - 4, 0.9);
   prop('assets/models/chair.glb', 1.0, 2.2, TOWER.z0 - 10.5, Math.PI, (o) => { T.chair = o; });
   pedestal(T.group, -6.1, TOWER.z0 - 15.5);
-  addAtmosphere(T.group, { xl: -TOWER.w / 2, xr: TOWER.w / 2, z0: TOWER.z0, z1: TOWER.z0 - TOWER.l, h: TOWER.h, seed: 31, lamps: [[0, 5.4, TOWER.z0 - 7], [0, 5.4, TOWER.z0 - 13]], shaft: 0xffd9a8, shaftOpacity: 0.075, stains: 10, puddles: 5, stainColor: 0x0c0603 });
+  addAtmosphere(T.group, { xl: -TOWER.w / 2, xr: TOWER.w / 2, z0: TOWER.z0, z1: TOWER.z0 - TOWER.l, h: TOWER.h, seed: 31, lamps: lampPos, shaft: 0xffd9a8, shaftOpacity: 0.075, stains: 10, puddles: 5, stainColor: 0x0c0603 });
   addExtras(T.group, [['x_clock', 2.3, -6.6, 0, TOWER.z0 - 4.5, Math.PI / 2], ['x_lion', 0.44, 6.3, 1.15, TOWER.z0 - 9, -Math.PI / 2], ['x_bust', 0.52, -6.1, 0.95, TOWER.z0 - 15.5, Math.PI / 2 + 0.4, 1, 0, (g) => { T.bust = g; }]]);
 
   // porta d'uscita con bagliore sotto
@@ -70,7 +89,7 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   T.onPreview = () => { if (T.entry) T.entry.visible = false; lights.addLamp(0, 5.4, TOWER.z0 - 7 + T.pdz, 0xffd4a0); };   // dal magazzino la soglia e' aperta finche' non entri
   T.enter = (seamless = false) => {
     T.group.visible = true; T.opened = false; player.box = T.bounds; if (T.entry) T.entry.visible = true; if (seamless) audio.doorBang?.(new THREE.Vector3(0, 1.3, TOWER.z0 + 0.5), 0.8); else { player.pos.set(0.3, 1.62, TOWER.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false; }   // seamless: la porta si chiude alle tue spalle
-    lights.setLamps([[0, 5.4, TOWER.z0 - 7], [0, 5.4, TOWER.z0 - 13]], 2.4, 0xffd4a0); lights.grade({ fog: 0x0a0503, hemi: [0x6a3e22, 0x120804, 0.42] }); scene.fog.density = 0.04; audio.duck(1, 1.5); instab.set(0.05, 6);
+    lights.setLamps(lampPos, 2.4, 0xffd4a0); fixtures.forEach((fixture, i) => { lights.lamps[i].mesh = fixture; }); lights.grade({ fog: 0x0a0503, hemi: [0x6a3e22, 0x120804, 0.42] }); scene.fog.density = 0.04; audio.duck(1, 1.5); instab.set(0.05, 6);
     warm.position.set(stovePos.x + 0.1, 1.0, stovePos.z + 0.2); warm.intensity = 36;
   };
   T.leave = () => { T.group.visible = false; warm.intensity = 0; };
