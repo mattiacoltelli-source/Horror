@@ -1,6 +1,7 @@
 // STANZA 3 — LA TORRE: calma apparente (stufa, mobili, sedia a rotelle) e la porta d'uscita. Qui si decide il finale:
 //   specchio completato → C (esci)   ·   ti sei girato nella sala → B   ·   altrimenti → A.
 import * as THREE from 'three';
+import { addRoundLamps } from '../world/round-lamps.js';
 import { aged } from '../world/aged.js';
 import { patchDecals, burnDecals } from '../world/blood.js';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
@@ -26,24 +27,7 @@ export function createTower({ scene, mats, player, camera, audio, lights, instab
   T.group.add(room.group); const bedroom = createBedroom({ group: T.group, mats, zc: TOWER.z0 - 6.6 }); T.entry = decorTower(T.group, TOWER.z0); T.bounds = [room.bounds[0], room.bounds[1], TOWER.z0 - TOWER.l + 1.6, TOWER.z0 - 0.6];
   const zFar = TOWER.z0 - TOWER.l, loader = new GLTFLoader();
   const lampPos = [[0, 5.4, TOWER.z0 - 7], [0, 5.4, TOWER.z0 - 13]];
-  const fixtures = lampPos.map(([x, y, z]) => {
-    const fixture = new THREE.Group(); fixture.name = 'tower-hanging-lamp'; fixture.position.set(x, y, z); T.group.add(fixture);
-    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd4a0, toneMapped: false }));
-    bulb.position.y = 0.13; fixture.add(bulb);
-    fixture.userData.setGlow = (level) => { bulb.visible = level > 0.01; bulb.material.color.setHex(0xffd4a0).multiplyScalar(1.4 * level); };
-    const length = TOWER.h - y - 0.42;
-    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, length, 5), new THREE.MeshStandardMaterial({ color: 0x17130f, roughness: 0.9 }));
-    cord.position.set(x, y + 0.42 + length / 2, z); T.group.add(cord);
-    return fixture;
-  });
-  loader.load('assets/models/lamp.glb', (g) => {
-    for (const fixture of fixtures) {
-      const model = g.scene.clone(true), bounds = new THREE.Box3().setFromObject(model);
-      model.scale.multiplyScalar(0.42 / Math.max(0.001, bounds.max.y - bounds.min.y));
-      bounds.setFromObject(model); const center = bounds.getCenter(new THREE.Vector3());
-      model.position.set(-center.x, -bounds.min.y, -center.z); fixture.add(model);
-    }
-  }, undefined, (error) => console.warn('tower lamp fixture', error));
+  const fixtures = addRoundLamps(T.group, lampPos, TOWER.h);
   const stovePos = new THREE.Vector3(-2.4, 0, TOWER.z0 - 6.5);
 
   patchDecals(T.group, [{ img: 'assets/tex/pt_gravel.webp', p: [-2.2, 0.012, TOWER.z0 - 8], wall: 'floor', w: 3.4, h: 3.0, rot: 0.3 }, { img: 'assets/tex/pt_layers.webp', p: [3.2, 0.012, TOWER.z0 - 13], wall: 'floor', w: 3.0, h: 2.6, rot: -0.4 }, { img: 'assets/tex/pt_layers.webp', p: [0, 8.49, TOWER.z0 - 7], wall: 'ceil', w: 5, h: 3.4, rot: 0.2, a: 0.5, tint: 0.28 }, { img: 'assets/tex/pt_stain.webp', p: [0, 8.49, TOWER.z0 - 13], wall: 'ceil', w: 3.6, h: 2.6, rot: -0.3, a: 0.45, tint: 0.28 }]);   // torre: cemento grezzo sul pavimento e soffitto macchiato
