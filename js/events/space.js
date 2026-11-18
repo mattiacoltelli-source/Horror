@@ -66,6 +66,10 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
         float dust = smoothstep(0.5, 0.72, fbm3(d * 5.5 + 7.0)), core = exp(-pow(lon - 0.9, 2.0) * 0.9) * band;
         vec3 col = band * (0.25 + 1.05 * f) * mix(vec3(0.3, 0.42, 0.95), vec3(1.0, 0.72, 0.45), core) * (1.0 - 0.7 * dust * band);
         col += vec3(0.10, 0.03, 0.16) * pow(fbm3(d * 2.0 + 3.0), 2.0) * 1.6 + vec3(0.02, 0.07, 0.16) * pow(fbm3(d * 2.4 + 9.0), 2.0) * 1.6;
+        float e1 = smoothstep(0.5, 0.8, fbm3(d * 1.7 + 21.0)), e2 = smoothstep(0.54, 0.82, fbm3(d * 2.2 + 41.0)), e3 = smoothstep(0.58, 0.84, fbm3(d * 3.1 + 63.0));
+        col += vec3(0.62, 0.12, 0.30) * e1 * (0.3 + 0.8 * band) * 0.5 + vec3(0.06, 0.38, 0.55) * e2 * (0.3 + 0.8 * band) * 0.65 + vec3(0.75, 0.38, 0.10) * e3 * band * 0.45;   // nebulose a emissione (magenta, ciano, ambra) lungo la Via Lattea
+        col *= 1.0 - 0.45 * smoothstep(0.5, 0.75, fbm3(d * 7.0 + 90.0)) * band;   // corsie di polvere scura
+        for (int k = 0; k < 3; k++) { vec3 cd = normalize(vec3(-0.5 + 0.9 * float(k), 0.25 - 0.3 * float(k), -0.8 + 0.5 * float(k))); float cr = length(d - cd); col += mix(vec3(0.5, 0.65, 1.0), vec3(1.0, 0.75, 0.5), float(k) * 0.5) * (exp(-cr * cr * 1800.0) * 0.5 + exp(-cr * cr * 9000.0) * 0.9); }   // ammassi stellari luminosi
         float dens = 0.80 - 0.12 * band;
         col += stars(d, 90.0, dens + 0.08, 0.18) * 1.4 + stars(d, 170.0, dens + 0.05, 0.16) + stars(d, 320.0, dens, 0.14) * 0.8 + stars(d, 40.0, 0.94, 0.2) * 2.0;
         gl_FragColor = vec4(min(col, vec3(1.0)), 1.0); }`, {}, 16);
@@ -235,13 +239,25 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   for (let i = 0; i < ND; i++) { const a = rnd() * 6.283, r = 1.2 + rnd() * 7; dust.pos[i * 3] = Math.cos(a) * r; dust.pos[i * 3 + 1] = Math.sin(a) * r; dust.pos[i * 3 + 2] = -rnd() * 70; }
   dust.pts = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(dust.pos, 3)), new THREE.PointsMaterial({ map: glowTex, color: 0xaecbff, size: 0.12, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.55 })); dust.pts.frustumCulled = false; scene.add(dust.pts);
 
+  // ---- scie di velocita' (si allungano verso il portale) e stelle di campo a diverse profondita' (parallasse) ----
+  const NSK = 150, sk = { pos: new Float32Array(NSK * 6), a: [], z: [], len: [] };
+  for (let i = 0; i < NSK; i++) { const an = rnd() * 6.283, r = 1.8 + rnd() * 9; sk.a.push([Math.cos(an) * r, Math.sin(an) * r]); sk.z.push(-rnd() * 90); sk.len.push(0.5 + rnd() * 1.3); }
+  const streaks = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(sk.pos, 3)), new THREE.LineBasicMaterial({ color: 0xbcd6ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); streaks.frustumCulled = false; streaks.renderOrder = 3; scene.add(streaks);
+  const NF = 280, fp = new Float32Array(NF * 3), fc = new Float32Array(NF * 3), fcol = [[0.7, 0.8, 1.0], [1.0, 0.85, 0.65], [0.85, 0.7, 1.0], [1.0, 1.0, 1.0]];
+  for (let i = 0; i < NF; i++) { const an = rnd() * 6.283, r = 12 + rnd() * rnd() * 140; fp[i * 3] = Math.cos(an) * r; fp[i * 3 + 1] = Math.sin(an) * r * 0.8; fp[i * 3 + 2] = -rnd() * 150; const c = fcol[(rnd() * 4) | 0], b = 0.5 + rnd() * 0.9; fc[i * 3] = c[0] * b; fc[i * 3 + 1] = c[1] * b; fc[i * 3 + 2] = c[2] * b; }
+  const fieldGeo = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(fp, 3)).setAttribute('color', new THREE.BufferAttribute(fc, 3));
+  const field = new THREE.Points(fieldGeo, new THREE.PointsMaterial({ map: glowTex, vertexColors: true, size: 0.9, sizeAttenuation: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); field.frustumCulled = false; field.renderOrder = -4; scene.add(field);
+
   // ---- percorso: caduta accelerata verso il portale (la visuale e' libera) ----
-  const DUR = 10;
+  const DUR = 13, K = 10 / DUR;   // la caduta dura 13 s: tutta la scena e' pensata su 10 s di "tempo di scena" e viene dilatata (K); la durata si cambia qui
+  S.DUR = DUR;
   const pathPos = (t, out) => { const z = -(2.5 * t + 0.7 * t * t); return out.set(0.5 * Math.sin(t * 0.9) + 0.015 * t * t, 0.35 * Math.sin(t * 0.7 + 1.0), z); };
   const tmp = new THREE.Vector3(), q = new THREE.Quaternion();
   let overlay = null;
   const ov = () => overlay ||= (() => { const d = document.createElement('div'); d.id = 'spacefade'; d.style.cssText = 'position:fixed;inset:0;z-index:60;background:#000;opacity:0;pointer-events:none;transition:opacity .5s'; document.body.appendChild(d); return d; })();
 
+  let vigEl = null;   // vignettatura da obiettivo: bordi scuri, centro luminoso
+  const vig = () => vigEl ||= (() => { const d = document.createElement('div'); d.id = 'spacevig'; d.style.cssText = 'position:fixed;inset:0;z-index:59;pointer-events:none;opacity:0;transition:opacity 1.2s;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 48%,rgba(0,0,6,.55) 100%)'; document.body.appendChild(d); return d; })();
   // preparazione in anticipo (durante la cantina): cottura delle texture a strisce e precompilazione degli shader; a runtime resta solo il disegno
   S.prepared = false; S.preparing = false; S.compiled = false;
   S.prepare = () => { if (S.preparing || S.prepared) return; S.preparing = true; S.waitT = 0; };
@@ -259,15 +275,15 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
     setTimeout(() => {
       S.finish(); S.pr0 = renderer.getPixelRatio(); S.pr = Math.min(S.pr0, 0.9); S.pf = 0; S.pn = 0; renderer.setPixelRatio(S.pr);   // risoluzione un po' piu' bassa: la scena e' morbida e va fluida
       S.active = true; S.phase = 'fall'; S.t = 0; clock.t = 0; player.speedMul = 0; player.yaw = 0; player.pitch = 0;   // da fermo, guardando in avanti
-      o.style.transition = 'opacity .9s'; o.style.opacity = '0'; audio.space?.(DUR); say('Non puoi muoverti.\nGuardati intorno.', 3400);
+      o.style.transition = 'opacity .9s'; o.style.opacity = '0'; vig().style.opacity = 1; audio.space?.(DUR); say('Non puoi muoverti.\nGuardati intorno.', 3400);
     }, 600);
   };
   const v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3(), mx = new THREE.Matrix4(), zAx = new THREE.Vector3(0, 0, 1);
   S.update = (dt) => {
-    if (!S.active) return; S.t += dt; U.uT.value = S.t; const T = S.t;
+    if (!S.active) return; S.t += dt; const TR = S.t, T = S.t * K; U.uT.value = T;
     for (const p of planets) p.m.rotation.y += p.spin * dt;
-    const t = Math.min(DUR, T); pathPos(t, tmp); sc.position.copy(tmp);
-    sc.aspect = camera.aspect; sc.fov = camera.fov; sc.updateProjectionMatrix();
+    const t = Math.min(10, T); pathPos(t, tmp); sc.position.copy(tmp);
+    sc.aspect = camera.aspect; { const u = Math.min(1, Math.max(0, (T - 5.5) / 4.5)); sc.fov = camera.fov * (1 + 0.2 * u * u * (3 - 2 * u)); } sc.updateProjectionMatrix();
     sc.quaternion.copy(camera.quaternion); q.setFromAxisAngle(zAx, 0.035 * Math.sin(T * 0.8)); sc.quaternion.multiply(q);   // piccolo rollio: sembra di cadere
     sky.position.copy(sc.position); sc.updateMatrixWorld(true);
     halo.quaternion.copy(sc.quaternion); lensed.quaternion.copy(sc.quaternion); corona.quaternion.copy(sc.quaternion);
@@ -290,14 +306,19 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
       if (comet.visible) { comet.position.set(26 - k * 56, 13 - k * 24, -22 - k * 34); v1.copy(comet.position).sub(SUN).normalize(); v2.copy(comet.position).sub(sc.position).normalize(); v3.crossVectors(v1, v2).normalize();
         const len = 22; mx.makeBasis(v3.multiplyScalar(2.2), v1.clone().multiplyScalar(len), v2); mx.setPosition(comet.position.x + v1.x * len * 0.5, comet.position.y + v1.y * len * 0.5, comet.position.z + v1.z * len * 0.5); tail.matrix.copy(mx); tail.matrixWorldNeedsUpdate = true;
         tail.geometry.attributes.uv; } }
+    // scie di velocita': lunghezza e visibilita' crescono con la velocita' (soprattutto verso il portale)
+    { const sp = 2.5 + 1.4 * Math.min(10, T), u = Math.min(1, Math.max(0, (T - 2.5) / 6.5)), cz = sc.position.z;
+      for (let i = 0; i < NSK; i++) { if (sk.z[i] > cz + 2) sk.z[i] -= 90; const z0 = sk.z[i], ln = sk.len[i] * sp * 0.22 * (0.4 + u * 2.2), a = sk.a[i];
+        sk.pos[i * 6] = a[0]; sk.pos[i * 6 + 1] = a[1]; sk.pos[i * 6 + 2] = z0; sk.pos[i * 6 + 3] = a[0]; sk.pos[i * 6 + 4] = a[1]; sk.pos[i * 6 + 5] = z0 - ln; }
+      streaks.geometry.attributes.position.needsUpdate = true; streaks.material.opacity = 0.55 * u * u; }
     // polvere cosmica: scorre vicino alla camera
     for (let i = 0; i < ND; i++) { if (dust.pos[i * 3 + 2] - sc.position.z > 1.5) dust.pos[i * 3 + 2] -= 70; dust.pos[i * 3] += 0; }
     dust.pts.geometry.attributes.position.needsUpdate = true;
     pMat.uniforms.uOpen.value = Math.min(1, Math.max(0, (T - 5.2) / 3.4)); pMat.uniforms.uT.value = T;
     if (T > 4.6 && !S.said1) { S.said1 = true; say('Il plasma delle stelle ti attraversa.', 3200); }
     if (T > 7.4 && !S.said2) { S.said2 = true; say('Un varco si apre davanti a te.', 3000); }
-    if (T >= DUR - 0.5 && S.phase === 'fall') { S.phase = 'out'; const o = ov(); o.style.background = '#fff'; o.style.transition = 'opacity .45s'; o.style.opacity = '1'; }
-    if (T >= DUR) { S.active = false; S.phase = 'idle'; S.said1 = S.said2 = false; player.speedMul = 1; if (S.pr0) renderer.setPixelRatio(S.pr0); S.onDone?.(); setTimeout(() => { const o = ov(); o.style.transition = 'opacity 1.1s'; o.style.opacity = '0'; }, 1800); }
+    if (TR >= DUR - 0.5 && S.phase === 'fall') { S.phase = 'out'; const o = ov(); o.style.background = '#fff'; o.style.transition = 'opacity .45s'; o.style.opacity = '1'; }
+    if (TR >= DUR) { S.active = false; S.phase = 'idle'; S.said1 = S.said2 = false; player.speedMul = 1; vig().style.opacity = 0; if (S.pr0) renderer.setPixelRatio(S.pr0); S.onDone?.(); setTimeout(() => { const o = ov(); o.style.transition = 'opacity 1.1s'; o.style.opacity = '0'; }, 1800); }
   };
   S.render = () => renderer.render(scene, sc);
   return S;
