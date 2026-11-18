@@ -212,7 +212,7 @@ async function enter() {
   ambient ??= createAmbient({ player, audio, story, combat });
   wh ??= createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, flags, actBtn: $('act') });
   space ??= createSpaceFall({ renderer, camera, player, audio, say });
-  cellar ??= createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash, space, actBtn: $('act'), onSave: () => saveCkpt('cellar') });
+  cellar ??= createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash, warm, space, actBtn: $('act'), onSave: () => saveCkpt('cellar') });
   tower ??= createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish: (m, f, l) => (dawn ? dawn.start(m) : finish(m, f, l)), warm, actBtn: $('act'), combat });
   // topi: vicino ai muri e alle cose, scappano di scatto quando ti avvicini (una volta sola ciascuno)
   if (!window.__ratsDone) { window.__ratsDone = true;

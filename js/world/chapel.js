@@ -96,10 +96,10 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
   for (const [x, z, ch] of [[x0 + 1.55, zc - 0.55, 0.3], [x0 + 1.7, zc + 0.5, 0.22], [x0 + 0.95, zc - 1.25, 0.16], [x0 + 0.9, zc + 1.2, 0.26]]) candle(x, 0, z, ch);   // sul pavimento, davanti all'altare
   const candles = createCandles(G,candleSpots);
   createBrokenRosary(G,{x:aX+.12,y:1.32,z:zc+.43});
-  K.light = new THREE.PointLight(0xff8a3a, 2.2, 3.4, 1.3); K.light.position.set(aX - 0.8, 2.1, zc);
+  K.light = new THREE.PointLight(0xff8a3a, 2.2, 4.2, 1.3); K.light.position.set(aX - 0.8, 2.1, zc);
   // La luce alta delle candele raggiunge anche il fronte in tutte le versioni.
   G.add(K.light);
-  K.light2 = new THREE.PointLight(0xff7a30, 1.3, 2.6, 1.4); K.light2.position.set(x0 + 2.0, 0.8, zc); G.add(K.light2);   // candele sul pavimento: schiariscono i muri laterali
+  K.light2 = { intensity: 0 };   // una sola luce per la cripta (meno luci = piu' fluido)   // candele sul pavimento: schiariscono i muri laterali
 
   // Il rito resta sul davanti dell'altare; l'eventuale foto personale e' sul piano.
   // la minaccia di suor Agnese, a sangue sul davanti dell'altare (uguale in tutte le versioni, senza nome): data e ORA del giocatore (quelle del suo telefono) e «tra sette minuti».
@@ -127,6 +127,6 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
     mur('pic_chapel_hell.webp', 0.5392, [x0 + w / 2, 1.75, z0 - 0.012], '-z', 1.4),    // lato +z
   ]);
 
-  K.update = (dt) => { K.t += dt; candles.update(K.t); K.light.intensity = 2.1 + Math.sin(K.t * 11.3) * 0.14 + Math.sin(K.t * 27.1) * 0.08 + (Math.sin(K.t * 3.1) > 0.97 ? -0.3 : 0); K.light2.intensity = 1.25 + Math.sin(K.t * 9.1 + 1) * 0.12 + Math.sin(K.t * 23.3) * 0.07; };
+  K.update = (dt) => { K.t += dt; candles.update(K.t); K.light.intensity = 2.6 + Math.sin(K.t * 11.3) * 0.14 + Math.sin(K.t * 27.1) * 0.08 + (Math.sin(K.t * 3.1) > 0.97 ? -0.3 : 0); K.light2.intensity = 1.25 + Math.sin(K.t * 9.1 + 1) * 0.12 + Math.sin(K.t * 23.3) * 0.07; };
   return K;
 }

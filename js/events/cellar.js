@@ -29,7 +29,7 @@ export const CELLAR = { z0: -200, w: 8, l: 24, h: 4.4 };
 const MIRROR = new THREE.Vector3(-3.98, 1.45, -210);
 const DIST = [7, 4.6, 2.6, 1.3, 0.7];
 
-export function createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash, space, actBtn, onSave }) {
+export function createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash, warm, space, actBtn, onSave }) {
   const C = { group: new THREE.Group(), state: 'idle', step: -1, gaze: 0, away: 0, started: false, apDone: false };
   C.group.visible = false; scene.add(C.group);
   const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23, exit: { w: 2, h: 2.5 }, sideDoors: [{ side: 1, z: CELLAR.z0 - 15.5, w: 2.0, h: 3.1, reflectionPanel: 'chapel' }, FILM_DOOR] });
@@ -40,6 +40,9 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const portal = C.portal = createPortal({ group: C.group, x: -0.5, z: CELLAR.z0 - 13.6 });   // in mezzo al salone: bisogna girarsi, guardarlo ed entrare di proposito
   C.keypad = createKeypad({ group: C.group, player, audio, say, actBtn, flags, x: CELLAR.w / 2, y: 1.32, z: CELLAR.z0 - 20.7, onOpen: () => portal.openIt() });   // muro destro, sotto la luce rossa, a ~4 m dall'arco della cripta
   C.shrine = createFilmShrineEvent({ group: C.group, mats, panel: room.sidePanels.film, player, flags, audio, say, actBtn, onSave });
+  // la lampadina del santuario non ha una luce sua: usa la luce "warm" della scena (libera in cantina), cosi' in cantina ci sono 7 luci invece di 10
+  if (warm && C.shrine.light) { const sl = C.shrine.light, slPos = new THREE.Vector3(); C.group.updateMatrixWorld(true); sl.getWorldPosition(slPos); sl.parent?.remove(sl); let cur = 0;
+    C.shrine.light = { get intensity() { return cur; }, set intensity(v) { if (v === cur) return; cur = v; if (v > 0) { warm.color.setHex(0xe5a266); warm.distance = 4.1; warm.decay = 1.5; warm.position.copy(slPos); warm.intensity = v; } else { warm.intensity = 0; warm.color.setHex(0xff9a50); warm.distance = 15; warm.decay = 1.7; } } }; }
   const shrineMove = (x, z) => C.group.visible && !C.gone ? (chapel.constrainMove(x, z, C.bounds, player.pos) ?? C.shrine.move(x, z, C.bounds)) : null;
 
   const red = redLight(C.group, { x: CELLAR.w / 2 - 0.1, y: 2.5, z: CELLAR.z0 - 19.5, dir: 1 });   // luce rossa d'emergenza vicino all'uscita
