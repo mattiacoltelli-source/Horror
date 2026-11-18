@@ -9,6 +9,7 @@ import { bloodText } from '../world/bloodfont.js';
 import { createElevator } from '../world/elevator.js';
 import { createElectricalPanel } from '../world/electrical-panel.js';
 
+import { createGravityRoll } from '../world/gravity-roll.js';
 export const WARD = { z0: -480, w: 4, l: 20, h: 2.5 };   // la fine del corridoio coincide con l'ingresso dell'obitorio (z0 -500): un unico ambiente
 const loader = new GLTFLoader(), cache = {};
 const get = (n) => cache[n] ??= new Promise((res) => loader.load(n.startsWith('../') ? `assets/models/${n.slice(3)}.glb` : `assets/models/hw_${n}.glb`, (g) => res(g.scene), undefined, () => res(null)));
@@ -138,16 +139,19 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
     if (R.loaded) R.bend.prepare();   // se i pezzi del reparto ci sono gia', si prepara subito (a fette, con il reparto nascosto)
   });
   R.bounds = [-hw + 0.45, hw - 0.45, zFar - 14, z0 - 0.6];   // il limite in fondo (l'obitorio) e' aggiornato a ogni fotogramma
+  // GRAVITA' CHE CAMBIA (?gravita=0 la spegne): a meta' corridoio, mentre le luci saltano, il reparto ruota di 180° e torna dritto
+  if (new URLSearchParams(location.search).get('gravita') !== '0') R.gravity = createGravityRoll({ group: R.group, player, camera, lights, audio, say, hideWhileActive: [] });
   R.enter = (seamless = false) => {
+    R.gravity?.reset();
     R.pl = null; R.group.visible = true; R.state = 'walk'; R.t = 0; R.hit = false; R.crossed = false; { const m = getMorgue(); m.group.visible = true; if (m.back) m.back.visible = false; if (m.entry) m.entry.visible = false; m.cones.forEach((c) => (c.visible = false)); m.puddles.forEach((c) => (c.visible = false)); }
     player.box = R.bounds; if (!seamless) { player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false; }   // arrivando dalla cantina il giocatore e' gia' qui
     lights.setLamps(lampPos, 2.1, 0xcfeadc); lights.grade({ fog: 0x050a08, hemi: [0x2c4a44, 0x08100e, 0.4] }); scene.fog.density = 0.05; audio.duck(1, 1.5); instab.set(0.15, 6);
     lights.lamp(0, 'pulse');
     if (R.bend) { R.bend.reset(); if (!R.bend.prepared) R.bend.refresh(); }   // normalmente e' gia' pronto: il ripiego serve solo se qualcosa e' arrivato tardi
   };
-  R.leave = () => { R.group.visible = false; if (R.bend) { R.bend.setA(0); R.bend.restoreFov(); } };
+  R.leave = () => { R.gravity?.stop(false); R.group.visible = false; if (R.bend) { R.bend.setA(0); R.bend.restoreFov(); } };
   R.update = (dt) => {
-    if (!R.group.visible || R.preview) return; R.t += dt; const P = player.pos;
+    if (!R.group.visible || R.preview) return; R.t += dt; const P = player.pos; R.gravity?.update(dt);
     if (R.bend) { if (R.crossed) { if (R.bend.A) { R.bend.setA(0); R.bend.restoreFov(); } } else R.bend.update(dt, P); }
     { // movimento: corridoio, poi la soglia (varco largo 1,9 m) e infine l'obitorio, senza dissolvenza
       const m = getMorgue(), B = player.box;
@@ -158,7 +162,9 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
     if (!R.crossed && R.state !== 'beat' && Math.random() < dt * 0.25) lights.lamp(0, 'flicker', 0.3 + Math.random() * 0.4);
     if (R.state === 'walk' && P.z < z0 - 8.5) {   // a meta' corridoio: tutte le luci spente per un secondo; la sedia, nel buio, si avvicina
       R.state = 'beat'; R.bt = 0; lights.lamp(0, 'off'); audio.lightOff?.(); instab.push(0.8, 5);
+      if (R.gravity?.start()) { const m = getMorgue(); R.gm = m.group; R.gmv = m.group.visible; m.group.visible = false; R.bend?.setA(0); if (R.bend) R.bend.state = 'done'; }   // l'obitorio sparisce per i 7 s della rotazione (il buio e le nebbie nascondono lo stacco)
     }
+    if (R.gm && !R.gravity?.active) { R.gm.visible = R.gmv ?? true; R.gm = null; }
     if (R.state === 'beat') { R.bt += dt;
       if (R.bt > 0.6 && !R.hit) R.hit = true;   // la sedia a rotelle resta ferma dov'e'
       if (R.bt > 1.2) { R.state = 'after'; lights.lamp(0, 'flicker', 0.9); setTimeout(() => lights.lamp(0, 'pulse'), 1100); audio.lightOn?.(); } }
