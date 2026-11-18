@@ -318,7 +318,7 @@ async function enter() {
   try { await audio.start(); audio.heartbeat?.(); navigator.vibrate?.(30); } catch (_) {}
   try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el, { navigationUI: 'hide' })?.catch?.(() => {}); } catch (_) {}
   try { await screen.orientation?.lock?.('portrait'); } catch (_) {}
-  if (q.get('respiro') !== '0') { breath = createBreath({ scene, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches }); breath.refresh(); setTimeout(() => breath?.refresh(), 3000); }   // respiro delle pareti nel tunnel (?respiro=0 lo spegne)
+  if (q.get('allunga') !== '0') { breath = createBreath({ scene, audio, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches }); breath.refresh(); setTimeout(() => breath?.refresh(), 3000); }   // allungamento del tunnel (?allunga=0 lo spegne)
   if (!restoreCk && (!q.get('start') || q.get('start') === 'porta')) await prepareScene();
   $('intro').classList.add('hidden');
   // I programmi e le texture della stanza vengono preparati durante il
@@ -429,7 +429,7 @@ requestAnimationFrame((n) => { last = n; frame(n); });
 
 // debug/test: ?debug=1 espone il gioco e permette di saltare avanti
 if (q.has('debug')) {
-  window.__g = { rats, say, get notes() { return notes; }, get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get ward() { return ward; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
+  window.__g = { get breath() { return breath; }, rats, say, get notes() { return notes; }, get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get ward() { return ward; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
     sim(sec, dt = 0.05) { for (let t = 0; t < sec; t += dt) tick(dt); },
     tp(z, yaw = 0) { player.pos.set(0.1, 1.62, z); player.yaw = yaw; player.pitch = 0; } };
 }
