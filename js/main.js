@@ -396,6 +396,7 @@ function tick(dt, hallDt = dt) {
   combat?.update(dt, time);
   time += dt;
   player.update(dt, time);
+  if (ward?.bend?.active) ward.bend.applyCamera(dt);   // ?piega=1: la camera segue il reparto piegato
   audio.setListener(camera);
   lights.update(hall?.active ? hallDt : dt, time, player.pos.z, player.pos.x);
   glassEvent.update(dt, time);
