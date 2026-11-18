@@ -54,7 +54,7 @@ export function buildRoom(mats, o) {
     if (opening && xe > left && x < right) { seg(x, Math.max(x, left), 0); seg(Math.max(x, left), Math.min(xe, right), opening.h); seg(Math.min(xe, right), xe, 0); }
     else seg(x, xe, 0);
   } };
-  endWall(z0, -1, door); if (!o.openEnd) endWall(z1, 1, o.exit || null);   // exit: varco d'uscita in fondo   // openEnd: niente parete di fondo (si continua in un'altra stanza)
+  endWall(z0 - (o.entryInset ?? 0), -1, door);   // entryInset: sposta la parete d'ingresso verso l'interno (es. stanza segreta dietro un muro: evita il z-fighting con la faccia del muro che la copre) if (!o.openEnd) endWall(z1, 1, o.exit || null);   // exit: varco d'uscita in fondo   // openEnd: niente parete di fondo (si continua in un'altra stanza)
   // pilastri in pietra lungo i muri
   const pillars = [];
   if (pillarEvery) for (let z = z0 - pillarEvery * 0.6; z > z1 + 1; z -= pillarEvery) for (const sx of [-1, 1]) {

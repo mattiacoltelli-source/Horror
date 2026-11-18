@@ -16,7 +16,7 @@ const get = (n) => cache[n] ??= new Promise((res) => loader.load(n.startsWith('.
 // toglie colore dalla texture (il blu acceso della sedia e del materasso stonerebbe con il resto): grigio-bruno sporco
 const desat = (mat, k = 0.8) => { mat.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
   { float gy = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(gy) * vec3(1.0, 0.95, 0.85), ${k.toFixed(2)}); }`); }; mat.needsUpdate = true; };
-export function createWard({ scene, mats, player, camera, audio, lights, instab, say, getMorgue, story, renderer }) {
+export function createWard({ scene, mats, player, camera, audio, lights, instab, say, getMorgue, getCellar, story, renderer, prepare }) {
   const R = { group: new THREE.Group(), state: 'idle', t: 0 };
   R.group.visible = false; scene.add(R.group);
   const { z0, w, l, h } = WARD, zFar = z0 - l, hw = w / 2;
@@ -95,7 +95,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
     { const lp = await get('../wlamp'); if (lp) for (const [x, , z] of lampPos) { const o = lp.clone(true), b = new THREE.Box3().setFromObject(o), g = new THREE.Group(); const sc = 0.5 / Math.max(b.max.x - b.min.x, b.max.y - b.min.y); o.scale.setScalar(sc); o.rotation.x = Math.PI / 2; o.updateMatrixWorld(true); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.set(-c.x, -b.max.y, -c.z); g.add(o); g.position.set(x, h - 0.02, z); R.group.add(g); } }
     R.chair = await place('wheel_chair', 0.9, 0.43 * 0.68, z0 - 11, 2.6, { dark: 0.7, desat: 0.85, scale: 0.68 });
     { const bd = await get('../hs_bed'); if (bd) { const o = bd.clone(true), b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()), g = new THREE.Group(); o.traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); m.material.color.multiplyScalar(0.55); desat(m.material, 0.6); } }); const sc = 2.0 / Math.max(b.max.x - b.min.x, b.max.z - b.min.z); o.scale.setScalar(sc); b.setFromObject(o); o.position.set(-c.x * sc, -b.min.y, -c.z * sc); g.add(o); g.position.set(-1.2, 0, z0 - 15.2); g.rotation.y = 0.04; R.group.add(g); } }
-    R.loaded = true; R.bend?.prepare();   // tutto il reparto e' arrivato: se la piega e' attiva, lo prepara a fette (con il reparto nascosto)
+    R.loaded = true; R.resolveReady?.(); R.bend?.prepare();   // tutto il reparto e' arrivato: se la piega e' attiva, lo prepara a fette (con il reparto nascosto)
   })().catch((e) => console.error('reparto: caricamento dei pezzi', e));
   // sporco sui muri e sangue vecchio
   stainDecals(R.group, [{ p: [-hw + 0.01, 1.3, z0 - 5], wall: '+x', w: 2.6, h: 2.2 }, { p: [hw - 0.01, 1.2, z0 - 9.5], wall: '-x', w: 2.4, h: 2.2, flip: true }, { p: [-hw + 0.01, 1.2, z0 - 14], wall: '+x', w: 2.4, h: 2.2, a: 0.8 }, { p: [hw - 0.01, 1.2, z0 - 4.8], wall: '-x', w: 2.4, h: 2.2 }]);
@@ -115,6 +115,22 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
   bloodDecals(R.group, [{ k: 'A', p: [-1.758, 1.1, z0 - 12.2], wall: '+x', h: 0.3, rot: 0.1 }]);
 
   // anteprima dal varco: la luce della lampada non c'e' ancora, un velo chiaro sul pavimento lo fa vedere (sparisce appena entri)
+  // Precompilazione degli shader nelle condizioni d'ingresso (reparto + obitorio accesi, con le loro luci): senza, entrando nel reparto il gioco ricompila decine di programmi e si blocca.
+  // Le luci si leggono all'inizio della compilazione: l'obitorio si accende solo per quell'istante e si rispegne subito.
+  R.ready = new Promise((res) => { R.resolveReady = res; });   // si risolve quando tutti i pezzi asincroni del reparto sono arrivati
+  R.warm = async () => {
+    if (R.warmed || !prepare) return; R.warmed = true;
+    await R.ready;   // prima devono esserci anche sedia, letto e lampada: sono quelli che ricompilavano all'ingresso
+    const m = getMorgue(), c = getCellar?.(), keep = { m: m.group.visible, w: R.group.visible, c: c?.group.visible };
+    const run = async (cfg) => {   // la visibilita' vale solo all'inizio della compilazione (li' si leggono luci e oggetti), poi si ripristina subito
+      m.group.visible = cfg.m; R.group.visible = true; if (c) c.group.visible = cfg.c;
+      let pr; try { pr = prepare(); } finally { m.group.visible = keep.m; R.group.visible = keep.w; if (c) c.group.visible = keep.c; }
+      try { await pr; } catch (e) { console.warn('reparto: precompilazione', e); }
+    };
+    await run({ m: true, c: false });    // dopo l'ingresso: reparto + obitorio, cantina spenta (la cantina si nasconde 7 s dopo il passaggio)
+    await run({ m: false, c: true });    // durante l'anteprima e il passaggio: reparto + cantina
+    await run({ m: true, c: true });     // al passaggio: reparto + cantina + obitorio acceso, per i 7 s in cui la cantina resta alle spalle
+  };
   R.onPreview = () => { R.pl = lights.addLamp(0, h - 0.12, z0 - 10 + R.pdz, 0xcfeadc); };   // la lampada vera della stanza, accesa gia' dal varco
   // PIEGA (attiva per tutti, ?piega=0 la spegne): il reparto si flette per un attimo e torna dritto prima dell'obitorio (js/world/bend.js)
   if (new URLSearchParams(location.search).get('piega') !== '0') import('../world/bend.js').then(({ createBend }) => {

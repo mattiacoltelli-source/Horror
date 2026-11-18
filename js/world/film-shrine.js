@@ -174,7 +174,7 @@ export function createFilmShrine({ group, mats, panel }) {
 
   // Arredi anneriti negli angoli, pavimento libero.
   const furniture = new THREE.Group(); furniture.name = 'arredi-consumati'; G.add(furniture);
-  for (const side of [-1, 1]) box(furniture, wood, side * (W / 2 - 0.03), 0.065, -DEPTH / 2, 0.055, 0.13, DEPTH);
+  for (const side of [-1, 1]) box(furniture, wood, side * (W / 2 - 0.03), 0.065, -(DEPTH + 0.06) / 2, 0.055, 0.13, DEPTH - 0.06);   // il battiscopa parte 6 cm dentro: la sua testata non deve toccare il piano del muro della cantina (z-fighting, rettangolo che sfarfalla)
   box(furniture, wood, 0, 0.065, -DEPTH + 0.025, W, 0.13, 0.055);
   const crate = new THREE.Group(); crate.position.set(-1.17, 0.21, -2.96); crate.rotation.y = 0.17; furniture.add(crate);
   box(crate, wood, 0, 0, 0, 0.5, 0.42, 0.38);

@@ -30,7 +30,9 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
     tell,
     // PASSAGGIO SENZA STACCO tra due stanze contigue. preview: la stanza successiva si vede oltre il varco (spostata di d); cross: appena attraversi la soglia il giocatore
     // viene riportato nelle coordinate della nuova stanza (invisibile: stessa posizione relativa) e la vecchia resta visibile alle spalle, spostata di -d, finche' non sei lontano.
-    preview(to, d, gap = 0.25) { const t = ({ ward: getWard(), tower: getTower() })[to]; t.group.position.z = d - gap; t.group.visible = true; t.preview = true; t.pdz = d - gap; t.onPreview?.(); },   // gap: la stanza dopo e' spostata di 25 cm oltre il muro, cosi' le sue pareti non spuntano coplanari ai lati del varco
+    preview(to, d, gap = 0.25) { const t = ({ ward: getWard(), tower: getTower() })[to]; t.warm?.(); t.group.position.z = d - gap; t.group.visible = true; t.preview = true; t.pdz = d - gap; t.onPreview?.(); },   // gap: la stanza dopo e' spostata di 25 cm oltre il muro, cosi' le sue pareti non spuntano coplanari ai lati del varco
+    // precompila in anticipo la stanza successiva (shader nelle condizioni d'ingresso), cosi' il passaggio non si blocca
+    warm(to) { ({ ward: getWard(), tower: getTower() })[to]?.warm?.(); },
     cross(from, to, d) {
       const f = ({ cellar: getCellar(), warehouse: getWh() })[from], t = ({ ward: getWard(), tower: getTower() })[to];
       d = t.pdz ?? d; player.pos.z -= d; f.group.position.z = -d; t.group.position.z = 0; t.preview = false; f.gone = true;
