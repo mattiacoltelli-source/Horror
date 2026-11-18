@@ -72,8 +72,8 @@ Apri `http://localhost:8123` (su desktop: WASD + trascinamento a destra).
 - Modelli dei personaggi e murales forniti dall'autore del progetto (murales generati con strumenti di immagini); licenze originali da confermare prima di una pubblicazione più ampia.
 - Three.js: MIT.
 
-## Effetto della piega nel reparto (sperimentale)
-Con `?piega=1` nel link (es. `?start=reparto&piega=1`) il corridoio del reparto si flette a S e si torce un po' sul proprio asse (circa 27° al massimo) per un attimo (circa 11 s), poi torna dritto prima dell'obitorio. Collisioni, posizioni ed eventi non cambiano: cambia solo il disegno (`js/world/bend.js`, stessa matematica di `labs/space-fold`). Senza il parametro non viene caricato niente. Con «movimento ridotto» del sistema l'effetto è più piccolo e senza allargamento del campo visivo.
+## Effetto della piega nel reparto
+Di default (in tutte le versioni; `?piega=0` la spegne) il corridoio del reparto si flette a S e si torce un po' sul proprio asse (circa 27° al massimo) per un attimo (circa 11 s), poi torna dritto prima dell'obitorio. Collisioni, posizioni ed eventi non cambiano: cambia solo il disegno (`js/world/bend.js`, stessa matematica di `labs/space-fold`). Con `?piega=0` non viene caricato niente. Con «movimento ridotto» del sistema l'effetto è più piccolo e senza allargamento del campo visivo.
 
 ## App installabile e aggiornamenti
 Il gioco è una PWA: icona sulla home, schermo intero, funziona offline dopo il primo avvio. Quando esce una nuova versione compare il banner **«Aggiornamento disponibile · AGGIORNA»** (controllo a ogni apertura e ogni 30 minuti).

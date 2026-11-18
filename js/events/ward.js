@@ -116,8 +116,8 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
 
   // anteprima dal varco: la luce della lampada non c'e' ancora, un velo chiaro sul pavimento lo fa vedere (sparisce appena entri)
   R.onPreview = () => { R.pl = lights.addLamp(0, h - 0.12, z0 - 10 + R.pdz, 0xcfeadc); };   // la lampada vera della stanza, accesa gia' dal varco
-  // PIEGA (solo con ?piega=1): il reparto si flette per un attimo e torna dritto prima dell'obitorio (js/world/bend.js)
-  if (new URLSearchParams(location.search).get('piega') === '1') import('../world/bend.js').then(({ createBend }) => {
+  // PIEGA (attiva per tutti, ?piega=0 la spegne): il reparto si flette per un attimo e torna dritto prima dell'obitorio (js/world/bend.js)
+  if (new URLSearchParams(location.search).get('piega') !== '0') import('../world/bend.js').then(({ createBend }) => {
     R.bend = createBend({ group: R.group, z0, length: l, camera, lights, audio, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches, compile: () => renderer?.compileAsync?.(R.group, camera, scene) });
     if (R.loaded) R.bend.prepare();   // se i pezzi del reparto ci sono gia', si prepara subito (a fette, con il reparto nascosto)
   });
