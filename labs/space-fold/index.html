@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#070d0c">
+  <link rel="icon" href="data:,">
+  <base href="../../">
+  <title>SPACE FOLD · Laboratorio Horror</title>
+  <link rel="stylesheet" href="labs/space-fold/style.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three/three.module.min.js"}}</script>
+</head>
+<body>
+  <canvas id="gl" aria-label="Corridoio tridimensionale giocabile"></canvas>
+  <header><span>SPACE FOLD <small>REPARTO</small></span><button id="pause" hidden aria-label="Pausa">Ⅱ</button></header>
+  <p id="hint" aria-live="polite"></p>
+  <div id="stick"><div></div></div>
+  <div id="crosshair" hidden></div>
+  <section id="overlay">
+    <div class="panel">
+      <p class="eyebrow">NON GIRARTI · ESPERIMENTO LOCALE</p>
+      <h1>Lo spazio<br>non tiene.</h1>
+      <p id="status" role="status">SPACE FOLD è disattivato.</p>
+      <p id="instructions" hidden>Sinistra: cammina. Destra: guarda.<br>Puoi fermarti e tornare indietro, anche sulla curva.</p>
+      <label><input id="reduced" type="checkbox"> Movimento ridotto</label>
+      <label><input id="sound" type="checkbox" checked> Suono</label>
+      <button id="start" hidden>Entra nel reparto</button>
+      <a id="enable" href="labs/space-fold/?spaceFold=1">Attiva il prototipo</a>
+      <button id="restart" hidden>Ricomincia la prova</button>
+      <small id="note">La versione pubblica e i salvataggi del gioco restano separati.</small>
+    </div>
+  </section>
+  <p id="metrics" hidden></p>
+  <script type="module" src="labs/space-fold/boot.js"></script>
+</body>
+</html>

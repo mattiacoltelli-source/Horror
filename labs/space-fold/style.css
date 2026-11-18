@@ -1,0 +1,27 @@
+:root {color-scheme:dark;font-family:Georgia,serif;background:#070d0c;color:#e0dfcf}
+* {box-sizing:border-box}
+html,body {margin:0;width:100%;height:100%;overflow:hidden;touch-action:none;overscroll-behavior:none}
+#gl {position:fixed;inset:0;width:100%;height:100%;display:block}
+header {position:fixed;top:env(safe-area-inset-top,0px);left:0;width:100%;padding:17px 20px;display:flex;align-items:center;justify-content:space-between;pointer-events:none;font:11px/1.5 system-ui;letter-spacing:.14em;color:#c1cbc2;text-shadow:0 2px 6px #000}
+header small {display:block;font-size:9px;opacity:.65;letter-spacing:.24em}
+button,a,input {touch-action:manipulation}
+button,a {pointer-events:auto;border:1px solid #52645b;background:#15241feb;color:#e0dfcf;font:13px system-ui;padding:12px 18px;border-radius:3px;text-align:center;cursor:pointer;text-decoration:none}
+button:focus-visible,a:focus-visible,input:focus-visible {outline:2px solid #f0d7a0;outline-offset:4px}
+button:disabled {opacity:.45;cursor:wait}
+#pause {padding:10px 14px}
+#overlay {position:fixed;inset:0;display:grid;place-items:center;background:linear-gradient(#050807b8,#050807ed);padding:25px}
+.panel {max-width:380px;width:100%}
+.eyebrow {font:10px/1.5 system-ui;letter-spacing:.18em;color:#9ab2a2}
+h1 {font-weight:400;font-size:clamp(38px,9vw,58px);line-height:1.06;margin:22px 0 25px}
+#status,#instructions {font:14px/1.6 system-ui;color:#bec8bf}
+label {display:flex;align-items:center;gap:10px;margin:14px 0;font:13px system-ui}
+input {accent-color:#95b3a1;width:18px;height:18px}
+#start,#enable,#restart {display:block;width:100%;margin:22px 0 15px}
+#note {display:block;font:11px/1.6 system-ui;color:#7e9185}
+#hint {position:fixed;bottom:max(35px,env(safe-area-inset-bottom));left:16%;width:68%;text-align:center;font:12px/1.6 system-ui;letter-spacing:.04em;text-shadow:0 2px 8px #000;pointer-events:none;transition:opacity .5s;color:#bbc8bb}
+#stick {position:fixed;left:0;top:0;transform:translate(-50%,-50%);width:108px;height:108px;border:1px solid #c3d1bd50;border-radius:50%;background:#b7cdbb0b;opacity:0;pointer-events:none}
+#stick>div {position:absolute;left:37px;top:37px;width:32px;height:32px;border-radius:50%;background:#c1d3c459}
+#crosshair {position:fixed;left:50%;top:50%;width:3px;height:3px;border-radius:50%;background:#e4f0d580;pointer-events:none}
+#metrics {position:fixed;top:62px;left:20px;font:10px/1.6 monospace;color:#bcd2bc;pointer-events:none}
+[hidden] {display:none!important}
+@media(prefers-reduced-motion:reduce) {* {transition:none!important}}
