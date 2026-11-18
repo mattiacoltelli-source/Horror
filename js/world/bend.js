@@ -9,7 +9,7 @@ const S0 = 2, SL = 13, N = 40, STEP = 0.5, ROLLK = 0.8, CY = 1.25;   // torsione
 const smooth5 = (v) => { const u = Math.max(0, Math.min(1, v)); return u * u * u * (10 + u * (-15 + 6 * u)); };
 const smoothstep = (a, b, v) => { const u = Math.max(0, Math.min(1, (v - a) / (b - a))); return u * u * (3 - 2 * u); };
 
-export function createBend({ group, z0, length = 20, camera, lights, audio, reduced = false }) {
+export function createBend({ group, z0, length = 20, camera, lights, audio, reduced = false, compile = null }) {
   const B = { active: false, state: 'idle', t: 0, A: 0, follow: 0, followR: 0, k: 1 };
   const AMAX = reduced ? 0.4 : 0.6, SLOW = reduced ? 2 : 1;
   const U = { uBA: { value: 0 }, uBY: { value: new Float32Array(N + 1) }, uBZ: { value: new Float32Array(N + 1) } };
@@ -121,19 +121,29 @@ vec3 bPos(vec3 w, out float th, out float ro) {
     mesh.removeFromParent(); mesh.position.set(0, 0, 0); mesh.quaternion.identity(); mesh.scale.set(1, 1, 1); mesh.updateMatrix();
     group.add(mesh); mesh.userData.bent = true;
   }
-  const visibleChain = (o) => { for (let p = o; p && p !== group.parent; p = p.parent) if (p.visible === false) return false; return true; };
+  const visibleChain = (o) => { for (let p = o; p && p !== group; p = p.parent) if (p.visible === false) return false; return true; };   // il gruppo del reparto puo' essere nascosto: conta solo la catena sotto di lui
   // Prepara tutto il reparto: i pezzi grandi e statici vengono divisi, tutti i materiali ricevono la piega. Si puo' richiamare piu' volte (i pezzi arrivano in asincrono).
-  B.refresh = () => {
-    const meshes = []; group.traverse((o) => { if (o.isMesh && !o.isInstancedMesh && !o.isSkinnedMesh) meshes.push(o); });
-    const box = new THREE.Box3();
-    for (const m of meshes) {
-      if (m.userData.bent === undefined && m.geometry && visibleChain(m)) {
-        m.updateWorldMatrix(true, false); box.setFromObject(m);
-        if (box.max.z - box.min.z > 0.7 && !m.geometry.userData.noBend) { try { bake(m); } catch (e) { console.warn('piega: pezzo non diviso', m.name, e); m.userData.bent = false; } } else m.userData.bent = false;
-      }
-      m.frustumCulled = false;
-      for (const mat of [].concat(m.material || [])) patchMaterial(mat);
+  const meshes = [];
+  const todo = () => { const l = []; group.traverse((o) => { if (o.isMesh && !o.isInstancedMesh && !o.isSkinnedMesh && (o.userData.bent === undefined || [].concat(o.material || []).some((m) => !m.userData.bendPatched))) l.push(o); }); return l; };
+  const box = new THREE.Box3();
+  const one = (m) => {
+    if (m.userData.bent === undefined && m.geometry && visibleChain(m)) {
+      m.updateWorldMatrix(true, false); box.setFromObject(m);
+      if (box.max.z - box.min.z > 0.7) { try { bake(m); } catch (e) { console.warn('piega: pezzo non diviso', m.name, e); m.userData.bent = false; } } else m.userData.bent = false;
     }
+    if (!meshes.includes(m)) meshes.push(m);
+    m.frustumCulled = !B.active;   // il riquadro di un pezzo piegato non e' piu' quello originale: senza piega si torna al taglio normale (meno disegno)
+    for (const mat of [].concat(m.material || [])) patchMaterial(mat);
+  };
+  B.prepared = false;
+  // Versione sincrona (ripiego, se qualcosa arriva tardi): prepara solo i pezzi non ancora pronti.
+  B.refresh = () => { const l = todo(); for (const m of l) one(m); return l.length; };
+  // Versione "a fette": si fa mentre il reparto e' nascosto, due pezzi per volta, poi si precompilano gli shader; cosi' all'ingresso non resta nulla da fare.
+  B.prepare = async () => {
+    const l = todo();
+    for (let i = 0; i < l.length; i++) { one(l[i]); if (i % 2 === 1) await new Promise((r) => setTimeout(r, 0)); }
+    try { await compile?.(); } catch (e) { console.warn('piega: precompilazione', e); }
+    B.prepared = true;
   };
 
   // ---------- sequenza: sale in ~4 s, resta ~2,5 s, torna dritta in ~4,5 s; sparisce comunque man mano che ci si avvicina all'obitorio ----------
@@ -141,6 +151,7 @@ vec3 bPos(vec3 w, out float th, out float ro) {
   B.setA = (A) => {
     if (Math.abs(A - B.A) < 1e-4 && !(A === 0 && B.A !== 0)) return;
     const was = B.active; B.A = A; rebuild(A); B.active = A > 1e-4;
+    if (B.active !== was) for (const m of meshes) m.frustumCulled = !B.active;
     if (B.active) lights.mapPoint = B.mapPoint; else if (was) lights.mapPoint = null;
   };
   B.update = (dt, p) => {

@@ -16,7 +16,7 @@ const get = (n) => cache[n] ??= new Promise((res) => loader.load(n.startsWith('.
 // toglie colore dalla texture (il blu acceso della sedia e del materasso stonerebbe con il resto): grigio-bruno sporco
 const desat = (mat, k = 0.8) => { mat.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
   { float gy = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(gy) * vec3(1.0, 0.95, 0.85), ${k.toFixed(2)}); }`); }; mat.needsUpdate = true; };
-export function createWard({ scene, mats, player, camera, audio, lights, instab, say, getMorgue, story }) {
+export function createWard({ scene, mats, player, camera, audio, lights, instab, say, getMorgue, story, renderer }) {
   const R = { group: new THREE.Group(), state: 'idle', t: 0 };
   R.group.visible = false; scene.add(R.group);
   const { z0, w, l, h } = WARD, zFar = z0 - l, hw = w / 2;
@@ -95,7 +95,8 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
     { const lp = await get('../wlamp'); if (lp) for (const [x, , z] of lampPos) { const o = lp.clone(true), b = new THREE.Box3().setFromObject(o), g = new THREE.Group(); const sc = 0.5 / Math.max(b.max.x - b.min.x, b.max.y - b.min.y); o.scale.setScalar(sc); o.rotation.x = Math.PI / 2; o.updateMatrixWorld(true); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.set(-c.x, -b.max.y, -c.z); g.add(o); g.position.set(x, h - 0.02, z); R.group.add(g); } }
     R.chair = await place('wheel_chair', 0.9, 0.43 * 0.68, z0 - 11, 2.6, { dark: 0.7, desat: 0.85, scale: 0.68 });
     { const bd = await get('../hs_bed'); if (bd) { const o = bd.clone(true), b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()), g = new THREE.Group(); o.traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); m.material.color.multiplyScalar(0.55); desat(m.material, 0.6); } }); const sc = 2.0 / Math.max(b.max.x - b.min.x, b.max.z - b.min.z); o.scale.setScalar(sc); b.setFromObject(o); o.position.set(-c.x * sc, -b.min.y, -c.z * sc); g.add(o); g.position.set(-1.2, 0, z0 - 15.2); g.rotation.y = 0.04; R.group.add(g); } }
-  })();
+    R.loaded = true; R.bend?.prepare();   // tutto il reparto e' arrivato: se la piega e' attiva, lo prepara a fette (con il reparto nascosto)
+  })().catch((e) => console.error('reparto: caricamento dei pezzi', e));
   // sporco sui muri e sangue vecchio
   stainDecals(R.group, [{ p: [-hw + 0.01, 1.3, z0 - 5], wall: '+x', w: 2.6, h: 2.2 }, { p: [hw - 0.01, 1.2, z0 - 9.5], wall: '-x', w: 2.4, h: 2.2, flip: true }, { p: [-hw + 0.01, 1.2, z0 - 14], wall: '+x', w: 2.4, h: 2.2, a: 0.8 }, { p: [hw - 0.01, 1.2, z0 - 4.8], wall: '-x', w: 2.4, h: 2.2 }]);
   patchDecals(R.group, [{ img: 'assets/tex/pt_plaster.webp', p: [-hw + 0.016, 1.85, z0 - 2.6], wall: '+x', w: 1.9, h: 1.3 }, { img: 'assets/tex/pt_plaster.webp', p: [hw - 0.016, 1.85, z0 - 4.2], wall: '-x', w: 1.7, h: 1.2, rot: 0.04 }]);   // corridoio: intonaco scrostato e muro macchiato sopra le piastrelle
@@ -117,8 +118,8 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
   R.onPreview = () => { R.pl = lights.addLamp(0, h - 0.12, z0 - 10 + R.pdz, 0xcfeadc); };   // la lampada vera della stanza, accesa gia' dal varco
   // PIEGA (solo con ?piega=1): il reparto si flette per un attimo e torna dritto prima dell'obitorio (js/world/bend.js)
   if (new URLSearchParams(location.search).get('piega') === '1') import('../world/bend.js').then(({ createBend }) => {
-    R.bend = createBend({ group: R.group, z0, length: l, camera, lights, audio, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches });
-    if (R.group.visible) R.bend.refresh();
+    R.bend = createBend({ group: R.group, z0, length: l, camera, lights, audio, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches, compile: () => renderer?.compileAsync?.(R.group, camera, scene) });
+    if (R.loaded) R.bend.prepare();   // se i pezzi del reparto ci sono gia', si prepara subito (a fette, con il reparto nascosto)
   });
   R.bounds = [-hw + 0.45, hw - 0.45, zFar - 14, z0 - 0.6];   // il limite in fondo (l'obitorio) e' aggiornato a ogni fotogramma
   R.enter = (seamless = false) => {
@@ -126,8 +127,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
     player.box = R.bounds; if (!seamless) { player.pos.set(0, 1.62, z0 - 1.4); player.yaw = 0; player.pitch = 0; player.frozen = false; }   // arrivando dalla cantina il giocatore e' gia' qui
     lights.setLamps(lampPos, 2.1, 0xcfeadc); lights.grade({ fog: 0x050a08, hemi: [0x2c4a44, 0x08100e, 0.4] }); scene.fog.density = 0.05; audio.duck(1, 1.5); instab.set(0.15, 6);
     lights.lamp(0, 'pulse');
-    if (R.bend) { R.bend.reset(); R.bend.refresh(); }
-    setTimeout(() => R.bend?.refresh(), 2500);   // i pezzi del reparto arrivano in asincrono: si preparano anche quelli
+    if (R.bend) { R.bend.reset(); if (!R.bend.prepared) R.bend.refresh(); }   // normalmente e' gia' pronto: il ripiego serve solo se qualcosa e' arrivato tardi
   };
   R.leave = () => { R.group.visible = false; if (R.bend) { R.bend.setA(0); R.bend.restoreFov(); } };
   R.update = (dt) => {
