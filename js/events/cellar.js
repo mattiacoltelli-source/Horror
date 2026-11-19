@@ -19,6 +19,7 @@ import { createFingerWriter } from '../world/fingerwrite.js';
 import { rgbPulse } from '../ui/rgbshift.js';
 import { createTorch } from './torch.js';
 import { createMirrorFrame } from '../world/mirror-frame.js';
+import { createBurntRoom } from '../world/burnt-room.js';
 import { createChapel } from '../world/chapel.js';
 import { createKeypad } from './keypad.js';
 import { createPortal } from '../world/portal.js';
@@ -49,38 +50,20 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const red = redLight(C.group, { x: CELLAR.w / 2 - 0.1, y: 2.5, z: CELLAR.z0 - 19.5, dir: 1 });   // luce rossa d'emergenza vicino all'uscita
   // specchio
   const mw = 1.7, mh = 2.4;
-  const mirror = new Reflector(new THREE.PlaneGeometry(mw, mh), { textureWidth: globalThis.__quality === 'low' ? 96 : 144, textureHeight: globalThis.__quality === 'low' ? 144 : 216, color: new THREE.Color(0x777b78), clipBias: 0.003 });
+  // lo specchio mostra un ALTRO ambiente: la cantina bruciata (scena minuscola, js/world/burnt-room.js), vista con la parallasse giusta come un vero riflesso.
+  // E' molto piu' leggera del riflesso della stanza vera e si aggiorna un disegno si' e uno no.
+  const burnt = createBurntRoom({ z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h });
+  const mirror = new Reflector(new THREE.PlaneGeometry(mw, mh), { textureWidth: globalThis.__quality === 'low' ? 160 : 240, textureHeight: globalThis.__quality === 'low' ? 240 : 352, color: new THREE.Color(0x929490), clipBias: 0.003, multisample: 2 });
   mirror.position.copy(MIRROR); mirror.rotation.y = Math.PI / 2; C.group.add(mirror);
   mirror.camera.userData.planarReflection = true;
-  // nel riflesso lo z-fighting del pavimento (pozzanghere, veli di luce, tombini incassati) fa comparire "quadratini" neri: durante il render dello specchio quegli oggetti sono nascosti
-  { const orig = mirror.onBeforeRender; let flat = null;
-    let tick = 0, lastT = 0;   // il riflesso (dietro il vetro appannato) si aggiorna ogni 4 disegni: la stanza viene ridisegnata molto meno
+  { const orig = mirror.onBeforeRender; let tick = 0, lastT = 0;
     mirror.onBeforeRender = function (...a) {
-      { const nowT = performance.now(); if (nowT - lastT > 120) tick = 0; lastT = nowT; if ((tick++ & 3) !== 0) return; }
-      flat ??= (() => { const L = []; C.group.traverse((o) => { if (o.isMesh && o !== mirror && o.position.y < 0.035 && ((o.geometry.type === 'PlaneGeometry' && o.position.y > 0.001) || (o.material && /manhole/.test(o.material.name || '')))) L.push(o); }); return L; })();
-      const vis = flat.map((o) => o.visible), fv = frame.visible; flat.forEach((o) => (o.visible = false)); frame.visible = false;   // la cornice non serve nel riflesso
-      try { C.shrine.withClosedReflection(() => withClosedChapelReflection(() => orig.apply(this, a))); }
-      finally { flat.forEach((o, i) => (o.visible = vis[i])); frame.visible = fv; }
+      const nowT = performance.now(); if (nowT - lastT > 120) tick = 0; lastT = nowT; if ((tick++ & 1) !== 0) return;
+      burnt.update(nowT / 1000);
+      const sil = [fig, far1, runM]; burnt.scene.add(...sil);   // le sagome degli eventi (dietro di te, ai margini) compaiono anche nello specchio bruciato
+      a[1] = burnt.scene;
+      try { orig.apply(this, a); } finally { C.group.add(...sil); }
     }; }
-  // vetro APPANNATO: velo di condensa lattiginoso, piu' fitto in basso e ai bordi, con una zona sfregata dal passaggio di una mano dove si intravede il riflesso, gocce e colature
-  const DW = 340, DH = 480, dc = document.createElement('canvas'); dc.width = DW; dc.height = DH; const dg = dc.getContext('2d');
-  const rr = (() => { let sd = 31; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })();
-  const blur = (w, h, f, alpha = 1, op = 'source-over') => { const t = document.createElement('canvas'); t.width = w; t.height = h; const tg = t.getContext('2d'); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { tg.fillStyle = f(x / w, y / h, rr()); tg.fillRect(x, y, 1, 1); } dg.save(); dg.globalCompositeOperation = op; dg.globalAlpha = alpha; dg.imageSmoothingEnabled = true; dg.imageSmoothingQuality = 'high'; dg.drawImage(t, 0, 0, DW, DH); dg.restore(); };
-  dg.fillStyle = 'rgba(112,119,117,.68)'; dg.fillRect(0, 0, DW, DH);                                              // velo di condensa su tutto il vetro
-  { const gr = dg.createLinearGradient(0, 0, 0, DH); gr.addColorStop(0, 'rgba(120,128,126,.0)'); gr.addColorStop(1, 'rgba(120,128,126,.22)'); dg.fillStyle = gr; dg.fillRect(0, 0, DW, DH); }   // piu' fitto in basso
-  blur(10, 14, (u, v, r) => `rgba(205,212,210,${r * 0.5})`, 0.5); blur(26, 36, (u, v, r) => `rgba(70,78,76,${r * 0.45})`, 0.3);   // variazioni morbide di densita'
-  // zona sfregata: pennellate morbide e irregolari + alone centrale; li' il vetro e' quasi trasparente
-  { const wipe = (x, y, r, a) => { const g = dg.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(0.6, `rgba(0,0,0,${a * 0.6})`); g.addColorStop(1, 'rgba(0,0,0,0)'); dg.fillStyle = g; dg.fillRect(x - r, y - r, 2 * r, 2 * r); };
-    dg.save(); dg.globalCompositeOperation = 'destination-out';
-    wipe(DW * 0.5, DH * 0.44, DH * 0.34, 0.62);
-    dg.restore(); }
-  // gocce di condensa (piu' fitte in alto) e colature: la goccia scivola e lascia una scia piu' pulita
-  for (let i = 0; i < 40; i++) { const x = rr() * DW, y = rr() * DH * (rr() < 0.7 ? 0.5 : 1), len = 24 + rr() * 110; dg.save(); dg.globalCompositeOperation = 'destination-out'; const gr = dg.createLinearGradient(0, y, 0, y + len); gr.addColorStop(0, 'rgba(0,0,0,.0)'); gr.addColorStop(0.15, 'rgba(0,0,0,.5)'); gr.addColorStop(1, 'rgba(0,0,0,.35)'); dg.fillStyle = gr; dg.fillRect(x - 0.9, y, 1.8, len); dg.restore();
-    dg.fillStyle = 'rgba(225,235,233,.55)'; dg.beginPath(); dg.ellipse(x, y + len, 2.2, 3.2, 0, 0, 7); dg.fill(); dg.strokeStyle = 'rgba(25,30,30,.4)'; dg.lineWidth = 0.8; dg.stroke(); }
-  for (let i = 0; i < 700; i++) { const x = rr() * DW, y = rr() * DH, r = 0.6 + rr() * 1.4; dg.fillStyle = `rgba(215,225,223,${0.12 + rr() * 0.3})`; dg.beginPath(); dg.arc(x, y, r, 0, 7); dg.fill(); }   // microgocce
-  const fogTex = new THREE.CanvasTexture(dc); fogTex.colorSpace = THREE.SRGBColorSpace;
-  const dirt = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), new THREE.MeshStandardMaterial({ map: fogTex, roughness: 0.9, metalness: 0, transparent: true, depthWrite: false, emissive: 0x050606 }));
-  dirt.position.copy(MIRROR).add(new THREE.Vector3(0.004, 0, 0)); dirt.rotation.y = Math.PI / 2; C.group.add(dirt);
   const frame = createMirrorFrame({ hx: mw / 2, hy: mh / 2 }); frame.position.copy(MIRROR); frame.position.x += 0.006; frame.rotation.y = Math.PI / 2; C.group.add(frame);   // cornice barocca di legno e oro consumato
 
   // nello specchio: mai un modello visibile. Un'ombra scura che compare e scompare (vedo / non vedo) e impronte di sangue
