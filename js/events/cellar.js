@@ -49,34 +49,38 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const red = redLight(C.group, { x: CELLAR.w / 2 - 0.1, y: 2.5, z: CELLAR.z0 - 19.5, dir: 1 });   // luce rossa d'emergenza vicino all'uscita
   // specchio
   const mw = 1.7, mh = 2.4;
-  const mirror = new Reflector(new THREE.PlaneGeometry(mw, mh), { textureWidth: globalThis.__quality === 'low' ? 128 : 192, textureHeight: globalThis.__quality === 'low' ? 192 : 288, color: new THREE.Color(0x6b6e69), clipBias: 0.003 });
+  const mirror = new Reflector(new THREE.PlaneGeometry(mw, mh), { textureWidth: globalThis.__quality === 'low' ? 96 : 144, textureHeight: globalThis.__quality === 'low' ? 144 : 216, color: new THREE.Color(0x777b78), clipBias: 0.003 });
   mirror.position.copy(MIRROR); mirror.rotation.y = Math.PI / 2; C.group.add(mirror);
   mirror.camera.userData.planarReflection = true;
   // nel riflesso lo z-fighting del pavimento (pozzanghere, veli di luce, tombini incassati) fa comparire "quadratini" neri: durante il render dello specchio quegli oggetti sono nascosti
   { const orig = mirror.onBeforeRender; let flat = null;
+    let tick = 0, lastT = 0;   // il riflesso (dietro il vetro appannato) si aggiorna ogni 4 disegni: la stanza viene ridisegnata molto meno
     mirror.onBeforeRender = function (...a) {
+      { const nowT = performance.now(); if (nowT - lastT > 120) tick = 0; lastT = nowT; if ((tick++ & 3) !== 0) return; }
       flat ??= (() => { const L = []; C.group.traverse((o) => { if (o.isMesh && o !== mirror && o.position.y < 0.035 && ((o.geometry.type === 'PlaneGeometry' && o.position.y > 0.001) || (o.material && /manhole/.test(o.material.name || '')))) L.push(o); }); return L; })();
       const vis = flat.map((o) => o.visible), fv = frame.visible; flat.forEach((o) => (o.visible = false)); frame.visible = false;   // la cornice non serve nel riflesso
       try { C.shrine.withClosedReflection(() => withClosedChapelReflection(() => orig.apply(this, a))); }
       finally { flat.forEach((o, i) => (o.visible = vis[i])); frame.visible = fv; }
     }; }
-  // vetro molto sporco e vecchio: ai bordi muffa e unto quasi opachi, al centro una zona piu' pulita dove si intravede il riflesso; graffi, colature e macchie senza contorno
+  // vetro APPANNATO: velo di condensa lattiginoso, piu' fitto in basso e ai bordi, con una zona sfregata dal passaggio di una mano dove si intravede il riflesso, gocce e colature
   const DW = 340, DH = 480, dc = document.createElement('canvas'); dc.width = DW; dc.height = DH; const dg = dc.getContext('2d');
-  const blur = (w, h, draw, alpha = 1, op = 'source-over') => { const t = document.createElement('canvas'); t.width = w; t.height = h; const tg = t.getContext('2d'); draw(tg, w, h); dg.save(); dg.globalCompositeOperation = op; dg.globalAlpha = alpha; dg.imageSmoothingEnabled = true; dg.imageSmoothingQuality = 'high'; dg.drawImage(t, 0, 0, DW, DH); dg.restore(); };
-  const cells = (w, h, f) => (tg) => { for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { tg.fillStyle = f(x / w, y / h, Math.random()); tg.fillRect(x, y, 1, 1); } };
-  dg.fillStyle = 'rgba(66,72,64,.82)'; dg.fillRect(0, 0, DW, DH);                                   // velo di sporco su tutto il vetro
-  blur(9, 13, cells(9, 13, (u, v, r) => `rgba(8,10,8,${r * 0.8})`), 0.32);                          // grandi zone scure
-  blur(22, 32, cells(22, 32, (u, v, r) => `rgba(8,10,8,${r * r * 0.9})`), 0.3);                      // macchie medie
-  blur(46, 66, cells(46, 66, (u, v, r) => `rgba(120,128,114,${r * 0.6})`), 0.5);                      // chiazze di unto piu' chiare
-  blur(14, 20, cells(14, 20, (u, v, r) => { const d = Math.hypot((u - 0.5) * 1.1, v - 0.5); return d > 0.28 && r > 0.55 ? `rgba(48,78,36,${(r - 0.55) * 2.0 * Math.min(1, (d - 0.28) * 3)})` : 'rgba(0,0,0,0)'; }), 0.95);   // muffa verde verso i bordi
-  blur(30, 44, cells(30, 44, (u, v, r) => { const d = Math.hypot((u - 0.5) * 1.1, v - 0.5); return d > 0.3 && r > 0.62 ? `rgba(38,62,30,${(r - 0.62) * 1.8})` : 'rgba(0,0,0,0)'; }), 0.7);
-  { const gr = dg.createRadialGradient(DW * 0.5, DH * 0.42, 0, DW * 0.5, DH * 0.42, DH * 0.5); gr.addColorStop(0, 'rgba(0,0,0,.72)'); gr.addColorStop(0.45, 'rgba(0,0,0,.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-    dg.save(); dg.globalCompositeOperation = 'destination-out'; dg.save(); dg.translate(DW * 0.5, DH * 0.42); dg.scale(0.78, 1); dg.translate(-DW * 0.5, -DH * 0.42); dg.fillStyle = gr; dg.fillRect(0, 0, DW, DH); dg.restore(); dg.restore(); }   // zona centrale quasi pulita: il riflesso si intravede
-  blur(18, 26, cells(18, 26, (u, v, r) => `rgba(0,0,0,${r * 0.35})`), 0.6, 'destination-out');      // il pulito e' irregolare, non un cerchio
-  for (let i = 0; i < 22; i++) { const x = Math.random() * DW, y0 = Math.random() * DH * 0.35, len = 60 + Math.random() * 260, w = 1 + Math.random() * 3.2, g2 = dg.createLinearGradient(0, y0, 0, y0 + len); g2.addColorStop(0, 'rgba(6,8,6,.55)'); g2.addColorStop(1, 'rgba(6,8,6,0)'); dg.fillStyle = g2; dg.fillRect(x, y0, w, len); }   // colature dall'alto
-  dg.lineCap = 'round'; for (let i = 0; i < 46; i++) { const x = DW * (0.2 + Math.random() * 0.6), y = DH * (0.1 + Math.random() * 0.7), a = Math.random() * 6.283, l = 14 + Math.random() * 70; dg.strokeStyle = `rgba(205,208,196,${0.12 + Math.random() * 0.22})`; dg.lineWidth = 0.5 + Math.random() * 0.7; dg.beginPath(); dg.moveTo(x, y); dg.quadraticCurveTo(x + Math.cos(a + 0.4) * l * 0.5, y + Math.sin(a + 0.4) * l * 0.5, x + Math.cos(a) * l, y + Math.sin(a) * l); dg.stroke(); }   // graffi
-  for (let i = 0; i < 1400; i++) { dg.fillStyle = `rgba(10,12,10,${Math.random() * 0.5})`; dg.fillRect(Math.random() * DW, Math.random() * DH, 0.6 + Math.random() * 1.6, 0.6 + Math.random() * 1.6); }   // puntini fini
-  const dirt = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(dc), transparent: true, depthWrite: false }));
+  const rr = (() => { let sd = 31; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })();
+  const blur = (w, h, f, alpha = 1, op = 'source-over') => { const t = document.createElement('canvas'); t.width = w; t.height = h; const tg = t.getContext('2d'); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { tg.fillStyle = f(x / w, y / h, rr()); tg.fillRect(x, y, 1, 1); } dg.save(); dg.globalCompositeOperation = op; dg.globalAlpha = alpha; dg.imageSmoothingEnabled = true; dg.imageSmoothingQuality = 'high'; dg.drawImage(t, 0, 0, DW, DH); dg.restore(); };
+  dg.fillStyle = 'rgba(150,158,156,.68)'; dg.fillRect(0, 0, DW, DH);                                              // velo di condensa su tutto il vetro
+  { const gr = dg.createLinearGradient(0, 0, 0, DH); gr.addColorStop(0, 'rgba(120,128,126,.0)'); gr.addColorStop(1, 'rgba(120,128,126,.22)'); dg.fillStyle = gr; dg.fillRect(0, 0, DW, DH); }   // piu' fitto in basso
+  blur(10, 14, (u, v, r) => `rgba(205,212,210,${r * 0.5})`, 0.5); blur(26, 36, (u, v, r) => `rgba(70,78,76,${r * 0.45})`, 0.3);   // variazioni morbide di densita'
+  // zona sfregata: pennellate morbide e irregolari + alone centrale; li' il vetro e' quasi trasparente
+  { const wipe = (x, y, r, a) => { const g = dg.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(0.6, `rgba(0,0,0,${a * 0.6})`); g.addColorStop(1, 'rgba(0,0,0,0)'); dg.fillStyle = g; dg.fillRect(x - r, y - r, 2 * r, 2 * r); };
+    dg.save(); dg.globalCompositeOperation = 'destination-out';
+    wipe(DW * 0.5, DH * 0.44, DH * 0.34, 0.62);
+    for (let k = 0; k < 3; k++) { let x = DW * (0.3 + rr() * 0.4), y = DH * (0.12 + rr() * 0.2); const dx = (rr() - 0.5) * 30, dy = 26 + rr() * 8; for (let i = 0; i < 18; i++) { wipe(x + Math.sin(i * 0.5) * 14, y, 20 + rr() * 8, 0.5); x += dx * 0.3; y += dy; } }   // tre strisciate di dita dall'alto
+    dg.restore(); }
+  // gocce di condensa (piu' fitte in alto) e colature: la goccia scivola e lascia una scia piu' pulita
+  for (let i = 0; i < 40; i++) { const x = rr() * DW, y = rr() * DH * (rr() < 0.7 ? 0.5 : 1), len = 24 + rr() * 110; dg.save(); dg.globalCompositeOperation = 'destination-out'; const gr = dg.createLinearGradient(0, y, 0, y + len); gr.addColorStop(0, 'rgba(0,0,0,.0)'); gr.addColorStop(0.15, 'rgba(0,0,0,.5)'); gr.addColorStop(1, 'rgba(0,0,0,.35)'); dg.fillStyle = gr; dg.fillRect(x - 0.9, y, 1.8, len); dg.restore();
+    dg.fillStyle = 'rgba(225,235,233,.55)'; dg.beginPath(); dg.ellipse(x, y + len, 2.2, 3.2, 0, 0, 7); dg.fill(); dg.strokeStyle = 'rgba(25,30,30,.4)'; dg.lineWidth = 0.8; dg.stroke(); }
+  for (let i = 0; i < 700; i++) { const x = rr() * DW, y = rr() * DH, r = 0.6 + rr() * 1.4; dg.fillStyle = `rgba(215,225,223,${0.12 + rr() * 0.3})`; dg.beginPath(); dg.arc(x, y, r, 0, 7); dg.fill(); }   // microgocce
+  const fogTex = new THREE.CanvasTexture(dc); fogTex.colorSpace = THREE.SRGBColorSpace;
+  const dirt = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), new THREE.MeshStandardMaterial({ map: fogTex, roughness: 0.9, metalness: 0, transparent: true, depthWrite: false, emissive: 0x0b0d0d }));
   dirt.position.copy(MIRROR).add(new THREE.Vector3(0.004, 0, 0)); dirt.rotation.y = Math.PI / 2; C.group.add(dirt);
   const frame = createMirrorFrame({ hx: mw / 2, hy: mh / 2 }); frame.position.copy(MIRROR); frame.position.x += 0.006; frame.rotation.y = Math.PI / 2; C.group.add(frame);   // cornice barocca di legno e oro consumato
 
