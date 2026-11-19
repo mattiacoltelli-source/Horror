@@ -7,7 +7,8 @@ import { aged } from '../world/aged.js';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { Reflector } from '../../vendor/three/Reflector.js';
 import { buildRoom } from '../world/rooms.js';
-import { bloodDecals } from '../world/blood.js';
+import { bloodDecals, writingDecals } from '../world/blood.js';
+import { bloodText } from '../world/bloodfont.js';
 import { decorCellar } from '../world/decor.js';
 import { redLight } from '../world/redlight.js';
 import { addExtras, pedestal, turnToward } from '../world/extra.js';
@@ -47,6 +48,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     C.shrine.light = { get intensity() { return cur; }, set intensity(v) { if (v === cur) return; cur = v; if (v > 0) { warm.color.setHex(0xe5a266); warm.distance = 4.1; warm.decay = 1.5; warm.position.copy(slPos); warm.intensity = v; } else { warm.intensity = 0; warm.color.setHex(0xff9a50); warm.distance = 15; warm.decay = 1.7; } } }; }
   const shrineMove = (x, z) => C.group.visible && !C.gone ? (chapel.constrainMove(x, z, C.bounds, player.pos) ?? C.shrine.move(x, z, C.bounds)) : null;
 
+  { const T = 'NON DIGITARE\n150390', ta = bloodText(T).aspect; writingDecals(C.group, [{ text: T, aspect: ta, p: [CELLAR.w / 2 - 0.012, 3.35, CELLAR.z0 - 22.3], wall: '-x', w: Math.min(2.0, 0.62 * ta), dry: false }]); }   // avvertimento a sangue sul muro destro, in alto e un po' piu' in la' del tastierino: bisogna alzare lo sguardo
   const red = redLight(C.group, { x: CELLAR.w / 2 - 0.1, y: 2.5, z: CELLAR.z0 - 19.5, dir: 1 });   // luce rossa d'emergenza vicino all'uscita
   // specchio
   const mw = 1.7, mh = 2.4;

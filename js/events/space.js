@@ -302,7 +302,7 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   // ---- nucleo del disegno: aggiorna tutto cio' che si muove nella scena per il tempo T, con la camera data (percorso della caduta, oppure posa esterna S.ext) ----
   const core = (dt, T, win = false) => {
     U.uT.value = T;
-    { const lite = win; dust.pts.visible = !lite; windPts.visible = !lite; streaks.visible = !lite; S.ast.visible = !lite; }   // nelle finestre: via polvere, vento solare, scie e asteroidi (poco visibili da lontano, molto costosi)
+    { const lite = win; dust.pts.visible = !lite; windPts.visible = !lite; streaks.visible = !lite; S.ast.visible = !lite; for (const m of moons) m.m.visible = !lite; for (const m of proms) m.m.visible = !lite; for (const b of brights) b.sp.visible = !lite; jets.visible = halo.visible = !lite; for (const o of sky.children) if (o !== skyMesh) o.visible = !lite || o.userData.keepWin === true; }   // nelle finestre: meno particolari (lune, protuberanze, stelle a raggi, getti, galassie piccole)   // nelle finestre: via polvere, vento solare, scie e asteroidi (poco visibili da lontano, molto costosi)
     disk.visible = lensed.visible = !win; if (win) for (const f of flares) f.sp.material.opacity = 0;
     { const showEye = !!S.eye && (!win || !!S.opts?.eye); if (S.eye) { S.eye.mesh.visible = showEye; if (showEye) { S.eye.dir.copy(win ? EYE_WIN : EYE_FALL); S.eye.mesh.scale.setScalar(win ? 0.36 : 1); } }
       crossG.visible = win && !!S.opts?.cross; if (crossG.visible) crossG.rotation.y += dt * 0.12; portal2.visible = win && !!S.opts?.portal; pMat2.uniforms.uT.value = T; }
@@ -351,7 +351,7 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   const extWin = { pos: new THREE.Vector3(), quat: new THREE.Quaternion() };
   S.drawWindow = (dt, camPos, camQuat, pc, q, opts = null) => { S.opts = opts;
     if (!S.prepared || S.active) return false;
-    renderer.getDrawingBufferSize(vtmp); const w = Math.max(64, Math.round(vtmp.x * 0.288)), h = Math.max(64, Math.round(vtmp.y * 0.288)); if (winRT.width !== w || winRT.height !== h) winRT.setSize(w, h); S.win.res.copy(vtmp);
+    renderer.getDrawingBufferSize(vtmp); const w = Math.max(64, Math.round(vtmp.x * 0.32)), h = Math.max(64, Math.round(vtmp.y * 0.32)); if (winRT.width !== w || winRT.height !== h) winRT.setSize(w, h); S.win.res.copy(vtmp);
     S.win.wt += dt; S.ext = mapPose(camPos, camQuat, pc, extWin, q); core(dt, S.win.wt, true); const prev = renderer.getRenderTarget(); renderer.setRenderTarget(winRT); renderer.render(scene, sc); renderer.setRenderTarget(prev); S.ext = null; S.opts = null; return true;
   };
   S.update = (dt) => {
