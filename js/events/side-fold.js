@@ -290,8 +290,12 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.78, metalness: 0.35 }));
     m.position.set(x, y, z); m.rotation.y = Math.PI / 2; m.rotation.x = tilt; m.rotation.z = tilt * 0.6; G.add(m); return m; };
   const paint = (g, txt, cw, ch, sz) => { g.fillStyle = '#fff'; g.font = `bold ${sz}px Impact, "Arial Black", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; const L = txt.split('\n'); L.forEach((l, i) => g.fillText(l, cw / 2, ch / 2 + (i - (L.length - 1) / 2) * sz * 1.1)); };
-  const signIn = signMesh(1.15, 0.5, (g, cw, ch) => paint(g, 'ENTRA QUI,\nFIDATI', cw, ch, 78), -W + 0.03, 1.2, ZR, 0.03, 1);
-  const signOut = signMesh(0.95, 0.5, (g, cw, ch) => { g.fillStyle = '#fff'; g.beginPath(); g.moveTo(60, ch * 0.4); g.lineTo(cw * 0.58, ch * 0.4); g.lineTo(cw * 0.58, ch * 0.18); g.lineTo(cw - 50, ch * 0.5); g.lineTo(cw * 0.58, ch * 0.82); g.lineTo(cw * 0.58, ch * 0.6); g.lineTo(60, ch * 0.6); g.closePath(); g.fill(); }, -W + 0.03, 1.5, ZL, -0.025, 2);
+  // i due cartelli sono foto di lamiera vera (assets/tex/sign_in.webp, sign_out.webp): lievemente ondulati, un po' storti
+  const signImg = (url, w, h, x, y, z, tilt) => { const t = new THREE.TextureLoader().load(url); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+    const geo = new THREE.PlaneGeometry(w, h, 8, 6), pos = geo.attributes.position; for (let i = 0; i < pos.count; i++) { const fx = pos.getX(i) / w + 0.5, fy = pos.getY(i) / h + 0.5; pos.setZ(i, 0.012 * Math.sin(fx * 4 + fy * 2) + 0.03 * Math.pow(Math.max(0, fx - 0.8) / 0.2, 2)); } geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: t, side: THREE.DoubleSide, roughness: 0.8, metalness: 0.25, color: 0xd8d0c8 })); m.position.set(x, y, z); m.rotation.y = Math.PI / 2; m.rotation.x = tilt; m.rotation.z = tilt * 0.6; G.add(m); return m; };
+  const signIn = signImg('assets/tex/sign_in.webp', 0.72, 0.88, -W + 0.03, 1.2, ZR, 0.03);
+  const signOut = signImg('assets/tex/sign_out.webp', 0.84, 0.7, -W + 0.03, 1.5, ZL, -0.02);
   signOut.visible = false; F.signOut = signOut; F.signIn = signIn;
   F.group = G; F.U = U;
   return F;
