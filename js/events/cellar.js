@@ -66,7 +66,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const DW = 340, DH = 480, dc = document.createElement('canvas'); dc.width = DW; dc.height = DH; const dg = dc.getContext('2d');
   const rr = (() => { let sd = 31; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })();
   const blur = (w, h, f, alpha = 1, op = 'source-over') => { const t = document.createElement('canvas'); t.width = w; t.height = h; const tg = t.getContext('2d'); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { tg.fillStyle = f(x / w, y / h, rr()); tg.fillRect(x, y, 1, 1); } dg.save(); dg.globalCompositeOperation = op; dg.globalAlpha = alpha; dg.imageSmoothingEnabled = true; dg.imageSmoothingQuality = 'high'; dg.drawImage(t, 0, 0, DW, DH); dg.restore(); };
-  dg.fillStyle = 'rgba(150,158,156,.68)'; dg.fillRect(0, 0, DW, DH);                                              // velo di condensa su tutto il vetro
+  dg.fillStyle = 'rgba(112,119,117,.68)'; dg.fillRect(0, 0, DW, DH);                                              // velo di condensa su tutto il vetro
   { const gr = dg.createLinearGradient(0, 0, 0, DH); gr.addColorStop(0, 'rgba(120,128,126,.0)'); gr.addColorStop(1, 'rgba(120,128,126,.22)'); dg.fillStyle = gr; dg.fillRect(0, 0, DW, DH); }   // piu' fitto in basso
   blur(10, 14, (u, v, r) => `rgba(205,212,210,${r * 0.5})`, 0.5); blur(26, 36, (u, v, r) => `rgba(70,78,76,${r * 0.45})`, 0.3);   // variazioni morbide di densita'
   // zona sfregata: pennellate morbide e irregolari + alone centrale; li' il vetro e' quasi trasparente
@@ -79,7 +79,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     dg.fillStyle = 'rgba(225,235,233,.55)'; dg.beginPath(); dg.ellipse(x, y + len, 2.2, 3.2, 0, 0, 7); dg.fill(); dg.strokeStyle = 'rgba(25,30,30,.4)'; dg.lineWidth = 0.8; dg.stroke(); }
   for (let i = 0; i < 700; i++) { const x = rr() * DW, y = rr() * DH, r = 0.6 + rr() * 1.4; dg.fillStyle = `rgba(215,225,223,${0.12 + rr() * 0.3})`; dg.beginPath(); dg.arc(x, y, r, 0, 7); dg.fill(); }   // microgocce
   const fogTex = new THREE.CanvasTexture(dc); fogTex.colorSpace = THREE.SRGBColorSpace;
-  const dirt = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), new THREE.MeshStandardMaterial({ map: fogTex, roughness: 0.9, metalness: 0, transparent: true, depthWrite: false, emissive: 0x0b0d0d }));
+  const dirt = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), new THREE.MeshStandardMaterial({ map: fogTex, roughness: 0.9, metalness: 0, transparent: true, depthWrite: false, emissive: 0x050606 }));
   dirt.position.copy(MIRROR).add(new THREE.Vector3(0.004, 0, 0)); dirt.rotation.y = Math.PI / 2; C.group.add(dirt);
   const frame = createMirrorFrame({ hx: mw / 2, hy: mh / 2 }); frame.position.copy(MIRROR); frame.position.x += 0.006; frame.rotation.y = Math.PI / 2; C.group.add(frame);   // cornice barocca di legno e oro consumato
 
