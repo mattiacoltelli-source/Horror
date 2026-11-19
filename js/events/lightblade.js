@@ -188,10 +188,11 @@ export function createLightBlade({ group, camera, player, audio, say, warm, fini
       smoke.pts.geometry.attributes.position.needsUpdate = true; smoke.pts.material.opacity = 0.8 * (1 - Math.max(0, (k - 0.6) / 0.4));
       if (dis >= 3.2) { nun.visible = false; smoke.pts.visible = false; dis = -2; DIS.uDis.value = 0; }
     }
+    if (st === 'wave' || st === 'after' || st === 'end') hand.visible = false;
     if (st === 'after') { flash.material.opacity = Math.max(0, flash.material.opacity - dt * 2); charge = Math.max(0, charge - dt * 1.5); B.lightUp(0.6);
       if (dis === -2) { B.state = 'end'; B.t = 0; } }
     if (st === 'end') {
-      const k = Math.min(1, B.t / 1.6); hand.visible = B.t < 1.2; charge = Math.max(0, charge - dt); halo.material.opacity = 0.4 * (1 - k); B.lightUp(1 - k);
+      const k = Math.min(1, B.t / 1.6); hand.visible = false; charge = Math.max(0, charge - dt); halo.material.opacity = 0.4 * (1 - k); B.lightUp(1 - k);
       if (B.t > 0.5 && !B.said) { B.said = true; say('L’ombra torna al buio.\nLa luce era prima.', 2800); }
       if (B.t >= 3.2) B.finish();
     }
