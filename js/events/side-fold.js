@@ -12,7 +12,7 @@ const RADIUS = 0.32;
 const radial = (stops, size = 128) => { const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d'), r = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2); for (const [o, col] of stops) r.addColorStop(o, col); g.fillStyle = r; g.fillRect(0, 0, size, size); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
 const linear = (stops, w = 8, h = 128) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'), r = g.createLinearGradient(0, 0, 0, h); for (const [o, col] of stops) r.addColorStop(o, col); g.fillStyle = r; g.fillRect(0, 0, w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
 
-export function createSideFold({ scene, tunnel, mats, player, camera, audio, lights, say, instab }) {
+export function createSideFold({ scene, tunnel, mats, player, camera, audio, lights, say, instab, getSpace }) {
   const F = { state: 'idle', t: 0, done: false, enabled: true };
   const G = new THREE.Group(); G.name = 'porta-laterale'; scene.add(G);
   const U = { uK: { value: 0 }, uGlow: { value: 0 }, uS0: { value: S0 }, uZ0: { value: ZR } };
@@ -58,25 +58,26 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     const x = side * (W - 0.04); B(0.14, PH + 0.12, 0.16, x, (PH + 0.12) / 2, zc + PW + 0.08); B(0.14, PH + 0.12, 0.16, x, (PH + 0.12) / 2, zc - PW - 0.08); B(0.14, 0.14, PW * 2 + 0.32, x, PH + 0.07, zc); return g; };
   const frameR = frame(1, ZR), frameL = frame(-1, ZL); frameL.visible = false; G.add(frameR, frameL);
   // ---- la stanza sospesa: pavimento di luce, croce enorme, raggi, alone, polvere e stelle. Nessun muro. Molto lontana, in fondo al passaggio ----
-  const GL = new THREE.Group(); G.add(GL); const GX = XD + LEN + 5; GL.position.set(GX, 0, ZR);
+  const GL = new THREE.Group(); G.add(GL); const GX = XD + LEN + 34; GL.position.set(GX, 0, ZR);
   const glowMats = [], addGlow = (m, base) => { m.userData.base = base; glowMats.push(m); return m; };
   const add = (o, m) => { o.frustumCulled = false; GL.add(o); return o; };
   const discTex = radial([[0, 'rgba(255,240,205,1)'], [0.35, 'rgba(255,214,150,.7)'], [0.75, 'rgba(255,170,90,.18)'], [1, 'rgba(255,150,70,0)']]);
-  const disc = add(new THREE.Mesh(new THREE.CircleGeometry(9, 48), addGlow(new THREE.MeshBasicMaterial({ map: discTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }), 0.55))); disc.rotation.x = -Math.PI / 2; disc.position.y = 0.01;
+  const disc = add(new THREE.Mesh(new THREE.CircleGeometry(15, 48), addGlow(new THREE.MeshBasicMaterial({ map: discTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }), 0.55))); disc.rotation.x = -Math.PI / 2; disc.position.y = 0.01;
   const haloM = addGlow(new THREE.SpriteMaterial({ map: radial([[0, 'rgba(255,248,225,1)'], [0.2, 'rgba(255,224,160,.75)'], [0.55, 'rgba(255,170,90,.22)'], [1, 'rgba(255,140,60,0)']]), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }), 0.75);
-  const halo = add(new THREE.Sprite(haloM)); halo.scale.set(20, 20, 1); halo.position.set(8, 6, 0);
+  const halo = add(new THREE.Sprite(haloM)); halo.scale.set(34, 34, 1); halo.position.set(12, 9, 0);
   const crossM = new THREE.MeshBasicMaterial({ color: 0x070504, fog: false });
   const cross = new THREE.Group(); const bar = (sx, sy, sz, x, y) => { const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), crossM); m.position.set(x, y, 0); cross.add(m);
     const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), addGlow(new THREE.LineBasicMaterial({ color: 0xffe6b8, transparent: true, fog: false }), 0.9)); e.position.copy(m.position); cross.add(e); };
-  bar(0.8, 8.2, 0.8, 0, 4.1); bar(4.6, 0.8, 0.8, 0, 5.9);
+  bar(1.3, 13, 1.3, 0, 6.5); bar(7.2, 1.3, 1.3, 0, 9.2);
   cross.position.set(4, 0, 0); cross.rotation.y = 0.06; add(cross);
   const rayTex = (() => { const c = document.createElement('canvas'); c.width = 64; c.height = 256; const g = c.getContext('2d'), v = g.createLinearGradient(0, 0, 0, 256); v.addColorStop(0, 'rgba(255,236,190,.8)'); v.addColorStop(0.5, 'rgba(255,200,130,.2)'); v.addColorStop(1, 'rgba(255,170,90,0)'); g.fillStyle = v; g.fillRect(0, 0, 64, 256);
     g.globalCompositeOperation = 'destination-in'; const h = g.createLinearGradient(0, 0, 64, 0); h.addColorStop(0, 'rgba(0,0,0,0)'); h.addColorStop(0.5, 'rgba(0,0,0,1)'); h.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = h; g.fillRect(0, 0, 64, 256); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
   for (let i = 0; i < 7; i++) { const a = (i / 7 - 0.5) * 1.9 + (i % 2) * 0.09, m = new THREE.Mesh(new THREE.PlaneGeometry(2.4 + (i % 3) * 1.2, 30), addGlow(new THREE.MeshBasicMaterial({ map: rayTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }), 0.32 + (i % 3) * 0.08));
-    m.rotation.y = Math.PI / 2; m.rotation.x = a; m.position.set(7, 5.9, 0); m.geometry.translate(0, -15, 0); m.userData.ph = i; add(m); }   // raggi morbidi che partono da dietro la croce (verso di te)
+    m.rotation.y = Math.PI / 2; m.rotation.x = a; m.position.set(10, 10.4, 0); m.geometry.translate(0, -15, 0); m.userData.ph = i; add(m); }   // raggi morbidi che partono da dietro la croce (verso di te)
   const rnd = (() => { let s = 91; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
   { const N = 420, p = new Float32Array(N * 3); for (let i = 0; i < N; i++) { const th = rnd() * 6.283, ph = Math.acos(2 * rnd() - 1), r = 35 + rnd() * 90; p[i * 3] = 20 + Math.sin(ph) * Math.cos(th) * r; p[i * 3 + 1] = 12 + Math.cos(ph) * r * 0.8; p[i * 3 + 2] = Math.sin(ph) * Math.sin(th) * r; }
     add(new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(p, 3)), addGlow(new THREE.PointsMaterial({ color: 0xd8e2ff, size: 0.55, sizeAttenuation: true, transparent: true, depthWrite: false, fog: false, map: radial([[0, 'rgba(255,255,255,1)'], [0.4, 'rgba(255,255,255,.4)'], [1, 'rgba(255,255,255,0)']], 32) }), 0.9))); }
+  const fbStart = GL.children.length;
   // cosmo dietro la stanza: nebulose colorate, una galassia a spirale e stelle luminose (disegnate una volta in canvas, solo sprite additivi)
   const nebTex = (hue1, hue2, seed) => { const c = document.createElement('canvas'); c.width = c.height = 192; const g = c.getContext('2d'); let sd = seed; const r = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
     for (let i = 0; i < 34; i++) { const x = 96 + (r() - 0.5) * 120, y = 96 + (r() - 0.5) * 120, rad = 18 + r() * 50, gr = g.createRadialGradient(x, y, 0, x, y, rad), col = r() < 0.55 ? hue1 : hue2; gr.addColorStop(0, `rgba(${col},${0.1 + r() * 0.16})`); gr.addColorStop(1, `rgba(${col},0)`); g.fillStyle = gr; g.fillRect(x - rad, y - rad, 2 * rad, 2 * rad); }
@@ -89,9 +90,16 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const gal = new THREE.Mesh(new THREE.PlaneGeometry(34, 34), addGlow(new THREE.MeshBasicMaterial({ map: t, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }), 0.95)); gal.position.set(38, 15, -10); gal.rotation.set(0.35, -Math.PI / 2 + 0.2, 0.5); add(gal); }
   { const N = 70, p = new Float32Array(N * 3); for (let i = 0; i < N; i++) { p[i * 3] = 14 + rnd() * 40; p[i * 3 + 1] = 2 + rnd() * 26; p[i * 3 + 2] = (rnd() - 0.5) * 36; }
     add(new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(p, 3)), addGlow(new THREE.PointsMaterial({ color: 0xfff1d8, size: 1.5, sizeAttenuation: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, map: radial([[0, 'rgba(255,255,255,1)'], [0.25, 'rgba(255,240,210,.5)'], [1, 'rgba(255,220,180,0)']], 64) }), 0.95))); }   // stelle luminose
+  const fallback = GL.children.slice(fbStart);   // ripiego se la scena dello spazio non e' ancora pronta
   const NM = 70, mp = new Float32Array(NM * 3), mv = []; for (let i = 0; i < NM; i++) { mp[i * 3] = -4 + rnd() * 20; mp[i * 3 + 1] = rnd() * 10; mp[i * 3 + 2] = (rnd() - 0.5) * 10; mv.push([rnd() * 6.28, 0.1 + rnd() * 0.25]); }
   const motes = add(new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(mp, 3)), addGlow(new THREE.PointsMaterial({ color: 0xffe2b0, size: 0.14, sizeAttenuation: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, map: radial([[0, 'rgba(255,255,255,1)'], [1, 'rgba(255,255,255,0)']], 32) }), 0.8)));
-  const debris = []; for (let i = 0; i < 9; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.5 + rnd() * 0.9, 0.12, 0.5 + rnd() * 0.9), new THREE.MeshBasicMaterial({ color: 0x120c08, fog: false })); m.position.set(-2 + rnd() * 14, 0.5 + rnd() * 5, (rnd() - 0.5) * 9); m.rotation.set(rnd(), rnd(), rnd()); m.userData.sp = [rnd() * 0.4 - 0.2, rnd() * 0.4 - 0.2]; add(m); debris.push(m); }
+  const debris = []; for (let i = 0; i < 5; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.5 + rnd() * 0.9, 0.12, 0.5 + rnd() * 0.9), new THREE.MeshBasicMaterial({ color: 0x120c08, fog: false })); m.position.set(-2 + rnd() * 14, 0.5 + rnd() * 5, (rnd() - 0.5) * 9); m.rotation.set(rnd(), rnd(), rnd()); m.userData.sp = [rnd() * 0.4 - 0.2, rnd() * 0.4 - 0.2]; add(m); debris.push(m); }
+  // FINESTRA SULLO SPAZIO VERO: sul fondo del passaggio un grande piano mostra la scena della caduta (cielo, galassie, nebulose, pianeti, Sole) con la camera del giocatore, letta a schermo come nel buco del portale
+  const winMat = new THREE.ShaderMaterial({ depthWrite: false, fog: false, uniforms: { uTex: { value: null }, uRes: { value: new THREE.Vector2(2, 2) }, uFade: { value: 1 } },
+    vertexShader: 'void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform sampler2D uTex; uniform vec2 uRes; uniform float uFade; void main() { gl_FragColor = vec4(texture2D(uTex, gl_FragCoord.xy / uRes).rgb * uFade, 1.0); }' });
+  const winQuad = new THREE.Mesh(new THREE.PlaneGeometry(110, 70), winMat); winQuad.position.set(XD + LEN + 0.2, 14, ZR); winQuad.rotation.y = -Math.PI / 2; winQuad.renderOrder = -5; winQuad.frustumCulled = false; winQuad.visible = false; G.add(winQuad);
+  const qWin = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2), pcWin = new THREE.Vector3(XD + LEN, 0, ZR), fw = new THREE.Vector3(); let spaceOn = false;
   // bagliore che esce dalla porta: macchia di luce sul pavimento del tunnel e alone sulla soglia
   const spillTex = radial([[0, 'rgba(255,214,150,.85)'], [0.35, 'rgba(255,200,130,.4)'], [0.7, 'rgba(255,180,110,.1)'], [1, 'rgba(255,170,100,0)']], 128);   // macchia morbida e rotonda, solo davanti alla porta
   const spill = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 2.3), addGlow(new THREE.MeshBasicMaterial({ map: spillTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }), 0.32)); spill.rotation.x = -Math.PI / 2; spill.position.set(W - 0.45, 0.012, ZR); spill.frustumCulled = false; G.add(spill);
@@ -119,11 +127,15 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     const st = F.state;
     if ((st === 'idle' || st === 'done') && lights.lamps) for (const L of lights.lamps) if (L.mode === 'off' || L.mode === 'dim') L.mode = 'on';   // salvaguardia: fuori dall'evento le lampade del tunnel non restano mai spente o attenuate
     if (st === 'idle' || st === 'done') {
-      if (st === 'idle') { dip -= dt; if (dip > 0) lv = 0.08 + Math.random() * 0.2; else { lv = 0.82 + 0.12 * Math.sin(tt * 2.3) + 0.05 * Math.sin(tt * 17); if (Math.random() < dt * 0.45) dip = 0.05 + Math.random() * 0.12; } setLight(lv);
+      if (st === 'idle') {
+        const sp = getSpace?.(); if (sp) { if (P.z < -12) sp.prepare?.(); camera.getWorldDirection(fw);
+          const dx = XD + LEN - P.x, dz = ZR - P.z, dist = Math.hypot(dx, dz), facing = (fw.x * dx + fw.z * dz) / Math.max(0.01, dist) > 0.3;
+          if (sp.prepared && !sp.active && dist < 26 && facing && sp.drawWindow(dt, camera.position, camera.quaternion, pcWin, qWin)) { if (!spaceOn) { spaceOn = true; winMat.uniforms.uTex.value = sp.win.tex; winQuad.visible = true; for (const o of fallback) o.visible = false; } winMat.uniforms.uRes.value = sp.win.res; } }
+        dip -= dt; if (dip > 0) lv = 0.08 + Math.random() * 0.2; else { lv = 0.82 + 0.12 * Math.sin(tt * 2.3) + 0.05 * Math.sin(tt * 17); if (Math.random() < dt * 0.45) dip = 0.05 + Math.random() * 0.12; } setLight(lv);
         if (P.x > XD + 1.7 && Math.abs(P.z - ZR) < 0.7 && !player.frozen) { F.state = 'flicker'; F.t = 0; lampAll('flicker', 1.7); audio.swell?.(2.2, 0.45); audio.whisper?.(1.4, 0.2); instab?.push?.(0.6, 6); } }
       return;
     }
-    if (st === 'flicker') { flickerT -= dt; if (flickerT <= 0) { flickerT = 0.04 + Math.random() * 0.1; lv = Math.random() < 0.5 ? 0.1 : 1.0; } setLight(lv); if (F.t > 1.7) { F.state = 'dark'; F.t = 0; setLight(0); GL.visible = false; ceilFar.visible = true; spill.visible = spillSp.visible = false; lampAll('off', 99); audio.lightOff?.(); audio.scare?.(); player.speedMul = 0; } return; }
+    if (st === 'flicker') { flickerT -= dt; if (flickerT <= 0) { flickerT = 0.04 + Math.random() * 0.1; lv = Math.random() < 0.5 ? 0.1 : 1.0; } setLight(lv); if (F.t > 1.7) { F.state = 'dark'; F.t = 0; setLight(0); GL.visible = false; winQuad.visible = false; ceilFar.visible = true; spill.visible = spillSp.visible = false; lampAll('off', 99); audio.lightOff?.(); audio.scare?.(); player.speedMul = 0; } return; }
     if (st === 'dark') { if (F.t > 1.0) { F.state = 'fold'; F.t = 0; player.speedMul = 1; say?.('La stanza non c’è più.\nIl passaggio si piega.', 3800); audio.swell?.(5, 0.55); } return; }
     if (st === 'fold') {
       const k = Math.min(1, F.t / 5.5), e = k * k * (3 - 2 * k); U.uK.value = KEND * e;
@@ -150,9 +162,9 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     if (K * u < Math.PI) { cxm = S0 + Math.sin(ph) / K; czm = ZR + (1 - Math.cos(ph)) / K; nx2 = -Math.sin(ph); nz2 = Math.cos(ph); } else { cxm = S0 - (u - Math.PI / K); czm = ZR + 2 / K; nx2 = 0; nz2 = -1; }
     p.x = cxm + d * nx2; p.z = czm + d * nz2; camera.quaternion.premultiply(qY.setFromAxisAngle(yA, -ph));
   };
-  F.reset = () => { F.state = 'idle'; F.t = 0; F.done = false; F.cutDone = false; U.uK.value = 0; RP.visible = true; ceilFar.visible = false; LP.visible = false; frameL.visible = false; frameR.visible = true; GL.visible = true; spill.visible = spillSp.visible = true; tunnel.userData.plugs?.[-1] && (tunnel.userData.plugs[-1].visible = true); tunnel.userData.plugs?.[1] && (tunnel.userData.plugs[1].visible = false); player.constrainMove = cm; };
+  F.reset = () => { F.state = 'idle'; F.t = 0; F.done = false; F.cutDone = false; U.uK.value = 0; RP.visible = true; ceilFar.visible = false; winQuad.visible = false; spaceOn = false; for (const o of fallback) o.visible = true; LP.visible = false; frameL.visible = false; frameR.visible = true; GL.visible = true; spill.visible = spillSp.visible = true; tunnel.userData.plugs?.[-1] && (tunnel.userData.plugs[-1].visible = true); tunnel.userData.plugs?.[1] && (tunnel.userData.plugs[1].visible = false); player.constrainMove = cm; };
   // animazioni leggere della stanza (raggi che respirano, polvere che sale, frammenti che ruotano)
-  F.animate = (dt) => { if (!GL.visible) return; for (const o of GL.children) if (o.userData.ph !== undefined) o.rotation.x += Math.sin(tt * 0.6 + o.userData.ph) * dt * 0.02; for (const d of debris) { d.rotation.x += d.userData.sp[0] * dt; d.rotation.y += d.userData.sp[1] * dt; d.position.y += Math.sin(tt * 0.5 + d.position.x) * dt * 0.05; }
+  F.animate = (dt) => { if (!GL.visible) return; cross.rotation.y += dt * 0.14; for (const o of GL.children) if (o.userData.ph !== undefined) o.rotation.x += Math.sin(tt * 0.6 + o.userData.ph) * dt * 0.02; for (const d of debris) { d.rotation.x += d.userData.sp[0] * dt; d.rotation.y += d.userData.sp[1] * dt; d.position.y += Math.sin(tt * 0.5 + d.position.x) * dt * 0.05; }
     const a = motes.geometry.attributes.position; for (let i = 0; i < NM; i++) { a.array[i * 3 + 1] += mv[i][1] * dt; if (a.array[i * 3 + 1] > 10) a.array[i * 3 + 1] = 0; a.array[i * 3] += Math.sin(tt * 0.4 + mv[i][0]) * dt * 0.2; } a.needsUpdate = true; };
   const upd = F.update; F.update = (dt) => { upd(dt); if (G.visible) F.animate(dt); };
   F.group = G; F.U = U;

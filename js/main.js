@@ -130,7 +130,7 @@ place('assets/models/cam.glb', 0.3, -W + 0.12, 2.0, -12, Math.PI - 0.55);   // p
 const glassEvent = createGlassEvent({ scene, renderer, camera, player, audio, lights, instab });
 const hound = createHound({ scene, player, lights, audio, glass: glassEvent });
 // porta laterale del tunnel + passaggio che si piega (?porta=0 la spegne; i varchi restano chiusi dai tamponi)
-const sideFold = createSideFold({ scene, tunnel: tunnelG, mats, player, camera, audio, lights, instab, say: (...a) => say(...a) });
+const sideFold = createSideFold({ scene, tunnel: tunnelG, mats, player, camera, audio, lights, instab, getSpace: () => space, say: (...a) => say(...a) });
 if (new URLSearchParams(location.search).get('porta') === '0') { sideFold.enabled = false; sideFold.group.visible = false; player.constrainMove = null; tunnelG.userData.plugs[1].visible = true; }
 
 // grana della pellicola (leggerissima, generata una volta)

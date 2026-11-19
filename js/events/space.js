@@ -334,12 +334,12 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   const qR = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2), vtmp = new THREE.Vector2();
   const winRT = new THREE.WebGLRenderTarget(64, 64, { depthBuffer: true, generateMipmaps: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }); winRT.texture.colorSpace = THREE.SRGBColorSpace;
   S.win = { tex: winRT.texture, res: new THREE.Vector2(2, 2), wt: 0 }; S.ext = null; S.seam = null;
-  const mapPose = (camPos, camQuat, pc, out) => { out.pos.copy(camPos).sub(pc).applyQuaternion(qR); out.quat.copy(camQuat).premultiply(qR); return out; };
+  const mapPose = (camPos, camQuat, pc, out, q = qR) => { out.pos.copy(camPos).sub(pc).applyQuaternion(q); out.quat.copy(camQuat).premultiply(q); return out; };
   const extWin = { pos: new THREE.Vector3(), quat: new THREE.Quaternion() };
-  S.drawWindow = (dt, camPos, camQuat, pc) => {
+  S.drawWindow = (dt, camPos, camQuat, pc, q) => {
     if (!S.prepared || S.active) return false;
     renderer.getDrawingBufferSize(vtmp); const w = Math.max(64, Math.round(vtmp.x * 0.5)), h = Math.max(64, Math.round(vtmp.y * 0.5)); if (winRT.width !== w || winRT.height !== h) winRT.setSize(w, h); S.win.res.copy(vtmp);
-    S.win.wt += dt; S.ext = mapPose(camPos, camQuat, pc, extWin); core(dt, S.win.wt, true); const prev = renderer.getRenderTarget(); renderer.setRenderTarget(winRT); renderer.render(scene, sc); renderer.setRenderTarget(prev); S.ext = null; return true;
+    S.win.wt += dt; S.ext = mapPose(camPos, camQuat, pc, extWin, q); core(dt, S.win.wt, true); const prev = renderer.getRenderTarget(); renderer.setRenderTarget(winRT); renderer.render(scene, sc); renderer.setRenderTarget(prev); S.ext = null; return true;
   };
   S.update = (dt) => {
     if (!S.active) return; S.t += dt; const TR = S.t, T = S.t * K;
