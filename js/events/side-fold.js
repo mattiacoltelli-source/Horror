@@ -231,19 +231,19 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
       if (st === 'idle') {
         winTick(dt, P);
         dip -= dt; if (dip > 0) lv = 0.08 + Math.random() * 0.2; else { lv = 0.82 + 0.12 * Math.sin(tt * 2.3) + 0.05 * Math.sin(tt * 17); if (Math.random() < dt * 0.45) dip = 0.05 + Math.random() * 0.12; } setLight(lv);
-        if (P.x > XD + 4.5 && Math.abs(P.z - ZR) < 0.7 && !player.frozen) { F.state = 'flicker'; F.t = 0; lampAll('flicker', 2.4); audio.swell?.(2.2, 0.45); audio.whisper?.(1.4, 0.2); instab?.push?.(0.6, 6); } }
+        if (P.x > XD + 4.5 && Math.abs(P.z - ZR) < 0.7 && !player.frozen) { F.state = 'flicker'; F.t = 0; audio.swell?.(2.2, 0.45); audio.whisper?.(1.4, 0.2); instab?.push?.(0.6, 6); } }
       return;
     }
     if (st === 'flicker') {   // la luce e l'universo sfarfallano insieme, sempre piu' spezzati, poi buio
       winTick(dt, P); flickerT -= dt; if (flickerT <= 0) { flickerT = 0.04 + Math.random() * 0.11; const env = Math.min(1, F.t / 2.4); lv = Math.random() < 0.3 + 0.5 * env ? 0.04 + Math.random() * 0.2 : 0.55 + 0.45 * (1 - env); }
       setLight(lv); winMat.uniforms.uFade.value += (lv - winMat.uniforms.uFade.value) * Math.min(1, dt * 28);
-      if (F.t > 2.4) { F.state = 'dark'; F.t = 0; F.tp = false; setLight(0); GL.visible = false; winQuad.visible = false; winMat.uniforms.uFade.value = 1; spill.visible = spillSp.visible = false; lampAll('off', 99); audio.lightOff?.(); audio.scare?.(); }
+      if (F.t > 2.4) { F.state = 'dark'; F.t = 0; F.tp = false; setLight(0); GL.visible = false; winQuad.visible = false; winMat.uniforms.uFade.value = 1; spill.visible = spillSp.visible = false; ov().style.transition = 'opacity .1s'; ov().style.opacity = '1'; audio.lightOff?.(); audio.scare?.(); }
       return; }
     if (st === 'dark') {
       if (F.t > 0.5 && !F.tp) { F.tp = true;   // nel buio: l'universo non c'e' piu', il passaggio e' un normale corridoio chiuso e ti ritrovi alla stessa profondita', girato verso il tunnel
         nearWalls.visible = false; farWalls.visible = false; mainFloor.visible = false; for (const o of slabs) o.visible = false; FW.visible = true; ceilFar.visible = true; SKY.visible = false;
         player.yaw += Math.PI; signIn.visible = false; signOut.position.set(-W + 0.03, 1.2, ZR); signOut.visible = true; }   // un mezzo giro nel buio: se si continua a camminare si va verso l'uscita
-      if (F.t > 1.0) { F.state = 'exit'; F.t = 0; lampAll('flicker', 1.3); audio.lightOn?.(); say?.('L’universo non c’è più.', 3200); }
+      if (F.t > 1.0) { F.state = 'exit'; F.t = 0; ov().style.transition = 'opacity .3s'; ov().style.opacity = '0'; lampAll('on', 1); audio.lightOn?.(); say?.('L’universo non c’è più.', 3200); }
       return; }
     if (st === 'fold') {
       const k = Math.min(1, F.t / 1.8), e = k * k * (3 - 2 * k); U.uK.value = KEND * e;
