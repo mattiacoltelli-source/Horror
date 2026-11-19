@@ -10,6 +10,8 @@ export const GLASS = { z0: -21, z1: -24, y0: 0.15, y1: 2.05, x: 1.62 };
 export const DOOR = { w: 2.0, h: 2.93 };
 export const RIBS = [-2, -8, -14, -19.5, -25.5, -31.5, -38, -44];
 export const LAMPS = [-6, -17.5, -33, -41];
+// porte laterali del tunnel (evento della piega): a destra l'ingresso, a sinistra l'uscita (chiusa da un tampone di muro finche' non serve)
+export const SIDE_DOORS = [{ side: 1, z: -34.5, w: 1.4, h: 2.0 }, { side: -1, z: -40.2, w: 1.4, h: 2.0 }];
 
 // rng deterministico: stessa geometria a ogni avvio
 let seed = 1337;
@@ -93,10 +95,21 @@ export function buildTunnel(mats) {
       [gray(edge), gray(edge), gray(edge), gray(edge)], [0, 1, 0]);
   }
 
+  // pannello con varco: stessi parametri casuali e stesse UV del pannello pieno; il "tampone" (BP) riempie il varco con la stessa texture (si toglie/si mette quando serve)
+  const BP = { 1: new Builder(), [-1]: new Builder() };
+  function wallPanelDoor(side, z0, z1, d) {
+    const x = side * W, k = 0.62 + rnd() * 0.38, flip = rnd() < 0.5 ? -1 : 1, ou = rnd() * 4, ov = Math.floor(rnd() * 3) * 0.33;
+    const U = (z) => (flip * -z) / bu + ou, V = (y) => y / bv + ov;
+    const seg = (Bd, za, zb, y0, y1) => { if (za <= zb) return; Bd.quad('brick', [[x, y0, za], [x, y0, zb], [x, y1, zb], [x, y1, za]], [[U(za), V(y0)], [U(zb), V(y0)], [U(zb), V(y1)], [U(za), V(y1)]], [wallCol(y0, k), wallCol(y0, k), wallCol(y1, k), wallCol(y1, k)], [-side, 0, 0]); };
+    const a = d.z + d.w / 2, b = d.z - d.w / 2;
+    seg(B, z0, a, 0, H0); seg(B, b, z1, 0, H0); seg(B, a, b, d.h, H0); seg(BP[side], a, b, 0, d.h);
+  }
+  const doorAt = (side, z, z1) => SIDE_DOORS.find((d) => d.side === side && d.z < z && d.z > z1);
   // MURI
   for (let z = Z_START; z > Z_END; z -= 3) {
     const z1 = Math.max(z - 3, Z_END);
-    wallPanel(-1, z, z1, 0, H0);
+    { const d = doorAt(-1, z, z1); if (d) wallPanelDoor(-1, z, z1, d); else wallPanel(-1, z, z1, 0, H0); }
+    { const d = doorAt(1, z, z1); if (d) { wallPanelDoor(1, z, z1, d); continue; } }
     if (Math.abs(z - GLASS.z0) < 0.01) {
       // apertura sul muro destro: fascia bassa, architrave, spalle
       wallPanel(1, z, z1, 0, GLASS.y0);
@@ -211,5 +224,7 @@ export function buildTunnel(mats) {
   }
 
   const g = B.build(mats);
+  g.userData.plugs = {};
+  for (const side of [1, -1]) { const pg = BP[side].build(mats); pg.visible = side === -1; g.add(pg); g.userData.plugs[side] = pg; }   // tamponi dei varchi: sinistro presente (porta non ancora comparsa), destro nascosto
   return g;
 }

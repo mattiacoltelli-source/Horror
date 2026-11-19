@@ -3,6 +3,7 @@ import { P, PKEY } from './personal.js';
 import { GLTFLoader } from '../vendor/three/loaders/GLTFLoader.js';
 import { makeMaterials, setAnisotropy } from './world/materials.js';
 import { buildTunnel, LAMPS, W, Z_END, H0 } from './world/tunnel.js';
+import { createSideFold } from './events/side-fold.js';
 import { createLights } from './world/lights.js';
 import { createControls } from './player/controls.js';
 import { createPlayer } from './player/player.js';
@@ -75,7 +76,7 @@ addEventListener('resize', resize); resize();
 
 // ---------- mondo ----------
 const mats = makeMaterials();
-{ const tg = buildTunnel(mats); scene.add(tg); decorTunnel(tg); }
+const tunnelG = buildTunnel(mats); scene.add(tunnelG); decorTunnel(tunnelG);
 
 // riflessi: panorama scurito come environment (leggero, solo per metallo/umido)
 new THREE.TextureLoader().load('assets/tex/bath_bg.jpg', (t) => {
@@ -128,6 +129,9 @@ place('assets/models/cam.glb', 0.3, -W + 0.12, 2.0, -12, Math.PI - 0.55);   // p
 // ---------- evento ----------
 const glassEvent = createGlassEvent({ scene, renderer, camera, player, audio, lights, instab });
 const hound = createHound({ scene, player, lights, audio, glass: glassEvent });
+// porta laterale del tunnel + passaggio che si piega (?porta=0 la spegne; i varchi restano chiusi dai tamponi)
+const sideFold = createSideFold({ scene, tunnel: tunnelG, mats, player, camera, audio, lights, instab, say: (...a) => say(...a) });
+if (new URLSearchParams(location.search).get('porta') === '0') { sideFold.enabled = false; sideFold.group.visible = false; player.constrainMove = null; tunnelG.userData.plugs[1].visible = true; }
 
 // grana della pellicola (leggerissima, generata una volta)
 try {
@@ -298,7 +302,7 @@ async function enter() {
     // magazzino: muro sinistro, tra due pilastri (sotto la lampada a muro, lontano dagli scaffali)
     { const ws = fit(WZ - 21.6, WZ - 27.6, 'm', 0.9, WR.m[2]); writingDecals(wh.group, [{ ...spec('m'), p: [-5.96, 1.6, ws.z], wall: '+x', w: ws.w }]); }
     // simbolo (occhio) a sangue, riempitivo: 3 volte lungo il percorso, in punti vuoti (tunnel muro destro, cantina muro sinistro, magazzino muro destro)
-    { const sg = 'assets/tex/wr_sigil.png', A = 0.844, tz = (RIBS[5] + RIBS[6]) / 2;   // muro destro, tra due costoloni, lontano da lampade e cavi
+    { const sg = 'assets/tex/wr_sigil.png', A = 0.844, tz = -36.6;   // muro destro (dopo la porta laterale, prima del costolone a -38), tra due costoloni, lontano da lampade e cavi
       writingDecals(scene, [{ img: sg, aspect: A, p: [1.38, 1.45, tz], wall: '-x', w: 1.1 }]);
       writingDecals(cellar.group, [{ img: sg, aspect: A, p: [-3.96, 1.6, CZ - 20.5], wall: '+x', w: 1.6 }]);
       writingDecals(wh.group, [{ img: sg, aspect: A, p: [5.96, 1.9, WZ - 6.6], wall: '-x', w: 1.7 }]); }
@@ -326,6 +330,7 @@ async function enter() {
   // I programmi e le texture della stanza vengono preparati durante il
   // caricamento o la dissolvenza, senza accendere tutte le stanze durante il gioco.
   // ?start=porta → salta il tunnel e parte a ~8 m dal portone (per provare solo la parte finale)
+  if (q.get('start') === 'piega') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, -31); }
   if (q.get('start') === 'porta') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, Z_END + 10); }
   // scorciatoie di prova: ?start=cantina | torre  (&turned=1 / &mirror=1 per simulare le scelte)
   { const ck = restoreCk ? loadCkpt(restoreRoom) : null, st = ck ? CK_ST[ck.room] : q.get('start'); flags.turned = ck ? ck.turned : q.get('turned') === '1'; flags.mirror = q.get('mirror') === '1'; flags.noGun = ck ? ck.noGun : q.get('nogun') === '1'; flags.weapon = ck ? ck.weapon : (q.get('weapon') === 'axe' ? 'axe' : null); flags.door = ck ? ck.door : (q.get('door') === 'red' ? 'red' : q.get('door') === 'breath' ? 'breath' : null);
@@ -400,6 +405,7 @@ function tick(dt, hallDt = dt) {
   combat?.update(dt, time);
   time += dt;
   player.update(dt, time);
+  sideFold.update(dt); sideFold.applyCamera();
   breath?.update(dt, player.pos.z);
   if (ward?.bend?.active) ward.bend.applyCamera(dt);   // ?piega=1: la camera segue il reparto piegato
   audio.setListener(camera);
@@ -434,7 +440,7 @@ requestAnimationFrame((n) => { last = n; frame(n); });
 
 // debug/test: ?debug=1 espone il gioco e permette di saltare avanti
 if (q.has('debug')) {
-  window.__g = { get space() { return space; }, get breath() { return breath; }, rats, say, get notes() { return notes; }, get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get ward() { return ward; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
+  window.__g = { sideFold, get space() { return space; }, get breath() { return breath; }, rats, say, get notes() { return notes; }, get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get ward() { return ward; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
     sim(sec, dt = 0.05) { for (let t = 0; t < sec; t += dt) tick(dt); },
     tp(z, yaw = 0) { player.pos.set(0.1, 1.62, z); player.yaw = yaw; player.pitch = 0; } };
 }

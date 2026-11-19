@@ -3,6 +3,9 @@ import { kitMesh, runZ } from './props.js';
 import * as THREE from 'three';
 import { bloodDecals, stainDecals, burnDecals, patchDecals } from './blood.js';
 import { aged } from './aged.js';
+import { SIDE_DOORS } from './tunnel.js';
+// toglie i moduli di tubo che passerebbero davanti a un varco del muro sinistro
+const clearDoors = (pl, len) => pl.filter((q) => !SIDE_DOORS.some((d) => d.side === -1 && Math.abs(q.p[2] - d.z) < d.w / 2 + len / 2 + 0.02));
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 const P2 = Math.PI / 2;
 const add = async (group, kit, pl) => { try { const m = await kitMesh(kit, pl); if (m) { m.traverse((o) => { o.userData.decor = true; if (globalThis.__lowQ) o.visible = false; }); group.add(m); } } catch (e) { console.warn('decor', kit, e); } };
@@ -18,12 +21,12 @@ export function decorTunnel(group) {
     { k: 'C', p: [-1.397, 1.346, -39.2], wall: '+x', h: 0.3, rot: 0.2 }, { k: 'A', p: [-1.397, 1.22, -41.2], wall: '+x', h: 0.31, rot: -0.15, flip: true },
     { k: 'C', p: [-1.397, 1.05, -43.0], wall: '+x', h: 0.29, rot: 0.3 },
     // (tolta la mano a z -28.5: li' c'e' il murale)
-    { k: 'X', p: [1.397, 1.55, -34.8], wall: '-x', h: 0.62, rot: 0.2 }, { k: 'X', p: [-1.397, 1.7, -35.0], wall: '+x', h: 0.55, rot: -0.15, flip: true },
+    { k: 'X', p: [-1.397, 1.7, -35.0], wall: '+x', h: 0.55, rot: -0.15, flip: true },
   ]);
   burnDecals(group, [{ k: 'wall', p: [-1.393, 1.0, -46.5], wall: '+x', w: 1.7, h: 1.8, a: 0.3 }]);   // un segno di fumo vicino al portone: il fuoco ha toccato anche qui
   patchDecals(group, [{ img: 'assets/tex/pt_gravel.webp', p: [-0.5, 0.012, -16.7], wall: 'floor', w: 1.5, h: 2.3, rot: 0.55 }, { img: 'assets/tex/pt_layers.webp', p: [-0.3, 0.012, -33.5], wall: 'floor', w: 1.8, h: 2.8, rot: -0.15 }]);   // tunnel: cemento grezzo a chiazze sul pavimento
-  add(group, 'ind', runZ('modular_industrial_pipes_01_pipe02', 1.95, -1.27, 2.0, 2.4, -48.4));
-  add(group, 'pipes', [...runZ('pipe_thin_200cm_metal', 2.0, -1.33, 1.62, 2.4, -48.4).map((p) => ({ ...p, r: [0, P2, 0] }))]);
+  add(group, 'ind', clearDoors(runZ('modular_industrial_pipes_01_pipe02', 1.95, -1.27, 2.0, 2.4, -48.4), 1.95));
+  add(group, 'pipes', clearDoors([...runZ('pipe_thin_200cm_metal', 2.0, -1.33, 1.62, 2.4, -48.4).map((p) => ({ ...p, r: [0, P2, 0] }))], 2.0));
   add(group, 'cables', [...cableRun(1.38, 2.0, -3, -7), ...cableRun(1.38, 2.0, -28, -31.5)]);
   add(group, 'manhole', [...manhole(-0.15, -14.5), ...manhole(0.3, -45, 0.7)]);
   sideGate(group, 1.4, -11);
