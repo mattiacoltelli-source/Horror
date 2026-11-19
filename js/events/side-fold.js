@@ -30,7 +30,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
             else { float rest = u - 3.14159 / uK; c2 = vec2(uS0 - rest, uZ0 + 2.0 / uK); nr = vec2(0.0, -1.0); }
             wp.x = c2.x + d * nr.x; wp.z = c2.y + d * nr.y; transformed = (inverse(modelMatrix) * wp).xyz; } }`);
     sh.fragmentShader = 'uniform float uGlow; varying float vRx;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-        totalEmissiveRadiance += vec3(1.0, 0.78, 0.48) * uGlow * pow(smoothstep(4.0, 15.0, vRx), 1.6) * 0.9;`);
+        totalEmissiveRadiance += vec3(1.0, 0.78, 0.48) * uGlow * pow(smoothstep(5.0, 16.0, vRx), 1.8) * 0.45;`);
   }; mat.customProgramCacheKey = () => 'sidefold-' + key; return mat; };
   const wallM = patch(mats.brick.clone(), 'w'), floorM = patch(mats.floorA.clone(), 'f');
   const colorAttr = (g, v) => { const n = g.attributes.position.count, a = new Float32Array(n * 3).fill(v); g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
@@ -40,20 +40,29 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   const mesh = (g, m, parent) => { const o = new THREE.Mesh(g, m); o.frustumCulled = false; parent.add(o); return o; };
   // sezione ad arco (pareti verticali fino alla linea d'imposta, poi mezzo cerchio): lo stesso profilo del varco nel muro del tunnel
   const SPR = R_DOOR.spring, ARC = 14;
-  const sweep = (poly, nrm, xA, xB, nx) => {   // poly: [[z,y],...] lungo la sezione; nrm: normali verso l'interno; si estrude lungo x
+  const sweep = (poly, nrm, xA, xB, nx, topFn = null) => {   // poly: [[z,y],...] lungo la sezione; nrm: normali verso l'interno; si estrude lungo x
     const n = poly.length, pos = [], nor = [], uv = [], idx = [], acc = [0]; for (let k = 1; k < n; k++) acc.push(acc[k - 1] + Math.hypot(poly[k][0] - poly[k - 1][0], poly[k][1] - poly[k - 1][1]));
-    for (let i = 0; i <= nx; i++) { const x = xA + (xB - xA) * i / nx; for (let k = 0; k < n; k++) { pos.push(x, poly[k][1], poly[k][0]); nor.push(0, nrm[k][1], nrm[k][0]); uv.push(x / bu, acc[k] / bv); } }
+    for (let i = 0; i <= nx; i++) { const x = xA + (xB - xA) * i / nx; for (let k = 0; k < n; k++) { pos.push(x, poly[k][2] && topFn ? poly[k][1] * topFn(x) : poly[k][1], poly[k][0]); nor.push(0, nrm[k][1], nrm[k][0]); uv.push(x / bu, acc[k] / bv); } }
     for (let i = 0; i < nx; i++) for (let k = 0; k < n - 1; k++) { const a0 = i * n + k, b0 = a0 + 1, c0 = a0 + n, d0 = c0 + 1; for (const t of [[a0, c0, b0], [b0, c0, d0]]) { const A = new THREE.Vector3(pos[t[0] * 3], pos[t[0] * 3 + 1], pos[t[0] * 3 + 2]), B = new THREE.Vector3(pos[t[1] * 3], pos[t[1] * 3 + 1], pos[t[1] * 3 + 2]), C = new THREE.Vector3(pos[t[2] * 3], pos[t[2] * 3 + 1], pos[t[2] * 3 + 2]), fn = B.clone().sub(A).cross(C.clone().sub(A)); const wn = new THREE.Vector3(0, nor[t[0] * 3 + 1], nor[t[0] * 3 + 2]); idx.push(...(fn.dot(wn) >= 0 ? t : [t[0], t[2], t[1]])); } }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setAttribute('color', new THREE.Float32BufferAttribute(new Array(pos.length).fill(0.8), 3)); g.setIndex(idx); return g; };
   const arcPoly = (zc) => { const poly = [], nrm = []; for (let k = 0; k <= ARC; k++) { const th = Math.PI - k / ARC * Math.PI; poly.push([zc + PW * Math.cos(th), SPR + PW * Math.sin(th)]); nrm.push([-Math.cos(th), -Math.sin(th)]); } return [poly, nrm]; };
   const wallsLo = (zc, xA, xB, nx, parent) => { mesh(sweep([[zc - PW, 0], [zc - PW, SPR]], [[1, 0], [1, 0]], xA, xB, nx), wallM, parent); mesh(sweep([[zc + PW, SPR], [zc + PW, 0]], [[-1, 0], [-1, 0]], xA, xB, nx), wallM, parent); };
   // passaggio di destra (lungo LEN, aperto in fondo): pavimento, pareti e volta; la volta oltre S0 compare quando la luce si spegne (prima il passaggio e' aperto sul vuoto e si intravede la croce)
-  const RP = new THREE.Group(); G.add(RP); const cx = XD + LEN / 2, nx = LEN * 4, NEARL = S0 - XD, FARL = LEN - NEARL;
+  const RP = new THREE.Group(); G.add(RP); const cx = XD + LEN / 2, nx = LEN * 4, NEARL = S0 - XD, FARL = LEN - NEARL, END = XD + LEN;
   const LIN = 0.5;   // i primi 50 cm del passaggio sono rivestiti dagli stessi conci dell'arco (non mattoni nuovi)
-  mesh(quadGeo(LEN - LIN, PW * 2, nx, M(-Math.PI / 2, 0, (XD + LIN + XD + LEN) / 2, 0, ZR), (x, y, z) => [x / fu, z / fv]), floorM, RP);
-  wallsLo(ZR, XD + LIN, XD + LEN, nx, RP);
-  { const [pl, nr] = arcPoly(ZR); mesh(sweep(pl, nr, XD + LIN, S0, Math.round(NEARL * 4)), wallM, RP); }
-  const ceilFar = new THREE.Group(); ceilFar.visible = false; RP.add(ceilFar); { const [pl, nr] = arcPoly(ZR); mesh(sweep(pl, nr, S0, XD + LEN, Math.round(FARL * 4)), wallM, ceilFar); }
+  const FEND = END - 2.6;   // il pavimento finisce prima della fine: il resto e' una scia di lastre spezzate che si perdono nel vuoto
+  mesh(quadGeo(FEND - XD - LIN, PW * 2, Math.round((FEND - XD) * 3), M(-Math.PI / 2, 0, (XD + LIN + FEND) / 2, 0, ZR), (x, y, z) => [x / fu, z / fv]), floorM, RP);
+  wallsLo(ZR, XD + LIN, S0, Math.round(NEARL * 4), RP);   // sotto la volta
+  // oltre la volta le pareti sono muri veri, spessi 35 cm, con il bordo che si sgretola verso il fondo (altezza irregolare), fino a sparire
+  const nz1 = (x) => { const v = Math.sin(x * 12.9898) * 43758.5453; return v - Math.floor(v); };
+  const crumble = (x) => { const t = Math.min(1, Math.max(0, (x - (S0 + 2.2)) / (END - S0 - 2.2))); return t <= 0 ? 1 : Math.max(0.04, 1 - t * (0.35 + 0.8 * nz1(Math.floor(x * 2.6)))); };
+  { const TH = 0.35; for (const j of [-1, 1]) { const zi = ZR + j * PW, zo = ZR + j * (PW + TH), ni = -j;
+      mesh(sweep([[zi, 0, 0], [zi, SPR, 1], [zi, SPR, 1], [zo, SPR, 1], [zo, SPR, 1], [zo, 0, 0]], [[ni, 0], [ni, 0], [0, 1], [0, 1], [j, 0], [j, 0]], S0, END, Math.round(FARL * 4), crumble), wallM, RP); } }
+  // lastre del pavimento spezzate che continuano oltre la fine, sempre piu' rade e piccole, leggermente inclinate
+  { const rr = (() => { let sd = 5; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })();
+    for (let i = 0; i < 16; i++) { const t = i / 16, w = (0.9 - t * 0.55) * (0.6 + rr() * 0.6), len = (0.8 - t * 0.4) * (0.6 + rr() * 0.8), g = new THREE.BoxGeometry(len, 0.1, w); g.rotateX((rr() - 0.5) * 0.3 * (0.4 + t)); g.rotateZ((rr() - 0.5) * 0.3 * (0.4 + t)); g.rotateY((rr() - 0.5) * 0.9); g.translate(FEND + 0.15 + t * 7.5 + rr() * 0.5, -t * 0.5 * rr() - 0.05 * i * 0.2, ZR + (rr() - 0.5) * (1.3 - t * 0.5));
+      const p = g.attributes.position, uv = g.attributes.uv; for (let q = 0; q < p.count; q++) uv.setXY(q, p.getX(q) / fu, p.getZ(q) / fv); colorAttr(g, 0.8 * (1 - t * 0.6)); mesh(g, floorM, RP); } }
+  const ceilFar = new THREE.Group(); ceilFar.visible = false; RP.add(ceilFar); { const [pl, nr] = arcPoly(ZR); mesh(sweep(pl, nr, S0, END, Math.round(FARL * 4)), wallM, ceilFar); }
   // passaggio di sinistra (6 m, chiuso in fondo), nascosto finche' la porta non compare
   const LP = new THREE.Group(); LP.visible = false; G.add(LP); const lcx = -XD - 3, LL = 6;
   mesh(quadGeo(LL - LIN, PW * 2, 24, M(-Math.PI / 2, 0, (-XD - LL - XD - LIN) / 2, 0, ZL), (x, y, z) => [x / fu, z / fv]), floorM, LP);
@@ -133,7 +142,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   // FINESTRA SULLO SPAZIO VERO: sul fondo del passaggio un grande piano mostra la scena della caduta (cielo, galassie, nebulose, pianeti, Sole) con la camera del giocatore, letta a schermo come nel buco del portale
   const winMat = new THREE.ShaderMaterial({ depthWrite: false, fog: false, uniforms: { uTex: { value: null }, uRes: { value: new THREE.Vector2(2, 2) }, uFade: { value: 1 } },
     vertexShader: 'void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: 'uniform sampler2D uTex; uniform vec2 uRes; uniform float uFade; void main() { gl_FragColor = vec4(texture2D(uTex, gl_FragCoord.xy / uRes).rgb * uFade, 1.0); }' });
+    fragmentShader: 'uniform sampler2D uTex; uniform vec2 uRes; uniform float uFade; void main() { vec3 c = texture2D(uTex, gl_FragCoord.xy / uRes).rgb; c = pow(c, vec3(1.45)) * 0.62; gl_FragColor = vec4(c * uFade, 1.0); }' });
   const winQuad = new THREE.Mesh(new THREE.PlaneGeometry(110, 70), winMat); winQuad.position.set(XD + LEN + 0.2, 14, ZR); winQuad.rotation.y = -Math.PI / 2; winQuad.renderOrder = -5; winQuad.frustumCulled = false; winQuad.visible = false; G.add(winQuad);
   const qWin = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2), pcWin = new THREE.Vector3(XD + LEN, 0, ZR), fw = new THREE.Vector3(); let spaceOn = false;
   // bagliore che esce dalla porta: macchia di luce sul pavimento del tunnel e alone sulla soglia
