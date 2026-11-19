@@ -10,7 +10,7 @@ import * as THREE from 'three';
 function eyeTextures(seed = 3, W = 768, H = 480) {
   const rnd = (() => { let s = seed * 9973 + 5; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
   const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; }, tex = (c) => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
-  const cx = W / 2, cy = H / 2, IR = H * 0.255, EX = W * 0.29;   // centro, raggio dell'iride, semi-larghezza della mandorla
+  const cx = W / 2, cy = H / 2, IR = H * 0.31, EX = W * 0.29;   // centro, raggio dell'iride, semi-larghezza della mandorla
   const lidY = (x) => { const u = Math.max(0, 1 - ((x - cx) / EX) ** 2); return H * 0.27 * Math.pow(u, 0.85); };   // semi-altezza dell'apertura a quella x
   // ---- A: radici di buio e nebulose arancio attorno all'occhio (fuori dall'apertura) ----
   const A = mk(), a = A.getContext('2d');
@@ -31,46 +31,38 @@ function eyeTextures(seed = 3, W = 768, H = 480) {
   for (let i = 0; i < 140; i++) { const x = cx + (rnd() - 0.5) * EX * 2, y = cy + (rnd() - 0.5) * H * 0.5, r = 8 + rnd() * 36, g = s.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rnd() < 0.4 ? '230,232,240' : '24,28,48'},${0.12 + rnd() * 0.22})`); g.addColorStop(1, 'rgba(0,0,0,0)'); s.fillStyle = g; s.fillRect(x - r, y - r, 2 * r, 2 * r); }
   const crack = (x, y, ang, len, w, depth) => { s.strokeStyle = `rgba(8,6,14,${0.75 + rnd() * 0.2})`; s.lineWidth = w; s.beginPath(); s.moveTo(x, y); let px = x, py = y; const seg = 7 + (rnd() * 5 | 0); for (let k = 0; k < seg; k++) { ang += (rnd() - 0.5) * 0.9; px += Math.cos(ang) * len / seg; py += Math.sin(ang) * len / seg; s.lineTo(px, py); if (depth > 0 && rnd() < 0.34) crack(px, py, ang + (rnd() - 0.5) * 1.8, len * 0.5, w * 0.65, depth - 1); } s.stroke(); };
   for (const sgn of [-1, 1]) for (let i = 0; i < 8; i++) crack(cx + sgn * IR * (1.0 + rnd() * 0.15), cy + (rnd() - 0.5) * IR * 1.4, sgn > 0 ? (rnd() - 0.5) * 1.2 : Math.PI + (rnd() - 0.5) * 1.2, 40 + rnd() * 60, 2.6 - rnd(), 2);
-  // ---- B: iride = sfera di vetro con stelle e galassie dentro, anello limbale, riflessi, pupilla orizzontale ----
-  const B = mk(), b = B.getContext('2d');
-  b.save(); b.beginPath(); b.arc(cx, cy, IR, 0, 7); b.clip();
-  { const g = b.createRadialGradient(cx - IR * 0.2, cy - IR * 0.2, IR * 0.1, cx, cy, IR); g.addColorStop(0, 'rgba(22,26,50,1)'); g.addColorStop(0.7, 'rgba(8,10,24,1)'); g.addColorStop(1, 'rgba(2,3,8,1)'); b.fillStyle = g; b.fillRect(0, 0, W, H); }
-  for (let i = 0; i < 26; i++) { const x = cx + (rnd() - 0.5) * IR * 2, y = cy + (rnd() - 0.5) * IR * 2, r = 20 + rnd() * 60, hue = rnd() < 0.5 ? '70,90,200' : rnd() < 0.5 ? '170,70,150' : '230,120,50', g = b.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${hue},${0.14 + rnd() * 0.2})`); g.addColorStop(1, `rgba(${hue},0)`); b.fillStyle = g; b.fillRect(x - r, y - r, 2 * r, 2 * r); }   // nebulose dentro la sfera
-  for (let i = 0; i < 700; i++) { const an = rnd() * 6.283, rr = Math.sqrt(rnd()) * IR, x = cx + Math.cos(an) * rr, y = cy + Math.sin(an) * rr, sz = rnd() < 0.04 ? 1.6 + rnd() * 1.4 : 0.4 + rnd() * 0.9; b.fillStyle = `rgba(${rnd() < 0.3 ? '255,200,150' : rnd() < 0.5 ? '190,210,255' : '255,255,255'},${0.35 + rnd() * 0.65})`; b.beginPath(); b.arc(x, y, sz, 0, 7); b.fill(); }
-  for (let i = 0; i < 11; i++) { const an = rnd() * 6.283, rr = Math.sqrt(rnd()) * IR * 0.85, x = cx + Math.cos(an) * rr, y = cy + Math.sin(an) * rr, w = 5 + rnd() * 9; b.save(); b.translate(x, y); b.rotate(rnd() * 3); b.scale(1, 0.4 + rnd() * 0.3); const g = b.createRadialGradient(0, 0, 0, 0, 0, w); g.addColorStop(0, 'rgba(255,235,200,.95)'); g.addColorStop(0.3, 'rgba(230,170,110,.5)'); g.addColorStop(1, 'rgba(120,140,255,0)'); b.fillStyle = g; b.beginPath(); b.arc(0, 0, w, 0, 7); b.fill(); b.restore(); }   // piccole galassie
+  // ---- I: iride (texture propria, quadrata, a piena risoluzione). Di partenza una versione disegnata qui; se c'e' l'immagine dell'iride (irisUrl) la sostituisce appena caricata ----
+  const N = 512, Ic = document.createElement('canvas'); Ic.width = Ic.height = N; const b = Ic.getContext('2d'), ic = N / 2, IRc = N * 0.46;
+  b.save(); b.beginPath(); b.arc(ic, ic, IRc, 0, 7); b.clip();
+  { const g = b.createRadialGradient(ic - IRc * 0.2, ic - IRc * 0.2, IRc * 0.1, ic, ic, IRc); g.addColorStop(0, 'rgba(22,26,50,1)'); g.addColorStop(0.7, 'rgba(8,10,24,1)'); g.addColorStop(1, 'rgba(2,3,8,1)'); b.fillStyle = g; b.fillRect(0, 0, N, N); }
+  for (let i = 0; i < 700; i++) { const an = rnd() * 6.283, rr = Math.sqrt(rnd()) * IRc, x = ic + Math.cos(an) * rr, y = ic + Math.sin(an) * rr, sz = rnd() < 0.04 ? 1.6 + rnd() * 1.4 : 0.4 + rnd() * 0.9; b.fillStyle = `rgba(${rnd() < 0.3 ? '255,200,150' : rnd() < 0.5 ? '190,210,255' : '255,255,255'},${0.35 + rnd() * 0.65})`; b.beginPath(); b.arc(x, y, sz, 0, 7); b.fill(); }
   b.restore();
-  { const g = b.createRadialGradient(cx, cy, IR * 0.82, cx, cy, IR * 1.04); g.addColorStop(0, 'rgba(180,185,200,0)'); g.addColorStop(0.6, 'rgba(190,196,212,.55)'); g.addColorStop(0.85, 'rgba(120,126,146,.7)'); g.addColorStop(1, 'rgba(30,32,44,0)'); b.fillStyle = g; b.beginPath(); b.arc(cx, cy, IR * 1.04, 0, 7); b.fill(); }   // anello di vetro, grigio chiaro
-  b.strokeStyle = 'rgba(255,255,255,.4)'; b.lineWidth = 3; b.beginPath(); b.arc(cx, cy, IR * 0.9, Math.PI * 1.05, Math.PI * 1.45); b.stroke(); b.lineWidth = 2; b.beginPath(); b.arc(cx, cy, IR * 0.86, Math.PI * 0.1, Math.PI * 0.3); b.stroke();   // riflessi sul vetro
-  b.save(); b.translate(cx, cy); b.scale(1, 0.27); { const g = b.createRadialGradient(0, 0, IR * 0.45, 0, 0, IR * 0.7); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.82, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)'); b.fillStyle = g; b.beginPath(); b.arc(0, 0, IR * 0.7, 0, 7); b.fill(); } b.restore();   // pupilla orizzontale
-  // ---- C: filamenti arancio che partono dalla pupilla (somma di luce: pulsano e ruotano piano) ----
-  const C = mk(), c = C.getContext('2d'); c.lineCap = 'round'; c.globalCompositeOperation = 'lighter';
-  { const g = c.createRadialGradient(cx, cy, IR * 0.1, cx, cy, IR * 0.75); g.addColorStop(0, 'rgba(255,150,60,0)'); g.addColorStop(0.55, 'rgba(255,140,50,.06)'); g.addColorStop(1, 'rgba(255,120,40,0)'); c.save(); c.translate(cx, cy); c.scale(1, 0.55); c.translate(-cx, -cy); c.fillStyle = g; c.beginPath(); c.arc(cx, cy, IR * 0.75, 0, 7); c.fill(); c.restore(); }
-  c.save(); c.beginPath(); c.arc(cx, cy, IR * 0.97, 0, 7); c.clip();
-  const bolt = (x, y, ang, len, w, depth) => { let px = x, py = y; const pts = [[x, y]]; const seg = 7 + (rnd() * 6 | 0); for (let k = 0; k < seg; k++) { ang += (rnd() - 0.5) * 1.0; px += Math.cos(ang) * len / seg; py += Math.sin(ang) * len / seg; pts.push([px, py]); if (depth > 0 && rnd() < 0.3) bolt(px, py, ang + (rnd() - 0.5) * 2, len * 0.45, w * 0.7, depth - 1); }
-    for (const [wd, al, col] of [[w * 2.6, 0.06, '255,110,30'], [w, 0.85, '255,170,80'], [w * 0.4, 0.9, '255,240,210']]) { c.strokeStyle = `rgba(${col},${al})`; c.lineWidth = wd; c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); for (let k = 1; k < pts.length; k++) c.lineTo(pts[k][0], pts[k][1]); c.stroke(); } };
-  for (let i = 0; i < 46; i++) { const t = rnd() * 6.283, x0 = cx + Math.cos(t) * IR * 0.62, y0 = cy + Math.sin(t) * IR * 0.2; bolt(x0, y0, t + (rnd() - 0.5) * 0.7, IR * (0.3 + rnd() * 0.5), 1.1 + rnd() * 1.1, 2); }
-  c.restore();
-  c.globalCompositeOperation = 'destination-out'; { c.save(); c.translate(cx, cy); c.scale(1, 0.26); const g = c.createRadialGradient(0, 0, IR * 0.5, 0, 0, IR * 0.72); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.85, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.beginPath(); c.arc(0, 0, IR * 0.72, 0, 7); c.fill(); c.restore(); } c.globalCompositeOperation = 'lighter';   // la pupilla resta nera: niente luce sopra
-  c.strokeStyle = 'rgba(255,160,70,.8)'; c.lineWidth = 3; c.beginPath(); c.ellipse(cx, cy, IR * 0.66, IR * 0.2, 0, 0, 7); c.stroke(); c.strokeStyle = 'rgba(255,230,190,.5)'; c.lineWidth = 1.2; c.beginPath(); c.ellipse(cx, cy, IR * 0.64, IR * 0.185, 0, 0, 7); c.stroke();
-  return [tex(A), tex(S), tex(B), tex(C), { cx, cy, EX, IR, W, H }];
+  { const t = document.createElement('canvas'); t.width = t.height = N; const c = t.getContext('2d'); c.lineCap = 'round'; c.globalCompositeOperation = 'lighter';
+    const bolt = (x, y, ang, len, w, depth) => { let px = x, py = y; const pts = [[x, y]]; const seg = 7 + (rnd() * 6 | 0); for (let k = 0; k < seg; k++) { ang += (rnd() - 0.5) * 1.0; px += Math.cos(ang) * len / seg; py += Math.sin(ang) * len / seg; pts.push([px, py]); if (depth > 0 && rnd() < 0.3) bolt(px, py, ang + (rnd() - 0.5) * 2, len * 0.45, w * 0.7, depth - 1); }
+      for (const [wd, al, col] of [[w * 2.6, 0.06, '255,110,30'], [w, 0.85, '255,170,80'], [w * 0.4, 0.9, '255,240,210']]) { c.strokeStyle = `rgba(${col},${al})`; c.lineWidth = wd; c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); for (let k = 1; k < pts.length; k++) c.lineTo(pts[k][0], pts[k][1]); c.stroke(); } };
+    for (let i = 0; i < 46; i++) { const tt = rnd() * 6.283; bolt(ic + Math.cos(tt) * IRc * 0.62, ic + Math.sin(tt) * IRc * 0.2, tt + (rnd() - 0.5) * 0.7, IRc * (0.3 + rnd() * 0.5), 1.4 + rnd() * 1.4, 2); }
+    b.drawImage(t, 0, 0); }
+  b.save(); b.translate(ic, ic); b.scale(1, 0.27); { const g = b.createRadialGradient(0, 0, IRc * 0.45, 0, 0, IRc * 0.7); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.82, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)'); b.fillStyle = g; b.beginPath(); b.arc(0, 0, IRc * 0.7, 0, 7); b.fill(); } b.restore();   // pupilla orizzontale
+  return [tex(A), tex(S), tex(Ic), { cx, cy, EX, IR, W, H }];
 }
 
-export function createGiantEye({ dir = new THREE.Vector3(-0.55, 0.3, 0.78), size = 520, distance = 850, seed = 3, baseVisibility = 0.14, res = 768 } = {}) {
+export function createGiantEye({ dir = new THREE.Vector3(-0.55, 0.3, 0.78), size = 520, distance = 850, seed = 3, baseVisibility = 0.14, res = 768, irisUrl = new URL('../../assets/tex/eye_iris.webp', import.meta.url).href } = {}) {
   const E = { openness: 0, vis: baseVisibility, dissolve: 0, stare: 0 };
-  const H = Math.round(res * 0.625), [tA, tS, tB, tC] = eyeTextures(seed, res, H);
+  const H = Math.round(res * 0.625), [tA, tS, tI, M] = eyeTextures(seed, res, H);
   E.mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, depthTest: false, fog: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
-    uniforms: { uA: { value: tA }, uS: { value: tS }, uB: { value: tB }, uC: { value: tC }, uT: { value: 0 }, uVis: { value: baseVisibility }, uOpen: { value: 0 }, uDis: { value: 0 }, uLook: { value: new THREE.Vector2() } },
+    uniforms: { uA: { value: tA }, uS: { value: tS }, uI: { value: tI }, uIr: { value: new THREE.Vector2(M.IR / M.W, M.IR / M.H) }, uT: { value: 0 }, uVis: { value: baseVisibility }, uOpen: { value: 0 }, uDis: { value: 0 }, uLook: { value: new THREE.Vector2() } },
     vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: `varying vec2 vUv; uniform sampler2D uA, uS, uB, uC; uniform float uT, uVis, uOpen, uDis; uniform vec2 uLook;
+    fragmentShader: `varying vec2 vUv; uniform sampler2D uA, uS, uI; uniform vec2 uIr; uniform float uT, uVis, uOpen, uDis; uniform vec2 uLook;
       float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float n2(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h2(i), h2(i + vec2(1, 0)), f.x), mix(h2(i + vec2(0, 1)), h2(i + vec2(1, 1)), f.x), f.y); }
       void main() { vec2 p = vUv * 2.0 - 1.0; float rr = length(vec2(p.x * 0.92, p.y * 1.22)); if (rr > 1.0) discard;
         // apertura: mandorla che si schiude con uOpen (prima solo una fessura); sclera, iride e filamenti sono visibili solo dentro
         float hx = max(0.0, 1.0 - pow((p.x - 0.0) / 0.72, 2.0)), hh = 0.54 * pow(hx, 0.85) * uOpen, inside = 1.0 - smoothstep(hh * 0.9, hh + 0.012, abs(p.y));
-        vec4 outer = texture2D(uA, vUv); vec4 sc = texture2D(uS, vUv); vec2 buv = vUv - uLook * vec2(0.07, 0.10); float inB = step(0.0, buv.x) * step(buv.x, 1.0) * step(0.0, buv.y) * step(buv.y, 1.0);
-        vec4 ir = texture2D(uB, buv) * inB; vec2 cuv = buv - 0.5; float ca = uT * 0.03, cs = sin(ca), cc = cos(ca); cuv = vec2(cc * cuv.x - cs * cuv.y * 1.6, (cs * cuv.x / 1.6 + cc * cuv.y)) + 0.5; 
-        vec3 fil = texture2D(uC, buv).rgb * (0.65 + 0.45 * sin(uT * 2.6 + length(buv - 0.5) * 14.0 + n2(buv * 8.0) * 5.0)) * inB;
-        float ai = max(sc.a, ir.a); vec3 inCol = sc.rgb * sc.a * 0.75; inCol = inCol * (1.0 - ir.a) + ir.rgb * ir.a; inCol += fil * ir.a * 1.15;
+        vec4 outer = texture2D(uA, vUv); vec4 sc = texture2D(uS, vUv); vec2 buv = vUv - uLook * vec2(0.07, 0.10);
+        // iride: texture quadrata a piena risoluzione, mappata sul cerchio di raggio uIr; maschera morbida sul bordo; i filamenti luminosi pulsano
+        vec2 iuv = (buv - 0.5) / (2.0 * uIr) + 0.5; float dI = length((iuv - 0.5) * 2.0); vec4 ir = texture2D(uI, iuv); ir.a = max(ir.a, step(0.01, max(ir.r, max(ir.g, ir.b)))) * (1.0 - smoothstep(0.86, 1.0, dI));
+        float lum = dot(ir.rgb, vec3(0.3, 0.5, 0.2)); ir.rgb *= 1.0 + 0.5 * sin(uT * 2.3 + n2(iuv * 9.0) * 6.0) * smoothstep(0.35, 0.9, lum) + 0.1 * sin(uT * 0.7);
+        float ai = max(sc.a, ir.a); vec3 inCol = sc.rgb * sc.a * 0.75; inCol = inCol * (1.0 - ir.a) + ir.rgb * ir.a;
         float edge = smoothstep(0.0, 0.05, hh) * (1.0 - smoothstep(0.0, 0.07, abs(abs(p.y) - hh)) * 0.5);   // ombra delle palpebre sul bordo
         vec3 col = outer.rgb * outer.a * (1.0 - inside * ai) + inCol * inside; float a = max(outer.a, ai * inside);
         // nebbia: l'occhio emerge dal gas, i bordi si sfaldano; con uDis alto si dissolve del tutto
@@ -96,6 +88,7 @@ export function createGiantEye({ dir = new THREE.Vector3(-0.55, 0.3, 0.78), size
     u.uLook.value.x += (lx - u.uLook.value.x) * Math.min(1, dt * 3); u.uLook.value.y += (ly - u.uLook.value.y) * Math.min(1, dt * 3);
     u.uT.value += dt; u.uVis.value = E.vis; u.uOpen.value = 0.1 + E.openness * 0.9; u.uDis.value = E.dissolve;
   };
-  E.dispose = () => { mesh.geometry.dispose(); E.mat.dispose(); tA.dispose(); tS.dispose(); tB.dispose(); tC.dispose(); };
+  new THREE.TextureLoader().load(irisUrl, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; E.mat.uniforms.uI.value = t; E.irisTex = t; }, undefined, () => {});   // l'immagine dell'iride sostituisce quella disegnata (se manca resta la disegnata)
+  E.dispose = () => { mesh.geometry.dispose(); E.mat.dispose(); tA.dispose(); tS.dispose(); tI.dispose(); E.irisTex?.dispose(); };
   return E;
 }
