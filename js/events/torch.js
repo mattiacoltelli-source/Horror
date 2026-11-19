@@ -23,7 +23,7 @@ export function createTorch({ group, player, camera, audio, x, z, yaw = 0, roll 
   const lens = new THREE.Mesh(new THREE.CircleGeometry(0.0315, 20), lensM); lens.position.z = 0.1085; R.add(lens);                                              // vetro incassato nell'anello
   const btn = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.007, 0.022), rub2); btn.position.set(0, 0.0255, 0.026); R.add(btn);                                  // pulsante
   const clip = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.003, 0.03), met); clip.position.set(0.0245, 0, -0.045); R.add(clip);                               // occhiello per il cinturino
-  const L = { intensity: 0 };   // niente luce vera (ogni luce in piu' costa su ogni pixel): resta il bagliore della lente
+  const L = new THREE.SpotLight(0xffefcf, 0, 12, 0.42, 0.85, 1.4); L.castShadow = false; G.add(L, L.target); L.position.set(0, 0.012, 0.13); L.target.position.set(0, -0.02, 3);
   const set = (k) => { L.intensity = 9 * k; lensM.color.setRGB(0.09 + 1.4 * k, 0.09 + 1.3 * k, 0.09 + 1.1 * k); refl.emissive.setRGB(0.5 * k, 0.45 * k, 0.33 * k); };
   const ease = (k) => k * k * (3 - 2 * k), d = new THREE.Vector3(), start = G.position.clone(), fwd = new THREE.Vector3();
   T.reset = () => { T.state = 'idle'; T.t = 0; T.s = 0; T.done = false; G.position.copy(start); G.rotation.y = yaw; R.rotation.z = 0; set(0); };
