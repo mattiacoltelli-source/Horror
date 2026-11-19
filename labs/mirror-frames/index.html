@@ -1,0 +1,78 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cornici specchio</title>
+<style>html,body{margin:0;background:#000;height:100%}canvas{display:block;width:100vw;height:100vh}</style>
+<script type="importmap">{ "imports": { "three": "../../vendor/three/three.module.min.js" } }</script>
+<canvas id="c"></canvas>
+<script type="module">
+// Proposte di cornice per lo specchio della cantina (?style=a|b|c  &view=full|detail). Solo anteprima: non e' usato dal gioco.
+import * as THREE from 'three';
+const q = new URLSearchParams(location.search), style = q.get('style') || 'a', view = q.get('view') || 'full';
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true }); renderer.setPixelRatio(1); renderer.setSize(innerWidth, innerHeight, false);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15; renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x030405); scene.fog = new THREE.FogExp2(0x030405, 0.05);
+const cam = new THREE.PerspectiveCamera(68, innerWidth / innerHeight, 0.05, 40);
+const rnd = (() => { let s = 11; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
+// ---- parete di mattoni ----
+const tl = new THREE.TextureLoader(), bc = tl.load('../../assets/tex/brick_c.jpg'), bn = tl.load('../../assets/tex/brick_n.jpg'); for (const t of [bc, bn]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 3); } bc.colorSpace = THREE.SRGBColorSpace;
+const wall = new THREE.Mesh(new THREE.PlaneGeometry(9, 6), new THREE.MeshStandardMaterial({ map: bc, normalMap: bn, roughness: 0.95, color: 0xb89a8c })); wall.position.set(0, 1.5, -0.001); scene.add(wall);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), new THREE.MeshStandardMaterial({ color: 0x1a1816, roughness: 1 })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
+// ---- vetro sporco (come nel gioco, versione semplificata) ----
+const MW = 1.7, MH = 2.4, DW = 340, DH = 480, dc = document.createElement('canvas'); dc.width = DW; dc.height = DH; const dg = dc.getContext('2d');
+{ const gr = dg.createRadialGradient(DW * .5, DH * .42, 10, DW * .5, DH * .42, DH * .55); gr.addColorStop(0, '#2c3430'); gr.addColorStop(.5, '#3d4640'); gr.addColorStop(1, '#2a3328'); dg.fillStyle = gr; dg.fillRect(0, 0, DW, DH);
+  for (let i = 0; i < 160; i++) { dg.fillStyle = `rgba(${rnd() < .5 ? '40,66,32' : '10,12,10'},${rnd() * .22})`; const r = 6 + rnd() * 36, x = rnd() * DW, y = rnd() * DH; const g2 = dg.createRadialGradient(x, y, 0, x, y, r); g2.addColorStop(0, dg.fillStyle); g2.addColorStop(1, 'rgba(0,0,0,0)'); dg.fillStyle = g2; dg.fillRect(x - r, y - r, 2 * r, 2 * r); }
+  for (let i = 0; i < 20; i++) { const x = rnd() * DW, y0 = rnd() * 150; const g2 = dg.createLinearGradient(0, y0, 0, y0 + 280); g2.addColorStop(0, 'rgba(6,8,6,.5)'); g2.addColorStop(1, 'rgba(6,8,6,0)'); dg.fillStyle = g2; dg.fillRect(x, y0, 1 + rnd() * 3, 280); }
+  dg.lineCap = 'round'; for (let i = 0; i < 40; i++) { const x = DW * (.15 + rnd() * .7), y = DH * (.1 + rnd() * .75), a = rnd() * 6.28, l = 14 + rnd() * 70; dg.strokeStyle = `rgba(205,208,196,${.1 + rnd() * .2})`; dg.lineWidth = .6; dg.beginPath(); dg.moveTo(x, y); dg.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); dg.stroke(); } }
+const glass = new THREE.Mesh(new THREE.PlaneGeometry(MW, MH), new THREE.MeshStandardMaterial({ map: (() => { const t = new THREE.CanvasTexture(dc); t.colorSpace = THREE.SRGBColorSpace; return t; })(), roughness: 0.6, metalness: 0.0, color: 0xc4c4b8, emissive: 0x161a16 })); glass.position.set(0, 1.45, 0.005); scene.add(glass);
+// ---- cornice: profilo spazzolato lungo il rettangolo (angoli a sega) ----
+function sweep(hx, hy, profile) {   // profile: [[w (verso l'esterno), z (verso chi guarda)], ...]
+  const pos = [], uv = [], hxy = [[hx, hy, 0], [hy, hx, -Math.PI / 2], [hx, hy, Math.PI], [hy, hx, Math.PI / 2]];
+  for (const [hl, hd, rot] of hxy) { const c = Math.cos(rot), s = Math.sin(rot); let acc = 0; for (let i = 0; i < profile.length - 1; i++) { const [w0, z0] = profile[i], [w1, z1] = profile[i + 1], L0 = hl + w0, L1 = hl + w1, d0 = hd + w0, d1 = hd + w1, v0 = acc, v1 = acc + Math.hypot(w1 - w0, z1 - z0); acc = v1;
+    const P = (x, y, z) => [x * c - y * s, x * s + y * c, z], A = P(-L0, d0, z0), B = P(L0, d0, z0), C = P(L1, d1, z1), D = P(-L1, d1, z1);
+    pos.push(...A, ...B, ...C, ...A, ...C, ...D); const u = (L) => L * 1.6 * (rot ? 1 : 1); uv.push(u(-L0) , v0 * 6, u(L0), v0 * 6, u(L1), v1 * 6, u(-L0), v0 * 6, u(L1), v1 * 6, u(-L1), v1 * 6); } }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.computeVertexNormals(); return g; }
+function woodCanvas(base, grain, wear, gild) {
+  const W = 512, c = document.createElement('canvas'); c.width = c.height = W; const g = c.getContext('2d'); g.fillStyle = base; g.fillRect(0, 0, W, W);
+  for (let i = 0; i < 700; i++) { g.strokeStyle = `rgba(${grain},${.05 + rnd() * .25})`; g.lineWidth = .4 + rnd() * 1.6; const y = rnd() * W, x = rnd() * W, l = 60 + rnd() * 300; g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x + l * .3, y + (rnd() - .5) * 6, x + l * .7, y + (rnd() - .5) * 6, x + l, y + (rnd() - .5) * 4); g.stroke(); }
+  for (let i = 0; i < 6; i++) { const x = rnd() * W, y = rnd() * W; for (let k = 5; k > 0; k--) { g.strokeStyle = `rgba(${grain},.18)`; g.lineWidth = 1.2; g.beginPath(); g.ellipse(x, y, k * 7, k * 3, 0, 0, 7); g.stroke(); } }   // nodi
+  if (gild) { const t = document.createElement('canvas'); t.width = 70; t.height = 70; const tg = t.getContext('2d'); for (let y = 0; y < 70; y++) for (let x = 0; x < 70; x++) { const r = rnd(); tg.fillStyle = r > .42 ? `rgba(${gild},${Math.min(1, (r - .42) * 2.4)})` : 'rgba(0,0,0,0)'; tg.fillRect(x, y, 1, 1); } const t2 = document.createElement('canvas'); t2.width = t2.height = 200; const g2 = t2.getContext('2d'); g2.imageSmoothingEnabled = true; g2.imageSmoothingQuality = 'high'; g2.drawImage(t, 0, 0, 200, 200); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(t2, 0, 0, W, W);   // foglia d'oro a chiazze (dove manca si vede il legno scuro)
+    g.fillStyle = 'rgba(255,230,160,.05)'; for (let i = 0; i < 300; i++) g.fillRect(rnd() * W, rnd() * W, 1 + rnd() * 3, 1); }
+  for (let i = 0; i < 260; i++) { g.fillStyle = `rgba(${wear},${rnd() * .3})`; g.fillRect(rnd() * W, rnd() * W, 1 + rnd() * 5, 1 + rnd() * 2); }   // usura e graffi
+  for (let i = 0; i < 30; i++) { const x = rnd() * W, y0 = rnd() * W; g.fillStyle = 'rgba(8,6,4,.25)'; g.fillRect(x, y0, 1 + rnd() * 2, 30 + rnd() * 120); }   // sporco colato
+  return c; }
+const mat = (cv, rough = 0.7, metal = 0.1) => { const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return new THREE.MeshStandardMaterial({ map: t, roughness: rough, metalness: metal, side: THREE.DoubleSide, bumpMap: t, bumpScale: 1.2 }); };
+const F = new THREE.Group(); F.position.set(0, 1.45, 0); scene.add(F);
+function along(group, make, w, z, step) {   // ripete un ornamento lungo i 4 lati alla distanza w dal vetro, alla quota z
+  for (const [hl, hd, rot] of [[hx, hy, 0], [hy, hx, -Math.PI / 2], [hx, hy, Math.PI], [hy, hx, Math.PI / 2]]) { const n = Math.floor((hl + w) * 2 / step), c = Math.cos(rot), s = Math.sin(rot);
+    for (let i = 0; i < n; i++) { const x = -(hl + w) + (i + 0.5) * ((hl + w) * 2 / n), y = hd + w, o = make(i); o.position.set(x * c - y * s, x * s + y * c, z); o.rotation.z += rot; group.add(o); } } }
+const hx = MW / 2, hy = MH / 2;
+if (style === 'a') {   // BAROCCA: modanatura a gradini, foglia d'oro consumata su legno scuro, rosoni agli angoli, cimasa a cartiglio
+  const prof = [[0, 0], [0, .035], [.018, .052], [.034, .03], [.046, .03], [.05, .066], [.072, .082], [.094, .064], [.104, .046], [.128, .05], [.143, .082], [.158, .078], [.174, .042], [.174, 0]];
+  const m = mat(woodCanvas('#2a1c11', '30,18,8', '200,170,110', '168,128,52'), 0.55, 0.35); F.add(new THREE.Mesh(sweep(hx, hy, prof), m));
+  { const pm = m; along(F, () => new THREE.Mesh(new THREE.SphereGeometry(.0105, 8, 6), pm), .083, .078, .034); }   // fila di perle sulla modanatura
+  const rosette = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(new THREE.LatheGeometry([[0, .07], [.02, .078], [.04, .07], [.05, .052], [.062, .058], [.08, .046], [.092, .03], [.1, .0]].map(([r, y]) => new THREE.Vector2(r, y)), 28), m)); for (let k = 0; k < 10; k++) { const p = new THREE.Mesh(new THREE.SphereGeometry(.026, 10, 8), m); const a = k / 10 * 6.28; p.position.set(Math.cos(a) * .075, .045, Math.sin(a) * .075); p.scale.set(1, .5, 1.6); p.rotation.y = -a; g.add(p); } g.rotation.x = Math.PI / 2; return g; };
+  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const r = rosette(); r.position.set(sx * (hx + .087), sy * (hy + .087), .07); F.add(r); }
+  const sh = new THREE.Shape(); sh.moveTo(-.46, 0); sh.bezierCurveTo(-.46, .1, -.3, .1, -.26, .17); sh.bezierCurveTo(-.2, .27, -.1, .22, -.06, .3); sh.bezierCurveTo(-.03, .38, .03, .38, .06, .3); sh.bezierCurveTo(.1, .22, .2, .27, .26, .17); sh.bezierCurveTo(.3, .1, .46, .1, .46, 0); sh.lineTo(-.46, 0);
+  const crest = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: .05, bevelEnabled: true, bevelSize: .014, bevelThickness: .016, bevelSegments: 3, curveSegments: 20 }), m); crest.position.set(0, hy + .17, .03); F.add(crest);
+  const sh2 = new THREE.Mesh(new THREE.TorusGeometry(.045, .012, 8, 16), m); sh2.position.set(0, hy + .35, .06); F.add(sh2);
+} else if (style === 'b') {   // GOTICA: rovere nero scolpito, scanalature verticali, frontone a punta con trafori, usura chiara sugli spigoli
+  const prof = [[0, 0], [0, .05], [.02, .055], [.02, .02], [.05, .02], [.05, .075], [.07, .08], [.07, .045], [.1, .045], [.1, .09], [.125, .098], [.15, .09], [.15, .03], [.16, .03], [.16, 0]];
+  const m = mat(woodCanvas('#1d150f', '8,5,3', '120,100,80', null), 0.8, 0.0); F.add(new THREE.Mesh(sweep(hx, hy, prof), m));
+  along(F, () => new THREE.Mesh(new THREE.BoxGeometry(.016, .02, .02), m), .01, .058, .035);   // dentelli lungo il bordo interno
+  along(F, (i) => { const o = new THREE.Mesh(new THREE.CapsuleGeometry(.0085, .028, 3, 6), m); o.rotation.z = Math.PI / 2 + (i % 2 ? .5 : -.5) * 0; o.userData = {}; return o; }, .11, .1, .03);   // cordone a torciglione
+  const sh = new THREE.Shape(); sh.moveTo(-.5, 0); sh.lineTo(-.5, .06); sh.bezierCurveTo(-.4, .08, -.22, .16, -.1, .42); sh.lineTo(-.09, .5); sh.lineTo(0, .66); sh.lineTo(.09, .5); sh.lineTo(.1, .42); sh.bezierCurveTo(.22, .16, .4, .08, .5, .06); sh.lineTo(.5, 0); sh.lineTo(-.5, 0);
+  for (const [x, y, r] of [[0, .27, .07], [-.24, .09, .04], [.24, .09, .04]]) { const h = new THREE.Path(); h.absarc(x, y, r, 0, 6.283, true); sh.holes.push(h); }
+  const crest = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: .06, bevelEnabled: true, bevelSize: .012, bevelThickness: .014, bevelSegments: 2 }), m); crest.position.set(0, hy + .15, .02); F.add(crest);
+  for (const sx of [-1, 1]) { const pin = new THREE.Mesh(new THREE.ConeGeometry(.035, .22, 8), m); pin.position.set(sx * (hx + .1), hy + .26, .05); F.add(pin); const base = new THREE.Mesh(new THREE.BoxGeometry(.07, .12, .07), m); base.position.set(sx * (hx + .1), hy + .15, .05); F.add(base); }
+} else {   // RUSTICA: travi spesse di legno grezzo, angolari di ferro con chiodi, taglio a mano
+  const prof = [[0, 0], [0, .05], [.012, .07], [.18, .075], [.19, .06], [.19, 0]];
+  const m = mat(woodCanvas('#3a2a1c', '16,10,5', '170,150,120', null), 0.9, 0.0); F.add(new THREE.Mesh(sweep(hx, hy, prof), m));
+  const iron = new THREE.MeshStandardMaterial({ color: 0x1a1a1b, roughness: 0.6, metalness: 0.9, side: THREE.DoubleSide }), rust = new THREE.MeshStandardMaterial({ map: (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.fillStyle = '#1d1c1b'; g.fillRect(0, 0, 128, 128); for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(${110 + rnd() * 40 | 0},${50 + rnd() * 20 | 0},20,${rnd() * .35})`; g.fillRect(rnd() * 128, rnd() * 128, 1 + rnd() * 4, 1 + rnd() * 3); } const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })(), roughness: 0.7, metalness: 0.8, side: THREE.DoubleSide });
+  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const p = new THREE.Mesh(new THREE.BoxGeometry(.3, .3, .02), rust); p.position.set(sx * (hx + .06), sy * (hy + .06), .085); F.add(p); const cut = new THREE.Mesh(new THREE.BoxGeometry(.22, .22, .024), m); for (const [dx, dy] of [[-.1, -.1], [.1, -.1], [-.1, .1], [.1, .1]]) { const n = new THREE.Mesh(new THREE.CylinderGeometry(.014, .016, .03, 8), iron); n.rotation.x = Math.PI / 2; n.position.set(sx * (hx + .06) + dx, sy * (hy + .06) + dy, .1); F.add(n); } }
+  for (const [x, y, w, h] of [[0, hy + .06, .5, .09], [0, -hy - .06, .5, .09], [-hx - .06, 0, .09, .5], [hx + .06, 0, .09, .5]]) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, .014), rust); b.position.set(x, y, .083); F.add(b); }
+}
+// ---- luci come in cantina: una luce calda e bassa da sinistra, tenue ambiente freddo ----
+scene.add(new THREE.HemisphereLight(0x3a4a80, 0x0a0a14, 0.9)); { const fill = new THREE.PointLight(0xffd9a8, 7, 9, 1.4); fill.position.set(0.4, 2.2, 3.4); scene.add(fill); }
+const lamp = new THREE.PointLight(0xffc888, 9, 9, 1.5); lamp.position.set(-1.9, 3.4, 1.1); scene.add(lamp);
+const torch = new THREE.SpotLight(0xfff1d6, 9, 12, 0.5, 0.9, 1.8); torch.position.set(0.7, 1.7, 3); torch.target.position.set(0, 1.5, 0); scene.add(torch, torch.target);
+if (view === 'full') { cam.position.set(0.8, 1.45, 3.7); cam.lookAt(0, 1.45, 0); } else if (view === 'corner') { cam.position.set(-0.5, 2.5, 1.5); cam.lookAt(-0.55, 2.55, 0); } else { cam.position.set(0.0, 2.9, 1.8); cam.lookAt(0, 2.75, 0); }
+let n = 0; (function loop() { renderer.render(scene, cam); if (++n === 40) document.title = 'ready'; requestAnimationFrame(loop); })();
+</script>
