@@ -345,10 +345,12 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
       if (s >= 1) { S.seam = null; S.ext = null; }
     }
     core(dt, T);
-    if (T > 4.6 && !S.said1) { S.said1 = true; say('Il plasma delle stelle ti attraversa.', 3200); }
-    if (T > 7.4 && !S.said2) { S.said2 = true; say('Un varco si apre davanti a te.', 3000); }
+    if (T > 2.9 && !S.said0) { S.said0 = true; say('ogni stella è un fuoco\nacceso prima del tempo.', 2600); }
+    if (T > 4.6 && !S.said1) { S.said1 = true; say('Il plasma delle stelle ti attraversa.', 2600); }
+    if (T > 6.0 && !S.said3) { S.said3 = true; say('luce prestata.\nbasta per un solo gesto.', 2400); }
+    if (T > 7.4 && !S.said2) { S.said2 = true; say('Un varco si apre davanti a te.', 2800); }
     if (TR >= DUR - 0.5 && S.phase === 'fall') { S.phase = 'out'; const o = ov(); o.style.background = '#fff'; o.style.transition = 'opacity .45s'; o.style.opacity = '1'; }
-    if (TR >= DUR) { S.active = false; S.phase = 'idle'; S.said1 = S.said2 = false; S.seam = null; S.ext = null; player.speedMul = 1; vig().style.opacity = 0; if (S.pr0) renderer.setPixelRatio(S.pr0); S.onDone?.(); setTimeout(() => { const o = ov(); o.style.transition = 'opacity 1.1s'; o.style.opacity = '0'; }, 1800); }
+    if (TR >= DUR) { S.active = false; S.phase = 'idle'; S.said0 = S.said1 = S.said2 = S.said3 = false; S.seam = null; S.ext = null; player.speedMul = 1; vig().style.opacity = 0; if (S.pr0) renderer.setPixelRatio(S.pr0); S.onDone?.(); setTimeout(() => { const o = ov(); o.style.transition = 'opacity 1.1s'; o.style.opacity = '0'; }, 1800); }
   };
   S.render = () => renderer.render(scene, sc);
   return S;
