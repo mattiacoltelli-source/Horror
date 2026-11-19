@@ -164,7 +164,7 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   { const NA = 110, geo = new THREE.IcosahedronGeometry(1, 1), dm = new THREE.Object3D(); const mat = new THREE.ShaderMaterial({ uniforms: { uSun: { value: SUN.clone() } },
       vertexShader: 'varying vec3 vN, vP, vW; void main() { vP = position; mat4 M = modelMatrix * instanceMatrix; vN = normalize(mat3(M) * normal); vec4 w = M * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
       fragmentShader: NOISE + 'varying vec3 vN, vP, vW; uniform vec3 uSun; void main() { vec3 n = normalize(vN), L = normalize(uSun - vW); float f = n3(vP * 3.0 + vW * 0.05); vec3 col = mix(vec3(0.16, 0.14, 0.13), vec3(0.44, 0.38, 0.32), f); float l = smoothstep(-0.1, 0.5, dot(n, L)); gl_FragColor = vec4(col * (0.03 + l * 1.3), 1.0); }' });
-    const ast = new THREE.InstancedMesh(geo, mat, NA); ast.frustumCulled = false;
+    const ast = S.ast = new THREE.InstancedMesh(geo, mat, NA); ast.frustumCulled = false;
     for (let i = 0; i < NA; i++) { const ang = rnd() * 6.283, rad = 5.2 + Math.pow(rnd(), 0.8) * 13, z = -30 - rnd() * 24; dm.position.set(Math.cos(ang) * rad + 6, Math.sin(ang) * rad * 0.7 - 1, z); const sz = 0.1 + Math.pow(rnd(), 3) * 0.75; dm.scale.set(sz * (0.7 + rnd() * 0.6), sz * (0.7 + rnd() * 0.6), sz * (0.7 + rnd() * 0.6)); dm.rotation.set(rnd() * 6, rnd() * 6, rnd() * 6); dm.updateMatrix(); ast.setMatrixAt(i, dm.matrix); }
     scene.add(ast); }
 
@@ -302,6 +302,7 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   // ---- nucleo del disegno: aggiorna tutto cio' che si muove nella scena per il tempo T, con la camera data (percorso della caduta, oppure posa esterna S.ext) ----
   const core = (dt, T, win = false) => {
     U.uT.value = T;
+    { const lite = win; dust.pts.visible = !lite; windPts.visible = !lite; streaks.visible = !lite; S.ast.visible = !lite; }   // nelle finestre: via polvere, vento solare, scie e asteroidi (poco visibili da lontano, molto costosi)
     disk.visible = lensed.visible = !win; if (win) for (const f of flares) f.sp.material.opacity = 0;
     { const showEye = !!S.eye && (!win || !!S.opts?.eye); if (S.eye) { S.eye.mesh.visible = showEye; if (showEye) { S.eye.dir.copy(win ? EYE_WIN : EYE_FALL); S.eye.mesh.scale.setScalar(win ? 0.36 : 1); } }
       crossG.visible = win && !!S.opts?.cross; if (crossG.visible) crossG.rotation.y += dt * 0.12; portal2.visible = win && !!S.opts?.portal; pMat2.uniforms.uT.value = T; }
@@ -350,7 +351,7 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   const extWin = { pos: new THREE.Vector3(), quat: new THREE.Quaternion() };
   S.drawWindow = (dt, camPos, camQuat, pc, q, opts = null) => { S.opts = opts;
     if (!S.prepared || S.active) return false;
-    renderer.getDrawingBufferSize(vtmp); const w = Math.max(64, Math.round(vtmp.x * 0.4)), h = Math.max(64, Math.round(vtmp.y * 0.4)); if (winRT.width !== w || winRT.height !== h) winRT.setSize(w, h); S.win.res.copy(vtmp);
+    renderer.getDrawingBufferSize(vtmp); const w = Math.max(64, Math.round(vtmp.x * 0.32)), h = Math.max(64, Math.round(vtmp.y * 0.32)); if (winRT.width !== w || winRT.height !== h) winRT.setSize(w, h); S.win.res.copy(vtmp);
     S.win.wt += dt; S.ext = mapPose(camPos, camQuat, pc, extWin, q); core(dt, S.win.wt, true); const prev = renderer.getRenderTarget(); renderer.setRenderTarget(winRT); renderer.render(scene, sc); renderer.setRenderTarget(prev); S.ext = null; S.opts = null; return true;
   };
   S.update = (dt) => {
