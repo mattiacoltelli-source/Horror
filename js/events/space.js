@@ -343,7 +343,7 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   // ---- FINESTRA SUL PORTALE: la scena dello spazio vista attraverso il buco nel pavimento della cantina, a bassa risoluzione, con la stessa camera del giocatore
   // (la direzione "giu'" della cantina diventa "avanti" nello spazio, cosi' dal buco si vede il cielo con i pianeti, il Sole e il buco nero). ----
   const qR = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2), vtmp = new THREE.Vector2();
-  const winRT = new THREE.WebGLRenderTarget(64, 64, { depthBuffer: true, generateMipmaps: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }); winRT.texture.colorSpace = THREE.SRGBColorSpace;
+  const winRT = new THREE.WebGLRenderTarget(64, 64, { depthBuffer: true, samples: 4, generateMipmaps: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }); winRT.texture.colorSpace = THREE.SRGBColorSpace;
   S.win = { tex: winRT.texture, res: new THREE.Vector2(2, 2), wt: 0 }; S.ext = null; S.seam = null;
   const mapPose = (camPos, camQuat, pc, out, q = qR) => { out.pos.copy(camPos).sub(pc).applyQuaternion(q); out.quat.copy(camQuat).premultiply(q); return out; };
   const extWin = { pos: new THREE.Vector3(), quat: new THREE.Quaternion() };

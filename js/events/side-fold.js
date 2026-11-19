@@ -22,13 +22,13 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     Object.assign(sh.uniforms, U);
     sh.vertexShader = 'uniform float uK, uS0, uZ0; varying float vRx;\n' + sh.vertexShader
       .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
-        { vec3 wp0 = (modelMatrix * vec4(position, 1.0)).xyz; if (uK > 1e-4 && wp0.x > uS0) { float ph = min(uK * (wp0.x - uS0), 3.14159), c = cos(ph), s = sin(ph); vec3 wn = mat3(modelMatrix) * objectNormal; float nx = wn.x, nz = wn.z; wn.x = nx * c - nz * s; wn.z = -(nx * s + nz * c); objectNormal = normalize(transpose(mat3(modelMatrix)) * wn); } }`)
+        { vec3 wp0 = (modelMatrix * vec4(position, 1.0)).xyz; if (uK > 1e-4 && wp0.x > uS0) { float ph = min(uK * (wp0.x - uS0), 3.14159), c = cos(ph), s = sin(ph); vec3 wn = mat3(modelMatrix) * objectNormal; float nx = wn.x, nz = wn.z; wn.x = nx * c + nz * s; wn.z = -nx * s + nz * c; objectNormal = normalize(transpose(mat3(modelMatrix)) * wn); } }`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
         { vec4 wp = modelMatrix * vec4(transformed, 1.0); vRx = wp.x;
           if (uK > 1e-4 && wp.x > uS0) { float u = wp.x - uS0, ph = uK * u, d = wp.z - uZ0; vec2 c2, nr;
-            if (ph < 3.14159) { c2 = vec2(uS0 + sin(ph) / uK, uZ0 + (1.0 - cos(ph)) / uK); nr = vec2(-sin(ph), cos(ph)); }
-            else { float rest = u - 3.14159 / uK; c2 = vec2(uS0 - rest, uZ0 + 2.0 / uK); nr = vec2(0.0, -1.0); }
-            wp.x = c2.x + d * nr.x; wp.z = 2.0 * uZ0 - (c2.y + d * nr.y); transformed = (inverse(modelMatrix) * wp).xyz; } }`);
+            if (ph < 3.14159) { c2 = vec2(uS0 + sin(ph) / uK, uZ0 - (1.0 - cos(ph)) / uK); nr = vec2(sin(ph), cos(ph)); }
+            else { float rest = u - 3.14159 / uK; c2 = vec2(uS0 - rest, uZ0 - 2.0 / uK); nr = vec2(0.0, -1.0); }
+            wp.x = c2.x + d * nr.x; wp.z = c2.y + d * nr.y; transformed = (inverse(modelMatrix) * wp).xyz; } }`);
     sh.fragmentShader = 'uniform float uGlow; varying float vRx;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         totalEmissiveRadiance += vec3(1.0, 0.78, 0.48) * uGlow * pow(smoothstep(5.0, 16.0, vRx), 1.8) * 0.45;`);
   }; mat.customProgramCacheKey = () => 'sidefold-' + key; return mat; };
@@ -58,10 +58,14 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   const crumble = (x) => { const t = Math.min(1, Math.max(0, (x - (SV + 2.2)) / (END - SV - 2.2))); return t <= 0 ? 1 : Math.max(0.04, 1 - t * (0.35 + 0.8 * nz1(Math.floor(x * 2.6)))); };
   const wallThick = (xa, xb, fn, parent, zc = ZR) => { const TH = 0.35; for (const j of [-1, 1]) { const zi = zc + j * PW, zo = zc + j * (PW + TH), ni = -j;
       mesh(sweep([[zi, 0, 0], [zi, SPR, 1], [zi, SPR, 1], [zo, SPR, 1], [zo, SPR, 1], [zo, 0, 0]], [[ni, 0], [ni, 0], [0, 1], [0, 1], [j, 0], [j, 0]], xa, xb, Math.max(2, Math.round((xb - xa) * 4)), fn), wallM, parent); } };
+  const wallThickSide = (xa, xb, j, parent, zc = ZR) => { const TH = 0.35, zi = zc + j * PW, zo = zc + j * (PW + TH), ni = -j; mesh(sweep([[zi, 0, 0], [zi, SPR, 1], [zi, SPR, 1], [zo, SPR, 1], [zo, SPR, 1], [zo, 0, 0]], [[ni, 0], [ni, 0], [0, 1], [0, 1], [j, 0], [j, 0]], xa, xb, Math.max(2, Math.round((xb - xa) * 4)), null), wallM, parent); };
   const XF = 12.0, ENDR = 15.6;   // da XF in poi, durante la piega, il passaggio diventa intero (tratto di ritorno): le parti sgretolate spariscono
-  wallThick(XD + LIN, XF, crumble, RP);
+  const nearWalls = new THREE.Group(); RP.add(nearWalls); wallThick(XD + LIN, XF, crumble, nearWalls);
   const farWalls = new THREE.Group(); RP.add(farWalls); wallThick(XF, END, crumble, farWalls);
-  const RET = new THREE.Group(); RET.visible = false; RP.add(RET); wallThick(XF, ENDR, null, RET);
+  const RET = new THREE.Group(); RET.visible = false; RP.add(RET);
+  // durante la piega il passaggio e' un tunnel chiuso (muri interi fino alla volta) con solo due spaccature strette, una a destra e una a sinistra, da cui si vede l'universo
+  const FW = new THREE.Group(); FW.visible = false; RP.add(FW); { const CR = [[1, 7.5], [-1, 10.3]], CW = 0.26; const gT = radial([[0, 'rgba(255,255,255,1)'], [0.35, 'rgba(255,225,200,.55)'], [1, 'rgba(160,150,255,0)']], 64); for (const j of [-1, 1]) { const cs = CR.filter((c) => c[0] === j).map((c) => c[1]); let x0 = XD + LIN; for (const c of cs) { wallThickSide(x0, c, j, FW); x0 = c + CW; } wallThickSide(x0, ENDR, j, FW); }
+    for (const [j, cxs] of CR) { const gm = patch(new THREE.MeshBasicMaterial({ map: gT, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 1.0, color: 0xcdb8ff, side: THREE.DoubleSide }), 'g'); const m = new THREE.Mesh(new THREE.PlaneGeometry(1.3, SPR, 8, 1), gm); m.rotation.y = Math.PI / 2; m.position.set(cxs + CW / 2, SPR / 2, ZR + j * (PW + 0.55)); m.frustumCulled = false; FW.add(m); } }
   mesh(quadGeo(ENDR - FEND, PW * 2, Math.round((ENDR - FEND) * 3), M(-Math.PI / 2, 0, (FEND + ENDR) / 2, 0, ZR), (x, y, z) => [x / fu, z / fv]), floorM, RET);
   // lastre del pavimento spezzate che continuano oltre la fine, sempre piu' rade e piccole, leggermente inclinate
   const slabs = [];
@@ -210,7 +214,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
         if (P.x > XD + 1.7 && Math.abs(P.z - ZR) < 0.7 && !player.frozen) { F.state = 'flicker'; F.t = 0; lampAll('flicker', 1.7); audio.swell?.(2.2, 0.45); audio.whisper?.(1.4, 0.2); instab?.push?.(0.6, 6); } }
       return;
     }
-    if (st === 'flicker') { flickerT -= dt; if (flickerT <= 0) { flickerT = 0.04 + Math.random() * 0.1; lv = Math.random() < 0.5 ? 0.1 : 1.0; } setLight(lv); if (F.t > 1.7) { F.state = 'dark'; F.t = 0; setLight(0); GL.visible = false; winQuad.visible = false; ceilFar.visible = true; spill.visible = spillSp.visible = false; lampAll('off', 99); audio.lightOff?.(); audio.scare?.(); player.speedMul = 0; } return; }
+    if (st === 'flicker') { flickerT -= dt; if (flickerT <= 0) { flickerT = 0.04 + Math.random() * 0.1; lv = Math.random() < 0.5 ? 0.1 : 1.0; } setLight(lv); if (F.t > 1.7) { F.state = 'dark'; F.t = 0; setLight(0); GL.visible = false; winQuad.visible = false; ceilFar.visible = true; nearWalls.visible = false; farWalls.visible = false; for (const o of slabs) o.visible = false; FW.visible = true; spill.visible = spillSp.visible = false; lampAll('off', 99); audio.lightOff?.(); audio.scare?.(); player.speedMul = 0; } return; }
     if (st === 'dark') { if (F.t > 1.0) { F.state = 'fold'; F.t = 0; player.speedMul = 1; farWalls.visible = false; for (const o of slabs) o.visible = false; RET.visible = true; say?.('La stanza non c’è più.\nIl passaggio si piega.', 3800); audio.swell?.(5, 0.55); } return; }
     if (st === 'fold') {
       const k = Math.min(1, F.t / 6.0), e = k * k * (3 - 2 * k); U.uK.value = KEND * e;
@@ -231,10 +235,10 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   F.applyCamera = () => {
     const K = U.uK.value; if (K < 1e-4 || F.state !== 'fold') return; const p = camera.position, x = p.x; if (x <= S0) return;
     const u = x - S0, ph = Math.min(K * u, Math.PI), d = p.z - ZR; let cxm, czm, nx2, nz2;
-    if (K * u < Math.PI) { cxm = S0 + Math.sin(ph) / K; czm = ZR + (1 - Math.cos(ph)) / K; nx2 = -Math.sin(ph); nz2 = Math.cos(ph); } else { cxm = S0 - (u - Math.PI / K); czm = ZR + 2 / K; nx2 = 0; nz2 = -1; }
-    p.x = cxm + d * nx2; p.z = 2 * ZR - (czm + d * nz2); camera.quaternion.premultiply(qY.setFromAxisAngle(yA, ph));
+    if (K * u < Math.PI) { cxm = S0 + Math.sin(ph) / K; czm = ZR - (1 - Math.cos(ph)) / K; nx2 = Math.sin(ph); nz2 = Math.cos(ph); } else { cxm = S0 - (u - Math.PI / K); czm = ZR - 2 / K; nx2 = 0; nz2 = -1; }
+    p.x = cxm + d * nx2; p.z = czm + d * nz2; camera.quaternion.premultiply(qY.setFromAxisAngle(yA, ph));
   };
-  F.reset = () => { F.state = 'idle'; F.t = 0; F.done = false; F.cutDone = false; U.uK.value = 0; RP.visible = true; farWalls.visible = true; for (const o of slabs) o.visible = true; RET.visible = false; R2.visible = false; frame2.visible = false; SKY.visible = false; if (tunnel.userData.plugs) { tunnel.userData.plugs[0].visible = false; tunnel.userData.plugs[1].visible = true; tunnel.userData.plugs[2].visible = true; } ceilFar.visible = false; winQuad.visible = false; spaceOn = false; for (const o of fallback) o.visible = true; LP.visible = false; frameL.visible = false; frameR.visible = true; GL.visible = true; spill.visible = spillSp.visible = true;  player.constrainMove = cm; };
+  F.reset = () => { F.state = 'idle'; F.t = 0; F.done = false; F.cutDone = false; U.uK.value = 0; RP.visible = true; nearWalls.visible = true; FW.visible = false; farWalls.visible = true; for (const o of slabs) o.visible = true; RET.visible = false; R2.visible = false; frame2.visible = false; SKY.visible = false; if (tunnel.userData.plugs) { tunnel.userData.plugs[0].visible = false; tunnel.userData.plugs[1].visible = true; tunnel.userData.plugs[2].visible = true; } ceilFar.visible = false; winQuad.visible = false; spaceOn = false; for (const o of fallback) o.visible = true; LP.visible = false; frameL.visible = false; frameR.visible = true; GL.visible = true; spill.visible = spillSp.visible = true;  player.constrainMove = cm; };
   // animazioni leggere della stanza (raggi che respirano, polvere che sale, frammenti che ruotano)
   F.animate = (dt) => { for (let i = 0; i < runeMats.length; i++) runeMats[i].opacity = 0.32 + 0.3 * (0.5 + 0.5 * Math.sin(tt * 0.9 + i * 1.7)) * (0.7 + 0.3 * Math.sin(tt * 4.1 + i * 3.1)); for (const d of dustSets) { const a = d.pts.geometry.attributes.position; for (let i = 0; i < d.pd.length; i++) { const k = (tt * d.pd[i][1] + d.pd[i][0] * 3) % 1; a.array[i * 3] = d.side * (W - 0.1 - k * 0.5); a.array[i * 3 + 1] = 0.15 + k * 1.9 * (0.5 + d.pd[i][0]); a.array[i * 3 + 2] = d.zc + d.pd[i][2] * 1.8 + Math.sin(tt * 0.5 + i) * 0.1; } a.needsUpdate = true; }
     if (!GL.visible) return; cross.rotation.y += dt * 0.14; for (const o of GL.children) if (o.userData.ph !== undefined) o.rotation.x += Math.sin(tt * 0.6 + o.userData.ph) * dt * 0.02; for (const d of debris) { d.rotation.x += d.userData.sp[0] * dt; d.rotation.y += d.userData.sp[1] * dt; d.position.y += Math.sin(tt * 0.5 + d.position.x) * dt * 0.05; }
