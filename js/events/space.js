@@ -74,9 +74,9 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
         float dens = 0.80 - 0.12 * band;
         col += stars(d, 90.0, dens + 0.08, 0.18) * 1.4 + stars(d, 170.0, dens + 0.05, 0.16) + stars(d, 320.0, dens, 0.14) * 0.8 + stars(d, 40.0, 0.94, 0.2) * 2.0;
         gl_FragColor = vec4(min(col, vec3(1.0)), 1.0); }`, {}, 16);
-  const skyMat = new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { uTex: { value: skyTex } },
+  const skyMat = new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { uTex: { value: skyTex }, uWin: { value: 0 } },
     vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: 'varying vec2 vUv; uniform sampler2D uTex; void main() { gl_FragColor = vec4(texture2D(uTex, vUv).rgb, 1.0); }' });
+    fragmentShader: 'varying vec2 vUv; uniform sampler2D uTex; uniform float uWin; void main() { vec3 c = texture2D(uTex, vUv).rgb; float l = dot(c, vec3(0.3, 0.5, 0.2)); c = mix(c, vec3(l) * vec3(0.8, 0.85, 1.0), 0.75 * uWin) * (1.0 - 0.45 * uWin) ; gl_FragColor = vec4(c, 1.0); }' });
   const skyMesh = new THREE.Mesh(new THREE.SphereGeometry(900, 40, 24), skyMat); skyMesh.renderOrder = -10; skyMesh.frustumCulled = false; sky.add(skyMesh);
   const galaxyMat = (seed, tilt, hue) => {
     const tex = bake(128, 128, NOISE + `varying vec2 vUv; uniform float uSeed, uTilt; uniform vec3 uHue;
@@ -302,7 +302,7 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   // ---- nucleo del disegno: aggiorna tutto cio' che si muove nella scena per il tempo T, con la camera data (percorso della caduta, oppure posa esterna S.ext) ----
   const core = (dt, T, win = false) => {
     U.uT.value = T;
-    { const lite = win; dust.pts.visible = !lite; windPts.visible = !lite; streaks.visible = !lite; S.ast.visible = !lite; for (const pl of planets) if (pl.m !== gas) pl.m.visible = !lite; corona.visible = !lite; for (const m of moons) m.m.visible = !lite; for (const m of proms) m.m.visible = !lite; for (const b of brights) b.sp.visible = !lite; jets.visible = halo.visible = !lite; for (const o of sky.children) if (o !== skyMesh) o.visible = !lite || o.userData.keepWin === true; }   // nelle finestre: meno particolari (lune, protuberanze, stelle a raggi, getti, galassie piccole)   // nelle finestre: via polvere, vento solare, scie e asteroidi (poco visibili da lontano, molto costosi)
+    { const lite = win; dust.pts.visible = !lite; windPts.visible = !lite; streaks.visible = !lite; S.ast.visible = !lite; skyMat.uniforms.uWin.value = lite ? 1 : 0; for (const m of scene.children) if (m.userData.bb) m.visible = !lite; for (const pl of planets) if (pl.m !== gas) pl.m.visible = !lite; corona.visible = !lite; for (const m of moons) m.m.visible = !lite; for (const m of proms) m.m.visible = !lite; for (const b of brights) b.sp.visible = !lite; jets.visible = halo.visible = !lite; for (const o of sky.children) if (o !== skyMesh) o.visible = !lite || o.userData.keepWin === true; }   // nelle finestre: meno particolari (lune, protuberanze, stelle a raggi, getti, galassie piccole)   // nelle finestre: via polvere, vento solare, scie e asteroidi (poco visibili da lontano, molto costosi)
     disk.visible = lensed.visible = !win; if (win) for (const f of flares) f.sp.material.opacity = 0;
     { const showEye = !!S.eye && (!win || !!S.opts?.eye); if (S.eye) { S.eye.mesh.visible = showEye; if (showEye) { S.eye.dir.copy(win ? EYE_WIN : EYE_FALL); S.eye.mesh.scale.setScalar(win ? 0.36 : 1); } }
       crossG.visible = win && !!S.opts?.cross; if (crossG.visible) crossG.rotation.y += dt * 0.12; portal2.visible = win && !!S.opts?.portal; pMat2.uniforms.uT.value = T; }
