@@ -21,7 +21,7 @@ export function decorTunnel(group) {
     { k: 'C', p: [-1.397, 1.346, -39.2], wall: '+x', h: 0.3, rot: 0.2 }, { k: 'A', p: [-1.397, 1.22, -41.2], wall: '+x', h: 0.31, rot: -0.15, flip: true },
     { k: 'C', p: [-1.397, 1.05, -43.0], wall: '+x', h: 0.29, rot: 0.3 },
     // (tolta la mano a z -28.5: li' c'e' il murale)
-    { k: 'X', p: [-1.397, 1.7, -35.0], wall: '+x', h: 0.55, rot: -0.15, flip: true },
+    { k: 'X', p: [-1.397, 1.7, -37.0], wall: '+x', h: 0.55, rot: -0.15, flip: true },
   ]);
   burnDecals(group, [{ k: 'wall', p: [-1.393, 1.0, -46.5], wall: '+x', w: 1.7, h: 1.8, a: 0.3 }]);   // un segno di fumo vicino al portone: il fuoco ha toccato anche qui
   patchDecals(group, [{ img: 'assets/tex/pt_gravel.webp', p: [-0.5, 0.012, -16.7], wall: 'floor', w: 1.5, h: 2.3, rot: 0.55 }, { img: 'assets/tex/pt_layers.webp', p: [-0.3, 0.012, -33.5], wall: 'floor', w: 1.8, h: 2.8, rot: -0.15 }]);   // tunnel: cemento grezzo a chiazze sul pavimento
