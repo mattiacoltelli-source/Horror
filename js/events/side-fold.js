@@ -69,7 +69,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   mesh(quadGeo(ENDR - FEND, PW * 2, Math.round((ENDR - FEND) * 3), M(-Math.PI / 2, 0, (FEND + ENDR) / 2, 0, ZR), (x, y, z) => [x / fu, z / fv]), floorM, RET);   // pavimento del tratto di ritorno
   const FW = new THREE.Group(); FW.visible = false; RP.add(FW);
   // durante la piega il passaggio e' un tunnel chiuso (muri spessi 50 cm fino alla volta) con solo due squarci, uno a destra e uno a sinistra; i bordi dello squarcio hanno lo spessore pieno del muro; dietro si vede solo l'universo
-  { const CR = [[1, 7.3], [-1, 10.1]], CW = 0.55;
+  { const CR = [], CW = 0.55;   // nessuna feritoia: il tunnel che si piega e' chiuso
     const skyTex = (() => { const W2 = 1024, H2 = 512, c = document.createElement('canvas'); c.width = W2; c.height = H2; const g = c.getContext('2d'), rr = (() => { let sd = 53; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })(); g.fillStyle = '#01010a'; g.fillRect(0, 0, W2, H2);
       for (let i = 0; i < 70; i++) { const x = rr() * W2, y = rr() * H2, rad = 40 + rr() * 150, hue = rr() < 0.4 ? '130,60,200' : rr() < 0.5 ? '240,120,60' : rr() < 0.5 ? '50,150,200' : '200,70,140', gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(${hue},${0.07 + rr() * 0.16})`); gr.addColorStop(1, `rgba(${hue},0)`); g.fillStyle = gr; g.fillRect(x - rad, y - rad, 2 * rad, 2 * rad); }   // nebulose a strati
       g.globalCompositeOperation = 'lighter';
@@ -121,9 +121,6 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     blk(0.5, 0.06, RAD * 2 + 0.5, xo - side * 0.22, 0.03, zc, 0, 0, 0, 0.45, 0.02); blk(0.56, 0.06, RAD * 2, XC, -0.03, zc, 0, 0, 0, 0.45, 0.02);   // soglia fuori e lastra nel passaggio
     for (let i = 0; i < 4; i++) blk(0.07 + r() * 0.08, 0.06 + r() * 0.07, 0.08 + r() * 0.09, xo - side * (0.3 + r() * 0.4), 0.05, zc + (r() - 0.5) * 2.2, r(), r(), r(), 0.4, 0.03);
     const fm = frameM.clone(); fm.vertexColors = true; g.add(new THREE.Mesh(mergeGeometries(parts), fm));
-    // polvere che esce dal varco
-    const NP = 20, pp = new Float32Array(NP * 3), pd = []; for (let i = 0; i < NP; i++) { pd.push([r(), 0.04 + r() * 0.08, (r() - 0.5) * 0.5]); }
-    const dust = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(pp, 3)), new THREE.PointsMaterial({ color: 0xcfd8e8, size: 0.035, sizeAttenuation: true, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, map: radial([[0, 'rgba(255,255,255,1)'], [1, 'rgba(255,255,255,0)']], 32) })); dust.frustumCulled = false; g.add(dust); dustSets.push({ pts: dust, pp, pd, side, zc });
     return g; };
   // RIVESTIMENTO DI SOSTEGNO dietro i conci: un guscio continuo di pietra (arco, pareti e pavimento) lungo la profondita' dell'arco; chiude ogni fessura tra un concio e l'altro (da li' non si vede mai il vuoto o l'universo)
   let lin; { const linM = mats.stone.clone(); linM.color.setRGB(0.5, 0.5, 0.52);
