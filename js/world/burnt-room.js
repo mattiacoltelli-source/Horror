@@ -46,14 +46,9 @@ export function createBurntRoom({ z0, w, l, h }) {
     for (const sz of [0.5, 1, 1.5, 2, 2.5].map((k) => z0 - 1 - k * 4.4)) { bx(0.5, h, 0.5, xr - 0.25, h / 2, sz); }                                                          // pilastri a destra
     S.add(new THREE.Mesh(mergeGeometries(parts), charred)); }
 
-  // ---- detriti: sedia rovesciata, figura carbonizzata seduta che guarda lo specchio, mucchi di macerie ----
+  // ---- detriti: sedia rovesciata, mucchi di macerie ----
   { const parts = [], bx = (sx, sy, sz, x, y, z, rx = 0, ry = 0, rz = 0) => { const g = new THREE.BoxGeometry(sx, sy, sz); g.rotateX(rx); g.rotateY(ry); g.rotateZ(rz); g.translate(x, y, z); parts.push(g); };
     bx(0.45, 0.05, 0.45, 0.7, 0.28, z0 - 8.2, 1.2, 0.5, 0.2); bx(0.05, 0.5, 0.45, 0.78, 0.5, z0 - 8.5, 1.2, 0.5, 0.2); for (const [dx, dz] of [[-.2, -.2], [.2, -.2], [-.2, .2], [.2, .2]]) bx(0.05, 0.42, 0.05, 0.7 + dx * 1.1, 0.12, z0 - 8.2 + dz * 1.1, 0.7, 0.3, 0.5);   // sedia caduta
-    { const cx = 2.4, cz = z0 - 12.8; bx(0.5, 0.05, 0.5, cx, 0.46, cz); bx(0.05, 0.55, 0.5, cx + 0.25, 0.75, cz); for (const [dx, dz] of [[-.22, -.22], [.22, -.22], [-.22, .22], [.22, .22]]) bx(0.05, 0.46, 0.05, cx + dx, 0.23, cz + dz);   // sedia
-      bx(0.34, 0.1, 0.3, cx - 0.02, 0.53, cz); bx(0.3, 0.6, 0.3, cx + 0.07, 0.86, cz, 0, 0, -0.12);                                                                                       // bacino e busto
-      bx(0.4, 0.1, 0.1, cx - 0.28, 0.58, cz - 0.12, 0, 0, 0.1); bx(0.4, 0.1, 0.1, cx - 0.28, 0.58, cz + 0.12, 0, 0, 0.1); bx(0.1, 0.5, 0.1, cx - 0.46, 0.34, cz - 0.12); bx(0.1, 0.5, 0.1, cx - 0.46, 0.34, cz + 0.12);   // cosce e stinchi
-      bx(0.1, 0.1, 0.34, cx - 0.1, 0.92, cz - 0.28, 0, 0, 0.9); bx(0.1, 0.1, 0.34, cx - 0.1, 0.92, cz + 0.28, 0, 0, 0.9);   // braccia sulle ginocchia
-      const hd = new THREE.SphereGeometry(0.13, 10, 8); hd.scale(1, 1.15, 1); hd.translate(cx - 0.04, 1.3, cz + 0.02); parts.push(hd); }
     S.add(new THREE.Mesh(mergeGeometries(parts), dark(0x0a0706)));
     const rub = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.2, 0), dark(0x15100d), 22), d = new THREE.Object3D(); for (let i = 0; i < 22; i++) { const k = i % 4, [bx0, bz0] = B[k]; d.position.set(bx0 + (rnd() - 0.5) * 2.2, 0.07, bz0 + (rnd() - 0.5) * 2.2); d.scale.set(0.5 + rnd() * 1.4, 0.3 + rnd() * 0.5, 0.5 + rnd() * 1.4); d.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3); d.updateMatrix(); rub.setMatrixAt(i, d.matrix); } S.add(rub); }
 
