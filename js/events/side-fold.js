@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { W, SIDE_DOORS, Z_END } from '../world/tunnel.js';
 import { TILES } from '../world/materials.js';
+import { mergeGeometries } from '../../vendor/three/utils/BufferGeometryUtils.js';
 
 const R_DOOR = SIDE_DOORS[0], L_DOOR = SIDE_DOORS[1], ZR = R_DOOR.z, ZL = L_DOOR.z, XD = W, PW = 0.7, PH = R_DOOR.h, LEN = 14, S0 = XD + 2.6, KEND = 0.4;
 const RADIUS = 0.32;
@@ -53,10 +54,72 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   mesh(quadGeo(LL, PH, 24, M(0, Math.PI, lcx, PH / 2, ZL + PW), (x, y) => [x / bu, y / bv]), wallM, LP);
   mesh(quadGeo(PW * 2, PH, 1, M(0, Math.PI / 2, -XD - LL, PH / 2, ZL), (x, y, z) => [z / bu, y / bv]), wallM, LP);
   // cornici di pietra attorno ai due varchi (spalle e architrave, sporgono 4 cm nel tunnel)
-  const frameM = mats.stone.clone(); frameM.color.setRGB(1.5, 1.4, 1.3);
-  const frame = (side, zc) => { const g = new THREE.Group(), B = (sx, sy, sz, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), frameM); m.position.set(x, y, z); g.add(m); };
-    const x = side * (W - 0.04); B(0.14, PH + 0.12, 0.16, x, (PH + 0.12) / 2, zc + PW + 0.08); B(0.14, PH + 0.12, 0.16, x, (PH + 0.12) / 2, zc - PW - 0.08); B(0.14, 0.14, PW * 2 + 0.32, x, PH + 0.07, zc); return g; };
-  const frameR = frame(1, ZR), frameL = frame(-1, ZL); frameL.visible = false; G.add(frameR, frameL);
+  // ---- PORTALE ANTICO E ROVINATO (ingresso e uscita): blocchi di pietra scheggiati, storti e mancanti, crepe nel muro, macerie e polvere, crepe e segni che brillano appena di una luce fredda ----
+  const frameM = mats.stone.clone(); frameM.color.setRGB(0.8, 0.8, 0.86);
+  const frng = (sd) => () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+  const runeTex = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 256; const g = c.getContext('2d'), r = frng(17); g.lineCap = 'round'; g.lineJoin = 'round';
+    for (let i = 0; i < 34; i++) { let x = r() * 256, y = r() * 256, a = r() * 6.28; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 6; k++) { a += (r() - 0.5) * 1.6; x += Math.cos(a) * (10 + r() * 22); y += Math.sin(a) * (10 + r() * 22); g.lineTo(x, y); } g.strokeStyle = `rgba(120,170,255,${0.35 + r() * 0.4})`; g.lineWidth = 1 + r() * 1.4; g.stroke(); }   // crepe luminose
+    for (let i = 0; i < 6; i++) { const x = 30 + (i % 3) * 78 + r() * 14, y = 40 + (i / 3 | 0) * 120 + r() * 14; g.strokeStyle = 'rgba(190,215,255,.9)'; g.lineWidth = 2.2; g.beginPath(); const k = i % 3;   // segni incisi: cerchio e raggi, triangolo, occhio
+      if (k === 0) { g.arc(x, y, 14, 0, 7); g.moveTo(x - 22, y); g.lineTo(x + 22, y); g.moveTo(x, y - 22); g.lineTo(x, y + 22); } else if (k === 1) { g.moveTo(x, y - 18); g.lineTo(x + 17, y + 12); g.lineTo(x - 17, y + 12); g.closePath(); g.moveTo(x, y - 4); g.lineTo(x, y + 6); } else { g.ellipse(x, y, 20, 9, 0, 0, 7); g.moveTo(x + 5, y); g.arc(x, y, 5, 0, 7); } g.stroke(); }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
+  const crackTex = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 512; const g = c.getContext('2d'), r = frng(23); g.lineCap = 'round';
+    const crack = (x, y, a, len, w, d) => { g.strokeStyle = `rgba(6,5,5,${0.55 + r() * 0.35})`; g.lineWidth = w; g.beginPath(); g.moveTo(x, y); let px = x, py = y; const n = 8; for (let k = 0; k < n; k++) { a += (r() - 0.5) * 0.9; px += Math.cos(a) * len / n; py += Math.sin(a) * len / n; g.lineTo(px, py); if (d > 0 && r() < 0.3) crack(px, py, a + (r() - 0.5) * 1.8, len * 0.5, w * 0.7, d - 1); } g.stroke(); };
+    for (let i = 0; i < 22; i++) { const e = r(), x = e < 0.5 ? 256 + (r() < 0.5 ? -1 : 1) * (130 + r() * 90) : 256 + (r() - 0.5) * 360, y = e < 0.5 ? r() * 512 : (r() < 0.5 ? 30 + r() * 50 : 440 + r() * 50); crack(x, y, r() * 6.28, 50 + r() * 110, 1.5 + r() * 2.4, 2); }
+    for (let i = 0; i < 16; i++) { const x = r() * 512, y = r() * 512, rad = 14 + r() * 38, gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(4,4,3,${0.2 + r() * 0.25})`); gr.addColorStop(1, 'rgba(4,4,3,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, 2 * rad, 2 * rad); }   // macchie di umidita' e fuliggine
+    g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000'; g.fillRect(256 - (PW + 0.55) / 3.2 * 512 / 2, 512 - (2.35 / 3.2) * 512 - 0, (PW + 0.55) / 3.2 * 512, (2.35 / 3.2) * 512);   // il vano e il portale restano liberi
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+  const runeMats = [], dustSets = [];
+  // texture dell'anello decorato dell'arco (medaglioni con segni, stelle e spirali, in pietra consumata) e del timpano (anelli concentrici e sigillo); filigrana di bronzo e crepe luminose sulle colonne
+  const archTex = (() => { const N = 1024, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), r = frng(31), cx = N / 2, cy = N / 2; g.fillStyle = '#5a554c'; g.fillRect(0, 0, N, N);
+    for (let i = 0; i < 2600; i++) { g.fillStyle = `rgba(${r() < 0.2 ? '60,74,50' : '14,12,10'},${r() * 0.28})`; g.fillRect(r() * N, r() * N, 2 + r() * 12, 2 + r() * 8); }
+    g.strokeStyle = 'rgba(150,140,125,.6)'; g.lineWidth = 3; for (const rr of [0.5, 0.74, 0.97]) { g.beginPath(); g.arc(cx, cy, rr * cx, 0, 7); g.stroke(); }
+    const sig = (x, y, rad, k) => { g.strokeStyle = 'rgba(190,180,160,.85)'; g.lineWidth = 3; g.beginPath(); g.arc(x, y, rad, 0, 7); g.stroke(); g.beginPath(); if (k === 0) { for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; g.moveTo(x + Math.cos(a) * rad * 0.3, y + Math.sin(a) * rad * 0.3); g.lineTo(x + Math.cos(a) * rad * 0.85, y + Math.sin(a) * rad * 0.85); } } else if (k === 1) { for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * 4 * Math.PI / 5; g[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * rad * 0.75, y + Math.sin(a) * rad * 0.75); } g.closePath(); } else if (k === 2) { for (let t = 0; t < 40; t++) { const a = t * 0.5, rr2 = rad * 0.1 + t * rad * 0.02; g[t ? 'lineTo' : 'moveTo'](x + Math.cos(a) * rr2, y + Math.sin(a) * rr2); } } else { g.ellipse(x, y, rad * 0.8, rad * 0.4, 0, 0, 7); g.moveTo(x + 6, y); g.arc(x, y, 6, 0, 7); } g.stroke(); };
+    for (let i = 0; i < 12; i++) { const a = Math.PI + (i + 0.5) / 12 * Math.PI, rr = 0.855 * cx; sig(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 40, i % 4); }
+    for (let i = 0; i < 9; i++) { const a = Math.PI + (i + 0.5) / 9 * Math.PI, rr = 0.62 * cx; g.fillStyle = 'rgba(190,180,160,.5)'; g.save(); g.translate(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); g.rotate(a + Math.PI / 2); g.fillRect(-4, -26, 8, 52); g.fillRect(-14, -10, 28, 6); g.restore(); }   // tacche incise sull'anello interno
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+  const archGlow = (() => { const N = 512, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d'), cx = N / 2; g.lineCap = 'round';
+    for (const [rr, w] of [[0.5, 3], [0.97, 3]]) { g.strokeStyle = 'rgba(140,180,255,.35)'; g.lineWidth = w; g.beginPath(); g.arc(cx, cx, rr * cx, Math.PI, 2 * Math.PI); g.stroke(); }
+    g.strokeStyle = 'rgba(190,215,255,.9)'; g.lineWidth = 3; g.beginPath(); g.arc(cx, cx, 0.2 * cx, 0, 7); g.moveTo(cx - 0.3 * cx, cx); g.lineTo(cx + 0.3 * cx, cx); g.moveTo(cx, cx - 0.3 * cx); g.lineTo(cx, cx); g.stroke();   // sigillo del timpano
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+  const filTex = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 512; const g = c.getContext('2d'), r = frng(41); g.fillStyle = '#48443d'; g.fillRect(0, 0, 256, 512);
+    for (let i = 0; i < 700; i++) { g.fillStyle = `rgba(${r() < 0.2 ? '60,74,50' : '10,9,8'},${r() * 0.3})`; g.fillRect(r() * 256, r() * 512, 2 + r() * 10, 2 + r() * 6); }
+    g.lineCap = 'round'; for (let k = 0; k < 5; k++) { const x = 60 + (k % 2) * 140, y = 70 + k * 90; g.strokeStyle = 'rgba(122,78,44,.9)'; g.lineWidth = 5; g.beginPath(); for (let t = 0; t < 60; t++) { const a = t * 0.34, rr = 4 + t * 0.9; g[t ? 'lineTo' : 'moveTo'](x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.stroke(); g.strokeStyle = 'rgba(200,140,80,.5)'; g.lineWidth = 1.5; g.stroke(); g.fillStyle = 'rgba(122,78,44,.95)'; g.beginPath(); g.arc(x, y, 7, 0, 7); g.fill(); }   // spirali di bronzo
+    g.strokeStyle = 'rgba(40,36,30,.8)'; for (let i = 0; i < 8; i++) { let x = r() * 256, y = r() * 512; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 6; k++) { x += (r() - 0.5) * 40; y += 20 + r() * 30; g.lineTo(x, y); } g.stroke(); }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+  const frame = (side, zc, sd) => { const g = new THREE.Group(), r = frng(sd), parts = [], ry = -side * Math.PI / 2, XF = side * (W - 0.2);
+    const blk = (sx, sy, sz, x, y, z, rx, rY, rz, shade) => { const gm = new THREE.BoxGeometry(sx, sy, sz, 2, 2, 2); { const p = gm.attributes.position; for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) + (r() - 0.5) * sx * 0.12, p.getY(i) + (r() - 0.5) * sy * 0.1, p.getZ(i) + (r() - 0.5) * sz * 0.12); }
+      gm.rotateX(rx); gm.rotateY(rY); gm.rotateZ(rz); gm.translate(x, y, z); const uv = gm.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 0.9 + r(), uv.getY(i) * 0.9 + r()); const n = gm.attributes.position.count, col = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const v = shade * (0.8 + r() * 0.35), gr = r() < 0.14 ? 0.05 : 0; col[i * 3] = v * 0.95; col[i * 3 + 1] = v + gr; col[i * 3 + 2] = v * 0.9; } gm.setAttribute('color', new THREE.BufferAttribute(col, 3)); parts.push(gm); };
+    const xs = (off) => side * (W - 0.11 - off);
+    // piedritti: colonna interna (blocchi impilati e storti) e pilastro esterno piu' largo con la filigrana di bronzo
+    for (const j of [-1, 1]) { let y = 0, k = 0; const missing = j === (r() < 0.5 ? -1 : 1) ? 4 : 99; while (y < PH - 0.05 && k < 6) { const h = 0.3 + r() * 0.3; if (k !== missing) blk(0.2 + r() * 0.04, Math.min(h, PH - y), 0.24 + r() * 0.05, xs(r() * 0.03), y + h / 2, zc + j * (PW + 0.13 + (r() - 0.5) * 0.04), (r() - 0.5) * 0.05, (r() - 0.5) * 0.14, (r() - 0.5) * 0.07, 0.2 + r() * 0.1); y += h; k++; }
+      blk(0.2, PH + 0.05, 0.5, xs(0.0), (PH + 0.05) / 2, zc + j * (PW + 0.52), 0, (r() - 0.5) * 0.04, (r() - 0.5) * 0.03, 0.24); }
+    // arco: anello interno di conci (alcuni scheggiati o mancanti), anello decorato, anello esterno piu' sottile; il timpano resta chiuso da pietra incisa
+    const NV = 9; for (let i = 0; i < NV; i++) { if (i === 2 && r() < 0.8) continue; const th = (i + 0.5) / NV * Math.PI, Rm = 0.84; blk(0.22 + r() * 0.03, 0.3, 0.26, xs(r() * 0.03), PH + Math.sin(th) * Rm, zc + Math.cos(th) * Rm, -th, (r() - 0.5) * 0.06, (r() - 0.5) * 0.08, 0.2 + r() * 0.08); }
+    for (let i = 0; i < 12; i++) { if (i === 9) continue; const th = (i + 0.5) / 12 * Math.PI, Rm = 1.42; blk(0.2, 0.34, 0.14, xs(0.02), PH + Math.sin(th) * Rm, zc + Math.cos(th) * Rm, -th, 0, (r() - 0.5) * 0.06, 0.22 + r() * 0.06); }
+    // lastra davanti alla porta e macerie
+    blk(0.6, 0.07, 2.0, xs(-0.3), 0.035, zc, 0, 0.0, 0.0, 0.2);
+    for (let i = 0; i < 6; i++) blk(0.09 + r() * 0.1, 0.07 + r() * 0.1, 0.09 + r() * 0.1, xs(0.2 + r() * 0.4), 0.06, zc + (r() - 0.5) * 2.4, r(), r(), r(), 0.18);
+    const fm = frameM.clone(); fm.vertexColors = true; g.add(new THREE.Mesh(mergeGeometries(parts), fm));
+    // anello decorato (medaglioni) e timpano
+    const stoneMat = (map, emissive) => new THREE.MeshStandardMaterial({ map, roughness: 0.92, metalness: 0.05, color: 0xc4c4cc, side: THREE.DoubleSide, emissive: 0x000000 });
+    const ringM = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.28, 48, 1, 0, Math.PI), stoneMat(archTex)); ringM.geometry.attributes.uv; { const uv = ringM.geometry.attributes.uv, p = ringM.geometry.attributes.position; for (let i = 0; i < uv.count; i++) uv.setXY(i, 0.5 + p.getX(i) / 2.9, 0.5 + p.getY(i) / 2.9); }
+    ringM.position.set(XF + side * 0.0, PH, zc); ringM.rotation.y = ry; g.add(ringM);
+    const tymp = new THREE.Mesh(new THREE.CircleGeometry(0.78, 32, 0, Math.PI), stoneMat(archTex)); { const uv = tymp.geometry.attributes.uv, p = tymp.geometry.attributes.position; for (let i = 0; i < uv.count; i++) uv.setXY(i, 0.5 + p.getX(i) / 2.9, 0.5 + p.getY(i) / 2.9); }
+    tymp.position.set(XF + side * 0.012, PH, zc); tymp.rotation.y = ry; g.add(tymp);
+    // filigrana di bronzo sui pilastri esterni
+    for (const j of [-1, 1]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.46, PH), new THREE.MeshStandardMaterial({ map: filTex, roughness: 0.8, metalness: 0.2, color: 0xaaaaaa })); m.position.set(XF - side * 0.0 + side * 0.0, PH / 2, zc + j * (PW + 0.52)); m.position.x = side * (W - 0.215); m.rotation.y = ry; g.add(m); }
+    // crepe di muro tutto attorno
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.6), new THREE.MeshBasicMaterial({ map: crackTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, fog: true })); wall.position.set(side * (W - 0.006), 1.7, zc); wall.rotation.y = -side * Math.PI / 2; g.add(wall);
+    // luce fredda: crepe sui pilastri, anello del timpano e sigillo, circolo inciso sulla lastra
+    const rm = (map, op) => { const m = new THREE.MeshBasicMaterial({ map, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: op, color: 0x9ac0ff, side: THREE.DoubleSide }); runeMats.push(m); return m; };
+    for (const j of [-1, 1]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.46, PH), rm(runeTex, 0.5)); m.material.map = runeTex.clone(); m.material.map.repeat.set(0.4, 1.6); m.material.map.offset.set(r(), r()); m.material.map.needsUpdate = true; m.position.set(side * (W - 0.222), PH / 2, zc + j * (PW + 0.52)); m.rotation.y = ry; g.add(m); }
+    const gl = new THREE.Mesh(new THREE.CircleGeometry(1.0, 48, 0, Math.PI), rm(archGlow, 0.8)); gl.scale.setScalar(1.28); gl.position.set(side * (W - 0.215), PH, zc); gl.rotation.y = ry; g.add(gl);
+    const slab = new THREE.Mesh(new THREE.CircleGeometry(0.62, 40), rm(radial([[0, 'rgba(0,0,0,0)'], [0.55, 'rgba(0,0,0,0)'], [0.64, 'rgba(150,190,255,.9)'], [0.7, 'rgba(0,0,0,0)'], [0.82, 'rgba(120,160,255,.5)'], [0.86, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0)']], 256), 0.6)); slab.rotation.x = -Math.PI / 2; slab.position.set(side * (W - 0.55), 0.075, zc); g.add(slab);
+    // polvere che esce dal varco
+    const NP = 26, pp = new Float32Array(NP * 3), pd = []; for (let i = 0; i < NP; i++) { pd.push([r(), 0.04 + r() * 0.08, (r() - 0.5) * 0.5]); }
+    const dust = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(pp, 3)), new THREE.PointsMaterial({ color: 0xcfd8e8, size: 0.04, sizeAttenuation: true, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, map: radial([[0, 'rgba(255,255,255,1)'], [1, 'rgba(255,255,255,0)']], 32) })); dust.frustumCulled = false; g.add(dust); dustSets.push({ pts: dust, pp, pd, side, zc });
+    return g; };
+  const frameR = frame(1, ZR, 7), frameL = frame(-1, ZL, 11); frameL.visible = false; G.add(frameR, frameL);
   // ---- la stanza sospesa: pavimento di luce, croce enorme, raggi, alone, polvere e stelle. Nessun muro. Molto lontana, in fondo al passaggio ----
   const GL = new THREE.Group(); G.add(GL); const GX = XD + LEN + 34; GL.position.set(GX, 0, ZR);
   const glowMats = [], addGlow = (m, base) => { m.userData.base = base; glowMats.push(m); return m; };
@@ -130,7 +193,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
       if (st === 'idle') {
         const sp = getSpace?.(); if (sp) { if (P.z < -12) sp.prepare?.(); camera.getWorldDirection(fw);
           const dx = XD + LEN - P.x, dz = ZR - P.z, dist = Math.hypot(dx, dz), facing = (fw.x * dx + fw.z * dz) / Math.max(0.01, dist) > 0.3;
-          if (sp.prepared && !sp.active && dist < 26 && facing && sp.drawWindow(dt, camera.position, camera.quaternion, pcWin, qWin)) { if (!spaceOn) { spaceOn = true; winMat.uniforms.uTex.value = sp.win.tex; winQuad.visible = true; for (const o of fallback) o.visible = false; } winMat.uniforms.uRes.value = sp.win.res; } }
+          if (sp.prepared && !sp.active && dist < 26 && facing && sp.drawWindow(dt, camera.position, camera.quaternion, pcWin, qWin, { eye: true, portal: true })) { if (!spaceOn) { spaceOn = true; winMat.uniforms.uTex.value = sp.win.tex; winQuad.visible = true; for (const o of fallback) o.visible = false; } winMat.uniforms.uRes.value = sp.win.res; } }
         dip -= dt; if (dip > 0) lv = 0.08 + Math.random() * 0.2; else { lv = 0.82 + 0.12 * Math.sin(tt * 2.3) + 0.05 * Math.sin(tt * 17); if (Math.random() < dt * 0.45) dip = 0.05 + Math.random() * 0.12; } setLight(lv);
         if (P.x > XD + 1.7 && Math.abs(P.z - ZR) < 0.7 && !player.frozen) { F.state = 'flicker'; F.t = 0; lampAll('flicker', 1.7); audio.swell?.(2.2, 0.45); audio.whisper?.(1.4, 0.2); instab?.push?.(0.6, 6); } }
       return;
@@ -164,7 +227,8 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   };
   F.reset = () => { F.state = 'idle'; F.t = 0; F.done = false; F.cutDone = false; U.uK.value = 0; RP.visible = true; ceilFar.visible = false; winQuad.visible = false; spaceOn = false; for (const o of fallback) o.visible = true; LP.visible = false; frameL.visible = false; frameR.visible = true; GL.visible = true; spill.visible = spillSp.visible = true; tunnel.userData.plugs?.[-1] && (tunnel.userData.plugs[-1].visible = true); tunnel.userData.plugs?.[1] && (tunnel.userData.plugs[1].visible = false); player.constrainMove = cm; };
   // animazioni leggere della stanza (raggi che respirano, polvere che sale, frammenti che ruotano)
-  F.animate = (dt) => { if (!GL.visible) return; cross.rotation.y += dt * 0.14; for (const o of GL.children) if (o.userData.ph !== undefined) o.rotation.x += Math.sin(tt * 0.6 + o.userData.ph) * dt * 0.02; for (const d of debris) { d.rotation.x += d.userData.sp[0] * dt; d.rotation.y += d.userData.sp[1] * dt; d.position.y += Math.sin(tt * 0.5 + d.position.x) * dt * 0.05; }
+  F.animate = (dt) => { for (let i = 0; i < runeMats.length; i++) runeMats[i].opacity = 0.32 + 0.3 * (0.5 + 0.5 * Math.sin(tt * 0.9 + i * 1.7)) * (0.7 + 0.3 * Math.sin(tt * 4.1 + i * 3.1)); for (const d of dustSets) { const a = d.pts.geometry.attributes.position; for (let i = 0; i < d.pd.length; i++) { const k = (tt * d.pd[i][1] + d.pd[i][0] * 3) % 1; a.array[i * 3] = d.side * (W - 0.1 - k * 0.5); a.array[i * 3 + 1] = 0.15 + k * 1.9 * (0.5 + d.pd[i][0]); a.array[i * 3 + 2] = d.zc + d.pd[i][2] * 1.8 + Math.sin(tt * 0.5 + i) * 0.1; } a.needsUpdate = true; }
+    if (!GL.visible) return; cross.rotation.y += dt * 0.14; for (const o of GL.children) if (o.userData.ph !== undefined) o.rotation.x += Math.sin(tt * 0.6 + o.userData.ph) * dt * 0.02; for (const d of debris) { d.rotation.x += d.userData.sp[0] * dt; d.rotation.y += d.userData.sp[1] * dt; d.position.y += Math.sin(tt * 0.5 + d.position.x) * dt * 0.05; }
     const a = motes.geometry.attributes.position; for (let i = 0; i < NM; i++) { a.array[i * 3 + 1] += mv[i][1] * dt; if (a.array[i * 3 + 1] > 10) a.array[i * 3 + 1] = 0; a.array[i * 3] += Math.sin(tt * 0.4 + mv[i][0]) * dt * 0.2; } a.needsUpdate = true; };
   const upd = F.update; F.update = (dt) => { upd(dt); if (G.visible) F.animate(dt); };
   F.group = G; F.U = U;

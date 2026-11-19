@@ -237,6 +237,16 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   const pMat = portalMaterial({ r: PR, reach: 9, wallX: 1e5, zMin: -1e6 });
   const portal = new THREE.Mesh(new THREE.PlaneGeometry(18, 18), pMat); portal.position.copy(PORTAL); portal.renderOrder = 8; portal.frustumCulled = false; scene.add(portal);
 
+  // ---- elementi che compaiono SOLO nelle finestre (dalla porta del tunnel e dal portale della cantina), lontani e non in primo piano: croce enorme che gira, secondo portale defilato ----
+  const crossG = new THREE.Group(); crossG.visible = false; scene.add(crossG);
+  { const m = new THREE.MeshBasicMaterial({ color: 0x050403, fog: false }), edge = new THREE.LineBasicMaterial({ color: 0xffe0a8, transparent: true, opacity: 0.8, fog: false });
+    const bar = (sx, sy, sz, y) => { const b = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), m); b.position.y = y; crossG.add(b); const e = new THREE.LineSegments(new THREE.EdgesGeometry(b.geometry), edge); e.position.y = y; crossG.add(e); };
+    bar(2.4, 26, 2.4, 13); bar(14, 2.4, 2.4, 19);
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.5 })); halo.scale.set(70, 70, 1); halo.position.set(0, 17, -4); crossG.add(halo);
+    crossG.position.set(14, -4, -190); crossG.renderOrder = -2; }
+  const pMat2 = portalMaterial({ r: 4.2, reach: 9, wallX: 1e5, zMin: -1e6 }); pMat2.uniforms.uOpen.value = 1;
+  const portal2 = new THREE.Mesh(new THREE.PlaneGeometry(18, 18), pMat2); portal2.position.set(30, 9, -80); portal2.scale.setScalar(0.55); portal2.renderOrder = 8; portal2.frustumCulled = false; portal2.visible = false; scene.add(portal2);
+  const EYE_FALL = new THREE.Vector3(-0.62, 0.78, 0.0), EYE_WIN = new THREE.Vector3(-0.2, 0.14, -0.97).normalize();
   // ---- polvere cosmica vicino alla camera: da' il senso della caduta ----
   const ND = 130, dust = { pos: new Float32Array(ND * 3), pts: null };
   for (let i = 0; i < ND; i++) { const a = rnd() * 6.283, r = 1.2 + rnd() * 7; dust.pos[i * 3] = Math.cos(a) * r; dust.pos[i * 3 + 1] = Math.sin(a) * r; dust.pos[i * 3 + 2] = -rnd() * 70; }
@@ -292,13 +302,14 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   // ---- nucleo del disegno: aggiorna tutto cio' che si muove nella scena per il tempo T, con la camera data (percorso della caduta, oppure posa esterna S.ext) ----
   const core = (dt, T, win = false) => {
     U.uT.value = T;
-    if (S.eye) { S.eye.mesh.visible = !win; }
+    { const showEye = !!S.eye && (!win || !!S.opts?.eye); if (S.eye) { S.eye.mesh.visible = showEye; if (showEye) { S.eye.dir.copy(win ? EYE_WIN : EYE_FALL); S.eye.mesh.scale.setScalar(win ? 0.36 : 1); } }
+      crossG.visible = win && !!S.opts?.cross; if (crossG.visible) crossG.rotation.y += dt * 0.12; portal2.visible = win && !!S.opts?.portal; pMat2.uniforms.uT.value = T; }
     for (const p of planets) p.m.rotation.y += p.spin * dt;
     if (S.ext) sc.position.copy(S.ext.pos); else { const t = Math.min(10, T); pathPos(t, tmp); sc.position.copy(tmp); }
     sc.aspect = camera.aspect; { const u = win ? 0 : Math.min(1, Math.max(0, (T - 5.5) / 4.5)); sc.fov = camera.fov * (1 + 0.2 * u * u * (3 - 2 * u)); } sc.updateProjectionMatrix();
     if (S.ext) sc.quaternion.copy(S.ext.quat); else { sc.quaternion.copy(camera.quaternion); q.setFromAxisAngle(zAx, 0.035 * Math.sin(T * 0.8)); sc.quaternion.multiply(q); }   // piccolo rollio: sembra di cadere
     sky.position.copy(sc.position); sc.updateMatrixWorld(true);
-    if (S.eye && !win) S.eye.update(dt, sc);
+    if (S.eye && S.eye.mesh.visible) S.eye.update(dt, sc);
     halo.quaternion.copy(sc.quaternion); lensed.quaternion.copy(sc.quaternion); corona.quaternion.copy(sc.quaternion);
     for (const m of scene.children) if (m.userData.bb) m.quaternion.copy(sc.quaternion);   // nebulose sempre di fronte (rotazione fissa sullo schermo)
     // lune che orbitano attorno al gigante gassoso
@@ -327,7 +338,7 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
     // polvere cosmica: scorre vicino alla camera
     for (let i = 0; i < ND; i++) { if (dust.pos[i * 3 + 2] - sc.position.z > 1.5) dust.pos[i * 3 + 2] -= 70; dust.pos[i * 3] += 0; }
     dust.pts.geometry.attributes.position.needsUpdate = true;
-    pMat.uniforms.uOpen.value = Math.min(1, Math.max(0, (T - 5.2) / 3.4)); pMat.uniforms.uT.value = T;
+    pMat.uniforms.uOpen.value = win ? 0 : Math.min(1, Math.max(0, (T - 5.2) / 3.4)); pMat.uniforms.uT.value = T;
   };
   // ---- FINESTRA SUL PORTALE: la scena dello spazio vista attraverso il buco nel pavimento della cantina, a bassa risoluzione, con la stessa camera del giocatore
   // (la direzione "giu'" della cantina diventa "avanti" nello spazio, cosi' dal buco si vede il cielo con i pianeti, il Sole e il buco nero). ----
@@ -336,10 +347,10 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   S.win = { tex: winRT.texture, res: new THREE.Vector2(2, 2), wt: 0 }; S.ext = null; S.seam = null;
   const mapPose = (camPos, camQuat, pc, out, q = qR) => { out.pos.copy(camPos).sub(pc).applyQuaternion(q); out.quat.copy(camQuat).premultiply(q); return out; };
   const extWin = { pos: new THREE.Vector3(), quat: new THREE.Quaternion() };
-  S.drawWindow = (dt, camPos, camQuat, pc, q) => {
+  S.drawWindow = (dt, camPos, camQuat, pc, q, opts = null) => { S.opts = opts;
     if (!S.prepared || S.active) return false;
     renderer.getDrawingBufferSize(vtmp); const w = Math.max(64, Math.round(vtmp.x * 0.5)), h = Math.max(64, Math.round(vtmp.y * 0.5)); if (winRT.width !== w || winRT.height !== h) winRT.setSize(w, h); S.win.res.copy(vtmp);
-    S.win.wt += dt; S.ext = mapPose(camPos, camQuat, pc, extWin, q); core(dt, S.win.wt, true); const prev = renderer.getRenderTarget(); renderer.setRenderTarget(winRT); renderer.render(scene, sc); renderer.setRenderTarget(prev); S.ext = null; return true;
+    S.win.wt += dt; S.ext = mapPose(camPos, camQuat, pc, extWin, q); core(dt, S.win.wt, true); const prev = renderer.getRenderTarget(); renderer.setRenderTarget(winRT); renderer.render(scene, sc); renderer.setRenderTarget(prev); S.ext = null; S.opts = null; return true;
   };
   S.update = (dt) => {
     if (!S.active) return; S.t += dt; const TR = S.t, T = S.t * K;
