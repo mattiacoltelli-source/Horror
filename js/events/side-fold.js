@@ -56,17 +56,25 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   // oltre la volta le pareti sono muri veri, spessi 35 cm, con il bordo che si sgretola verso il fondo (altezza irregolare), fino a sparire
   const nz1 = (x) => { const v = Math.sin(x * 12.9898) * 43758.5453; return v - Math.floor(v); };
   const crumble = (x) => { const t = Math.min(1, Math.max(0, (x - (SV + 2.2)) / (END - SV - 2.2))); return t <= 0 ? 1 : Math.max(0.04, 1 - t * (0.35 + 0.8 * nz1(Math.floor(x * 2.6)))); };
-  const wallThick = (xa, xb, fn, parent, zc = ZR) => { const TH = 0.35; for (const j of [-1, 1]) { const zi = zc + j * PW, zo = zc + j * (PW + TH), ni = -j;
+  const TH = 0.5;   // spessore dei muretti e dei muri del passaggio
+  const wallThick = (xa, xb, fn, parent, zc = ZR) => { for (const j of [-1, 1]) { const zi = zc + j * PW, zo = zc + j * (PW + TH), ni = -j;
       mesh(sweep([[zi, 0, 0], [zi, SPR, 1], [zi, SPR, 1], [zo, SPR, 1], [zo, SPR, 1], [zo, 0, 0]], [[ni, 0], [ni, 0], [0, 1], [0, 1], [j, 0], [j, 0]], xa, xb, Math.max(2, Math.round((xb - xa) * 4)), fn), wallM, parent); } };
-  const wallThickSide = (xa, xb, j, parent, zc = ZR) => { const TH = 0.35, zi = zc + j * PW, zo = zc + j * (PW + TH), ni = -j; mesh(sweep([[zi, 0, 0], [zi, SPR, 1], [zi, SPR, 1], [zo, SPR, 1], [zo, SPR, 1], [zo, 0, 0]], [[ni, 0], [ni, 0], [0, 1], [0, 1], [j, 0], [j, 0]], xa, xb, Math.max(2, Math.round((xb - xa) * 4)), null), wallM, parent); };
+  const capGeo = (x, j, dir, zc) => { const g = new THREE.PlaneGeometry(TH, SPR); g.applyMatrix4(M(0, dir * Math.PI / 2, x, SPR / 2, zc + j * (PW + TH / 2))); const p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, p.getZ(i) / bu, p.getY(i) / bv); return colorAttr(g, 0.7); };
+  const wallThickSide = (xa, xb, j, parent, zc = ZR, capA = false, capB = false) => { if (capA) mesh(capGeo(xa, j, -1, zc), wallM, parent); if (capB) mesh(capGeo(xb, j, 1, zc), wallM, parent); const zi = zc + j * PW, zo = zc + j * (PW + TH), ni = -j; mesh(sweep([[zi, 0, 0], [zi, SPR, 1], [zi, SPR, 1], [zo, SPR, 1], [zo, SPR, 1], [zo, 0, 0]], [[ni, 0], [ni, 0], [0, 1], [0, 1], [j, 0], [j, 0]], xa, xb, Math.max(2, Math.round((xb - xa) * 4)), null), wallM, parent); };
   const XF = 12.0, ENDR = 15.6;   // da XF in poi, durante la piega, il passaggio diventa intero (tratto di ritorno): le parti sgretolate spariscono
   const nearWalls = new THREE.Group(); RP.add(nearWalls); wallThick(XD + LIN, XF, crumble, nearWalls);
   const farWalls = new THREE.Group(); RP.add(farWalls); wallThick(XF, END, crumble, farWalls);
   const RET = new THREE.Group(); RET.visible = false; RP.add(RET);
   // durante la piega il passaggio e' un tunnel chiuso (muri interi fino alla volta) con solo due spaccature strette, una a destra e una a sinistra, da cui si vede l'universo
-  const FW = new THREE.Group(); FW.visible = false; RP.add(FW); { const CR = [[1, 7.5], [-1, 10.3]], CW = 0.26; const gT = radial([[0, 'rgba(255,255,255,1)'], [0.35, 'rgba(255,225,200,.55)'], [1, 'rgba(160,150,255,0)']], 64); for (const j of [-1, 1]) { const cs = CR.filter((c) => c[0] === j).map((c) => c[1]); let x0 = XD + LIN; for (const c of cs) { wallThickSide(x0, c, j, FW); x0 = c + CW; } wallThickSide(x0, ENDR, j, FW); }
-    for (const [j, cxs] of CR) { const gm = patch(new THREE.MeshBasicMaterial({ map: gT, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 1.0, color: 0xcdb8ff, side: THREE.DoubleSide }), 'g'); const m = new THREE.Mesh(new THREE.PlaneGeometry(1.3, SPR, 8, 1), gm); m.rotation.y = Math.PI / 2; m.position.set(cxs + CW / 2, SPR / 2, ZR + j * (PW + 0.55)); m.frustumCulled = false; FW.add(m); } }
-  mesh(quadGeo(ENDR - FEND, PW * 2, Math.round((ENDR - FEND) * 3), M(-Math.PI / 2, 0, (FEND + ENDR) / 2, 0, ZR), (x, y, z) => [x / fu, z / fv]), floorM, RET);
+  const FW = new THREE.Group(); FW.visible = false; RP.add(FW);
+  // durante la piega il passaggio e' un tunnel chiuso (muri spessi 50 cm fino alla volta) con solo due squarci, uno a destra e uno a sinistra; i bordi dello squarcio hanno lo spessore pieno del muro; dietro si vede solo l'universo
+  { const CR = [[1, 7.3], [-1, 10.1]], CW = 0.55;
+    const skyTex = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d'), rr = (() => { let sd = 53; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })(); g.fillStyle = '#02020a'; g.fillRect(0, 0, 512, 256);
+      for (let i = 0; i < 9; i++) { const x = rr() * 512, y = rr() * 256, rad = 60 + rr() * 110, hue = rr() < 0.5 ? '120,60,190' : rr() < 0.5 ? '230,120,60' : '60,100,220', gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(${hue},${0.22 + rr() * 0.2})`); gr.addColorStop(1, `rgba(${hue},0)`); g.fillStyle = gr; g.fillRect(x - rad, y - rad, 2 * rad, 2 * rad); }
+      for (let i = 0; i < 380; i++) { const b = 0.35 + rr() * rr() * 0.65, sz = rr() < 0.05 ? 2 : 1; g.fillStyle = `rgba(255,${235 + rr() * 20 | 0},${220 + rr() * 35 | 0},${b})`; g.fillRect(rr() * 512, rr() * 256, sz, sz); }
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+    for (const j of [-1, 1]) { const cs = CR.filter((c) => c[0] === j).map((c) => c[1]); let x0 = XD + LIN, capA = false; for (const c of cs) { wallThickSide(x0, c, j, FW, ZR, capA, true); x0 = c + CW; capA = true; } wallThickSide(x0, ENDR, j, FW, ZR, capA, false); }
+    for (const [j, cxs] of CR) { const gm = patch(new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.DoubleSide, fog: false }), 'sky'); const m = new THREE.Mesh(new THREE.PlaneGeometry(9, 4, 12, 1), gm); m.rotation.y = j > 0 ? Math.PI : 0; m.position.set(cxs + CW / 2, 1.2, ZR + j * (PW + TH + 1.4)); m.frustumCulled = false; FW.add(m); } }
   // lastre del pavimento spezzate che continuano oltre la fine, sempre piu' rade e piccole, leggermente inclinate
   const slabs = [];
   { const rr = (() => { let sd = 5; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })();
@@ -220,12 +228,13 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
       const k = Math.min(1, F.t / 6.0), e = k * k * (3 - 2 * k); U.uK.value = KEND * e;
       if (F.t > 1.5) P.x += Math.min(1, (F.t - 1.5) / 2) * 0.7 * dt;   // il passaggio ti trascina avanti piano
       P.x = Math.min(P.x, FMAX);
+      if (!F.lit && P.x > FMAX - 4.5) { F.lit = true; lampAll('flicker', 1.6); audio.lightOn?.(); }   // le luci del tunnel tornano mentre ci si avvicina: all'uscita niente scarto
       if (Math.random() < dt * 0.6) player.addShake?.(0.25);
       if (P.x >= FMAX - 0.15 && U.uK.value > KEND * 0.995) {   // fine del ritorno: la posizione e la direzione del mondo piegato coincidono con quelle reali nel tunnel (nessuno stacco)
         const K = U.uK.value, u = P.x - S0, rest = Math.max(0, u - Math.PI / K); const wx = S0 - rest, wz = ZL + (P.z - ZR) * -1;
         U.uK.value = 0; RP.visible = false; R2.visible = true; frame2.visible = true; LP.visible = true; frameL.visible = true; SKY.visible = false;
         tunnel.userData.plugs[2].visible = false; tunnel.userData.plugs[1].visible = false; tunnel.userData.plugs[0].visible = true; frameR.visible = false;
-        P.set(wx, P.y, wz); player.yaw += Math.PI; F.state = 'exit'; F.t = 0; lampAll('flicker', 1.6); audio.lightOn?.(); say?.('Sei di nuovo nel tunnel.\nUna porta che prima non c’era.', 3800); }
+        P.set(wx, P.y, wz); player.yaw += Math.PI; F.state = 'exit'; F.t = 0; lampAll('on', 1); say?.('Sei di nuovo nel tunnel.\nUna porta che prima non c’era.', 3800); }
       return;
     }
     if (st === 'exit') { if (F.t > 2.5) { F.state = 'done'; F.done = true; lampAll('on', 1); } return; }
@@ -238,7 +247,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     if (K * u < Math.PI) { cxm = S0 + Math.sin(ph) / K; czm = ZR - (1 - Math.cos(ph)) / K; nx2 = Math.sin(ph); nz2 = Math.cos(ph); } else { cxm = S0 - (u - Math.PI / K); czm = ZR - 2 / K; nx2 = 0; nz2 = -1; }
     p.x = cxm + d * nx2; p.z = czm + d * nz2; camera.quaternion.premultiply(qY.setFromAxisAngle(yA, ph));
   };
-  F.reset = () => { F.state = 'idle'; F.t = 0; F.done = false; F.cutDone = false; U.uK.value = 0; RP.visible = true; nearWalls.visible = true; FW.visible = false; farWalls.visible = true; for (const o of slabs) o.visible = true; RET.visible = false; R2.visible = false; frame2.visible = false; SKY.visible = false; if (tunnel.userData.plugs) { tunnel.userData.plugs[0].visible = false; tunnel.userData.plugs[1].visible = true; tunnel.userData.plugs[2].visible = true; } ceilFar.visible = false; winQuad.visible = false; spaceOn = false; for (const o of fallback) o.visible = true; LP.visible = false; frameL.visible = false; frameR.visible = true; GL.visible = true; spill.visible = spillSp.visible = true;  player.constrainMove = cm; };
+  F.reset = () => { F.lit = false; F.state = 'idle'; F.t = 0; F.done = false; F.cutDone = false; U.uK.value = 0; RP.visible = true; nearWalls.visible = true; FW.visible = false; farWalls.visible = true; for (const o of slabs) o.visible = true; RET.visible = false; R2.visible = false; frame2.visible = false; SKY.visible = false; if (tunnel.userData.plugs) { tunnel.userData.plugs[0].visible = false; tunnel.userData.plugs[1].visible = true; tunnel.userData.plugs[2].visible = true; } ceilFar.visible = false; winQuad.visible = false; spaceOn = false; for (const o of fallback) o.visible = true; LP.visible = false; frameL.visible = false; frameR.visible = true; GL.visible = true; spill.visible = spillSp.visible = true;  player.constrainMove = cm; };
   // animazioni leggere della stanza (raggi che respirano, polvere che sale, frammenti che ruotano)
   F.animate = (dt) => { for (let i = 0; i < runeMats.length; i++) runeMats[i].opacity = 0.32 + 0.3 * (0.5 + 0.5 * Math.sin(tt * 0.9 + i * 1.7)) * (0.7 + 0.3 * Math.sin(tt * 4.1 + i * 3.1)); for (const d of dustSets) { const a = d.pts.geometry.attributes.position; for (let i = 0; i < d.pd.length; i++) { const k = (tt * d.pd[i][1] + d.pd[i][0] * 3) % 1; a.array[i * 3] = d.side * (W - 0.1 - k * 0.5); a.array[i * 3 + 1] = 0.15 + k * 1.9 * (0.5 + d.pd[i][0]); a.array[i * 3 + 2] = d.zc + d.pd[i][2] * 1.8 + Math.sin(tt * 0.5 + i) * 0.1; } a.needsUpdate = true; }
     if (!GL.visible) return; cross.rotation.y += dt * 0.14; for (const o of GL.children) if (o.userData.ph !== undefined) o.rotation.x += Math.sin(tt * 0.6 + o.userData.ph) * dt * 0.02; for (const d of debris) { d.rotation.x += d.userData.sp[0] * dt; d.rotation.y += d.userData.sp[1] * dt; d.position.y += Math.sin(tt * 0.5 + d.position.x) * dt * 0.05; }
