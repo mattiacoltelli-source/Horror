@@ -11,7 +11,7 @@ canvas{display:block;width:100vw;height:100vh}
 #ext{position:fixed;right:14px;bottom:70px;padding:12px 14px;font-size:12px;letter-spacing:.12em;background:rgba(20,26,38,.7);border:1px solid #4a586c;color:#b9c8dc;border-radius:10px}
 #reset{position:fixed;right:14px;bottom:14px;padding:14px 16px;font-size:13px;letter-spacing:.15em}
 </style>
-<canvas id="c"></canvas><div id="hint">trascina per guardare · guarda il tastierino sul muro destro</div><button id="act" class="hidden"></button><div id="msg"></div>
+<canvas id="c"></canvas><div id="hint">trascina per guardare · tastierino sul muro destro · poi cammina avanti dentro la piega</div><button id="act" class="hidden"></button><div id="msg"></div>
 <div id="dpad"><span></span><button data-k="f">▲</button><span></span><button data-k="l">◀</button><button data-k="b">▼</button><button data-k="r">▶</button></div><button id="reset">RIPRISTINA</button><button id="ext">VISTA ESTERNA</button>
 <script type="importmap">{ "imports": { "three": "../../vendor/three/three.module.min.js" } }</script>
 <script type="module">
@@ -89,11 +89,15 @@ const eased = (v) => v * v * (3 - 2 * v); let last = performance.now(), clock = 
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now; clock += dt;
   if (!P.frozen) { const f = (keys.w || keys.arrowup || keys.dpf ? 1 : 0) - (keys.s || keys.arrowdown || keys.dpb ? 1 : 0), r = (keys.d || keys.dpr ? 1 : 0) - (keys.a || keys.dpl ? 1 : 0); const sp = 1.6 * dt;
-    P.pos.x += (Math.cos(P.yaw) * r - Math.sin(P.yaw) * f) * sp; P.pos.z += (-Math.sin(P.yaw) * r - Math.cos(P.yaw) * f) * sp; P.pos.x = Math.max(-W / 2 + 0.4, Math.min(W / 2 - 0.4, P.pos.x)); P.pos.z = Math.max(-S0 + 0.8, Math.min(0.2, P.pos.z)); }
+    P.pos.x += (Math.cos(P.yaw) * r - Math.sin(P.yaw) * f) * sp; P.pos.z += (-Math.sin(P.yaw) * r - Math.cos(P.yaw) * f) * sp; P.pos.x = Math.max(-W / 2 + 0.4, Math.min(W / 2 - 0.4, P.pos.x)); P.pos.z = Math.max(-(L - 1.2), Math.min(0.2, P.pos.z)); }   // si puo' camminare lungo tutto il corridoio, anche dentro la piega
   if (state.dir) { state.t = Math.max(0, Math.min(1, state.t + state.dir * dt / 7)); if (state.t >= 1 || state.t <= 0) state.dir = 0; }
   FOLD.uK.value = KEND * eased(state.t);
   const shake = state.dir > 0 ? 0.004 * Math.sin(clock * 53) * Math.min(1, state.t * 4) : 0;
-  camera.position.set(P.pos.x, P.pos.y + shake, P.pos.z); camera.rotation.set(P.pitch, P.yaw, 0, 'YXZ'); P.forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
+  // il giocatore cammina lungo l'asse del corridoio: dentro la piega la sua posizione e la sua visuale seguono la curva (il "giu'" resta sotto i piedi)
+  camera.rotation.set(P.pitch, P.yaw, 0, 'YXZ'); P.forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
+  { const K = FOLD.uK.value, sP = -P.pos.z; let phi = 0, wy = P.pos.y, wz = P.pos.z;
+    if (K > 1e-4 && sP > S0) { const u = sP - S0, h = P.pos.y - CY; phi = K * u; let ay, az, ny, nz; if (phi < Math.PI) { ay = CY + (1 - Math.cos(phi)) / K; az = -(S0 + Math.sin(phi) / K); ny = Math.cos(phi); nz = Math.sin(phi); } else { phi = Math.PI; ay = CY + 2 / K; az = -S0 + (u - Math.PI / K); ny = -1; nz = 0; } wy = ay + h * ny; wz = az + h * nz; }
+    camera.position.set(P.pos.x, wy + shake, wz); if (phi) camera.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), phi)); }
   kp.update(dt, true);
   if (outside) { const e = window.__lab.ext; camera.position.set(e.x, e.y, e.z); camera.rotation.set(e.pitch, Math.PI / 2, 0, 'YXZ'); }   // vista laterale: si vede la piega dall'esterno
   renderer.render(scene, camera); requestAnimationFrame(frame);
