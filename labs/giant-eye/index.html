@@ -1,0 +1,24 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Occhio cosmico</title>
+<style>html,body{margin:0;background:#000;height:100%;overflow:hidden}canvas{display:block;width:100vw;height:100vh}#h{position:fixed;left:0;right:0;bottom:10px;text-align:center;color:#8a93a8;font:12px ui-monospace,monospace}</style>
+<canvas id="c"></canvas><div id="h">trascina per girare la visuale · l'occhio si apre se lo guardi, ti segue, e se lo fissi si dissolve</div>
+<script type="importmap">{ "imports": { "three": "../../vendor/three/three.module.min.js" } }</script>
+<script type="module">
+// Anteprima dell'occhio cosmico (js/world/giant-eye.js): ?mode=open mostra l'occhio sempre aperto e ben visibile (per valutare il disegno); senza parametro si comporta come nel gioco.
+import * as THREE from 'three';
+import { createGiantEye } from '../../js/world/giant-eye.js';
+const q = new URLSearchParams(location.search), mode = q.get('mode');
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: false }); renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(innerWidth, innerHeight, false);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x02030a);
+const camera = new THREE.PerspectiveCamera(68, innerWidth / innerHeight, 0.1, 3000); camera.rotation.order = 'YXZ';
+// un po' di cielo di stelle dietro, per vedere l'occhio contro lo spazio
+{ const N = 1400, p = new Float32Array(N * 3); for (let i = 0; i < N; i++) { const v = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(1500); p.set([v.x, v.y, v.z], i * 3); } scene.add(new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(p, 3)), new THREE.PointsMaterial({ color: 0xbfd0ff, size: 2.2, sizeAttenuation: false }))); }
+const eye = createGiantEye({ dir: new THREE.Vector3(0, 0, -1), size: 760, distance: 850 }); eye.mat.depthTest = false; scene.add(eye.mesh);
+let yaw = 0, pitch = 0, drag = false, lx = 0, ly = 0; const el = document.getElementById('c');
+el.addEventListener('pointerdown', (e) => { drag = true; lx = e.clientX; ly = e.clientY; }); addEventListener('pointerup', () => { drag = false; });
+addEventListener('pointermove', (e) => { if (!drag) return; yaw -= (e.clientX - lx) * 0.004; pitch = Math.max(-1.2, Math.min(1.2, pitch - (e.clientY - ly) * 0.004)); lx = e.clientX; ly = e.clientY; });
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+let last = performance.now(); (function loop(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  camera.rotation.set(pitch, yaw, 0); eye.update(dt, camera);
+  if (mode === 'open') { const u = eye.mat.uniforms; u.uVis.value = 1; u.uOpen.value = 1; u.uDis.value = 0; }
+  renderer.render(scene, camera); requestAnimationFrame(loop); })(last); window.__eye = eye; window.__cam = { set: (y, p) => { yaw = y; pitch = p; } };
+</script>
