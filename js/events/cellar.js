@@ -59,16 +59,25 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
       try { C.shrine.withClosedReflection(() => withClosedChapelReflection(() => orig.apply(this, a))); }
       finally { flat.forEach((o, i) => (o.visible = vis[i])); }
     }; }
-  const dc = document.createElement('canvas'); dc.width = 256; dc.height = 384; const dg = dc.getContext('2d');
-  dg.fillStyle = 'rgba(38,40,35,.29)'; dg.fillRect(0, 0, 256, 384);   // velo di polvere e unto: specchio opaco, poco riflettente
-  { const t = document.createElement('canvas'); t.width = 20; t.height = 30; const tg = t.getContext('2d'); for (let y = 0; y < 30; y++) for (let x = 0; x < 20; x++) { tg.fillStyle = `rgba(${150 + Math.random() * 40 | 0},${145 + Math.random() * 40 | 0},${125 + Math.random() * 30 | 0},${Math.random() * 0.07})`; tg.fillRect(x, y, 1, 1); }
-    dg.imageSmoothingEnabled = true; dg.imageSmoothingQuality = 'high'; dg.drawImage(t, 0, 0, 256, 384); }   // macchie morbide e senza contorno (poche celle scalate e sfumate)
-  for (let i = 0; i < 1100; i++) { dg.fillStyle = `rgba(18,20,19,${Math.random() * 0.255})`; dg.beginPath(); dg.arc(Math.random() * 256, Math.random() * 384, 0.5 + Math.random() * 2.2, 0, 7); dg.fill(); }
-  for (let i = 0; i < 14; i++) { const x = Math.random() * 256, y = Math.random() * 200, g2 = dg.createLinearGradient(0, y, 0, y + 150 + Math.random() * 150); g2.addColorStop(0, 'rgba(15,18,16,.24)'); g2.addColorStop(1, 'rgba(15,18,16,0)'); dg.fillStyle = g2; dg.fillRect(x, y, 1.5 + Math.random() * 3, 330); }
-  const grad = dg.createLinearGradient(0, 0, 0, 384); grad.addColorStop(0, 'rgba(0,0,0,.38)'); grad.addColorStop(.3, 'rgba(0,0,0,0)'); grad.addColorStop(1, 'rgba(0,0,0,.47)'); dg.fillStyle = grad; dg.fillRect(0, 0, 256, 384);
+  // vetro molto sporco e vecchio: ai bordi muffa e unto quasi opachi, al centro una zona piu' pulita dove si intravede il riflesso; graffi, colature e macchie senza contorno
+  const DW = 340, DH = 480, dc = document.createElement('canvas'); dc.width = DW; dc.height = DH; const dg = dc.getContext('2d');
+  const blur = (w, h, draw, alpha = 1, op = 'source-over') => { const t = document.createElement('canvas'); t.width = w; t.height = h; const tg = t.getContext('2d'); draw(tg, w, h); dg.save(); dg.globalCompositeOperation = op; dg.globalAlpha = alpha; dg.imageSmoothingEnabled = true; dg.imageSmoothingQuality = 'high'; dg.drawImage(t, 0, 0, DW, DH); dg.restore(); };
+  const cells = (w, h, f) => (tg) => { for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { tg.fillStyle = f(x / w, y / h, Math.random()); tg.fillRect(x, y, 1, 1); } };
+  dg.fillStyle = 'rgba(66,72,64,.82)'; dg.fillRect(0, 0, DW, DH);                                   // velo di sporco su tutto il vetro
+  blur(9, 13, cells(9, 13, (u, v, r) => `rgba(8,10,8,${r * 0.8})`), 0.32);                          // grandi zone scure
+  blur(22, 32, cells(22, 32, (u, v, r) => `rgba(8,10,8,${r * r * 0.9})`), 0.3);                      // macchie medie
+  blur(46, 66, cells(46, 66, (u, v, r) => `rgba(120,128,114,${r * 0.6})`), 0.5);                      // chiazze di unto piu' chiare
+  blur(14, 20, cells(14, 20, (u, v, r) => { const d = Math.hypot((u - 0.5) * 1.1, v - 0.5); return d > 0.28 && r > 0.55 ? `rgba(48,78,36,${(r - 0.55) * 2.0 * Math.min(1, (d - 0.28) * 3)})` : 'rgba(0,0,0,0)'; }), 0.95);   // muffa verde verso i bordi
+  blur(30, 44, cells(30, 44, (u, v, r) => { const d = Math.hypot((u - 0.5) * 1.1, v - 0.5); return d > 0.3 && r > 0.62 ? `rgba(38,62,30,${(r - 0.62) * 1.8})` : 'rgba(0,0,0,0)'; }), 0.7);
+  { const gr = dg.createRadialGradient(DW * 0.5, DH * 0.42, 0, DW * 0.5, DH * 0.42, DH * 0.5); gr.addColorStop(0, 'rgba(0,0,0,.72)'); gr.addColorStop(0.45, 'rgba(0,0,0,.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    dg.save(); dg.globalCompositeOperation = 'destination-out'; dg.save(); dg.translate(DW * 0.5, DH * 0.42); dg.scale(0.78, 1); dg.translate(-DW * 0.5, -DH * 0.42); dg.fillStyle = gr; dg.fillRect(0, 0, DW, DH); dg.restore(); dg.restore(); }   // zona centrale quasi pulita: il riflesso si intravede
+  blur(18, 26, cells(18, 26, (u, v, r) => `rgba(0,0,0,${r * 0.35})`), 0.6, 'destination-out');      // il pulito e' irregolare, non un cerchio
+  for (let i = 0; i < 22; i++) { const x = Math.random() * DW, y0 = Math.random() * DH * 0.35, len = 60 + Math.random() * 260, w = 1 + Math.random() * 3.2, g2 = dg.createLinearGradient(0, y0, 0, y0 + len); g2.addColorStop(0, 'rgba(6,8,6,.55)'); g2.addColorStop(1, 'rgba(6,8,6,0)'); dg.fillStyle = g2; dg.fillRect(x, y0, w, len); }   // colature dall'alto
+  dg.lineCap = 'round'; for (let i = 0; i < 46; i++) { const x = DW * (0.2 + Math.random() * 0.6), y = DH * (0.1 + Math.random() * 0.7), a = Math.random() * 6.283, l = 14 + Math.random() * 70; dg.strokeStyle = `rgba(205,208,196,${0.12 + Math.random() * 0.22})`; dg.lineWidth = 0.5 + Math.random() * 0.7; dg.beginPath(); dg.moveTo(x, y); dg.quadraticCurveTo(x + Math.cos(a + 0.4) * l * 0.5, y + Math.sin(a + 0.4) * l * 0.5, x + Math.cos(a) * l, y + Math.sin(a) * l); dg.stroke(); }   // graffi
+  for (let i = 0; i < 1400; i++) { dg.fillStyle = `rgba(10,12,10,${Math.random() * 0.5})`; dg.fillRect(Math.random() * DW, Math.random() * DH, 0.6 + Math.random() * 1.6, 0.6 + Math.random() * 1.6); }   // puntini fini
   const dirt = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(dc), transparent: true, depthWrite: false }));
   dirt.position.copy(MIRROR).add(new THREE.Vector3(0.004, 0, 0)); dirt.rotation.y = Math.PI / 2; C.group.add(dirt);
-  const fm = new THREE.MeshStandardMaterial({ color: 0x2b2824, roughness: 0.55, metalness: 0.85 });
+  const fm = new THREE.MeshStandardMaterial({ color: 0x1c1a17, roughness: 0.85, metalness: 0.3 });
   const bx = (sx, sy, sz, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), fm); m.position.set(MIRROR.x + 0.04, y, z); C.group.add(m); };
   bx(0.09, 0.1, mw + 0.2, MIRROR.y + mh / 2 + 0.05, MIRROR.z); bx(0.09, 0.1, mw + 0.2, MIRROR.y - mh / 2 - 0.05, MIRROR.z);
   bx(0.09, mh, 0.1, MIRROR.y, MIRROR.z + mw / 2 + 0.05); bx(0.09, mh, 0.1, MIRROR.y, MIRROR.z - mw / 2 - 0.05);
