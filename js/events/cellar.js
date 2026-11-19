@@ -18,6 +18,7 @@ import { P as PROF, whisperName } from '../personal.js';
 import { createFingerWriter } from '../world/fingerwrite.js';
 import { rgbPulse } from '../ui/rgbshift.js';
 import { createTorch } from './torch.js';
+import { createMirrorFrame } from '../world/mirror-frame.js';
 import { createChapel } from '../world/chapel.js';
 import { createKeypad } from './keypad.js';
 import { createPortal } from '../world/portal.js';
@@ -55,9 +56,9 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   { const orig = mirror.onBeforeRender; let flat = null;
     mirror.onBeforeRender = function (...a) {
       flat ??= (() => { const L = []; C.group.traverse((o) => { if (o.isMesh && o !== mirror && o.position.y < 0.035 && ((o.geometry.type === 'PlaneGeometry' && o.position.y > 0.001) || (o.material && /manhole/.test(o.material.name || '')))) L.push(o); }); return L; })();
-      const vis = flat.map((o) => o.visible); flat.forEach((o) => (o.visible = false));
+      const vis = flat.map((o) => o.visible), fv = frame.visible; flat.forEach((o) => (o.visible = false)); frame.visible = false;   // la cornice non serve nel riflesso
       try { C.shrine.withClosedReflection(() => withClosedChapelReflection(() => orig.apply(this, a))); }
-      finally { flat.forEach((o, i) => (o.visible = vis[i])); }
+      finally { flat.forEach((o, i) => (o.visible = vis[i])); frame.visible = fv; }
     }; }
   // vetro molto sporco e vecchio: ai bordi muffa e unto quasi opachi, al centro una zona piu' pulita dove si intravede il riflesso; graffi, colature e macchie senza contorno
   const DW = 340, DH = 480, dc = document.createElement('canvas'); dc.width = DW; dc.height = DH; const dg = dc.getContext('2d');
@@ -77,10 +78,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   for (let i = 0; i < 1400; i++) { dg.fillStyle = `rgba(10,12,10,${Math.random() * 0.5})`; dg.fillRect(Math.random() * DW, Math.random() * DH, 0.6 + Math.random() * 1.6, 0.6 + Math.random() * 1.6); }   // puntini fini
   const dirt = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(dc), transparent: true, depthWrite: false }));
   dirt.position.copy(MIRROR).add(new THREE.Vector3(0.004, 0, 0)); dirt.rotation.y = Math.PI / 2; C.group.add(dirt);
-  const fm = new THREE.MeshStandardMaterial({ color: 0x1c1a17, roughness: 0.85, metalness: 0.3 });
-  const bx = (sx, sy, sz, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), fm); m.position.set(MIRROR.x + 0.04, y, z); C.group.add(m); };
-  bx(0.09, 0.1, mw + 0.2, MIRROR.y + mh / 2 + 0.05, MIRROR.z); bx(0.09, 0.1, mw + 0.2, MIRROR.y - mh / 2 - 0.05, MIRROR.z);
-  bx(0.09, mh, 0.1, MIRROR.y, MIRROR.z + mw / 2 + 0.05); bx(0.09, mh, 0.1, MIRROR.y, MIRROR.z - mw / 2 - 0.05);
+  const frame = createMirrorFrame({ hx: mw / 2, hy: mh / 2 }); frame.position.copy(MIRROR); frame.position.x += 0.006; frame.rotation.y = Math.PI / 2; C.group.add(frame);   // cornice barocca di legno e oro consumato
 
   // nello specchio: mai un modello visibile. Un'ombra scura che compare e scompare (vedo / non vedo) e impronte di sangue
   // che affiorano dall'interno del vetro. L'ombra usa la stessa sagoma nera della folla.
