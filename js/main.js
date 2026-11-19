@@ -220,7 +220,7 @@ async function enter() {
   tower ??= createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish: (m, f, l) => (dawn ? dawn.start(m) : finish(m, f, l)), warm, actBtn: $('act'), combat });
   // topi: vicino ai muri e alle cose, scappano di scatto quando ti avvicini (una volta sola ciascuno)
   if (!window.__ratsDone) { window.__ratsDone = true;
-    rats.add(scene, { x: 1.0, z: -9.5, ry: 0.4, hide: [[1.12, -13], [1.2, -18.3]] });                                                  // tunnel, lungo il muro destro
+    rats.add(scene, { x: 1.0, z: -9.5, ry: 0.4, hide: [[1.12, -10.4], [1.2, -18.3]] });                                                  // tunnel, lungo il muro destro
     rats.add(cellar.group, { x: 2.2, z: -204.5, ry: 2.2, hide: [[3.6, -205.6], [3.75, -208]] });                                         // cantina, vicino ai rottami
     rats.add(cellar.group, { x: -2.4, z: -215.0, ry: 0.9, hide: [[-3.7, -218], [-3.65, -222.8]] });                                      // cantina, lato dello specchio
     rats.add(morgue.group, { x: -3.95, z: -509.5, ry: -1.9, hide: [[-4.05, -511.6], [-4.05, -513.9]] });                                   // obitorio, contro il muro sinistro
