@@ -66,15 +66,21 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   const farWalls = new THREE.Group(); RP.add(farWalls); wallThick(XF, END, crumble, farWalls);
   const RET = new THREE.Group(); RET.visible = false; RP.add(RET);
   // durante la piega il passaggio e' un tunnel chiuso (muri interi fino alla volta) con solo due spaccature strette, una a destra e una a sinistra, da cui si vede l'universo
+  mesh(quadGeo(ENDR - FEND, PW * 2, Math.round((ENDR - FEND) * 3), M(-Math.PI / 2, 0, (FEND + ENDR) / 2, 0, ZR), (x, y, z) => [x / fu, z / fv]), floorM, RET);   // pavimento del tratto di ritorno
   const FW = new THREE.Group(); FW.visible = false; RP.add(FW);
   // durante la piega il passaggio e' un tunnel chiuso (muri spessi 50 cm fino alla volta) con solo due squarci, uno a destra e uno a sinistra; i bordi dello squarcio hanno lo spessore pieno del muro; dietro si vede solo l'universo
   { const CR = [[1, 7.3], [-1, 10.1]], CW = 0.55;
-    const skyTex = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d'), rr = (() => { let sd = 53; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })(); g.fillStyle = '#02020a'; g.fillRect(0, 0, 512, 256);
-      for (let i = 0; i < 9; i++) { const x = rr() * 512, y = rr() * 256, rad = 60 + rr() * 110, hue = rr() < 0.5 ? '120,60,190' : rr() < 0.5 ? '230,120,60' : '60,100,220', gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(${hue},${0.22 + rr() * 0.2})`); gr.addColorStop(1, `rgba(${hue},0)`); g.fillStyle = gr; g.fillRect(x - rad, y - rad, 2 * rad, 2 * rad); }
-      for (let i = 0; i < 380; i++) { const b = 0.35 + rr() * rr() * 0.65, sz = rr() < 0.05 ? 2 : 1; g.fillStyle = `rgba(255,${235 + rr() * 20 | 0},${220 + rr() * 35 | 0},${b})`; g.fillRect(rr() * 512, rr() * 256, sz, sz); }
-      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+    const skyTex = (() => { const W2 = 1024, H2 = 512, c = document.createElement('canvas'); c.width = W2; c.height = H2; const g = c.getContext('2d'), rr = (() => { let sd = 53; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })(); g.fillStyle = '#01010a'; g.fillRect(0, 0, W2, H2);
+      for (let i = 0; i < 70; i++) { const x = rr() * W2, y = rr() * H2, rad = 40 + rr() * 150, hue = rr() < 0.4 ? '130,60,200' : rr() < 0.5 ? '240,120,60' : rr() < 0.5 ? '50,150,200' : '200,70,140', gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(${hue},${0.07 + rr() * 0.16})`); gr.addColorStop(1, `rgba(${hue},0)`); g.fillStyle = gr; g.fillRect(x - rad, y - rad, 2 * rad, 2 * rad); }   // nebulose a strati
+      g.globalCompositeOperation = 'lighter';
+      for (let arm = 0; arm < 2; arm++) for (let i = 0; i < 700; i++) { const t = Math.pow(i / 700, 0.8), a = arm * Math.PI + t * 7 + (rr() - 0.5) * 0.4, r = 4 + t * 70, x = 700 + Math.cos(a) * r * 1.4, y = 170 + Math.sin(a) * r * 0.55; g.fillStyle = `rgba(${t < 0.35 ? '255,225,185' : '170,190,255'},${(0.3 + rr() * 0.5) * (1 - t * 0.6)})`; g.fillRect(x, y, 1 + rr() * 1.4, 1 + rr() * 1.4); }   // galassia a spirale
+      { const co = g.createRadialGradient(700, 170, 0, 700, 170, 26); co.addColorStop(0, 'rgba(255,240,215,.9)'); co.addColorStop(1, 'rgba(255,200,140,0)'); g.fillStyle = co; g.fillRect(660, 130, 80, 80); }
+      for (let i = 0; i < 1100; i++) { const b = 0.3 + rr() * rr() * 0.7, sz = rr() < 0.04 ? 2.4 : rr() < 0.2 ? 1.4 : 1; g.fillStyle = `rgba(255,${230 + rr() * 25 | 0},${210 + rr() * 45 | 0},${b})`; g.fillRect(rr() * W2, rr() * H2, sz, sz); }
+      for (let i = 0; i < 6; i++) { const x = rr() * W2, y = rr() * H2, gr = g.createRadialGradient(x, y, 0, x, y, 16); gr.addColorStop(0, 'rgba(255,255,255,.95)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(x - 16, y - 16, 32, 32); }   // stelle luminose
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; })();
     for (const j of [-1, 1]) { const cs = CR.filter((c) => c[0] === j).map((c) => c[1]); let x0 = XD + LIN, capA = false; for (const c of cs) { wallThickSide(x0, c, j, FW, ZR, capA, true); x0 = c + CW; capA = true; } wallThickSide(x0, ENDR, j, FW, ZR, capA, false); }
-    for (const [j, cxs] of CR) { const gm = patch(new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.DoubleSide, fog: false }), 'sky'); const m = new THREE.Mesh(new THREE.PlaneGeometry(9, 4, 12, 1), gm); m.rotation.y = j > 0 ? Math.PI : 0; m.position.set(cxs + CW / 2, 1.2, ZR + j * (PW + TH + 1.4)); m.frustumCulled = false; FW.add(m); } }
+    for (const [j, cxs] of CR) { const gm = patch(new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.DoubleSide, fog: false }), 'sky'); const m = new THREE.Mesh(new THREE.PlaneGeometry(10, 5, 12, 1), gm); m.rotation.y = j > 0 ? Math.PI : 0; m.position.set(cxs + CW / 2, 1.2, ZR + j * (PW + TH + 1.4)); m.frustumCulled = false; FW.add(m);
+      const sp = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.8, 6, 6), patch(new THREE.MeshBasicMaterial({ map: radial([[0, 'rgba(190,170,255,.7)'], [0.45, 'rgba(150,130,230,.28)'], [1, 'rgba(120,100,220,0)']], 128), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.8 }), 'spill')); sp.rotation.x = -Math.PI / 2; sp.position.set(cxs + CW / 2, 0.015, ZR + j * 0.35); sp.frustumCulled = false; FW.add(sp); } }
   // lastre del pavimento spezzate che continuano oltre la fine, sempre piu' rade e piccole, leggermente inclinate
   const slabs = [];
   { const rr = (() => { let sd = 5; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })();
@@ -201,7 +207,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     return null;
   };
   const FMAX = 16.2;   // fine del tratto di ritorno nelle coordinate "a riposo" del passaggio (oltre c'e' il tunnel)
-  const cm = (x, z) => { const st = F.state; if (st === 'fold') return corridor(1, ZR, FMAX, x, z); if (st === 'exit' || st === 'done') return corridor(-1, ZL, XD + LL - 0.6, x, z) || corridor(1, ZL, XR2 - 0.3, x, z); return corridor(1, ZR, XD + LEN - 1.2, x, z); };
+  const cm = (x, z) => { const st = F.state; if (st === 'fold') return corridor(1, ZR, FMAX, x, z); if (st === 'exit' || st === 'done') return corridor(1, ZL, XR2 - 0.3, x, z); return corridor(1, ZR, XD + LEN - 1.2, x, z); };
   player.constrainMove = cm;
   let overlay = null; const ov = () => overlay ||= (() => { const d = document.createElement('div'); d.id = 'foldfade'; d.style.cssText = 'position:fixed;inset:0;z-index:61;background:#000;opacity:0;pointer-events:none;transition:opacity .35s'; document.body.appendChild(d); return d; })();
   const lampAll = (mode, dur) => { for (let i = 0; i < 4; i++) lights.lamp?.(i, mode, dur); };
@@ -232,9 +238,9 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
       if (Math.random() < dt * 0.6) player.addShake?.(0.25);
       if (P.x >= FMAX - 0.15 && U.uK.value > KEND * 0.995) {   // fine del ritorno: la posizione e la direzione del mondo piegato coincidono con quelle reali nel tunnel (nessuno stacco)
         const K = U.uK.value, u = P.x - S0, rest = Math.max(0, u - Math.PI / K); const wx = S0 - rest, wz = ZL + (P.z - ZR) * -1;
-        U.uK.value = 0; RP.visible = false; R2.visible = true; frame2.visible = true; LP.visible = true; frameL.visible = true; SKY.visible = false;
-        tunnel.userData.plugs[2].visible = false; tunnel.userData.plugs[1].visible = false; tunnel.userData.plugs[0].visible = true; frameR.visible = false;
-        P.set(wx, P.y, wz); player.yaw += Math.PI; F.state = 'exit'; F.t = 0; lampAll('on', 1); say?.('Sei di nuovo nel tunnel.\nUna porta che prima non c’era.', 3800); }
+        U.uK.value = 0; RP.visible = false; R2.visible = true; frame2.visible = true; SKY.visible = false;
+        tunnel.userData.plugs[2].visible = false; tunnel.userData.plugs[0].visible = true; frameR.visible = false;
+        P.set(wx, P.y, wz); player.yaw += Math.PI; F.state = 'exit'; F.t = 0; lampAll('on', 1); say?.('Sei di nuovo nel tunnel.\nLa porta da cui sei uscito non c’era.', 3800); }
       return;
     }
     if (st === 'exit') { if (F.t > 2.5) { F.state = 'done'; F.done = true; lampAll('on', 1); } return; }

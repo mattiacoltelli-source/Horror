@@ -177,6 +177,8 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
 
   // portale: ci si CADE dentro (nessun tasto, nessun caricamento): passando sul buco si precipita; il buco mostra gia' lo spazio vero, la caduta riparte da quell'immagine
   C.onPortal = () => { const go = () => { flags.bladeEnding = true; story.goto('tower', true); }; if (space && new URLSearchParams(location.search).get('spazio') !== '0') space.start(go, { camPos: camera.position.clone(), camQuat: camera.quaternion.clone(), portalC: new THREE.Vector3(portal.x, 0, portal.z) }); else { player.frozen = false; go(); } };
+  // la finestra sullo spazio si disegna DOPO l'aggiornamento del giocatore (stessa camera del fotogramma): cosi' i pianeti restano fissi mentre ci si gira
+  C.drawWindow = () => { if (C.winWant === undefined) return; const dt = C.winWant; C.winWant = undefined; if (space && !space.active && space.drawWindow(dt, camera.position, camera.quaternion, portalC, undefined, { cross: true })) { portal.mat.uniforms.uSpace.value = space.win.tex; portal.mat.uniforms.uRes.value = space.win.res; } };
   C.enterPortal = () => {};   // compatibilita': non serve piu' un tasto
   const portalC = new THREE.Vector3(portal.x, 0, portal.z), fwdTmp = new THREE.Vector3();
   C.enter = () => {
@@ -202,7 +204,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     {   // finestra sullo spazio nel buco (solo se il portale e' aperto, vicino e davanti a chi guarda) + caduta dentro il buco
       const dx = portal.x - P.x, dz = portal.z - P.z, dist = Math.hypot(dx, dz); let use = 0;
       if (portal.open && portal.u > 0.05 && space && !space.active && !C.portalUsed) { camera.getWorldDirection(fwdTmp); const vis = dist < 16 && (fwdTmp.x * dx + fwdTmp.z * dz) / Math.max(0.001, dist) > -0.2 || fwdTmp.y < -0.5;
-        if (vis && space.drawWindow(dt, camera.position, camera.quaternion, portalC, undefined, { cross: true })) { use = 1; portal.mat.uniforms.uSpace.value = space.win.tex; portal.mat.uniforms.uRes.value = space.win.res; } }
+        if (vis) { use = 1; C.winWant = dt; } }
       portal.mat.uniforms.uUse.value += (use * Math.min(1, portal.u * 1.2) - portal.mat.uniforms.uUse.value) * Math.min(1, dt * 4);
       if (!C.portalUsed && !C.dive && portal.open && portal.u > 0.8 && !player.frozen && dist < 0.55) { C.portalUsed = true; C.dive = { t: 0, x: player.pos.x, z: player.pos.z, y: player.pos.y, pitch: player.pitch }; player.frozen = true; audio.swell?.(1.4, 0.7); }
       if (C.dive) { const D = C.dive; D.t += dt; const k = Math.min(1, D.t / 0.5);   // 0,5 s di caduta nel buco con la stanza ancora visibile: scivola verso il centro, la visuale si abbassa

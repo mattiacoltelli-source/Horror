@@ -405,6 +405,7 @@ function tick(dt, hallDt = dt) {
   combat?.update(dt, time);
   time += dt;
   player.update(dt, time);
+  cellar?.drawWindow?.();
   sideFold.update(dt); sideFold.applyCamera();
   breath?.update(dt, player.pos.z);
   if (ward?.bend?.active) ward.bend.applyCamera(dt);   // ?piega=1: la camera segue il reparto piegato
