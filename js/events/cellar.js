@@ -73,7 +73,6 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   { const wipe = (x, y, r, a) => { const g = dg.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(0.6, `rgba(0,0,0,${a * 0.6})`); g.addColorStop(1, 'rgba(0,0,0,0)'); dg.fillStyle = g; dg.fillRect(x - r, y - r, 2 * r, 2 * r); };
     dg.save(); dg.globalCompositeOperation = 'destination-out';
     wipe(DW * 0.5, DH * 0.44, DH * 0.34, 0.62);
-    for (let k = 0; k < 3; k++) { let x = DW * (0.3 + rr() * 0.4), y = DH * (0.12 + rr() * 0.2); const dx = (rr() - 0.5) * 30, dy = 26 + rr() * 8; for (let i = 0; i < 18; i++) { wipe(x + Math.sin(i * 0.5) * 14, y, 20 + rr() * 8, 0.5); x += dx * 0.3; y += dy; } }   // tre strisciate di dita dall'alto
     dg.restore(); }
   // gocce di condensa (piu' fitte in alto) e colature: la goccia scivola e lascia una scia piu' pulita
   for (let i = 0; i < 40; i++) { const x = rr() * DW, y = rr() * DH * (rr() < 0.7 ? 0.5 : 1), len = 24 + rr() * 110; dg.save(); dg.globalCompositeOperation = 'destination-out'; const gr = dg.createLinearGradient(0, y, 0, y + len); gr.addColorStop(0, 'rgba(0,0,0,.0)'); gr.addColorStop(0.15, 'rgba(0,0,0,.5)'); gr.addColorStop(1, 'rgba(0,0,0,.35)'); dg.fillStyle = gr; dg.fillRect(x - 0.9, y, 1.8, len); dg.restore();
