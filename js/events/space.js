@@ -239,8 +239,8 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
 
   // ---- elementi che compaiono SOLO nelle finestre (dalla porta del tunnel e dal portale della cantina), lontani e non in primo piano: croce enorme che gira, secondo portale defilato ----
   const crossG = new THREE.Group(); crossG.visible = false; scene.add(crossG);
-  { const m = new THREE.MeshBasicMaterial({ color: 0x050403, fog: false }), edge = new THREE.LineBasicMaterial({ color: 0xffe0a8, transparent: true, opacity: 0.8, fog: false });
-    const bar = (sx, sy, sz, y) => { const b = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), m); b.position.y = y; crossG.add(b); const e = new THREE.LineSegments(new THREE.EdgesGeometry(b.geometry), edge); e.position.y = y; crossG.add(e); };
+  { const m = new THREE.MeshBasicMaterial({ color: 0x000000, fog: false, toneMapped: false });
+    const bar = (sx, sy, sz, y) => { const b = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), m); b.position.y = y; crossG.add(b); };
     bar(2.4, 26, 2.4, 13); bar(14, 2.4, 2.4, 19);
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.5 })); halo.scale.set(70, 70, 1); halo.position.set(0, 17, -4); crossG.add(halo);
     crossG.position.set(14, -4, -190); crossG.renderOrder = -2; }
