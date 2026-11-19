@@ -117,6 +117,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     const here = P.z > Z_END + 1.2 || F.state === 'fold' || F.state === 'cut'; G.visible = here || F.state === 'exit';
     if (!G.visible) return;
     const st = F.state;
+    if ((st === 'idle' || st === 'done') && lights.lamps) for (const L of lights.lamps) if (L.mode === 'off' || L.mode === 'dim') L.mode = 'on';   // salvaguardia: fuori dall'evento le lampade del tunnel non restano mai spente o attenuate
     if (st === 'idle' || st === 'done') {
       if (st === 'idle') { dip -= dt; if (dip > 0) lv = 0.08 + Math.random() * 0.2; else { lv = 0.82 + 0.12 * Math.sin(tt * 2.3) + 0.05 * Math.sin(tt * 17); if (Math.random() < dt * 0.45) dip = 0.05 + Math.random() * 0.12; } setLight(lv);
         if (P.x > XD + 1.7 && Math.abs(P.z - ZR) < 0.7 && !player.frozen) { F.state = 'flicker'; F.t = 0; lampAll('flicker', 1.7); audio.swell?.(2.2, 0.45); audio.whisper?.(1.4, 0.2); instab?.push?.(0.6, 6); } }
