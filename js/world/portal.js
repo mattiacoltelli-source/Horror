@@ -6,10 +6,10 @@ export function portalMaterial({ r = 1.05, reach = 2.7, wallX = 3.97, zMin = -22
   return new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, fog: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
     polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5,
-    uniforms: { uT: { value: 0 }, uOpen: { value: 0 } },
+    uniforms: { uT: { value: 0 }, uOpen: { value: 0 }, uSpace: { value: null }, uRes: { value: new THREE.Vector2(2, 2) }, uUse: { value: 0 } },
     vertexShader: 'varying vec2 vP; varying vec3 vW; void main() { vP = position.xy; vW = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
     fragmentShader: `
-      varying vec2 vP; varying vec3 vW; uniform float uT, uOpen;
+      varying vec2 vP; varying vec3 vW; uniform float uT, uOpen, uUse; uniform sampler2D uSpace; uniform vec2 uRes;
       float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float n2(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }
       float fbm(vec2 p) { float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++) { s += a * n2(p); p = p * 2.03 + 11.7; a *= 0.5; } return s; }
@@ -30,6 +30,8 @@ export function portalMaterial({ r = 1.05, reach = 2.7, wallX = 3.97, zMin = -22
         vec2 sp = vP * 7.0 + vec2(uT * 0.05, 0.0); vec2 cell = floor(sp); float st = step(0.965, h21(cell)); float tw = 0.5 + 0.5 * sin(uT * 3.0 + h21(cell + 5.0) * 40.0);
         float star = st * tw * (1.0 - smoothstep(0.0, 0.18, length(fract(sp) - 0.5)));
         voidCol += vec3(0.8, 0.9, 1.0) * star;
+        // finestra sullo spazio vero (universo della caduta), se disponibile: stessa camera del giocatore, letto a schermo
+        { vec3 spc = texture2D(uSpace, gl_FragCoord.xy / uRes).rgb; spc *= 1.0 - 0.4 * smoothstep(0.55, 1.0, d / max(edgeR, 0.01)); voidCol = mix(voidCol, spc, uUse); }
         // luce del bordo: sottile, forte, pulsa
         float rim = exp(-pow((d - edgeR) / 0.045, 2.0)) * open, rim2 = exp(-pow((d - edgeR) / 0.2, 2.0)) * open;
         vec3 rimCol = vec3(0.55, 0.8, 1.0) * rim * (1.2 + 0.9 * pulse) + vec3(0.25, 0.45, 1.0) * rim2 * (0.35 + 0.4 * pulse2);
@@ -57,7 +59,7 @@ export function createPortal({ group, x, z, r = 1.05, reach = 2.7, wallX = 3.97,
   const P = { open: false, t: 0, x, z, r, enterR: 0.6, u: 0 };
   const S = reach * 2, mat = portalMaterial({ r, reach, wallX, zMin });
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(S, S), mat); mesh.rotation.x = -Math.PI / 2; mesh.position.set(x, 0.026, z); mesh.visible = false; mesh.frustumCulled = false; mesh.name = 'portale-a-terra'; group.add(mesh);
-  P.mesh = mesh;
+  P.mesh = mesh; P.mat = mat;
   P.openIt = () => { if (P.open) return; P.open = true; P.t = 0; mesh.visible = true; };
   P.close = () => { P.open = false; P.t = 0; P.u = 0; mesh.visible = false; mat.uniforms.uOpen.value = 0; };
   P.update = (dt, t) => { if (!P.open) return; P.t += dt; P.u = Math.min(1, P.t / 3.2); mat.uniforms.uOpen.value = P.u; mat.uniforms.uT.value = t; };

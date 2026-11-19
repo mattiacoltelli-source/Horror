@@ -40,7 +40,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   chapelWall.visible = false; C.group.add(chapelWall);
   const withClosedChapelReflection = createReflectionSubstitute({ room: chapel.group, substitute: chapelWall });
   const portal = C.portal = createPortal({ group: C.group, x: -0.5, z: CELLAR.z0 - 13.6 });   // in mezzo al salone: bisogna girarsi, guardarlo ed entrare di proposito
-  C.keypad = createKeypad({ group: C.group, player, audio, say, actBtn, flags, x: CELLAR.w / 2, y: 1.32, z: CELLAR.z0 - 20.7, onOpen: () => portal.openIt() });   // muro destro, sotto la luce rossa, a ~4 m dall'arco della cripta
+  C.keypad = createKeypad({ group: C.group, player, audio, say, actBtn, flags, x: CELLAR.w / 2, y: 1.32, z: CELLAR.z0 - 20.7, onOpen: () => { space?.finish?.(); portal.openIt(); audio.swell?.(3.2, 0.5); } });   // muro destro, sotto la luce rossa, a ~4 m dall'arco della cripta
   C.shrine = createFilmShrineEvent({ group: C.group, mats, panel: room.sidePanels.film, player, flags, audio, say, actBtn, onSave });
   // la lampadina del santuario non ha una luce sua: usa la luce "warm" della scena (libera in cantina), cosi' in cantina ci sono 7 luci invece di 10
   if (warm && C.shrine.light) { const sl = C.shrine.light, slPos = new THREE.Vector3(); C.group.updateMatrixWorld(true); sl.getWorldPosition(slPos); sl.parent?.remove(sl); let cur = 0;
@@ -175,11 +175,12 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const shade = hall.silhouette(0); shade.visible = false; C.group.add(shade);
   let ap = -1;
 
-  // portale: arrivo diretto nella torre (la caduta nello spazio e' un possibile prossimo passo)
-  C.onPortal = () => { const go = () => { flags.bladeEnding = true; story.goto('tower', true); }; if (space && new URLSearchParams(location.search).get('spazio') !== '0') space.start(go); else go(); };   // portale -> caduta tra le stelle -> torre con il plasma
-  C.enterPortal = () => { if (!C.portalNear || C.portalUsed) return; C.portalUsed = true; C.portalNear = false; actBtn.classList.add('hidden'); C.onPortal(); };   // il portale porta direttamente nella torre, con la lama di luce
+  // portale: ci si CADE dentro (nessun tasto, nessun caricamento): passando sul buco si precipita; il buco mostra gia' lo spazio vero, la caduta riparte da quell'immagine
+  C.onPortal = () => { const go = () => { flags.bladeEnding = true; story.goto('tower', true); }; if (space && new URLSearchParams(location.search).get('spazio') !== '0') space.start(go, { camPos: camera.position.clone(), camQuat: camera.quaternion.clone(), portalC: new THREE.Vector3(portal.x, 0, portal.z) }); else { player.frozen = false; go(); } };
+  C.enterPortal = () => {};   // compatibilita': non serve piu' un tasto
+  const portalC = new THREE.Vector3(portal.x, 0, portal.z), fwdTmp = new THREE.Vector3();
   C.enter = () => {
-    space?.prepare?.(); torch.reset(); chapel.stamped = false; C.gone = false; C.portalUsed = false; portal.close(); C.portalNear = false; C.keypad.reset(); C.warmWard = false; C.exitStarted = false; if (exCap) exCap.visible = true; if (exL) { exL.rotation.y = 0; exR.rotation.y = 0; } C.group.position.z = 0; C.bounds[2] = CELLAR.z0 - CELLAR.l + 1.4; if (C.bx) { C.bounds[0] = C.bx[0]; C.bounds[1] = C.bx[1]; }
+    space?.prepare?.(); torch.reset(); chapel.stamped = false; C.gone = false; C.portalUsed = false; C.dive = null; portal.close(); portal.mat.uniforms.uUse.value = 0; C.portalNear = false; C.keypad.reset(); C.warmWard = false; C.exitStarted = false; if (exCap) exCap.visible = true; if (exL) { exL.rotation.y = 0; exR.rotation.y = 0; } C.group.position.z = 0; C.bounds[2] = CELLAR.z0 - CELLAR.l + 1.4; if (C.bx) { C.bounds[0] = C.bx[0]; C.bounds[1] = C.bx[1]; }
     C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; cornerDone = false; cornerT = -1; corner.visible = false; runDone = false; runT = -1; runM.visible = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.uniforms.uA.value = 0; mist.material.opacity = 0; shNear.material.uniforms.uA.value = 0; fogMat.uniforms.uM.value = 0; fogMat.uniforms.uW.value = 0; fogMat.uniforms.uMask.value = blankTex; fogMat.uniforms.uTip.value.set(0, 0, 0); fogMat.uniforms.uR.value = 0.36; fogMat.uniforms.uB.value.set(0.47, 0.52); C.wr = null; C.wName = false; C.b1 = C.b2 = C.sw = C.sw2 = C.clean = false; C.farT = -1; C.farN = 0; far1.visible = false;
     player.box = C.bounds; player.pos.set(0.4, 1.62, CELLAR.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     player.constrainMove = shrineMove; C.shrine.reset();
@@ -198,8 +199,16 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     const P = player.pos;
     C.keypad.update(dt, !C.gone && !story.busy() && !C.shrine.near);
     portal.update(dt, C.tt || 0);
-    { const pn = portal.open && !C.portalUsed && portal.u > 0.7 && !player.frozen && Math.hypot(P.x - portal.x, P.z - portal.z) < 1.15;   // niente caduta accidentale: serve il tasto ENTRA
-      if (pn !== C.portalNear) { C.portalNear = pn; if (pn) { actBtn.textContent = 'ENTRA'; actBtn.classList.remove('hidden'); } else actBtn.classList.add('hidden'); } }
+    {   // finestra sullo spazio nel buco (solo se il portale e' aperto, vicino e davanti a chi guarda) + caduta dentro il buco
+      const dx = portal.x - P.x, dz = portal.z - P.z, dist = Math.hypot(dx, dz); let use = 0;
+      if (portal.open && portal.u > 0.05 && space && !space.active && !C.portalUsed) { camera.getWorldDirection(fwdTmp); const vis = dist < 16 && (fwdTmp.x * dx + fwdTmp.z * dz) / Math.max(0.001, dist) > -0.2 || fwdTmp.y < -0.5;
+        if (vis && space.drawWindow(dt, camera.position, camera.quaternion, portalC)) { use = 1; portal.mat.uniforms.uSpace.value = space.win.tex; portal.mat.uniforms.uRes.value = space.win.res; } }
+      portal.mat.uniforms.uUse.value += (use * Math.min(1, portal.u * 1.2) - portal.mat.uniforms.uUse.value) * Math.min(1, dt * 4);
+      if (!C.portalUsed && !C.dive && portal.open && portal.u > 0.8 && !player.frozen && dist < 0.55) { C.portalUsed = true; C.dive = { t: 0, x: player.pos.x, z: player.pos.z, y: player.pos.y, pitch: player.pitch }; player.frozen = true; audio.swell?.(1.4, 0.7); }
+      if (C.dive) { const D = C.dive; D.t += dt; const k = Math.min(1, D.t / 0.5);   // 0,5 s di caduta nel buco con la stanza ancora visibile: scivola verso il centro, la visuale si abbassa
+        player.pos.x += (portal.x - player.pos.x) * Math.min(1, dt * 6); player.pos.z += (portal.z - player.pos.z) * Math.min(1, dt * 6); player.pos.y = D.y - 9 * D.t * D.t; player.pitch += (-1.15 - player.pitch) * Math.min(1, dt * 7);
+        if (player.pos.y < -0.25 || D.t > 0.7) { C.dive = null; C.onPortal(); } }
+    }
     if (!C.warmWard && P.z < CELLAR.z0 - 13) { C.warmWard = true; story.warm?.('ward'); }   // a meta' cantina si precompila il reparto
     // --- specchio ---
     d.set(MIRROR.x - P.x, 0, MIRROR.z - P.z); const dm = d.length(); d.normalize();

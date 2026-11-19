@@ -66,7 +66,7 @@ export function createKeypad({ group, player, audio, say, actBtn, flags, x, y, z
     if (!/^\d$/.test(k) || K.code.length >= 6) return;
     K.code += k; paint(); audio.keypad?.(k);
     if (K.code.length === 6) {
-      if (djb2(K.code) === HASH) { K.open = true; setLed(0x2bff5a); audio.keypadOk?.(); setTimeout(hide, 450); setTimeout(() => { audio.swell?.(2.4, 0.4); say('Qualcosa si apre nella cripta.', 3600); onOpen?.(); }, 600); }
+      if (djb2(K.code) === HASH) { K.open = true; setLed(0x2bff5a); audio.keypadOk?.(); setTimeout(hide, 450); setTimeout(() => { audio.swell?.(2.4, 0.4); say('Qualcosa si apre nella cripta.', 3600); }, 600); setTimeout(() => { onOpen?.(); }, 3600); }
       else { setLed(0xff2a1c); scr.classList.add('bad'); audio.keypadBad?.(); setTimeout(() => { K.code = ''; paint(); setLed(0x5a0b08); }, 650); }
     }
   };

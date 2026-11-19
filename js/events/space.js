@@ -270,8 +270,13 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   // qualita' adattiva durante la caduta: scala la risoluzione se i fotogrammi sono lenti
   S.perf = (elapsed) => { if (!S.active) return; S.pf = (S.pf ?? 0) * 0.9 + elapsed * 0.1; S.pn = (S.pn || 0) + 1;
     if (S.pn > 10 && S.pf > 0.034 && S.pr > 0.55) { S.pr = Math.max(0.55, S.pr * 0.88); renderer.setPixelRatio(S.pr); S.pn = 0; } };
-  S.start = (onDone) => {
-    if (S.phase !== 'idle') return; S.phase = 'in'; S.onDone = onDone; S.t = 0; const o = ov(); o.style.background = '#000'; o.style.transition = 'opacity .5s'; o.style.opacity = '1';
+  S.start = (onDone, seam = null) => {
+    if (S.phase !== 'idle') return;
+    if (seam) {   // CADUTA DAL PORTALE: nessun nero, nessun caricamento; si e' gia' dentro l'immagine del buco
+      S.finish(); S.onDone = onDone; S.pr0 = renderer.getPixelRatio(); S.pr = Math.min(S.pr0, 0.9); S.pf = 0; S.pn = 0; renderer.setPixelRatio(S.pr);
+      const pose = mapPose(seam.camPos, seam.camQuat, seam.portalC, { pos: new THREE.Vector3(), quat: new THREE.Quaternion() }); S.seam = { off: pose.pos.clone(), q: pose.quat.clone() };
+      S.active = true; S.phase = 'fall'; S.t = 0; clock.t = 0; player.speedMul = 0; player.frozen = false; vig().style.opacity = 1; audio.space?.(DUR); say('Non puoi muoverti.\nGuardati intorno.', 3400); return;
+    } S.phase = 'in'; S.onDone = onDone; S.t = 0; const o = ov(); o.style.background = '#000'; o.style.transition = 'opacity .5s'; o.style.opacity = '1';
     setTimeout(() => {
       S.finish(); S.pr0 = renderer.getPixelRatio(); S.pr = Math.min(S.pr0, 0.9); S.pf = 0; S.pn = 0; renderer.setPixelRatio(S.pr);   // risoluzione un po' piu' bassa: la scena e' morbida e va fluida
       S.active = true; S.phase = 'fall'; S.t = 0; clock.t = 0; player.speedMul = 0; player.yaw = 0; player.pitch = 0;   // da fermo, guardando in avanti
@@ -279,12 +284,13 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
     }, 600);
   };
   const v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3(), mx = new THREE.Matrix4(), zAx = new THREE.Vector3(0, 0, 1);
-  S.update = (dt) => {
-    if (!S.active) return; S.t += dt; const TR = S.t, T = S.t * K; U.uT.value = T;
+  // ---- nucleo del disegno: aggiorna tutto cio' che si muove nella scena per il tempo T, con la camera data (percorso della caduta, oppure posa esterna S.ext) ----
+  const core = (dt, T, win = false) => {
+    U.uT.value = T;
     for (const p of planets) p.m.rotation.y += p.spin * dt;
-    const t = Math.min(10, T); pathPos(t, tmp); sc.position.copy(tmp);
-    sc.aspect = camera.aspect; { const u = Math.min(1, Math.max(0, (T - 5.5) / 4.5)); sc.fov = camera.fov * (1 + 0.2 * u * u * (3 - 2 * u)); } sc.updateProjectionMatrix();
-    sc.quaternion.copy(camera.quaternion); q.setFromAxisAngle(zAx, 0.035 * Math.sin(T * 0.8)); sc.quaternion.multiply(q);   // piccolo rollio: sembra di cadere
+    if (S.ext) sc.position.copy(S.ext.pos); else { const t = Math.min(10, T); pathPos(t, tmp); sc.position.copy(tmp); }
+    sc.aspect = camera.aspect; { const u = win ? 0 : Math.min(1, Math.max(0, (T - 5.5) / 4.5)); sc.fov = camera.fov * (1 + 0.2 * u * u * (3 - 2 * u)); } sc.updateProjectionMatrix();
+    if (S.ext) sc.quaternion.copy(S.ext.quat); else { sc.quaternion.copy(camera.quaternion); q.setFromAxisAngle(zAx, 0.035 * Math.sin(T * 0.8)); sc.quaternion.multiply(q); }   // piccolo rollio: sembra di cadere
     sky.position.copy(sc.position); sc.updateMatrixWorld(true);
     halo.quaternion.copy(sc.quaternion); lensed.quaternion.copy(sc.quaternion); corona.quaternion.copy(sc.quaternion);
     for (const m of scene.children) if (m.userData.bb) m.quaternion.copy(sc.quaternion);   // nebulose sempre di fronte (rotazione fissa sullo schermo)
@@ -315,10 +321,32 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
     for (let i = 0; i < ND; i++) { if (dust.pos[i * 3 + 2] - sc.position.z > 1.5) dust.pos[i * 3 + 2] -= 70; dust.pos[i * 3] += 0; }
     dust.pts.geometry.attributes.position.needsUpdate = true;
     pMat.uniforms.uOpen.value = Math.min(1, Math.max(0, (T - 5.2) / 3.4)); pMat.uniforms.uT.value = T;
+  };
+  // ---- FINESTRA SUL PORTALE: la scena dello spazio vista attraverso il buco nel pavimento della cantina, a bassa risoluzione, con la stessa camera del giocatore
+  // (la direzione "giu'" della cantina diventa "avanti" nello spazio, cosi' dal buco si vede il cielo con i pianeti, il Sole e il buco nero). ----
+  const qR = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2), vtmp = new THREE.Vector2();
+  const winRT = new THREE.WebGLRenderTarget(64, 64, { depthBuffer: true, generateMipmaps: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }); winRT.texture.colorSpace = THREE.SRGBColorSpace;
+  S.win = { tex: winRT.texture, res: new THREE.Vector2(2, 2), wt: 0 }; S.ext = null; S.seam = null;
+  const mapPose = (camPos, camQuat, pc, out) => { out.pos.copy(camPos).sub(pc).applyQuaternion(qR); out.quat.copy(camQuat).premultiply(qR); return out; };
+  const extWin = { pos: new THREE.Vector3(), quat: new THREE.Quaternion() };
+  S.drawWindow = (dt, camPos, camQuat, pc) => {
+    if (!S.prepared || S.active) return false;
+    renderer.getDrawingBufferSize(vtmp); const w = Math.max(64, Math.round(vtmp.x * 0.5)), h = Math.max(64, Math.round(vtmp.y * 0.5)); if (winRT.width !== w || winRT.height !== h) winRT.setSize(w, h); S.win.res.copy(vtmp);
+    S.win.wt += dt; S.ext = mapPose(camPos, camQuat, pc, extWin); core(dt, S.win.wt, true); const prev = renderer.getRenderTarget(); renderer.setRenderTarget(winRT); renderer.render(scene, sc); renderer.setRenderTarget(prev); S.ext = null; return true;
+  };
+  S.update = (dt) => {
+    if (!S.active) return; S.t += dt; const TR = S.t, T = S.t * K;
+    if (S.seam) {   // arrivo senza stacco: la posa parte esattamente da quella vista dal buco, poi si scioglie nel percorso e nella visuale libera
+      const s = Math.min(1, S.t / 1.4), e = s * s * (3 - 2 * s), sm = S.seam; S.ext ||= { pos: new THREE.Vector3(), quat: new THREE.Quaternion() };
+      pathPos(Math.min(10, T), tmp); S.ext.pos.copy(tmp).addScaledVector(sm.off, 1 - e); S.ext.quat.copy(sm.q).slerp(camera.quaternion, e);
+      player.yaw -= player.yaw * Math.min(1, dt * 2.4); player.pitch -= player.pitch * Math.min(1, dt * 2.4);
+      if (s >= 1) { S.seam = null; S.ext = null; }
+    }
+    core(dt, T);
     if (T > 4.6 && !S.said1) { S.said1 = true; say('Il plasma delle stelle ti attraversa.', 3200); }
     if (T > 7.4 && !S.said2) { S.said2 = true; say('Un varco si apre davanti a te.', 3000); }
     if (TR >= DUR - 0.5 && S.phase === 'fall') { S.phase = 'out'; const o = ov(); o.style.background = '#fff'; o.style.transition = 'opacity .45s'; o.style.opacity = '1'; }
-    if (TR >= DUR) { S.active = false; S.phase = 'idle'; S.said1 = S.said2 = false; player.speedMul = 1; vig().style.opacity = 0; if (S.pr0) renderer.setPixelRatio(S.pr0); S.onDone?.(); setTimeout(() => { const o = ov(); o.style.transition = 'opacity 1.1s'; o.style.opacity = '0'; }, 1800); }
+    if (TR >= DUR) { S.active = false; S.phase = 'idle'; S.said1 = S.said2 = false; S.seam = null; S.ext = null; player.speedMul = 1; vig().style.opacity = 0; if (S.pr0) renderer.setPixelRatio(S.pr0); S.onDone?.(); setTimeout(() => { const o = ov(); o.style.transition = 'opacity 1.1s'; o.style.opacity = '0'; }, 1800); }
   };
   S.render = () => renderer.render(scene, sc);
   return S;
