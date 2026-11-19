@@ -91,9 +91,11 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   addGalaxy(new THREE.Vector3(0.25, -0.5, -1), 70, 2.2, 0.35, [0.7, 0.5, 1.0], 1.2);
   addGalaxy(new THREE.Vector3(-0.9, 0.55, 0.3), 110, 5.6, 0.6, [0.55, 0.75, 1.0], 0.2);
   addGalaxy(new THREE.Vector3(0.9, -0.25, -0.5), 60, 7.7, 0.5, [1.0, 0.8, 0.6], -0.9);
+  addGalaxy(new THREE.Vector3(0.12, -0.18, -1), 105, 9.3, 0.55, [0.7, 0.62, 1.0], 0.35);   // una galassia a spirale dritta davanti alla caduta (si vede anche dal buco)
+  addGalaxy(new THREE.Vector3(-0.35, 0.1, -1), 55, 11.2, 0.4, [1.0, 0.72, 0.5], -0.6);
   // stelle luminose con raggi di diffrazione (scintillano)
   const brights = [];
-  for (let i = 0; i < 9; i++) { const d = new THREE.Vector3(rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1).normalize().multiplyScalar(750); const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: spikeTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, fog: false, color: new THREE.Color().setHSL(0.55 + rnd() * 0.15 - (rnd() < 0.3 ? 0.5 : 0), 0.5, 0.85), opacity: 0.8 })); sp.position.copy(d); const sz = 25 + rnd() * 50; sp.scale.setScalar(sz); sp.renderOrder = -8; sky.add(sp); brights.push({ sp, sz, ph: rnd() * 6.28 }); }
+  for (let i = 0; i < 22; i++) { const d = new THREE.Vector3(rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1).normalize().multiplyScalar(750); const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: spikeTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, fog: false, color: new THREE.Color().setHSL(0.55 + rnd() * 0.15 - (rnd() < 0.3 ? 0.5 : 0), 0.5, 0.85), opacity: 0.8 })); sp.position.copy(d); const sz = 25 + rnd() * 50; sp.scale.setScalar(sz); sp.renderOrder = -8; sky.add(sp); brights.push({ sp, sz, ph: rnd() * 6.28 }); }
 
   // ---- nebulose colorate vicino al percorso (parallasse) ----
   const nebMat = (c1, c2, seed) => {
@@ -102,7 +104,7 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
         float dens = smoothstep(0.32, 0.8, f) * (1.0 - smoothstep(0.5, 1.0, r)); vec3 col = mix(uC1, uC2, g) * dens * 0.8 + uC2 * pow(smoothstep(0.62, 0.9, f), 3.0) * 0.35 * (1.0 - r); gl_FragColor = vec4(min(col, vec3(1.0)), 1.0); }`,
       { uS: { value: seed }, uC1: { value: new THREE.Color(...c1) }, uC2: { value: new THREE.Color(...c2) } });
     return new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }); };
-  for (const [pos, size, c1, c2, seed, rot] of [[[-34, -9, -34], 90, [0.55, 0.1, 0.5], [0.1, 0.35, 0.6], 3.0, 0.4], [[40, 14, -78], 110, [0.1, 0.45, 0.5], [0.7, 0.2, 0.35], 8.0, 1.2], [[-24, 18, -100], 120, [0.8, 0.35, 0.1], [0.35, 0.1, 0.6], 15.0, 2.3]]) {
+  for (const [pos, size, c1, c2, seed, rot] of [[[2, -6, -62], 80, [0.2, 0.2, 0.65], [0.6, 0.15, 0.5], 21.0, 0.8], [[-34, -9, -34], 90, [0.55, 0.1, 0.5], [0.1, 0.35, 0.6], 3.0, 0.4], [[40, 14, -78], 110, [0.1, 0.45, 0.5], [0.7, 0.2, 0.35], 8.0, 1.2], [[-24, 18, -100], 120, [0.8, 0.35, 0.1], [0.35, 0.1, 0.6], 15.0, 2.3]]) {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), nebMat(c1.map((x) => x), c2, seed)); m.position.set(...pos); m.rotation.z = rot; m.renderOrder = -5; m.frustumCulled = false; m.userData.bb = true; scene.add(m); }
 
   // ---- pianeti (shader: lavico, oceano con luci di citta' e nuvole, ghiaccio, gigante gassoso, lune), con ombra degli anelli ----
@@ -308,7 +310,7 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
     v1.copy(SUN).project(sc); const inFront = v1.z < 1 && v1.z > -1, nd = Math.hypot(v1.x, v1.y), vis = inFront ? 1 - Math.min(1, Math.max(0, (nd - 0.15) / 1.1)) : 0;
     for (const f of flares) { if (vis < 0.01) { f.sp.material.opacity = 0; continue; } v2.set(v1.x * -f.k, v1.y * -f.k, 0.5).unproject(sc); v3.copy(v2).sub(sc.position).normalize(); f.sp.position.copy(sc.position).addScaledVector(v3, 3); f.sp.scale.setScalar(f.sz * 3 * (1 + 0.15 * Math.sin(T * 3 + f.k))); f.sp.material.opacity = 0.5 * vis; }
     // cometa: attraversa da destra a sinistra tra 2,2 s e 6,5 s; la coda punta lontano dal Sole
-    { const k = (T - 2.2) / 4.3; comet.visible = tail.visible = k > 0 && k < 1;
+    { const k = (T - 2.2) / 4.3; comet.visible = tail.visible = !win && k > 0 && k < 1;
       if (comet.visible) { comet.position.set(26 - k * 56, 13 - k * 24, -22 - k * 34); v1.copy(comet.position).sub(SUN).normalize(); v2.copy(comet.position).sub(sc.position).normalize(); v3.crossVectors(v1, v2).normalize();
         const len = 22; mx.makeBasis(v3.multiplyScalar(2.2), v1.clone().multiplyScalar(len), v2); mx.setPosition(comet.position.x + v1.x * len * 0.5, comet.position.y + v1.y * len * 0.5, comet.position.z + v1.z * len * 0.5); tail.matrix.copy(mx); tail.matrixWorldNeedsUpdate = true;
         tail.geometry.attributes.uv; } }
@@ -316,7 +318,7 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
     { const sp = 2.5 + 1.4 * Math.min(10, T), u = Math.min(1, Math.max(0, (T - 2.5) / 6.5)), cz = sc.position.z;
       for (let i = 0; i < NSK; i++) { if (sk.z[i] > cz + 2) sk.z[i] -= 90; const z0 = sk.z[i], ln = sk.len[i] * sp * 0.22 * (0.4 + u * 2.2), a = sk.a[i];
         sk.pos[i * 6] = a[0]; sk.pos[i * 6 + 1] = a[1]; sk.pos[i * 6 + 2] = z0; sk.pos[i * 6 + 3] = a[0]; sk.pos[i * 6 + 4] = a[1]; sk.pos[i * 6 + 5] = z0 - ln; }
-      streaks.geometry.attributes.position.needsUpdate = true; streaks.material.opacity = 0.55 * u * u; }
+      streaks.geometry.attributes.position.needsUpdate = true; streaks.material.opacity = win ? 0 : 0.55 * u * u; }
     // polvere cosmica: scorre vicino alla camera
     for (let i = 0; i < ND; i++) { if (dust.pos[i * 3 + 2] - sc.position.z > 1.5) dust.pos[i * 3 + 2] -= 70; dust.pos[i * 3] += 0; }
     dust.pts.geometry.attributes.position.needsUpdate = true;
