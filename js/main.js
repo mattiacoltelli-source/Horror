@@ -119,7 +119,7 @@ LAMPS.forEach((z, i) => place('assets/models/lamp.glb', 0.32, 0, H0 + W - 0.62, 
   const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.5, 5), new THREE.MeshBasicMaterial({ color: 0x050505 }));
   cord.position.set(0, H0 + W - 0.2, z); scene.add(cord);
 }));
-place('assets/models/slamp2.glb', 0.9, 1.15, 1.55, -17, -Math.PI / 2); place('assets/models/slamp2.glb', 0.9, 1.15, 1.55, -43, -Math.PI / 2);
+place('assets/models/slamp2.glb', 0.9, 1.15, 1.55, -18.4, -Math.PI / 2); place('assets/models/slamp2.glb', 0.9, 1.15, 1.55, -43, -Math.PI / 2);
 place('assets/models/can.glb', 0.12, -0.7, 0, -4.5, 0.6);
 place('assets/models/can.glb', 0.12, 0.55, 0, -29, 2.1);
 place('assets/models/tank.glb', 0.55, -W + 0.3, 0, -36, 0.3);
@@ -220,7 +220,7 @@ async function enter() {
   tower ??= createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish: (m, f, l) => (dawn ? dawn.start(m) : finish(m, f, l)), warm, actBtn: $('act'), combat });
   // topi: vicino ai muri e alle cose, scappano di scatto quando ti avvicini (una volta sola ciascuno)
   if (!window.__ratsDone) { window.__ratsDone = true;
-    rats.add(scene, { x: 1.0, z: -9.5, ry: 0.4, hide: [[1.12, -13], [1.2, -16.5]] });                                                  // tunnel, lungo il muro destro
+    rats.add(scene, { x: 1.0, z: -9.5, ry: 0.4, hide: [[1.12, -13], [1.2, -18.3]] });                                                  // tunnel, lungo il muro destro
     rats.add(cellar.group, { x: 2.2, z: -204.5, ry: 2.2, hide: [[3.6, -205.6], [3.75, -208]] });                                         // cantina, vicino ai rottami
     rats.add(cellar.group, { x: -2.4, z: -215.0, ry: 0.9, hide: [[-3.7, -218], [-3.65, -222.8]] });                                      // cantina, lato dello specchio
     rats.add(morgue.group, { x: -3.95, z: -509.5, ry: -1.9, hide: [[-4.05, -511.6], [-4.05, -513.9]] });                                   // obitorio, contro il muro sinistro
@@ -330,7 +330,7 @@ async function enter() {
   // I programmi e le texture della stanza vengono preparati durante il
   // caricamento o la dissolvenza, senza accendere tutte le stanze durante il gioco.
   // ?start=porta → salta il tunnel e parte a ~8 m dal portone (per provare solo la parte finale)
-  if (q.get('start') === 'piega') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, -31); }
+  if (q.get('start') === 'piega') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, -12.5); }
   if (q.get('start') === 'porta') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, Z_END + 10); }
   // scorciatoie di prova: ?start=cantina | torre  (&turned=1 / &mirror=1 per simulare le scelte)
   { const ck = restoreCk ? loadCkpt(restoreRoom) : null, st = ck ? CK_ST[ck.room] : q.get('start'); flags.turned = ck ? ck.turned : q.get('turned') === '1'; flags.mirror = q.get('mirror') === '1'; flags.noGun = ck ? ck.noGun : q.get('nogun') === '1'; flags.weapon = ck ? ck.weapon : (q.get('weapon') === 'axe' ? 'axe' : null); flags.door = ck ? ck.door : (q.get('door') === 'red' ? 'red' : q.get('door') === 'breath' ? 'breath' : null);

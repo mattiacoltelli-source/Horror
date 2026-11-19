@@ -7,7 +7,7 @@ import { W, SIDE_DOORS, Z_END } from '../world/tunnel.js';
 import { TILES } from '../world/materials.js';
 import { mergeGeometries } from '../../vendor/three/utils/BufferGeometryUtils.js';
 
-const R_DOOR = SIDE_DOORS[0], L_DOOR = SIDE_DOORS[1], ZR = R_DOOR.z, ZL = L_DOOR.z, XD = W, PW = 0.7, PH = R_DOOR.h, LEN = 14, S0 = XD + 2.6, KEND = 2 / (ZR - ZL);   // la piega curva verso -z di 5,7 m: il ritorno arriva esattamente davanti alla porta sinistra
+const R_DOOR = SIDE_DOORS[0], L_DOOR = SIDE_DOORS[1], ZR = R_DOOR.z, ZL = L_DOOR.z, XD = W, PW = 0.7, PH = R_DOOR.h, LEN = 14, S0 = XD + 2.6, KEND = 0.35, LS = (ZR - ZL) - 2 / KEND, U3 = Math.PI / KEND + LS;   // percorso a "stadio": curva verso -z (raggio 2,9 m), rettilineo di LS metri, curva di ritorno: il ritorno arriva esattamente davanti alla seconda porta
 const RADIUS = 0.32;
 
 const radial = (stops, size = 128) => { const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d'), r = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2); for (const [o, col] of stops) r.addColorStop(o, col); g.fillStyle = r; g.fillRect(0, 0, size, size); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
@@ -16,19 +16,22 @@ const linear = (stops, w = 8, h = 128) => { const c = document.createElement('ca
 export function createSideFold({ scene, tunnel, mats, player, camera, audio, lights, say, instab, getSpace }) {
   const F = { state: 'idle', t: 0, done: false, enabled: true };
   const G = new THREE.Group(); G.name = 'porta-laterale'; scene.add(G);
-  const U = { uK: { value: 0 }, uGlow: { value: 0 }, uS0: { value: S0 }, uZ0: { value: ZR } };
+  const U = { uLs: { value: LS }, uK: { value: 0 }, uGlow: { value: 0 }, uS0: { value: S0 }, uZ0: { value: ZR } };
   // ---- materiali del passaggio: cloni dei mattoni/pavimento del tunnel con la piega e il bagliore nello shader ----
   const patch = (mat, key) => { mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
-    sh.vertexShader = 'uniform float uK, uS0, uZ0; varying float vRx;\n' + sh.vertexShader
+    const PATH = `uniform float uLs;
+      void sfPath(float u, out vec2 c, out float th) { float K = uK, u1 = 1.5707963 / K, u2 = u1 + uLs, u3 = u2 + 1.5707963 / K;
+        if (u < u1) { th = K * u; c = vec2(uS0 + sin(th) / K, uZ0 - (1.0 - cos(th)) / K); }
+        else if (u < u2) { th = 1.5707963; c = vec2(uS0 + 1.0 / K, uZ0 - 1.0 / K - (u - u1)); }
+        else if (u < u3) { th = 1.5707963 + K * (u - u2); c = vec2(uS0 + 1.0 / K + (sin(th) - 1.0) / K, uZ0 - 1.0 / K - uLs + cos(th) / K); }
+        else { th = 3.14159265; c = vec2(uS0 - (u - u3), uZ0 - 2.0 / K - uLs); } }\n`;
+    sh.vertexShader = 'uniform float uK, uS0, uZ0; varying float vRx;\n' + PATH + sh.vertexShader
       .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
-        { vec3 wp0 = (modelMatrix * vec4(position, 1.0)).xyz; if (uK > 1e-4 && wp0.x > uS0) { float ph = min(uK * (wp0.x - uS0), 3.14159), c = cos(ph), s = sin(ph); vec3 wn = mat3(modelMatrix) * objectNormal; float nx = wn.x, nz = wn.z; wn.x = nx * c + nz * s; wn.z = -nx * s + nz * c; objectNormal = normalize(transpose(mat3(modelMatrix)) * wn); } }`)
+        { vec3 wp0 = (modelMatrix * vec4(position, 1.0)).xyz; if (uK > 1e-4 && wp0.x > uS0) { vec2 c0; float th; sfPath(wp0.x - uS0, c0, th); float c = cos(th), s = sin(th); vec3 wn = mat3(modelMatrix) * objectNormal; float nx = wn.x, nz = wn.z; wn.x = nx * c + nz * s; wn.z = -nx * s + nz * c; objectNormal = normalize(transpose(mat3(modelMatrix)) * wn); } }`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
         { vec4 wp = modelMatrix * vec4(transformed, 1.0); vRx = wp.x;
-          if (uK > 1e-4 && wp.x > uS0) { float u = wp.x - uS0, ph = uK * u, d = wp.z - uZ0; vec2 c2, nr;
-            if (ph < 3.14159) { c2 = vec2(uS0 + sin(ph) / uK, uZ0 - (1.0 - cos(ph)) / uK); nr = vec2(sin(ph), cos(ph)); }
-            else { float rest = u - 3.14159 / uK; c2 = vec2(uS0 - rest, uZ0 - 2.0 / uK); nr = vec2(0.0, -1.0); }
-            wp.x = c2.x + d * nr.x; wp.z = c2.y + d * nr.y; transformed = (inverse(modelMatrix) * wp).xyz; } }`);
+          if (uK > 1e-4 && wp.x > uS0) { vec2 c2; float th; sfPath(wp.x - uS0, c2, th); float d = wp.z - uZ0; wp.x = c2.x + d * sin(th); wp.z = c2.y + d * cos(th); transformed = (inverse(modelMatrix) * wp).xyz; } }`);
     sh.fragmentShader = 'uniform float uGlow; varying float vRx;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         totalEmissiveRadiance += vec3(1.0, 0.78, 0.48) * uGlow * pow(smoothstep(5.0, 16.0, vRx), 1.8) * 0.45;`);
   }; mat.customProgramCacheKey = () => 'sidefold-' + key; return mat; };
@@ -61,7 +64,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
       mesh(sweep([[zi, 0, 0], [zi, SPR, 1], [zi, SPR, 1], [zo, SPR, 1], [zo, SPR, 1], [zo, 0, 0]], [[ni, 0], [ni, 0], [0, 1], [0, 1], [j, 0], [j, 0]], xa, xb, Math.max(2, Math.round((xb - xa) * 4)), fn), wallM, parent); } };
   const capGeo = (x, j, dir, zc) => { const g = new THREE.PlaneGeometry(TH, SPR); g.applyMatrix4(M(0, dir * Math.PI / 2, x, SPR / 2, zc + j * (PW + TH / 2))); const p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, p.getZ(i) / bu, p.getY(i) / bv); return colorAttr(g, 0.7); };
   const wallThickSide = (xa, xb, j, parent, zc = ZR, capA = false, capB = false) => { if (capA) mesh(capGeo(xa, j, -1, zc), wallM, parent); if (capB) mesh(capGeo(xb, j, 1, zc), wallM, parent); const zi = zc + j * PW, zo = zc + j * (PW + TH), ni = -j; mesh(sweep([[zi, 0, 0], [zi, SPR, 1], [zi, SPR, 1], [zo, SPR, 1], [zo, SPR, 1], [zo, 0, 0]], [[ni, 0], [ni, 0], [0, 1], [0, 1], [j, 0], [j, 0]], xa, xb, Math.max(2, Math.round((xb - xa) * 4)), null), wallM, parent); };
-  const XF = 12.0, ENDR = 15.6;   // da XF in poi, durante la piega, il passaggio diventa intero (tratto di ritorno): le parti sgretolate spariscono
+  const XF = 12.0, ENDR = S0 + U3 + S0 - 1.4 + 0.1;   // da XF in poi, durante la piega, il passaggio diventa intero (tratto di ritorno): le parti sgretolate spariscono
   const nearWalls = new THREE.Group(); RP.add(nearWalls); wallThick(XD + LIN, XF, crumble, nearWalls);
   const farWalls = new THREE.Group(); RP.add(farWalls); wallThick(XF, END, crumble, farWalls);
   const RET = new THREE.Group(); RET.visible = false; RP.add(RET);
@@ -203,7 +206,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     if ((Math.abs(z - zc) < 0.5 || inside) && cand > lim - 0.05) return [side * Math.min(xmax, Math.max(lim - 0.02, cand)), Math.max(zc - 0.5, Math.min(zc + 0.5, z))];
     return null;
   };
-  const FMAX = 16.2;   // fine del tratto di ritorno nelle coordinate "a riposo" del passaggio (oltre c'e' il tunnel)
+  const FMAX = ENDR + 0.4;   // fine del tratto di ritorno nelle coordinate "a riposo" del passaggio (oltre c'e' il tunnel)
   const cm = (x, z) => { const st = F.state; if (st === 'fold') return corridor(1, ZR, FMAX, x, z); if (st === 'exit' || st === 'done') return corridor(1, ZL, XR2 - 0.3, x, z); return corridor(1, ZR, XD + LEN - 1.2, x, z); };
   player.constrainMove = cm;
   let overlay = null; const ov = () => overlay ||= (() => { const d = document.createElement('div'); d.id = 'foldfade'; d.style.cssText = 'position:fixed;inset:0;z-index:61;background:#000;opacity:0;pointer-events:none;transition:opacity .35s'; document.body.appendChild(d); return d; })();
@@ -234,21 +237,20 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
       if (!F.lit && P.x > FMAX - 4.5) { F.lit = true; lampAll('flicker', 1.6); audio.lightOn?.(); }   // le luci del tunnel tornano mentre ci si avvicina: all'uscita niente scarto
       if (Math.random() < dt * 0.6) player.addShake?.(0.25);
       if (P.x >= FMAX - 0.15 && U.uK.value > KEND * 0.995) {   // fine del ritorno: la posizione e la direzione del mondo piegato coincidono con quelle reali nel tunnel (nessuno stacco)
-        const K = U.uK.value, u = P.x - S0, rest = Math.max(0, u - Math.PI / K); const wx = S0 - rest, wz = ZL + (P.z - ZR) * -1;
+        const K = U.uK.value, q = pathAt(K, P.x - S0), d = P.z - ZR, wx = q.x + d * Math.sin(q.th), wz = q.z + d * Math.cos(q.th), yawAdd = q.th;
         U.uK.value = 0; RP.visible = false; R2.visible = true; frame2.visible = true; SKY.visible = false;
         tunnel.userData.plugs[2].visible = false; tunnel.userData.plugs[0].visible = true; frameR.visible = false;
-        signOut.visible = true; P.set(wx, P.y, wz); player.yaw += Math.PI; F.state = 'exit'; F.t = 0; lampAll('on', 1); say?.('Sei di nuovo nel tunnel.\nLa porta da cui sei uscito non c’era.', 3800); }
+        signOut.visible = true; P.set(wx, P.y, wz); player.yaw += yawAdd; F.state = 'exit'; F.t = 0; lampAll('on', 1); say?.('Sei di nuovo nel tunnel.\nLa porta da cui sei uscito non c’era.', 3800); }
       return;
     }
     if (st === 'exit') { if (F.t > 2.5) { F.state = 'done'; F.done = true; lampAll('on', 1); } return; }
   };
+  const pathAt = (K, u) => { const u1 = Math.PI / 2 / K, u2 = u1 + LS, u3 = u2 + Math.PI / 2 / K; let x, z, th; if (u < u1) { th = K * u; x = S0 + Math.sin(th) / K; z = ZR - (1 - Math.cos(th)) / K; } else if (u < u2) { th = Math.PI / 2; x = S0 + 1 / K; z = ZR - 1 / K - (u - u1); } else if (u < u3) { th = Math.PI / 2 + K * (u - u2); x = S0 + 1 / K + (Math.sin(th) - 1) / K; z = ZR - 1 / K - LS + Math.cos(th) / K; } else { th = Math.PI; x = S0 - (u - u3); z = ZR - 2 / K - LS; } return { x, z, th }; };
   // la camera segue la curva: posizione e direzione dalla mappa (stessa formula dello shader)
   const qY = new THREE.Quaternion(), yA = new THREE.Vector3(0, 1, 0);
   F.applyCamera = () => {
     const K = U.uK.value; if (K < 1e-4 || F.state !== 'fold') return; const p = camera.position, x = p.x; if (x <= S0) return;
-    const u = x - S0, ph = Math.min(K * u, Math.PI), d = p.z - ZR; let cxm, czm, nx2, nz2;
-    if (K * u < Math.PI) { cxm = S0 + Math.sin(ph) / K; czm = ZR - (1 - Math.cos(ph)) / K; nx2 = Math.sin(ph); nz2 = Math.cos(ph); } else { cxm = S0 - (u - Math.PI / K); czm = ZR - 2 / K; nx2 = 0; nz2 = -1; }
-    p.x = cxm + d * nx2; p.z = czm + d * nz2; camera.quaternion.premultiply(qY.setFromAxisAngle(yA, ph));
+    const q = pathAt(K, x - S0), d = p.z - ZR; p.x = q.x + d * Math.sin(q.th); p.z = q.z + d * Math.cos(q.th); const ph = q.th; camera.quaternion.premultiply(qY.setFromAxisAngle(yA, ph));
   };
   F.reset = () => { signOut.visible = false; F.lit = false; F.state = 'idle'; F.t = 0; F.done = false; F.cutDone = false; U.uK.value = 0; RP.visible = true; nearWalls.visible = true; FW.visible = false; farWalls.visible = true; for (const o of slabs) o.visible = true; RET.visible = false; R2.visible = false; frame2.visible = false; SKY.visible = false; if (tunnel.userData.plugs) { tunnel.userData.plugs[0].visible = false; tunnel.userData.plugs[1].visible = true; tunnel.userData.plugs[2].visible = true; } ceilFar.visible = false; winQuad.visible = false; spaceOn = false; for (const o of fallback) o.visible = true; LP.visible = false; frameL.visible = false; frameR.visible = true; GL.visible = true; spill.visible = spillSp.visible = true;  player.constrainMove = cm; };
   // animazioni leggere della stanza (raggi che respirano, polvere che sale, frammenti che ruotano)
@@ -257,21 +259,39 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     const a = motes.geometry.attributes.position; for (let i = 0; i < NM; i++) { a.array[i * 3 + 1] += mv[i][1] * dt; if (a.array[i * 3 + 1] > 10) a.array[i * 3 + 1] = 0; a.array[i * 3] += Math.sin(tt * 0.4 + mv[i][0]) * dt * 0.2; } a.needsUpdate = true; };
   const upd = F.update; F.update = (dt) => { upd(dt); if (G.visible) F.animate(dt); };
   // ---- CARTELLI DI LAMIERA ARRUGGINITA: uno davanti all'ingresso («ENTRA QUI, FIDATI») e uno dopo l'uscita con una freccia verso la direzione giusta (la sala in fondo al tunnel) ----
-  const signMesh = (w, h, draw, x, y, z, tilt = 0) => {
-    const cw = 512, ch = Math.round(512 * h / w), c = document.createElement('canvas'); c.width = cw; c.height = ch; const g = c.getContext('2d'), rr = (() => { let sd = Math.round(w * 977 + h * 311); return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })();
-    const base = g.createLinearGradient(0, 0, cw, ch); base.addColorStop(0, '#6b3a22'); base.addColorStop(0.5, '#4d2c1c'); base.addColorStop(1, '#5e3320'); g.fillStyle = base; g.fillRect(0, 0, cw, ch);
-    draw(g, cw, ch);   // vernice sbiadita (testo o freccia)
-    for (let i = 0; i < 1400; i++) { g.fillStyle = `rgba(${rr() < 0.5 ? '150,70,28' : '28,16,10'},${rr() * 0.4})`; g.fillRect(rr() * cw, rr() * ch, 1 + rr() * 6, 1 + rr() * 4); }   // ruggine e crateri
-    for (let i = 0; i < 40; i++) { const x0 = rr() * cw, y0 = rr() * ch * 0.5, gr = g.createLinearGradient(0, y0, 0, y0 + 40 + rr() * 140); gr.addColorStop(0, `rgba(120,50,18,${0.3 + rr() * 0.3})`); gr.addColorStop(1, 'rgba(120,50,18,0)'); g.fillStyle = gr; g.fillRect(x0, y0, 2 + rr() * 5, 160); }   // colature di ruggine
-    for (let i = 0; i < 14; i++) { g.fillStyle = `rgba(20,12,8,${0.4 + rr() * 0.4})`; g.beginPath(); g.ellipse(rr() * cw, rr() * ch, 6 + rr() * 22, 4 + rr() * 14, rr() * 3, 0, 7); g.fill(); }   // vaiolature
-    for (const [bx, by] of [[18, 18], [cw - 18, 18], [18, ch - 18], [cw - 18, ch - 18]]) { g.fillStyle = '#2a1a12'; g.beginPath(); g.arc(bx, by, 9, 0, 7); g.fill(); g.fillStyle = 'rgba(170,90,40,.6)'; g.beginPath(); g.arc(bx - 2, by - 2, 4, 0, 7); g.fill(); }   // bulloni
-    g.strokeStyle = 'rgba(20,12,8,.85)'; g.lineWidth = 10; g.strokeRect(5, 5, cw - 10, ch - 10);   // bordo
+  const hsh = (x, y) => { const v = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return v - Math.floor(v); };
+  const vnoise = (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf); return hsh(xi, yi) * (1 - u) * (1 - v) + hsh(xi + 1, yi) * u * (1 - v) + hsh(xi, yi + 1) * (1 - u) * v + hsh(xi + 1, yi + 1) * u * v; };
+  const fbm = (x, y) => vnoise(x, y) * 0.5 + vnoise(x * 2.1 + 5, y * 2.1 + 3) * 0.28 + vnoise(x * 4.3 + 9, y * 4.3 + 1) * 0.15 + vnoise(x * 9 + 2, y * 9 + 7) * 0.07;
+  // cartello di lamiera vecchio di 30 anni nell'umidita': ruggine a strati (nera, bruna, arancio), vernice scrostata a placche, colature verticali, bordi mangiati, angoli piegati
+  const signMesh = (w, h, draw, x, y, z, tilt = 0, seed = 1) => {
+    const cw = 512, ch = Math.round(512 * h / w), pc = document.createElement('canvas'); pc.width = cw; pc.height = ch; draw(pc.getContext('2d'), cw, ch);
+    const pa = pc.getContext('2d').getImageData(0, 0, cw, ch).data, c = document.createElement('canvas'); c.width = cw; c.height = ch; const g = c.getContext('2d'), img = g.createImageData(cw, ch), o = img.data;
+    for (let j = 0; j < ch; j++) for (let i = 0; i < cw; i++) { const k = (j * cw + i) * 4, nx = i / cw, ny = j / ch;
+      const n1 = fbm(i * 0.018 + seed * 13, j * 0.018), n2 = fbm(i * 0.06 + seed * 7, j * 0.06 + 11), n3 = fbm(i * 0.22 + seed, j * 0.22), streak = vnoise(i * 0.07 + seed, j * 0.004) , edge = Math.min(i, j, cw - 1 - i, ch - 1 - j) / 40;
+      // rust: dark where wet/old, orange where fresh pits
+      const rustT = Math.min(1, Math.max(0, n1 * 1.4 - 0.2 + (n3 - 0.5) * 0.5)); let r = 30 + rustT * 120, gg = 16 + rustT * 52, b = 10 + rustT * 22;
+      r *= 0.55 + streak * 0.7; gg *= 0.55 + streak * 0.7; b *= 0.55 + streak * 0.7;
+      const pit = Math.max(0, n3 - 0.62) * 5; r *= 1 - pit * 0.6; gg *= 1 - pit * 0.6; b *= 1 - pit * 0.6;
+      // paint: only where the flaking mask allows it, dirty and faded
+      const keep = Math.min(1, Math.max(0, (n2 * 0.7 + n1 * 0.4 - 0.34) * 5)), pA = (pa[k + 3] / 255) * keep;
+      r = r * (1 - pA) + (150 + n3 * 40) * pA * 0.8; gg = gg * (1 - pA) + (140 + n3 * 40) * pA * 0.75; b = b * (1 - pA) + (112 + n3 * 40) * pA * 0.65;
+      // grime and edge rust
+      const ed = Math.max(0, 1 - edge); r = r * (1 - ed * 0.5) + 70 * ed * 0.5; gg *= 1 - ed * 0.55; b *= 1 - ed * 0.6;
+      const dr = Math.max(0, vnoise(i * 0.05 + seed * 3, j * 0.01) - 0.55) * Math.min(1, ny * 1.5) * 1.6; r *= 1 - dr * 0.5; gg *= 1 - dr * 0.55; b *= 1 - dr * 0.55;
+      // eaten edges and corner losses
+      const eat = fbm(i * 0.05 + seed * 5, j * 0.05 + 2) * 26, dEdge = Math.min(i, j, cw - 1 - i, ch - 1 - j), corner = Math.min(Math.hypot(i, j), Math.hypot(cw - i, j), Math.hypot(i, ch - j), Math.hypot(cw - i, ch - j));
+      let alpha = dEdge + eat - 20 > 0 ? 1 : 0; if (corner < 70 && fbm(i * 0.1 + seed, j * 0.1) < 0.42 + (70 - corner) / 150) alpha = 0;
+      o[k] = Math.min(255, r); o[k + 1] = Math.min(255, gg); o[k + 2] = Math.min(255, b); o[k + 3] = alpha ? 255 : 0; }
+    g.putImageData(img, 0, 0);
+    for (const [bx, by, sk] of [[28, 28, 0], [cw - 28, 28, 1], [28, ch - 28, 1], [cw - 28, ch - 28, 0]]) { if (hsh(bx + seed, by) < 0.3) continue; g.fillStyle = '#1c1008'; g.beginPath(); g.arc(bx, by, 10, 0, 7); g.fill(); g.fillStyle = 'rgba(150,70,25,.55)'; g.beginPath(); g.arc(bx - 2, by - 2, 5, 0, 7); g.fill(); g.strokeStyle = 'rgba(90,35,10,.5)'; g.lineWidth = 5; g.beginPath(); g.moveTo(bx, by); g.lineTo(bx + (hsh(bx, seed) - 0.5) * 30, by + 50 + hsh(by, seed) * 70); g.stroke(); }   // bulloni con colatura
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.02), [0, 1, 2, 3, 4, 5].map((k) => k === 4 ? new THREE.MeshStandardMaterial({ map: t, roughness: 0.65, metalness: 0.45 }) : new THREE.MeshStandardMaterial({ color: 0x2a1a12, roughness: 0.8, metalness: 0.3 })));
+    const geo = new THREE.PlaneGeometry(w, h, 10, 6), pos = geo.attributes.position; for (let i = 0; i < pos.count; i++) { const px = pos.getX(i), py = pos.getY(i), fx = px / w + 0.5, fy = py / h + 0.5; pos.setZ(i, 0.02 * Math.sin(fx * 3 + seed) + 0.05 * Math.pow(Math.max(0, fx - 0.7) / 0.3, 2) * (seed % 2 ? 1 : -1) + 0.04 * Math.pow(Math.max(0, 0.25 - fy) / 0.25, 2)); }   // lamiera ondulata e angoli piegati
+    geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.78, metalness: 0.35 }));
     m.position.set(x, y, z); m.rotation.y = Math.PI / 2; m.rotation.x = tilt; m.rotation.z = tilt * 0.6; G.add(m); return m; };
-  const paint = (g, txt, cw, ch, sz) => { g.fillStyle = 'rgba(214,200,170,.82)'; g.font = `bold ${sz}px Impact, "Arial Black", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; const L = txt.split('\n'); L.forEach((l, i) => g.fillText(l, cw / 2 + (Math.random() - 0.5) * 2, ch / 2 + (i - (L.length - 1) / 2) * sz * 1.1)); };
-  const signIn = signMesh(1.15, 0.5, (g, cw, ch) => { paint(g, 'ENTRA QUI,\nFIDATI', cw, ch, 78); g.globalCompositeOperation = 'destination-out'; for (let i = 0; i < 60; i++) { g.fillStyle = `rgba(0,0,0,${Math.random() * 0.5})`; g.fillRect(Math.random() * cw, Math.random() * ch, 2 + Math.random() * 9, 2 + Math.random() * 5); } g.globalCompositeOperation = 'source-over'; }, -W + 0.03, 1.2, ZR, 0.03);
-  const signOut = signMesh(0.95, 0.5, (g, cw, ch) => { g.fillStyle = 'rgba(214,200,170,.82)'; g.beginPath(); g.moveTo(60, ch * 0.4); g.lineTo(cw * 0.58, ch * 0.4); g.lineTo(cw * 0.58, ch * 0.18); g.lineTo(cw - 50, ch * 0.5); g.lineTo(cw * 0.58, ch * 0.82); g.lineTo(cw * 0.58, ch * 0.6); g.lineTo(60, ch * 0.6); g.closePath(); g.fill(); g.globalCompositeOperation = 'destination-out'; for (let i = 0; i < 70; i++) { g.fillStyle = `rgba(0,0,0,${Math.random() * 0.55})`; g.fillRect(Math.random() * cw, Math.random() * ch, 2 + Math.random() * 10, 2 + Math.random() * 5); } g.globalCompositeOperation = 'source-over'; }, -W + 0.03, 1.5, ZL, -0.025);
+  const paint = (g, txt, cw, ch, sz) => { g.fillStyle = '#fff'; g.font = `bold ${sz}px Impact, "Arial Black", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; const L = txt.split('\n'); L.forEach((l, i) => g.fillText(l, cw / 2, ch / 2 + (i - (L.length - 1) / 2) * sz * 1.1)); };
+  const signIn = signMesh(1.15, 0.5, (g, cw, ch) => paint(g, 'ENTRA QUI,\nFIDATI', cw, ch, 78), -W + 0.03, 1.2, ZR, 0.03, 1);
+  const signOut = signMesh(0.95, 0.5, (g, cw, ch) => { g.fillStyle = '#fff'; g.beginPath(); g.moveTo(60, ch * 0.4); g.lineTo(cw * 0.58, ch * 0.4); g.lineTo(cw * 0.58, ch * 0.18); g.lineTo(cw - 50, ch * 0.5); g.lineTo(cw * 0.58, ch * 0.82); g.lineTo(cw * 0.58, ch * 0.6); g.lineTo(60, ch * 0.6); g.closePath(); g.fill(); }, -W + 0.03, 1.5, ZL, -0.025, 2);
   signOut.visible = false; F.signOut = signOut; F.signIn = signIn;
   F.group = G; F.U = U;
   return F;

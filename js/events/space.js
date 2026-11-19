@@ -302,6 +302,7 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   // ---- nucleo del disegno: aggiorna tutto cio' che si muove nella scena per il tempo T, con la camera data (percorso della caduta, oppure posa esterna S.ext) ----
   const core = (dt, T, win = false) => {
     U.uT.value = T;
+    disk.visible = lensed.visible = !win; if (win) for (const f of flares) f.sp.material.opacity = 0;
     { const showEye = !!S.eye && (!win || !!S.opts?.eye); if (S.eye) { S.eye.mesh.visible = showEye; if (showEye) { S.eye.dir.copy(win ? EYE_WIN : EYE_FALL); S.eye.mesh.scale.setScalar(win ? 0.36 : 1); } }
       crossG.visible = win && !!S.opts?.cross; if (crossG.visible) crossG.rotation.y += dt * 0.12; portal2.visible = win && !!S.opts?.portal; pMat2.uniforms.uT.value = T; }
     for (const p of planets) p.m.rotation.y += p.spin * dt;
@@ -324,7 +325,7 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
     windPts.geometry.attributes.position.needsUpdate = true;
     // riflessi di lente: file di cerchi lungo la retta Sole-centro dello schermo
     v1.copy(SUN).project(sc); const inFront = v1.z < 1 && v1.z > -1, nd = Math.hypot(v1.x, v1.y), vis = inFront ? 1 - Math.min(1, Math.max(0, (nd - 0.15) / 1.1)) : 0;
-    for (const f of flares) { if (vis < 0.01) { f.sp.material.opacity = 0; continue; } v2.set(v1.x * -f.k, v1.y * -f.k, 0.5).unproject(sc); v3.copy(v2).sub(sc.position).normalize(); f.sp.position.copy(sc.position).addScaledVector(v3, 3); f.sp.scale.setScalar(f.sz * 3 * (1 + 0.15 * Math.sin(T * 3 + f.k))); f.sp.material.opacity = 0.5 * vis; }
+    for (const f of flares) { if (win || vis < 0.01) { f.sp.material.opacity = 0; continue; } v2.set(v1.x * -f.k, v1.y * -f.k, 0.5).unproject(sc); v3.copy(v2).sub(sc.position).normalize(); f.sp.position.copy(sc.position).addScaledVector(v3, 3); f.sp.scale.setScalar(f.sz * 3 * (1 + 0.15 * Math.sin(T * 3 + f.k))); f.sp.material.opacity = 0.5 * vis; }
     // cometa: attraversa da destra a sinistra tra 2,2 s e 6,5 s; la coda punta lontano dal Sole
     { const k = (T - 2.2) / 4.3; comet.visible = tail.visible = !win && k > 0 && k < 1;
       if (comet.visible) { comet.position.set(26 - k * 56, 13 - k * 24, -22 - k * 34); v1.copy(comet.position).sub(SUN).normalize(); v2.copy(comet.position).sub(sc.position).normalize(); v3.crossVectors(v1, v2).normalize();
