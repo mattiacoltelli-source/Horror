@@ -8,11 +8,12 @@ canvas{display:block;width:100vw;height:100vh}
 #msg{position:fixed;left:0;right:0;bottom:90px;text-align:center;color:#cfd6c0;font-size:15px;line-height:1.5;pointer-events:none;text-shadow:0 0 8px #000;transition:opacity .6s;opacity:0;white-space:pre-line}
 #dpad{position:fixed;left:14px;bottom:14px;display:grid;grid-template-columns:repeat(3,56px);grid-template-rows:repeat(2,56px);gap:6px}
 #dpad button,#reset{background:rgba(20,26,38,.7);border:1px solid #4a586c;color:#b9c8dc;font-size:22px;border-radius:10px;touch-action:none}
+#go{position:fixed;right:14px;bottom:126px;padding:12px 14px;font-size:12px;letter-spacing:.12em;background:rgba(60,30,20,.8);border:1px solid #c07a4a;color:#ffd9b8;border-radius:10px}
 #ext{position:fixed;right:14px;bottom:70px;padding:12px 14px;font-size:12px;letter-spacing:.12em;background:rgba(20,26,38,.7);border:1px solid #4a586c;color:#b9c8dc;border-radius:10px}
 #reset{position:fixed;right:14px;bottom:14px;padding:14px 16px;font-size:13px;letter-spacing:.15em}
 </style>
-<canvas id="c"></canvas><div id="hint">trascina per guardare · tastierino sul muro destro · poi cammina avanti dentro la piega</div><button id="act" class="hidden"></button><div id="msg"></div>
-<div id="dpad"><span></span><button data-k="f">▲</button><span></span><button data-k="l">◀</button><button data-k="b">▼</button><button data-k="r">▶</button></div><button id="reset">RIPRISTINA</button><button id="ext">VISTA ESTERNA</button>
+<canvas id="c"></canvas><div id="hint">PIEGA SUBITO (a destra) oppure codice 150390 sul tastierino · poi cammina avanti</div><button id="act" class="hidden"></button><div id="msg"></div>
+<div id="dpad"><span></span><button data-k="f">▲</button><span></span><button data-k="l">◀</button><button data-k="b">▼</button><button data-k="r">▶</button></div><button id="reset">RIPRISTINA</button><button id="ext">VISTA ESTERNA</button><button id="go">PIEGA SUBITO</button>
 <script type="importmap">{ "imports": { "three": "../../vendor/three/three.module.min.js" } }</script>
 <script type="module">
 // LABORATORIO: la stanza si ripiega su se stessa. Dopo il codice (150390) il corridoio, a partire da 5 m davanti a te, si incurva verso l'alto fino a fare un anello:
@@ -82,6 +83,7 @@ const audio = { keypad() {}, keypadOk() {}, keypadBad() {}, swell() {} };
 const state = { folding: false, t: 0, dir: 0 };
 const kp = createKeypad({ group: scene, player: P, audio, say, actBtn, flags: {}, x: W / 2, y: 1.32, z: -1.6, onOpen: () => { say('la stanza comincia a ripiegarsi.', 3200); state.dir = 1; } });
 actBtn.addEventListener('click', () => kp.act());
+document.getElementById('go').addEventListener('click', () => { state.dir = 1; say('la stanza comincia a ripiegarsi.', 3200); });
 let outside = false; document.getElementById('ext').addEventListener('click', () => { outside = !outside; });
 document.getElementById('reset').addEventListener('click', () => { state.dir = -1; kp.reset(); P.frozen = false; });
 // ---- ciclo ----
