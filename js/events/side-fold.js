@@ -122,9 +122,6 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
       blk(DEP + (key ? 0.06 : r() * 0.02), key ? 0.3 : 0.27, tang + (key ? 0.06 : 0), XC - side * (key ? 0.03 : 0.0), SPR + Math.sin(th) * Rm, zc + Math.cos(th) * Rm, -th, 0, (i === 3 ? 0.03 : (r() - 0.5) * 0.01), 0.5 + r() * 0.15, 0.03); }
     // secondo anello, piu' sottile e a filo di parete, con un buco dove un concio e' caduto
     const NV2 = 15; for (let i = 0; i < NV2; i++) { if (i === 11) continue; const th = (i + 0.5) / NV2 * Math.PI, Rm = RAD + 0.38; blk(0.06 + r() * 0.02, 0.24, Math.PI * Rm / NV2 * 1.02, xo + side * 0.02, SPR + Math.sin(th) * Rm, zc + Math.cos(th) * Rm, -th, 0, 0, 0.42 + r() * 0.12, 0.04); }
-    // soglia consumata e qualche pietra caduta
-    blk(0.5, 0.06, RAD * 2 + 0.5, xo - side * 0.22, 0.03, zc, 0, 0, 0, 0.45, 0.02); blk(0.56, 0.06, RAD * 2, XC, -0.03, zc, 0, 0, 0, 0.45, 0.02);   // soglia fuori e lastra nel passaggio
-    for (let i = 0; i < 4; i++) blk(0.07 + r() * 0.08, 0.06 + r() * 0.07, 0.08 + r() * 0.09, xo - side * (0.3 + r() * 0.4), 0.05, zc + (r() - 0.5) * 2.2, r(), r(), r(), 0.4, 0.03);
     const fm = frameM.clone(); fm.vertexColors = true; g.add(new THREE.Mesh(mergeGeometries(parts), fm));
     return g; };
   // RIVESTIMENTO DI SOSTEGNO dietro i conci: un guscio continuo di pietra (arco, pareti e pavimento) lungo la profondita' dell'arco; chiude ogni fessura tra un concio e l'altro (da li' non si vede mai il vuoto o l'universo)
@@ -190,7 +187,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   // FINESTRA SULLO SPAZIO VERO: sul fondo del passaggio un grande piano mostra la scena della caduta (cielo, galassie, nebulose, pianeti, Sole) con la camera del giocatore, letta a schermo come nel buco del portale
   const winMat = new THREE.ShaderMaterial({ depthWrite: false, fog: false, uniforms: { uTex: { value: null }, uRes: { value: new THREE.Vector2(2, 2) }, uFade: { value: 1 } },
     vertexShader: 'void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: 'uniform sampler2D uTex; uniform vec2 uRes; uniform float uFade; void main() { vec3 c = texture2D(uTex, gl_FragCoord.xy / uRes).rgb; c = pow(c, vec3(1.45)) * 0.545; gl_FragColor = vec4(c * uFade, 1.0); }' });
+    fragmentShader: 'uniform sampler2D uTex; uniform vec2 uRes; uniform float uFade; void main() { vec3 c = texture2D(uTex, gl_FragCoord.xy / uRes).rgb; c = pow(c, vec3(1.7)) * 0.5; gl_FragColor = vec4(c * uFade, 1.0); }' });
   const winQuad = new THREE.Mesh(new THREE.PlaneGeometry(110, 70), winMat); winQuad.position.set(XD + LEN + 0.2, 14, ZR); winQuad.rotation.y = -Math.PI / 2; winQuad.renderOrder = -5; winQuad.frustumCulled = false; winQuad.visible = false; G.add(winQuad);
   const qWin = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2), pcWin = new THREE.Vector3(XD + LEN, 0, ZR), fw = new THREE.Vector3(); let spaceOn = false;
   // bagliore che esce dalla porta: macchia di luce sul pavimento del tunnel e alone sulla soglia
@@ -205,7 +202,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   // ---- movimento: il passaggio e' un corridoio |z-ZR| < 0.55 (destra) o |z-ZL| < 0.55 (sinistra, quando c'e'); il resto del tunnel usa i limiti normali ----
   const corridor = (side, zc, xmax, x, z) => {   // corridoio laterale: si entra solo dal varco (|z-zc|<0.5), dentro si resta nelle pareti
     const lim = W - RADIUS, inside = side * player.pos.x > lim - 0.02, cand = side * x;
-    if ((Math.abs(z - zc) < 0.5 || inside) && cand > lim - 0.05) return [side * Math.min(xmax, Math.max(lim - 0.02, cand)), Math.max(zc - 0.5, Math.min(zc + 0.5, z))];
+    if ((Math.abs(z - zc) < 0.66 || inside) && cand > lim - 0.05) return [side * Math.min(xmax, Math.max(lim - 0.02, cand)), Math.max(zc - 0.5, Math.min(zc + 0.5, z))];
     return null;
   };
   const FMAX = ENDR + 0.4;   // fine del tratto di ritorno nelle coordinate "a riposo" del passaggio (oltre c'e' il tunnel)
