@@ -48,17 +48,16 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   const arcPoly = (zc, rad = PW) => { const poly = [], nrm = []; for (let k = 0; k <= ARC; k++) { const th = Math.PI - k / ARC * Math.PI; poly.push([zc + rad * Math.cos(th), SPR + rad * Math.sin(th)]); nrm.push([-Math.cos(th), -Math.sin(th)]); } return [poly, nrm]; };
   const wallsLo = (zc, xA, xB, nx, parent) => { mesh(sweep([[zc - PW, 0], [zc - PW, SPR]], [[1, 0], [1, 0]], xA, xB, nx), wallM, parent); mesh(sweep([[zc + PW, SPR], [zc + PW, 0]], [[-1, 0], [-1, 0]], xA, xB, nx), wallM, parent); };
   // passaggio di destra (lungo LEN, aperto in fondo): pavimento, pareti e volta; la volta oltre S0 compare quando la luce si spegne (prima il passaggio e' aperto sul vuoto e si intravede la croce)
-  const RP = new THREE.Group(); G.add(RP); const cx = XD + LEN / 2, nx = LEN * 4, END = XD + LEN, SV = END - 3.2, NEARL = SV - XD, FARL = END - SV;   // la volta copre tutto il passaggio tranne gli ultimi 3,2 m (aperti sul vuoto: li' si intravede lo spazio)
+  const RP = new THREE.Group(); G.add(RP); const cx = XD + LEN / 2, nx = LEN * 4, END = XD + LEN, SV = S0, NEARL = SV - XD, FARL = END - SV;   // la volta copre tutto il passaggio tranne gli ultimi 3,2 m (aperti sul vuoto: li' si intravede lo spazio)
   const LIN = 0.5;   // i primi 50 cm del passaggio sono rivestiti dagli stessi conci dell'arco (non mattoni nuovi)
   const FEND = END - 2.6;   // il pavimento finisce prima della fine: il resto e' una scia di lastre spezzate che si perdono nel vuoto
   mesh(quadGeo(FEND - XD - LIN, PW * 2, Math.round((FEND - XD) * 3), M(-Math.PI / 2, 0, (XD + LIN + FEND) / 2, 0, ZR), (x, y, z) => [x / fu, z / fv]), floorM, RP);
-  wallsLo(ZR, XD + LIN, SV, Math.round(NEARL * 4), RP);   // sotto la volta
   { const [pl, nr] = arcPoly(ZR); mesh(sweep(pl, nr, XD + LIN, SV, Math.round(NEARL * 4)), wallM, RP); }   // volta di mattoni
   // oltre la volta le pareti sono muri veri, spessi 35 cm, con il bordo che si sgretola verso il fondo (altezza irregolare), fino a sparire
   const nz1 = (x) => { const v = Math.sin(x * 12.9898) * 43758.5453; return v - Math.floor(v); };
-  const crumble = (x) => { const t = Math.min(1, Math.max(0, (x - (SV + 0.4)) / (END - SV - 0.4))); return t <= 0 ? 1 : Math.max(0.04, 1 - t * (0.35 + 0.8 * nz1(Math.floor(x * 2.6)))); };
+  const crumble = (x) => { const t = Math.min(1, Math.max(0, (x - (SV + 2.2)) / (END - SV - 2.2))); return t <= 0 ? 1 : Math.max(0.04, 1 - t * (0.35 + 0.8 * nz1(Math.floor(x * 2.6)))); };
   { const TH = 0.35; for (const j of [-1, 1]) { const zi = ZR + j * PW, zo = ZR + j * (PW + TH), ni = -j;
-      mesh(sweep([[zi, 0, 0], [zi, SPR, 1], [zi, SPR, 1], [zo, SPR, 1], [zo, SPR, 1], [zo, 0, 0]], [[ni, 0], [ni, 0], [0, 1], [0, 1], [j, 0], [j, 0]], SV, END, Math.round(FARL * 4), crumble), wallM, RP); } }
+      mesh(sweep([[zi, 0, 0], [zi, SPR, 1], [zi, SPR, 1], [zo, SPR, 1], [zo, SPR, 1], [zo, 0, 0]], [[ni, 0], [ni, 0], [0, 1], [0, 1], [j, 0], [j, 0]], XD + LIN, END, Math.round((END - XD - LIN) * 4), crumble), wallM, RP); } }
   // lastre del pavimento spezzate che continuano oltre la fine, sempre piu' rade e piccole, leggermente inclinate
   { const rr = (() => { let sd = 5; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })();
     for (let i = 0; i < 16; i++) { const t = i / 16, w = (0.9 - t * 0.55) * (0.6 + rr() * 0.6), len = (0.8 - t * 0.4) * (0.6 + rr() * 0.8), g = new THREE.BoxGeometry(len, 0.1, w); g.rotateX((rr() - 0.5) * 0.3 * (0.4 + t)); g.rotateZ((rr() - 0.5) * 0.3 * (0.4 + t)); g.rotateY((rr() - 0.5) * 0.9); g.translate(FEND + 0.15 + t * 7.5 + rr() * 0.5, -t * 0.5 * rr() - 0.05 * i * 0.2, ZR + (rr() - 0.5) * (1.3 - t * 0.5));
