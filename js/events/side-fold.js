@@ -216,8 +216,9 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
 
   // finestra sullo spazio dal fondo del passaggio: si prepara per tempo (a fette) e si disegna solo da vicino e davanti
   const winTick = (dt, P) => { const sp = getSpace?.(); if (!sp) return; sp.prepare?.(); camera.getWorldDirection(fw);
-    const dx = XD + 4 - P.x, dz = ZR - P.z, dist = Math.hypot(dx, dz), facing = (fw.x * dx + fw.z * dz) / Math.max(0.01, dist) > 0.5;
-    if (sp.prepared && !sp.active && dist < 12 && facing && sp.drawWindow(dt, camera.position, camera.quaternion, pcWin, qWin, { eye: true, portal: true })) { if (!spaceOn) { spaceOn = true; winMat.uniforms.uTex.value = sp.win.tex; winQuad.visible = true; for (const o of fallback) o.visible = false; } winMat.uniforms.uRes.value = sp.win.res; } };
+    const dx = XD + LEN - P.x, dz = ZR - P.z, dist = Math.hypot(dx, dz), facing = (fw.x * dx + fw.z * dz) / Math.max(0.01, dist) > 0.3;   // bersaglio: il fondo del passaggio (sempre davanti a chi e' dentro)
+    if (sp.prepared && !sp.active && P.x - XD < 13 && facing && sp.drawWindow(dt, camera.position, camera.quaternion, pcWin, qWin, { eye: true, portal: true })) { if (!spaceOn) { spaceOn = true; winMat.uniforms.uTex.value = sp.win.tex; for (const o of fallback) o.visible = false; } winQuad.visible = true; winMat.uniforms.uRes.value = sp.win.res; }
+    else if (spaceOn) winQuad.visible = false; };   // se non si disegna con la camera di questo fotogramma, la finestra si nasconde (mai un'immagine vecchia agganciata allo schermo)
   F.update = (dt) => {
     if (!F.enabled) return; const P = player.pos; tt += dt; F.t += dt;
     { const want = U.uK.value < 1e-4 && F.state !== 'dark'; if (want !== F.cull) { F.cull = want; G.traverse((o) => { if ((o.isMesh || o.isPoints || o.isSprite || o.isLine) && o.parent !== SKY) o.frustumCulled = want; }); } }   // senza piega i bounding box sono esatti: fuori campo non si disegna nulla (durante la piega i vertici si spostano nello shader e il culling e' spento)
