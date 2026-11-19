@@ -1,0 +1,102 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>Stanza che si ripiega</title>
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden;touch-action:none;font-family:ui-monospace,monospace}
+canvas{display:block;width:100vw;height:100vh}
+#hint{position:fixed;left:0;right:0;top:14px;text-align:center;color:#9fb0c8;font-size:13px;letter-spacing:.08em;pointer-events:none;text-shadow:0 0 6px #000}
+#act{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);padding:14px 26px;border:1px solid #6a7a90;background:rgba(10,14,22,.8);color:#cfe0f5;font:600 15px ui-monospace,monospace;letter-spacing:.2em;border-radius:6px}
+#act.hidden{display:none}
+#msg{position:fixed;left:0;right:0;bottom:90px;text-align:center;color:#cfd6c0;font-size:15px;line-height:1.5;pointer-events:none;text-shadow:0 0 8px #000;transition:opacity .6s;opacity:0;white-space:pre-line}
+#dpad{position:fixed;left:14px;bottom:14px;display:grid;grid-template-columns:repeat(3,56px);grid-template-rows:repeat(2,56px);gap:6px}
+#dpad button,#reset{background:rgba(20,26,38,.7);border:1px solid #4a586c;color:#b9c8dc;font-size:22px;border-radius:10px;touch-action:none}
+#ext{position:fixed;right:14px;bottom:70px;padding:12px 14px;font-size:12px;letter-spacing:.12em;background:rgba(20,26,38,.7);border:1px solid #4a586c;color:#b9c8dc;border-radius:10px}
+#reset{position:fixed;right:14px;bottom:14px;padding:14px 16px;font-size:13px;letter-spacing:.15em}
+</style>
+<canvas id="c"></canvas><div id="hint">trascina per guardare · guarda il tastierino sul muro destro</div><button id="act" class="hidden"></button><div id="msg"></div>
+<div id="dpad"><span></span><button data-k="f">▲</button><span></span><button data-k="l">◀</button><button data-k="b">▼</button><button data-k="r">▶</button></div><button id="reset">RIPRISTINA</button><button id="ext">VISTA ESTERNA</button>
+<script type="importmap">{ "imports": { "three": "../../vendor/three/three.module.min.js" } }</script>
+<script type="module">
+// LABORATORIO: la stanza si ripiega su se stessa. Dopo il codice (150390) il corridoio, a partire da 5 m davanti a te, si incurva verso l'alto fino a fare un anello:
+// il pavimento sale come un muro, poi diventa soffitto e il resto della stanza ti passa sopra la testa, a rovescio. E' una deformazione nello shader (nessuna geometria nuova, stesso metodo della piega del reparto).
+import * as THREE from 'three';
+import { createKeypad } from '../../js/events/keypad.js';
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: false }); renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); renderer.setSize(innerWidth, innerHeight, false);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.2; renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x03050a); scene.fog = new THREE.FogExp2(0x03050a, 0.028);
+const camera = new THREE.PerspectiveCamera(68, innerWidth / innerHeight, 0.05, 80); scene.add(camera);
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+const L = 26, W = 4, H = 3, CY = 1.5, S0 = 5.0, KEND = 0.385;   // lunghezza, larghezza, altezza, quota dell'asse, inizio della piega (m), curvatura finale (1/raggio)
+const FOLD = { uK: { value: 0 } };
+// ---- deformazione: l'asse della stanza si incurva verso l'alto con curvatura uK (arco di cerchio fino a 180°, poi dritto all'indietro, sopra la testa) ----
+function patch(mat) {
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uK = FOLD.uK;
+    const S0f = S0.toFixed(2), CYf = CY.toFixed(2);
+    sh.vertexShader = 'uniform float uK;\n' + sh.vertexShader
+      .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
+        { vec3 wp0 = (modelMatrix * vec4(position, 1.0)).xyz; float s0 = -wp0.z; if (s0 > ${S0f} && uK > 0.0001) { float ph = min(uK * (s0 - ${S0f}), 3.14159); float c = cos(ph), sn = sin(ph);
+            vec3 wn = mat3(modelMatrix) * objectNormal; float ny = wn.y, nz = wn.z; wn.y = ny * c - nz * sn; wn.z = ny * sn + nz * c; objectNormal = normalize(transpose(mat3(modelMatrix)) * wn); } }`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        { vec4 wp = modelMatrix * vec4(transformed, 1.0); float s = -wp.z; if (s > ${S0f} && uK > 0.0001) { float u = s - ${S0f}, ph = uK * u, h = wp.y - ${CYf}; vec2 a, n;
+            if (ph < 3.14159) { a = vec2(${CYf} + (1.0 - cos(ph)) / uK, -(${S0f} + sin(ph) / uK)); n = vec2(cos(ph), sin(ph)); }
+            else { float rest = u - 3.14159 / uK; a = vec2(${CYf} + 2.0 / uK, -${S0f} + rest); n = vec2(-1.0, 0.0); }
+            wp.y = a.x + h * n.x; wp.z = a.y + h * n.y; transformed = (inverse(modelMatrix) * wp).xyz; } }`);
+  };
+  mat.customProgramCacheKey = () => 'fold'; return mat;
+}
+// ---- la stanza: pavimento a piastrelle con frecce, mattoni, soffitto, strisce luminose agli spigoli, lampade, qualche cassa ----
+const cv = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t; };
+const floorT = cv(256, 256, (g, w, h) => { g.fillStyle = '#2b2d30'; g.fillRect(0, 0, w, h); for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(${20 + Math.random() * 40 | 0},${20 + Math.random() * 40 | 0},${24 + Math.random() * 40 | 0},.4)`; g.fillRect(Math.random() * w, Math.random() * h, 3, 3); } g.strokeStyle = '#111'; g.lineWidth = 3; g.strokeRect(0, 0, w, h); g.strokeStyle = 'rgba(255,170,60,.55)'; g.lineWidth = 6; g.beginPath(); g.moveTo(w * .3, h * .72); g.lineTo(w * .5, h * .3); g.lineTo(w * .7, h * .72); g.stroke(); });
+floorT.repeat.set(W / 2, L / 2);
+const brickT = new THREE.TextureLoader().load('../../assets/tex/brick_c.jpg'); brickT.wrapS = brickT.wrapT = THREE.RepeatWrapping; brickT.colorSpace = THREE.SRGBColorSpace; brickT.repeat.set(L / 2.2, H / 2.2);
+const room = new THREE.Group(); scene.add(room);
+const plane = (w, h, mat, x, y, z, rx, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h, Math.round(w * 4), Math.round(h * 4)), patch(mat)); m.position.set(x, y, z); m.rotation.set(rx || 0, ry || 0, 0); room.add(m); return m; };
+const seg = (g, w, h) => g;   // segmentazione fine nella lunghezza: la piega ha bisogno di vertici (4 per metro)
+const mk = (w, h, mat, x, y, z, rx, ry) => { const geo = new THREE.PlaneGeometry(w, h, 1, 1); const m = new THREE.Mesh(geo, patch(mat)); m.position.set(x, y, z); m.rotation.set(rx || 0, ry || 0, 0); room.add(m); return m; };
+function stripGeo(len, wid, along) { const g = new THREE.PlaneGeometry(along === 'z' ? wid : len, along === 'z' ? len : wid, along === 'z' ? 1 : Math.round(len * 4), along === 'z' ? Math.round(len * 4) : 1); return g; }
+const floorM = new THREE.Mesh(new THREE.PlaneGeometry(W, L, 1, Math.round(L * 5)), patch(new THREE.MeshStandardMaterial({ map: floorT, roughness: 0.8 }))); floorM.rotation.x = -Math.PI / 2; floorM.position.set(0, 0, -L / 2); room.add(floorM);
+const ceilM = new THREE.Mesh(new THREE.PlaneGeometry(W, L, 1, Math.round(L * 5)), patch(new THREE.MeshStandardMaterial({ color: 0x35373b, roughness: 1 }))); ceilM.rotation.x = Math.PI / 2; ceilM.position.set(0, H, -L / 2); room.add(ceilM);
+for (const sx of [-1, 1]) { const w = new THREE.Mesh(new THREE.PlaneGeometry(L, H, Math.round(L * 5), 1), patch(new THREE.MeshStandardMaterial({ map: brickT, roughness: 0.95, color: 0x8a6a5a }))); w.rotation.y = -sx * Math.PI / 2; w.position.set(sx * W / 2, H / 2, -L / 2); room.add(w); }
+const endM = new THREE.Mesh(new THREE.PlaneGeometry(W, H, 1, 1), patch(new THREE.MeshStandardMaterial({ color: 0x4a1c14, roughness: 1 }))); endM.position.set(0, H / 2, -L); room.add(endM);
+const back = new THREE.Mesh(new THREE.PlaneGeometry(W, H, 1, 1), new THREE.MeshStandardMaterial({ color: 0x2a2c30 })); back.position.set(0, H / 2, 0.5); back.rotation.y = Math.PI; scene.add(back);   // parete dietro il punto di partenza (non si piega)
+// strisce luminose lungo gli spigoli: fanno leggere la piega anche dove la torcia non arriva
+const strip = (x, y, col) => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, L, 1, 1, Math.round(L * 5)), patch(new THREE.MeshBasicMaterial({ color: col }))); m.position.set(x, y, -L / 2); room.add(m); };
+for (const sx of [-1, 1]) { strip(sx * (W / 2 - 0.05), 0.08, 0x2a7fff); strip(sx * (W / 2 - 0.05), H - 0.08, 0xff7a30); strip(sx * (W / 2 - 0.05), H / 2, 0x20c4a0); }
+// lampade e casse (parte della stanza: si piegano con lei)
+const lampM = new THREE.MeshBasicMaterial({ color: 0xfff0c8 });
+for (let z = 2; z < L; z += 4) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 0.25, 1, 1, 1), patch(lampM.clone())); l.position.set(0, H - 0.06, -z); room.add(l); }
+const crateM = new THREE.MeshStandardMaterial({ color: 0x5b4632, roughness: 0.9 });
+for (const [x, z, s] of [[-1.2, 8, 0.8], [1.1, 11, 0.6], [-1.0, 15, 0.9], [0.9, 18, 0.7], [-0.6, 22, 0.8]]) { const c = new THREE.Mesh(new THREE.BoxGeometry(s, s, s, 2, 2, 6), patch(crateM.clone())); c.position.set(x, s / 2, -z); room.add(c); }
+// luci: tenue ambiente e torcia della camera (i punti luminosi fissi non seguirebbero la piega)
+scene.add(new THREE.HemisphereLight(0x4a5a8a, 0x15100c, 0.9));
+const torch = new THREE.SpotLight(0xfff1d6, 22, 30, 0.6, 0.8, 1.6); torch.position.set(0.1, -0.1, 0); torch.target.position.set(0, 0, -4); camera.add(torch, torch.target);
+// ---- giocatore: sguardo trascinando, movimento con i tasti ----
+const P = { pos: new THREE.Vector3(0.2, 1.62, -0.9), yaw: 0, pitch: 0, frozen: false, forward: new THREE.Vector3(0, 0, -1) };
+let dragging = false, lx = 0, ly = 0; const cvEl = document.getElementById('c');
+cvEl.addEventListener('pointerdown', (e) => { dragging = true; lx = e.clientX; ly = e.clientY; }); addEventListener('pointerup', () => { dragging = false; });
+addEventListener('pointermove', (e) => { if (!dragging || P.frozen) return; P.yaw -= (e.clientX - lx) * 0.005; P.pitch = Math.max(-1.3, Math.min(1.3, P.pitch - (e.clientY - ly) * 0.005)); lx = e.clientX; ly = e.clientY; });
+const keys = {}; addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; }); addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+for (const b of document.querySelectorAll('#dpad button')) { const k = b.dataset.k; b.addEventListener('pointerdown', (e) => { e.stopPropagation(); keys['dp' + k] = true; }); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => { keys['dp' + k] = false; }); }
+const actBtn = document.getElementById('act'), msg = document.getElementById('msg'); let msgT = 0;
+const say = (t, ms = 3000) => { msg.textContent = t; msg.style.opacity = 1; clearTimeout(msgT); msgT = setTimeout(() => { msg.style.opacity = 0; }, ms); };
+const audio = { keypad() {}, keypadOk() {}, keypadBad() {}, swell() {} };
+const state = { folding: false, t: 0, dir: 0 };
+const kp = createKeypad({ group: scene, player: P, audio, say, actBtn, flags: {}, x: W / 2, y: 1.32, z: -1.6, onOpen: () => { say('la stanza comincia a ripiegarsi.', 3200); state.dir = 1; } });
+actBtn.addEventListener('click', () => kp.act());
+let outside = false; document.getElementById('ext').addEventListener('click', () => { outside = !outside; });
+document.getElementById('reset').addEventListener('click', () => { state.dir = -1; kp.reset(); P.frozen = false; });
+// ---- ciclo ----
+const eased = (v) => v * v * (3 - 2 * v); let last = performance.now(), clock = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now; clock += dt;
+  if (!P.frozen) { const f = (keys.w || keys.arrowup || keys.dpf ? 1 : 0) - (keys.s || keys.arrowdown || keys.dpb ? 1 : 0), r = (keys.d || keys.dpr ? 1 : 0) - (keys.a || keys.dpl ? 1 : 0); const sp = 1.6 * dt;
+    P.pos.x += (Math.cos(P.yaw) * r - Math.sin(P.yaw) * f) * sp; P.pos.z += (-Math.sin(P.yaw) * r - Math.cos(P.yaw) * f) * sp; P.pos.x = Math.max(-W / 2 + 0.4, Math.min(W / 2 - 0.4, P.pos.x)); P.pos.z = Math.max(-S0 + 0.8, Math.min(0.2, P.pos.z)); }
+  if (state.dir) { state.t = Math.max(0, Math.min(1, state.t + state.dir * dt / 7)); if (state.t >= 1 || state.t <= 0) state.dir = 0; }
+  FOLD.uK.value = KEND * eased(state.t);
+  const shake = state.dir > 0 ? 0.004 * Math.sin(clock * 53) * Math.min(1, state.t * 4) : 0;
+  camera.position.set(P.pos.x, P.pos.y + shake, P.pos.z); camera.rotation.set(P.pitch, P.yaw, 0, 'YXZ'); P.forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
+  kp.update(dt, true);
+  if (outside) { const e = window.__lab.ext; camera.position.set(e.x, e.y, e.z); camera.rotation.set(e.pitch, Math.PI / 2, 0, 'YXZ'); }   // vista laterale: si vede la piega dall'esterno
+  renderer.render(scene, camera); requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame); window.__lab = { P, state, FOLD, camera, ext: { x: 17, y: 4.5, z: -4, pitch: -0.05 }, setOutside: (v) => { outside = v; } };
+</script>

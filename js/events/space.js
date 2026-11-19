@@ -4,6 +4,7 @@
 // Scena a parte (nessuna luce, solo shader), disegnata al posto del gioco finche' dura: leggera per un telefono medio. ?spazio=0 la salta.
 import * as THREE from 'three';
 import { portalMaterial } from '../world/portal.js';
+import { createGiantEye } from '../world/giant-eye.js';
 
 const NOISE = `
 float h31(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
@@ -262,13 +263,15 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   const vig = () => vigEl ||= (() => { const d = document.createElement('div'); d.id = 'spacevig'; d.style.cssText = 'position:fixed;inset:0;z-index:59;pointer-events:none;opacity:0;transition:opacity 1.2s;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 48%,rgba(0,0,6,.55) 100%)'; document.body.appendChild(d); return d; })();
   // preparazione in anticipo (durante la cantina): cottura delle texture a strisce e precompilazione degli shader; a runtime resta solo il disegno
   S.prepared = false; S.preparing = false; S.compiled = false;
+  // occhio gigante dietro di te (alto, a sinistra): quasi invisibile, lo si nota solo cercandolo; fa parte della caduta, non della finestra del portale
+  const makeEye = () => { if (S.eye) return; S.eye = createGiantEye({ dir: new THREE.Vector3(-0.5, 0.34, 0.8), size: 560, distance: 850 }); S.eye.mat.depthTest = true; scene.add(S.eye.mesh); };
   S.prepare = () => { if (S.preparing || S.prepared) return; S.preparing = true; S.waitT = 0; };
   S.warm = (dt = 0.016) => {   // un passo per fotogramma
     if (!S.preparing || S.prepared) return; S.waitT += dt; if (S.waitT < 3.0) return;   // lascia passare l'ingresso nella cantina
     if (bakeStep()) return;
-    S.prepared = true; try { renderer.compileAsync(scene, sc).then(() => { S.compiled = true; }).catch(() => { S.compiled = true; }); } catch (e) { S.compiled = true; }
+    makeEye(); S.prepared = true; try { renderer.compileAsync(scene, sc).then(() => { S.compiled = true; }).catch(() => { S.compiled = true; }); } catch (e) { S.compiled = true; }
   };
-  S.finish = () => { let n = 0; while (bakeStep() && n++ < 400); S.prepared = true; if (!S.compiled) { try { renderer.compile(scene, sc); } catch (e) {} S.compiled = true; } };   // se serve subito, si fa sotto il nero
+  S.finish = () => { let n = 0; while (bakeStep() && n++ < 400); makeEye(); S.prepared = true; if (!S.compiled) { try { renderer.compile(scene, sc); } catch (e) {} S.compiled = true; } };   // se serve subito, si fa sotto il nero
   // qualita' adattiva durante la caduta: scala la risoluzione se i fotogrammi sono lenti
   S.perf = (elapsed) => { if (!S.active) return; S.pf = (S.pf ?? 0) * 0.9 + elapsed * 0.1; S.pn = (S.pn || 0) + 1;
     if (S.pn > 10 && S.pf > 0.034 && S.pr > 0.55) { S.pr = Math.max(0.55, S.pr * 0.88); renderer.setPixelRatio(S.pr); S.pn = 0; } };
@@ -289,11 +292,13 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   // ---- nucleo del disegno: aggiorna tutto cio' che si muove nella scena per il tempo T, con la camera data (percorso della caduta, oppure posa esterna S.ext) ----
   const core = (dt, T, win = false) => {
     U.uT.value = T;
+    if (S.eye) { S.eye.mesh.visible = !win; }
     for (const p of planets) p.m.rotation.y += p.spin * dt;
     if (S.ext) sc.position.copy(S.ext.pos); else { const t = Math.min(10, T); pathPos(t, tmp); sc.position.copy(tmp); }
     sc.aspect = camera.aspect; { const u = win ? 0 : Math.min(1, Math.max(0, (T - 5.5) / 4.5)); sc.fov = camera.fov * (1 + 0.2 * u * u * (3 - 2 * u)); } sc.updateProjectionMatrix();
     if (S.ext) sc.quaternion.copy(S.ext.quat); else { sc.quaternion.copy(camera.quaternion); q.setFromAxisAngle(zAx, 0.035 * Math.sin(T * 0.8)); sc.quaternion.multiply(q); }   // piccolo rollio: sembra di cadere
     sky.position.copy(sc.position); sc.updateMatrixWorld(true);
+    if (S.eye && !win) S.eye.update(dt, sc);
     halo.quaternion.copy(sc.quaternion); lensed.quaternion.copy(sc.quaternion); corona.quaternion.copy(sc.quaternion);
     for (const m of scene.children) if (m.userData.bb) m.quaternion.copy(sc.quaternion);   // nebulose sempre di fronte (rotazione fissa sullo schermo)
     // lune che orbitano attorno al gigante gassoso
