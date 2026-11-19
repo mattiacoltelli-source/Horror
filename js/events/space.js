@@ -201,10 +201,10 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
 
   // ---- cometa che attraversa la scena (coda opposta al Sole) ----
   const comet = new THREE.Group(); scene.add(comet);
-  const headS = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xcfe8ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); headS.scale.setScalar(2.6); comet.add(headS);
+  const headS = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xcfe8ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); headS.scale.setScalar(4.2); comet.add(headS);
   const tailMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false, uniforms: U,
     vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: 'varying vec2 vUv; uniform float uT; void main() { float x = abs(vUv.x - 0.5) * 2.0, y = vUv.y; float w = (1.0 - y) * 0.9 + 0.05; float a = (1.0 - smoothstep(0.0, w, x)) * pow(1.0 - y, 1.6) * (0.7 + 0.4 * sin(vUv.y * 40.0 - uT * 6.0) * sin(vUv.x * 17.0)); gl_FragColor = vec4(vec3(0.55, 0.78, 1.0) * a * 1.5, 1.0); }' });
+    fragmentShader: 'varying vec2 vUv; uniform float uT; void main() { float x = abs(vUv.x - 0.5) * 2.0, y = vUv.y; float w = (0.1 + 0.8 * smoothstep(0.0, 0.45, y)) * (1.0 - y) + 0.04; float a = (1.0 - smoothstep(0.0, w, x)) * smoothstep(0.0, 0.3, y) * pow(1.0 - y, 1.6) * (0.7 + 0.4 * sin(vUv.y * 40.0 - uT * 6.0) * sin(vUv.x * 17.0)); gl_FragColor = vec4(vec3(0.55, 0.78, 1.0) * a * 1.5, 1.0); }' });
   const tail = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), tailMat); tail.frustumCulled = false; tail.matrixAutoUpdate = false; scene.add(tail);
 
   // ---- buco nero: ombra, disco, anello di luce piegata, disco "piegato" sopra e sotto, getti relativistici ----
