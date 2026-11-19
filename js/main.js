@@ -307,7 +307,7 @@ async function enter() {
       writingDecals(cellar.group, [{ img: sg, aspect: A, p: [-3.96, 1.6, CZ - 20.5], wall: '+x', w: 1.6 }]);
       writingDecals(wh.group, [{ img: sg, aspect: A, p: [5.96, 1.9, WZ - 6.6], wall: '-x', w: 1.7 }]); }
     // tre simboli di sangue (casa, occhio che piange, faccia triste): uno nel tunnel, uno nel corridoio del reparto, uno nell'obitorio
-    writingDecals(scene, [{ img: 'assets/tex/sym_house.png', aspect: 0.9042, dry: true, p: [-1.38, 1.1, -5.0], wall: '+x', w: 0.62, rot: -0.04 }]);
+    writingDecals(scene, [{ img: 'assets/tex/sym_house.png', aspect: 0.9042, dry: true, p: [-1.38, 1.1, -7.0], wall: '+x', w: 0.62, rot: -0.04 }]);
     writingDecals(morgue.group, [{ img: 'assets/tex/sym_face.png', aspect: 1.0278, dry: true, p: [-4.22, 1.7, MZ - 10.5], wall: '+x', w: 0.8, rot: 0.03 }]);
     // solo Laya: scritte in thailandese, col sangue, sulla parete destra del primo corridoio (tra due costoloni, a destra del tubo)
     if (PKEY === 'laya') writingDecals(scene, [{ img: 'assets/tex/wr_thai.webp', aspect: 2.2928, dry: true, p: [1.375, 1.0, -42.45], wall: '-x', w: 2.7 }]);   // muro destro, tra le ultime due costole (lontano dal simbolo e dalla mano a z -34.8)
@@ -330,7 +330,7 @@ async function enter() {
   // I programmi e le texture della stanza vengono preparati durante il
   // caricamento o la dissolvenza, senza accendere tutte le stanze durante il gioco.
   // ?start=porta → salta il tunnel e parte a ~8 m dal portone (per provare solo la parte finale)
-  if (q.get('start') === 'piega') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, -12.5); }
+  if (q.get('start') === 'piega') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, 0.5); }
   if (q.get('start') === 'porta') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, Z_END + 10); }
   // scorciatoie di prova: ?start=cantina | torre  (&turned=1 / &mirror=1 per simulare le scelte)
   { const ck = restoreCk ? loadCkpt(restoreRoom) : null, st = ck ? CK_ST[ck.room] : q.get('start'); flags.turned = ck ? ck.turned : q.get('turned') === '1'; flags.mirror = q.get('mirror') === '1'; flags.noGun = ck ? ck.noGun : q.get('nogun') === '1'; flags.weapon = ck ? ck.weapon : (q.get('weapon') === 'axe' ? 'axe' : null); flags.door = ck ? ck.door : (q.get('door') === 'red' ? 'red' : q.get('door') === 'breath' ? 'breath' : null);

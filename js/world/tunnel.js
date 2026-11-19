@@ -11,7 +11,7 @@ export const DOOR = { w: 2.0, h: 2.93 };
 export const RIBS = [-2, -8, -14, -19.5, -25.5, -31.5, -38, -44];
 export const LAMPS = [-6, -17.5, -33, -41];
 // porte laterali del tunnel (evento della piega): a destra l'ingresso, a sinistra l'uscita (chiusa da un tampone di muro finche' non serve)
-export const SIDE_DOORS = [{ side: 1, z: -16.5, w: 1.4, h: 2.08, spring: 1.38 }, { side: -1, z: -40.2, w: 1.4, h: 2.08, spring: 1.38 }, { side: 1, z: -12.9, w: 1.4, h: 2.08, spring: 1.38 }];
+export const SIDE_DOORS = [{ side: 1, z: -4.5, w: 1.4, h: 2.08, spring: 1.38 }, { side: -1, z: -40.2, w: 1.4, h: 2.08, spring: 1.38 }, { side: 1, z: -12.9, w: 1.4, h: 2.08, spring: 1.38 }];
 
 // rng deterministico: stessa geometria a ogni avvio
 let seed = 1337;
