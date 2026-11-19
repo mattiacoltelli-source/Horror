@@ -49,14 +49,15 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   const wallsLo = (zc, xA, xB, nx, parent) => { mesh(sweep([[zc - PW, 0], [zc - PW, SPR]], [[1, 0], [1, 0]], xA, xB, nx), wallM, parent); mesh(sweep([[zc + PW, SPR], [zc + PW, 0]], [[-1, 0], [-1, 0]], xA, xB, nx), wallM, parent); };
   // passaggio di destra (lungo LEN, aperto in fondo): pavimento, pareti e volta; la volta oltre S0 compare quando la luce si spegne (prima il passaggio e' aperto sul vuoto e si intravede la croce)
   const RP = new THREE.Group(); G.add(RP); const cx = XD + LEN / 2, nx = LEN * 4, NEARL = S0 - XD, FARL = LEN - NEARL;
-  mesh(quadGeo(LEN, PW * 2, nx, M(-Math.PI / 2, 0, cx, 0, ZR), (x, y, z) => [x / fu, z / fv]), floorM, RP);
-  wallsLo(ZR, XD, XD + LEN, nx, RP);
-  { const [pl, nr] = arcPoly(ZR); mesh(sweep(pl, nr, XD, S0, Math.round(NEARL * 4)), wallM, RP); }
+  const LIN = 0.5;   // i primi 50 cm del passaggio sono rivestiti dagli stessi conci dell'arco (non mattoni nuovi)
+  mesh(quadGeo(LEN - LIN, PW * 2, nx, M(-Math.PI / 2, 0, (XD + LIN + XD + LEN) / 2, 0, ZR), (x, y, z) => [x / fu, z / fv]), floorM, RP);
+  wallsLo(ZR, XD + LIN, XD + LEN, nx, RP);
+  { const [pl, nr] = arcPoly(ZR); mesh(sweep(pl, nr, XD + LIN, S0, Math.round(NEARL * 4)), wallM, RP); }
   const ceilFar = new THREE.Group(); ceilFar.visible = false; RP.add(ceilFar); { const [pl, nr] = arcPoly(ZR); mesh(sweep(pl, nr, S0, XD + LEN, Math.round(FARL * 4)), wallM, ceilFar); }
   // passaggio di sinistra (6 m, chiuso in fondo), nascosto finche' la porta non compare
   const LP = new THREE.Group(); LP.visible = false; G.add(LP); const lcx = -XD - 3, LL = 6;
-  mesh(quadGeo(LL, PW * 2, 24, M(-Math.PI / 2, 0, lcx, 0, ZL), (x, y, z) => [x / fu, z / fv]), floorM, LP);
-  wallsLo(ZL, -XD - LL, -XD, 24, LP); { const [pl, nr] = arcPoly(ZL); mesh(sweep(pl, nr, -XD - LL, -XD, 24), wallM, LP); }
+  mesh(quadGeo(LL - LIN, PW * 2, 24, M(-Math.PI / 2, 0, (-XD - LL - XD - LIN) / 2, 0, ZL), (x, y, z) => [x / fu, z / fv]), floorM, LP);
+  wallsLo(ZL, -XD - LL, -XD - LIN, 24, LP); { const [pl, nr] = arcPoly(ZL); mesh(sweep(pl, nr, -XD - LL, -XD - LIN, 24), wallM, LP); }
   { const sh = new THREE.Shape(); sh.moveTo(-PW, 0); sh.lineTo(-PW, SPR); for (let k = 1; k <= ARC; k++) { const th = Math.PI - k / ARC * Math.PI; sh.lineTo(PW * Math.cos(th), SPR + PW * Math.sin(th)); } sh.lineTo(PW, 0); sh.lineTo(-PW, 0);
     const gcap = new THREE.ShapeGeometry(sh); const pp = gcap.attributes.position, uvc = gcap.attributes.uv; for (let i = 0; i < pp.count; i++) uvc.setXY(i, pp.getX(i) / bu, pp.getY(i) / bv); colorAttr(gcap, 0.8); gcap.rotateY(Math.PI / 2); gcap.translate(-XD - LL, 0, ZL); mesh(gcap, wallM, LP); }
   // ---- ARCO DI PIETRA, rovinato e integrato nel muro: conci a filo di parete (sporgono pochi centimetri), imposte a capitello, chiave d'arco piu' grossa, pietre scheggiate e un po' sconnesse,
@@ -73,17 +74,18 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
       gm.setAttribute('color', new THREE.BufferAttribute(col, 3)); parts.push(gm); };
     const xo = side * (W - 0.04);   // centro dei conci: sporgono ~7 cm dal muro
     const RAD = PW;   // raggio del varco
-    // piedritti: filari di conci (altezze diverse, giunti sfalsati), con una pietra mancante
-    for (const j of [-1, 1]) { let y = 0, k = 0; const gap = Math.floor(r() * 3) + 1; while (y < SPR - 0.04) { const h = Math.min(0.34 + r() * 0.2, SPR - y), wdt = 0.3 + (k % 2) * 0.1 + r() * 0.04; if (!(j === 1 && k === gap && r() < 0.6)) blk(0.1 + r() * 0.03, h - 0.012, wdt, xo - side * 0.02 * (r()), y + h / 2, zc + j * (RAD + wdt / 2 + 0.005), 0, (r() - 0.5) * 0.04, (r() - 0.5) * 0.02, 0.5 + r() * 0.15); y += h; k++; } }
+    // piedritti: filari di conci (altezze diverse, giunti sfalsati) profondi 59 cm: fuori dal muro per 9 cm e dentro il passaggio per 50; con una pietra mancante
+    const XC = side * (W + 0.205), DEP = 0.59;   // centro e profondita' dei conci (da W-0.09 a W+0.5, nel verso del passaggio)
+    for (const j of [-1, 1]) { let y = 0, k = 0; const gap = Math.floor(r() * 3) + 1; while (y < SPR - 0.04) { const h = Math.min(0.34 + r() * 0.2, SPR - y), wdt = 0.3 + (k % 2) * 0.1 + r() * 0.04; if (!(j === 1 && k === gap && r() < 0.6)) blk(DEP + r() * 0.02, h - 0.012, wdt, XC + side * 0.01 * r(), y + h / 2, zc + j * (RAD - 0.012 + wdt / 2), 0, (r() - 0.5) * 0.015, (r() - 0.5) * 0.01, 0.5 + r() * 0.15, 0.03); y += h; k++; } }
     // imposte: capitelli piatti che sporgono un po' di piu' e segnano l'attacco dell'arco
-    for (const j of [-1, 1]) blk(0.17, 0.14, 0.62, xo - side * 0.03, SPR + 0.05, zc + j * (RAD + 0.2), 0, 0, 0, 0.6, 0.03);
+    for (const j of [-1, 1]) blk(DEP + 0.03, 0.14, 0.62, XC - side * 0.015, SPR + 0.05, zc + j * (RAD + 0.2), 0, 0, 0, 0.6, 0.03);
     // arco: conci radiali (11), spessore 0.27, uno scheggiato e storto; chiave piu' alta e sporgente
-    const NV = 11; for (let i = 0; i < NV; i++) { const th = (i + 0.5) / NV * Math.PI, Rm = RAD + 0.2, key = i === (NV - 1) / 2, tang = Math.PI * Rm / NV * 1.02;
-      blk(key ? 0.15 : 0.1 + r() * 0.03, key ? 0.3 : 0.27, tang + (key ? 0.06 : 0), xo - side * (key ? 0.03 : 0.0), SPR + Math.sin(th) * (Rm + (key ? 0.02 : 0)), zc + Math.cos(th) * Rm, -th, 0, (i === 3 ? 0.05 : (r() - 0.5) * 0.015), 0.5 + r() * 0.15, 0.04); }
+    const NV = 11; for (let i = 0; i < NV; i++) { const th = (i + 0.5) / NV * Math.PI, key = i === (NV - 1) / 2, Rm = RAD - 0.012 + (key ? 0.15 : 0.135), tang = Math.PI * Rm / NV * 1.02;
+      blk(DEP + (key ? 0.06 : r() * 0.02), key ? 0.3 : 0.27, tang + (key ? 0.06 : 0), XC - side * (key ? 0.03 : 0.0), SPR + Math.sin(th) * Rm, zc + Math.cos(th) * Rm, -th, 0, (i === 3 ? 0.03 : (r() - 0.5) * 0.01), 0.5 + r() * 0.15, 0.03); }
     // secondo anello, piu' sottile e a filo di parete, con un buco dove un concio e' caduto
-    const NV2 = 15; for (let i = 0; i < NV2; i++) { if (i === 11) continue; const th = (i + 0.5) / NV2 * Math.PI, Rm = RAD + 0.2 + 0.27 / 2 + 0.2; blk(0.06 + r() * 0.02, 0.24, Math.PI * Rm / NV2 * 1.02, xo + side * 0.02, SPR + Math.sin(th) * Rm, zc + Math.cos(th) * Rm, -th, 0, 0, 0.42 + r() * 0.12, 0.04); }
+    const NV2 = 15; for (let i = 0; i < NV2; i++) { if (i === 11) continue; const th = (i + 0.5) / NV2 * Math.PI, Rm = RAD + 0.38; blk(0.06 + r() * 0.02, 0.24, Math.PI * Rm / NV2 * 1.02, xo + side * 0.02, SPR + Math.sin(th) * Rm, zc + Math.cos(th) * Rm, -th, 0, 0, 0.42 + r() * 0.12, 0.04); }
     // soglia consumata e qualche pietra caduta
-    blk(0.5, 0.06, RAD * 2 + 0.5, xo - side * 0.22, 0.03, zc, 0, 0, 0, 0.45, 0.02);
+    blk(0.5, 0.06, RAD * 2 + 0.5, xo - side * 0.22, 0.03, zc, 0, 0, 0, 0.45, 0.02); blk(0.56, 0.06, RAD * 2, XC, -0.03, zc, 0, 0, 0, 0.45, 0.02);   // soglia fuori e lastra nel passaggio
     for (let i = 0; i < 4; i++) blk(0.07 + r() * 0.08, 0.06 + r() * 0.07, 0.08 + r() * 0.09, xo - side * (0.3 + r() * 0.4), 0.05, zc + (r() - 0.5) * 2.2, r(), r(), r(), 0.4, 0.03);
     const fm = frameM.clone(); fm.vertexColors = true; g.add(new THREE.Mesh(mergeGeometries(parts), fm));
     // polvere che esce dal varco
