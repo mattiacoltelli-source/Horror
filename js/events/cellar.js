@@ -60,11 +60,12 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
       finally { flat.forEach((o, i) => (o.visible = vis[i])); }
     }; }
   const dc = document.createElement('canvas'); dc.width = 256; dc.height = 384; const dg = dc.getContext('2d');
-  dg.fillStyle = 'rgba(38,40,35,.34)'; dg.fillRect(0, 0, 256, 384);   // velo di polvere e unto: specchio opaco, poco riflettente
-  for (let i = 0; i < 70; i++) { dg.fillStyle = `rgba(${150 + Math.random() * 40 | 0},${145 + Math.random() * 40 | 0},${125 + Math.random() * 30 | 0},${Math.random() * 0.04})`; dg.beginPath(); dg.ellipse(Math.random() * 256, Math.random() * 384, 4 + Math.random() * 14, 3 + Math.random() * 10, Math.random() * 3, 0, 7); dg.fill(); }   // aloni di sporco chiaro
-  for (let i = 0; i < 1100; i++) { dg.fillStyle = `rgba(18,20,19,${Math.random() * 0.3})`; dg.beginPath(); dg.arc(Math.random() * 256, Math.random() * 384, 0.5 + Math.random() * 2.2, 0, 7); dg.fill(); }
-  for (let i = 0; i < 14; i++) { const x = Math.random() * 256, y = Math.random() * 200, g2 = dg.createLinearGradient(0, y, 0, y + 150 + Math.random() * 150); g2.addColorStop(0, 'rgba(15,18,16,.28)'); g2.addColorStop(1, 'rgba(15,18,16,0)'); dg.fillStyle = g2; dg.fillRect(x, y, 1.5 + Math.random() * 3, 330); }
-  const grad = dg.createLinearGradient(0, 0, 0, 384); grad.addColorStop(0, 'rgba(0,0,0,.45)'); grad.addColorStop(.3, 'rgba(0,0,0,0)'); grad.addColorStop(1, 'rgba(0,0,0,.55)'); dg.fillStyle = grad; dg.fillRect(0, 0, 256, 384);
+  dg.fillStyle = 'rgba(38,40,35,.29)'; dg.fillRect(0, 0, 256, 384);   // velo di polvere e unto: specchio opaco, poco riflettente
+  { const t = document.createElement('canvas'); t.width = 20; t.height = 30; const tg = t.getContext('2d'); for (let y = 0; y < 30; y++) for (let x = 0; x < 20; x++) { tg.fillStyle = `rgba(${150 + Math.random() * 40 | 0},${145 + Math.random() * 40 | 0},${125 + Math.random() * 30 | 0},${Math.random() * 0.07})`; tg.fillRect(x, y, 1, 1); }
+    dg.imageSmoothingEnabled = true; dg.imageSmoothingQuality = 'high'; dg.drawImage(t, 0, 0, 256, 384); }   // macchie morbide e senza contorno (poche celle scalate e sfumate)
+  for (let i = 0; i < 1100; i++) { dg.fillStyle = `rgba(18,20,19,${Math.random() * 0.255})`; dg.beginPath(); dg.arc(Math.random() * 256, Math.random() * 384, 0.5 + Math.random() * 2.2, 0, 7); dg.fill(); }
+  for (let i = 0; i < 14; i++) { const x = Math.random() * 256, y = Math.random() * 200, g2 = dg.createLinearGradient(0, y, 0, y + 150 + Math.random() * 150); g2.addColorStop(0, 'rgba(15,18,16,.24)'); g2.addColorStop(1, 'rgba(15,18,16,0)'); dg.fillStyle = g2; dg.fillRect(x, y, 1.5 + Math.random() * 3, 330); }
+  const grad = dg.createLinearGradient(0, 0, 0, 384); grad.addColorStop(0, 'rgba(0,0,0,.38)'); grad.addColorStop(.3, 'rgba(0,0,0,0)'); grad.addColorStop(1, 'rgba(0,0,0,.47)'); dg.fillStyle = grad; dg.fillRect(0, 0, 256, 384);
   const dirt = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(dc), transparent: true, depthWrite: false }));
   dirt.position.copy(MIRROR).add(new THREE.Vector3(0.004, 0, 0)); dirt.rotation.y = Math.PI / 2; C.group.add(dirt);
   const fm = new THREE.MeshStandardMaterial({ color: 0x2b2824, roughness: 0.55, metalness: 0.85 });
