@@ -264,7 +264,7 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   // preparazione in anticipo (durante la cantina): cottura delle texture a strisce e precompilazione degli shader; a runtime resta solo il disegno
   S.prepared = false; S.preparing = false; S.compiled = false;
   // occhio gigante dietro di te (alto, a sinistra): quasi invisibile, lo si nota solo cercandolo; fa parte della caduta, non della finestra del portale
-  const makeEye = () => { if (S.eye) return; S.eye = createGiantEye({ dir: new THREE.Vector3(-0.93, 0.3, -0.2), size: 540, distance: 850 }); S.eye.mat.depthTest = true; scene.add(S.eye.mesh); };
+  const makeEye = () => { if (S.eye) return; S.eye = createGiantEye({ dir: new THREE.Vector3(-0.62, 0.78, 0.0), size: 600, distance: 850 }); S.eye.mat.depthTest = true; scene.add(S.eye.mesh); };
   S.prepare = () => { if (S.preparing || S.prepared) return; S.preparing = true; S.waitT = 0; };
   S.warm = (dt = 0.016) => {   // un passo per fotogramma
     if (!S.preparing || S.prepared) return; S.waitT += dt; if (S.waitT < 3.0) return;   // lascia passare l'ingresso nella cantina

@@ -47,7 +47,7 @@ function eyeTextures(seed = 3, W = 768, H = 480) {
   return [tex(A), tex(S), tex(Ic), { cx, cy, EX, IR, W, H }];
 }
 
-export function createGiantEye({ dir = new THREE.Vector3(-0.55, 0.3, 0.78), size = 520, distance = 850, seed = 3, baseVisibility = 0.24, res = 768, irisUrl = new URL('../../assets/tex/eye_iris.webp', import.meta.url).href } = {}) {
+export function createGiantEye({ dir = new THREE.Vector3(-0.55, 0.3, 0.78), size = 520, distance = 850, seed = 3, baseVisibility = 0.4, res = 768, irisUrl = new URL('../../assets/tex/eye_iris.webp', import.meta.url).href } = {}) {
   const E = { openness: 0, vis: baseVisibility, dissolve: 0, stare: 0 };
   const H = Math.round(res * 0.625), [tA, tS, tI, M] = eyeTextures(seed, res, H);
   E.mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, depthTest: false, fog: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
