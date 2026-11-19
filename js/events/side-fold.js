@@ -213,7 +213,8 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   const lampAll = (mode, dur) => { for (let i = 0; i < 4; i++) lights.lamp?.(i, mode, dur); };
 
   F.update = (dt) => {
-    if (!F.enabled) return; const P = player.pos;
+    if (!F.enabled) return; const P = player.pos; tt += dt; F.t += dt;
+    { const want = U.uK.value < 1e-4 && F.state !== 'dark'; if (want !== F.cull) { F.cull = want; G.traverse((o) => { if ((o.isMesh || o.isPoints || o.isSprite || o.isLine) && o.parent !== SKY) o.frustumCulled = want; }); } }   // senza piega i bounding box sono esatti: fuori campo non si disegna nulla (durante la piega i vertici si spostano nello shader e il culling e' spento)
     { const inT = P.z > Z_END + 1.2 && P.z < 6; if (inT && camera.far > 30.5) { F.farSaved = camera.far; camera.far = 30; camera.updateProjectionMatrix(); } else if (!inT && F.farSaved && camera.far === 30) { camera.far = F.farSaved; F.farSaved = 0; camera.updateProjectionMatrix(); } }   // nel tunnel la nebbia nasconde tutto oltre ~28 m: meno geometria da disegnare tt += dt; F.t += dt;
     const here = P.z > Z_END + 1.2 || F.state === 'fold' || F.state === 'dark'; G.visible = here || F.state === 'exit';
     if (!G.visible) return;
