@@ -212,6 +212,10 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   let overlay = null; const ov = () => overlay ||= (() => { const d = document.createElement('div'); d.id = 'foldfade'; d.style.cssText = 'position:fixed;inset:0;z-index:61;background:#000;opacity:0;pointer-events:none;transition:opacity .35s'; document.body.appendChild(d); return d; })();
   const lampAll = (mode, dur) => { for (let i = 0; i < 4; i++) lights.lamp?.(i, mode, dur); };
 
+  // finestra sullo spazio dal fondo del passaggio: si prepara per tempo (a fette) e si disegna solo da vicino e davanti
+  const winTick = (dt, P) => { const sp = getSpace?.(); if (!sp) return; if (P.z < -3) sp.prepare?.(); camera.getWorldDirection(fw);
+    const dx = XD + 4 - P.x, dz = ZR - P.z, dist = Math.hypot(dx, dz), facing = (fw.x * dx + fw.z * dz) / Math.max(0.01, dist) > 0.5;
+    if (sp.prepared && !sp.active && dist < 12 && facing && sp.drawWindow(dt, camera.position, camera.quaternion, pcWin, qWin, { eye: true, portal: true })) { if (!spaceOn) { spaceOn = true; winMat.uniforms.uTex.value = sp.win.tex; winQuad.visible = true; for (const o of fallback) o.visible = false; } winMat.uniforms.uRes.value = sp.win.res; } };
   F.update = (dt) => {
     if (!F.enabled) return; const P = player.pos; tt += dt; F.t += dt;
     { const want = U.uK.value < 1e-4 && F.state !== 'dark'; if (want !== F.cull) { F.cull = want; G.traverse((o) => { if ((o.isMesh || o.isPoints || o.isSprite || o.isLine) && o.parent !== SKY) o.frustumCulled = want; }); } }   // senza piega i bounding box sono esatti: fuori campo non si disegna nulla (durante la piega i vertici si spostano nello shader e il culling e' spento)
@@ -223,15 +227,22 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     if ((st === 'idle' || st === 'done') && lights.lamps) for (const L of lights.lamps) if (L.mode === 'off' || L.mode === 'dim') L.mode = 'on';   // salvaguardia: fuori dall'evento le lampade del tunnel non restano mai spente o attenuate
     if (st === 'idle' || st === 'done') {
       if (st === 'idle') {
-        const sp = getSpace?.(); if (sp) { if (P.z < -12) sp.prepare?.(); camera.getWorldDirection(fw);
-          const dx = XD + LEN - P.x, dz = ZR - P.z, dist = Math.hypot(dx, dz), facing = (fw.x * dx + fw.z * dz) / Math.max(0.01, dist) > 0.55;
-          if (sp.prepared && !sp.active && dist < 22 && facing && sp.drawWindow(dt, camera.position, camera.quaternion, pcWin, qWin, { eye: true, portal: true })) { if (!spaceOn) { spaceOn = true; winMat.uniforms.uTex.value = sp.win.tex; winQuad.visible = true; for (const o of fallback) o.visible = false; } winMat.uniforms.uRes.value = sp.win.res; } }
+        winTick(dt, P);
         dip -= dt; if (dip > 0) lv = 0.08 + Math.random() * 0.2; else { lv = 0.82 + 0.12 * Math.sin(tt * 2.3) + 0.05 * Math.sin(tt * 17); if (Math.random() < dt * 0.45) dip = 0.05 + Math.random() * 0.12; } setLight(lv);
-        if (P.x > XD + 1.7 && Math.abs(P.z - ZR) < 0.7 && !player.frozen) { F.state = 'flicker'; F.t = 0; lampAll('flicker', 1.7); audio.swell?.(2.2, 0.45); audio.whisper?.(1.4, 0.2); instab?.push?.(0.6, 6); } }
+        if (P.x > XD + 1.7 && Math.abs(P.z - ZR) < 0.7 && !player.frozen) { F.state = 'flicker'; F.t = 0; lampAll('flicker', 2.4); audio.swell?.(2.2, 0.45); audio.whisper?.(1.4, 0.2); instab?.push?.(0.6, 6); } }
       return;
     }
-    if (st === 'flicker') { flickerT -= dt; if (flickerT <= 0) { flickerT = 0.04 + Math.random() * 0.1; lv = Math.random() < 0.5 ? 0.1 : 1.0; } setLight(lv); if (F.t > 1.7) { F.state = 'dark'; F.t = 0; setLight(0); GL.visible = false; winQuad.visible = false; ceilFar.visible = true; nearWalls.visible = false; farWalls.visible = false; mainFloor.visible = false; for (const o of slabs) o.visible = false; FW.visible = true; spill.visible = spillSp.visible = false; lampAll('off', 99); audio.lightOff?.(); audio.scare?.(); player.speedMul = 0; } return; }
-    if (st === 'dark') { if (F.t > 1.0) { F.state = 'fold'; F.t = 0; player.speedMul = 0; farWalls.visible = false; for (const o of slabs) o.visible = false; RET.visible = true; say?.('La stanza non c’è più.\nIl passaggio si piega.', 3800); audio.swell?.(5, 0.55); } return; }
+    if (st === 'flicker') {   // la luce e l'universo sfarfallano insieme, sempre piu' spezzati, poi buio
+      winTick(dt, P); flickerT -= dt; if (flickerT <= 0) { flickerT = 0.04 + Math.random() * 0.11; const env = Math.min(1, F.t / 2.4); lv = Math.random() < 0.3 + 0.5 * env ? 0.04 + Math.random() * 0.2 : 0.55 + 0.45 * (1 - env); }
+      setLight(lv); winMat.uniforms.uFade.value += (lv - winMat.uniforms.uFade.value) * Math.min(1, dt * 28);
+      if (F.t > 2.4) { F.state = 'dark'; F.t = 0; F.tp = false; setLight(0); GL.visible = false; winQuad.visible = false; winMat.uniforms.uFade.value = 1; spill.visible = spillSp.visible = false; lampAll('off', 99); audio.lightOff?.(); audio.scare?.(); player.speedMul = 0; }
+      return; }
+    if (st === 'dark') {
+      if (F.t > 0.5 && !F.tp) { F.tp = true;   // nel buio ci si ritrova nel tunnel, sotto l'arcata (nessun corridoio)
+        U.uK.value = 0; RP.visible = false; R2.visible = true; frame2.visible = true; SKY.visible = false; tunnel.userData.plugs[2].visible = false; tunnel.userData.plugs[0].visible = true; frameR.visible = false; signOut.visible = true;
+        P.set(0.55, P.y, ZL); player.yaw = Math.PI / 2; player.pitch = 0; }
+      if (F.t > 1.0) { F.state = 'exit'; F.t = 0; player.speedMul = 1; lampAll('flicker', 1.3); audio.lightOn?.(); say?.('Sei di nuovo nel tunnel.\nLa porta da cui sei uscito non c’era.', 3800); }
+      return; }
     if (st === 'fold') {
       const k = Math.min(1, F.t / 1.8), e = k * k * (3 - 2 * k); U.uK.value = KEND * e;
       P.x += 1.55 * dt;   // si avanza da soli alla stessa velocita' del cammino normale (la visuale resta libera)
@@ -254,7 +265,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     const K = U.uK.value; if (K < 1e-4 || F.state !== 'fold') return; const p = camera.position, x = p.x; if (x <= SB) return;
     const q = pathAt(K, x - SB), d = p.z - ZR; p.x = q.x - SDIR * d * Math.sin(q.th); p.z = q.z + d * Math.cos(q.th); camera.quaternion.premultiply(qY.setFromAxisAngle(yA, -SDIR * q.th));
   };
-  F.reset = () => { signOut.visible = false; F.lit = false; F.state = 'idle'; F.t = 0; F.done = false; F.cutDone = false; U.uK.value = 0; RP.visible = true; nearWalls.visible = true; mainFloor.visible = true; FW.visible = false; farWalls.visible = true; for (const o of slabs) o.visible = true; RET.visible = false; R2.visible = false; frame2.visible = false; SKY.visible = false; if (tunnel.userData.plugs) { tunnel.userData.plugs[0].visible = false; tunnel.userData.plugs[1].visible = true; tunnel.userData.plugs[2].visible = true; } ceilFar.visible = false; winQuad.visible = false; spaceOn = false; for (const o of fallback) o.visible = true; LP.visible = false; frameL.visible = false; frameR.visible = true; GL.visible = true; spill.visible = spillSp.visible = true;  player.constrainMove = cm; };
+  F.reset = () => { winMat.uniforms.uFade.value = 1; F.tp = false; signOut.visible = false; F.lit = false; F.state = 'idle'; F.t = 0; F.done = false; F.cutDone = false; U.uK.value = 0; RP.visible = true; nearWalls.visible = true; mainFloor.visible = true; FW.visible = false; farWalls.visible = true; for (const o of slabs) o.visible = true; RET.visible = false; R2.visible = false; frame2.visible = false; SKY.visible = false; if (tunnel.userData.plugs) { tunnel.userData.plugs[0].visible = false; tunnel.userData.plugs[1].visible = true; tunnel.userData.plugs[2].visible = true; } ceilFar.visible = false; winQuad.visible = false; spaceOn = false; for (const o of fallback) o.visible = true; LP.visible = false; frameL.visible = false; frameR.visible = true; GL.visible = true; spill.visible = spillSp.visible = true;  player.constrainMove = cm; };
   // animazioni leggere della stanza (raggi che respirano, polvere che sale, frammenti che ruotano)
   F.animate = (dt) => { for (let i = 0; i < runeMats.length; i++) runeMats[i].opacity = 0.32 + 0.3 * (0.5 + 0.5 * Math.sin(tt * 0.9 + i * 1.7)) * (0.7 + 0.3 * Math.sin(tt * 4.1 + i * 3.1)); for (const d of dustSets) { const a = d.pts.geometry.attributes.position; for (let i = 0; i < d.pd.length; i++) { const k = (tt * d.pd[i][1] + d.pd[i][0] * 3) % 1; a.array[i * 3] = d.side * (W - 0.1 - k * 0.5); a.array[i * 3 + 1] = 0.15 + k * 1.9 * (0.5 + d.pd[i][0]); a.array[i * 3 + 2] = d.zc + d.pd[i][2] * 1.8 + Math.sin(tt * 0.5 + i) * 0.1; } a.needsUpdate = true; }
     if (!GL.visible) return; cross.rotation.y += dt * 0.14; for (const o of GL.children) if (o.userData.ph !== undefined) o.rotation.x += Math.sin(tt * 0.6 + o.userData.ph) * dt * 0.02; for (const d of debris) { d.rotation.x += d.userData.sp[0] * dt; d.rotation.y += d.userData.sp[1] * dt; d.position.y += Math.sin(tt * 0.5 + d.position.x) * dt * 0.05; }
