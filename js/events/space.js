@@ -351,7 +351,7 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   const extWin = { pos: new THREE.Vector3(), quat: new THREE.Quaternion() };
   S.drawWindow = (dt, camPos, camQuat, pc, q, opts = null) => { S.opts = opts;
     if (!S.prepared || S.active) return false;
-    renderer.getDrawingBufferSize(vtmp); const w = Math.max(64, Math.round(vtmp.x * 0.32)), h = Math.max(64, Math.round(vtmp.y * 0.32)); if (winRT.width !== w || winRT.height !== h) winRT.setSize(w, h); S.win.res.copy(vtmp);
+    renderer.getDrawingBufferSize(vtmp); const w = Math.max(64, Math.round(vtmp.x * 0.288)), h = Math.max(64, Math.round(vtmp.y * 0.288)); if (winRT.width !== w || winRT.height !== h) winRT.setSize(w, h); S.win.res.copy(vtmp);
     S.win.wt += dt; S.ext = mapPose(camPos, camQuat, pc, extWin, q); core(dt, S.win.wt, true); const prev = renderer.getRenderTarget(); renderer.setRenderTarget(winRT); renderer.render(scene, sc); renderer.setRenderTarget(prev); S.ext = null; S.opts = null; return true;
   };
   S.update = (dt) => {
