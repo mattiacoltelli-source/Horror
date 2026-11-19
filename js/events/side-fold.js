@@ -101,7 +101,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     const gcap = new THREE.ShapeGeometry(sh); const pp = gcap.attributes.position, uvc = gcap.attributes.uv; for (let i = 0; i < pp.count; i++) uvc.setXY(i, pp.getX(i) / bu, pp.getY(i) / bv); colorAttr(gcap, 0.8); gcap.rotateY(Math.PI / 2); gcap.translate(-XD - LL, 0, ZLL); mesh(gcap, wallM, LP); }
   // ---- ARCO DI PIETRA, rovinato e integrato nel muro: conci a filo di parete (sporgono pochi centimetri), imposte a capitello, chiave d'arco piu' grossa, pietre scheggiate e un po' sconnesse,
   // muschio e sporco verso il basso, lastra consumata sulla soglia. Nessun disegno: solo pietra. ----
-  const frameM = lamb(mats.stone, 1.1);
+  const frameM = mats.stone.clone(); frameM.color.setRGB(0.95, 0.95, 1);
   const frng = (sd) => () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
   const runeMats = [], dustSets = [];
   const frame = (side, zc, sd) => { const g = new THREE.Group(), r = frng(sd), parts = [], IN = -side;
@@ -123,7 +123,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
       blk(DEP + (key ? 0.06 : r() * 0.02), key ? 0.3 : 0.27, tang + (key ? 0.06 : 0), XC - side * (key ? 0.03 : 0.0), SPR + Math.sin(th) * Rm, zc + Math.cos(th) * Rm, -th, 0, (i === 3 ? 0.03 : (r() - 0.5) * 0.01), 0.5 + r() * 0.15, 0.03); }
     // secondo anello, piu' sottile e a filo di parete, con un buco dove un concio e' caduto
     const NV2 = 15; for (let i = 0; i < NV2; i++) { if (i === 11) continue; const th = (i + 0.5) / NV2 * Math.PI, Rm = RAD + 0.38; blk(0.06 + r() * 0.02, 0.24, Math.PI * Rm / NV2 * 1.02, xo + side * 0.02, SPR + Math.sin(th) * Rm, zc + Math.cos(th) * Rm, -th, 0, 0, 0.42 + r() * 0.12, 0.04); }
-    const fm = frameM; g.add(new THREE.Mesh(mergeGeometries(parts), fm));
+    const fm = frameM.clone(); fm.vertexColors = true; g.add(new THREE.Mesh(mergeGeometries(parts), fm));
     return g; };
   // RIVESTIMENTO DI SOSTEGNO dietro i conci: un guscio continuo di pietra (arco, pareti e pavimento) lungo la profondita' dell'arco; chiude ogni fessura tra un concio e l'altro (da li' non si vede mai il vuoto o l'universo)
   let lin; { const linM = mats.stone.clone(); linM.color.setRGB(0.5, 0.5, 0.52);
@@ -231,13 +231,13 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     const rocks = new THREE.Mesh(mergeGeometries(parts), new THREE.MeshBasicMaterial({ color: 0x14161b })); rocks.frustumCulled = false; PL.add(rocks); }
   // fondale: una sola texture (cielo, galassie, nebulose, pianeta, montagne lontane), cilindro parziale a 56 m con l'orizzonte esattamente all'altezza degli occhi
   const BR = 56, bdMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide, fog: false, toneMapped: false });   // calotta di sfera: da -45 a +80 gradi di elevazione (l'immagine ha l'orizzonte al 64% dell'altezza, qui a 0 gradi = altezza occhi) e 120 gradi in orizzontale
-  const bd = new THREE.Mesh(new THREE.SphereGeometry(BR, 32, 16, Math.PI - 1.05, 2.1, 0.1745, 2.18), bdMat); bd.position.set(XD, 1.62, ZR); bd.frustumCulled = false; PL.add(bd);
+  const bd = new THREE.Mesh(new THREE.SphereGeometry(BR, 40, 16, Math.PI - 0.7, 1.4, 0.419, 1.801), bdMat); bd.position.set(XD, 1.62, ZR); bd.rotation.z = -0.2; bd.frustumCulled = false; PL.add(bd);   // l'immagine e' abbassata di ~11 gradi: galassie e pianeta compaiono gia' dentro l'arco, guardando dritto
   new THREE.TextureLoader().load('assets/tex/planet_sky.webp', (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.wrapS = THREE.RepeatWrapping; t.repeat.x = -1; t.offset.x = 1; bdMat.map = t; bdMat.needsUpdate = true; });
   PL.visible = true;
   const sky = (v) => bdMat.color.setScalar(v);   // sfarfallio economico: un solo colore
   // movimento: dal tunnel si passa dal varco (fascia stretta) e poi si cammina in una piccola area; il limite non si raggiunge mai (il collasso parte prima)
-  const cmP = (x, z) => { const st = F.state; if (st === 'dark' || st === 'exit' || st === 'done') return null; const lim = W - RADIUS, inside = player.pos.x > lim - 0.02, cand = x;
-    if ((Math.abs(z - ZR) < 0.66 || inside) && cand > lim - 0.05) { const hz = cand < FRONT ? 0.5 : PZH; return [Math.min(PXMAX, Math.max(lim - 0.02, cand)), Math.max(ZR - hz, Math.min(ZR + hz, z))]; } return null; };
+  const cmP = (x, z) => { const st = F.state; const back = st === 'dark' || st === 'exit' || st === 'done', xm = back ? PEND - 0.7 : PXMAX; const lim = W - RADIUS, inside = player.pos.x > lim - 0.02, cand = x;
+    if ((Math.abs(z - ZR) < 0.66 || inside) && cand > lim - 0.05) { const hz = cand < FRONT ? 0.5 : PZH; return [Math.min(xm, Math.max(lim - 0.02, cand)), Math.max(ZR - hz, Math.min(ZR + hz, z))]; } return null; };
   player.constrainMove = cmP;
   let nudge = 0;
   F.update = (dt) => {
@@ -247,22 +247,22 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     const st = F.state;
     if ((st === 'idle' || st === 'done') && lights.lamps) for (const L of lights.lamps) if (L.mode === 'off' || L.mode === 'dim') L.mode = 'on';   // salvaguardia: fuori dall'evento le lampade del tunnel non restano mai spente
     if (st === 'idle') { sky(0.85 + 0.12 * Math.sin(tt * 0.7));
-      if (P.x > FRONT && Math.abs(P.z - ZR) < 0.8 && !player.frozen) { F.state = 'explore'; F.t = 0; nudge = 0.4; audio.swell?.(2.0, 0.35); audio.whisper?.(1.6, 0.18); say?.('Un altro mondo.', 2600); } return; }
+      if (P.x > FRONT && Math.abs(P.z - ZR) < 0.8 && !player.frozen) { F.state = 'explore'; F.t = 0; nudge = 0.3; audio.swell?.(2.0, 0.35); audio.whisper?.(1.6, 0.18); say?.('Un altro mondo.', 2600); } return; }
     if (st === 'explore') { sky(0.85 + 0.12 * Math.sin(tt * 0.7));
-      if (nudge > 0) { const d = Math.min(nudge, dt * 0.28); player.pitch = Math.min(0.62, player.pitch + d); nudge -= d; }   // lo sguardo sale piano verso il cielo
+      if (nudge > 0) { const d = Math.min(nudge, dt * 0.28); player.pitch = Math.min(0.3, player.pitch + d); nudge -= d; }   // lo sguardo sale piano verso il cielo
       if (P.x < XD - 0.05) { F.state = 'idle'; return; }
       if (P.x > XD + 3.2 || F.t > 9) { F.state = 'flicker'; F.t = 0; audio.swell?.(2.2, 0.4); instab?.push?.(0.6, 6); } return; }
     if (st === 'flicker') {   // il cielo sfarfalla come una lampadina difettosa, sempre piu' spezzato
       flickerT -= dt; if (flickerT <= 0) { flickerT = 0.04 + Math.random() * 0.11; const env = Math.min(1, F.t / 2.2); lv = Math.random() < 0.3 + 0.5 * env ? 0.02 + Math.random() * 0.2 : 0.55 + 0.45 * (1 - env); }
       sky(lv); if (F.t > 2.2) { F.state = 'dark'; F.t = 0; F.tp = false; sky(0); ov().style.transition = 'opacity .1s'; ov().style.opacity = '1'; audio.lightOff?.(); audio.scare?.(); } return; }
     if (st === 'dark') {   // buio assoluto: si ripristina tutto e si torna nel corridoio originale (stesso gameplay, nessun caricamento)
-      if (F.t > 0.45 && !F.tp) { F.tp = true; PL.visible = false; RP.visible = false; tunnel.userData.plugs[0].visible = true; signIn.visible = false; signOut.position.set(-W + 0.03, 1.2, ZR); signOut.visible = true; frameR.visible = true;
-        P.set(0.1, P.y, ZR - 0.9); player.yaw = 0; player.pitch = 0; player.speedMul = 1; lampAll('on', 1); }
+      if (F.t > 0.45 && !F.tp) { F.tp = true; PL.visible = false; nearWalls.visible = false; farWalls.visible = false; mainFloor.visible = false; FW.visible = true; ceilFar.visible = true;   // il pianeta non c'e' piu': il passaggio e' un normale corridoio chiuso e ci si ritrova alla stessa profondita', girati verso il tunnel
+        signIn.visible = false; signOut.position.set(-W + 0.03, 1.2, ZR); signOut.visible = true; player.yaw += Math.PI; player.pitch = 0; lampAll('on', 1); }
       if (F.t > 1.1) { F.state = 'exit'; F.t = 0; ov().style.transition = 'opacity .9s'; ov().style.opacity = '0'; audio.lightOn?.(); } return; }
-    if (st === 'exit') { if (F.t > 1.2) { F.state = 'done'; F.done = true; if (player.constrainMove === cmP) player.constrainMove = null; } return; }
+    if (st === 'exit') { if (F.t > 1.2) { F.state = 'done'; F.done = true; } return; }
   };
   F.applyCamera = () => {};
-  F.reset = () => { ov().style.transition = 'opacity .1s'; ov().style.opacity = '0'; F.tp = false; F.state = 'idle'; F.t = 0; F.done = false; PL.visible = true; sky(0.85); signOut.visible = false; signIn.visible = true; frameR.visible = true; RP.visible = true; if (tunnel.userData.plugs) { tunnel.userData.plugs[0].visible = false; tunnel.userData.plugs[1].visible = true; tunnel.userData.plugs[2].visible = true; } player.constrainMove = cmP; };
+  F.reset = () => { ov().style.transition = 'opacity .1s'; ov().style.opacity = '0'; F.tp = false; F.state = 'idle'; F.t = 0; F.done = false; PL.visible = true; nearWalls.visible = true; farWalls.visible = true; mainFloor.visible = true; FW.visible = false; ceilFar.visible = false; sky(0.85); signOut.visible = false; signIn.visible = true; frameR.visible = true; RP.visible = true; if (tunnel.userData.plugs) { tunnel.userData.plugs[0].visible = false; tunnel.userData.plugs[1].visible = true; tunnel.userData.plugs[2].visible = true; } player.constrainMove = cmP; };
   // animazioni leggere della stanza (raggi che respirano, polvere che sale, frammenti che ruotano)
   F.animate = (dt) => { for (let i = 0; i < runeMats.length; i++) runeMats[i].opacity = 0.32 + 0.3 * (0.5 + 0.5 * Math.sin(tt * 0.9 + i * 1.7)) * (0.7 + 0.3 * Math.sin(tt * 4.1 + i * 3.1)); for (const d of dustSets) { const a = d.pts.geometry.attributes.position; for (let i = 0; i < d.pd.length; i++) { const k = (tt * d.pd[i][1] + d.pd[i][0] * 3) % 1; a.array[i * 3] = d.side * (W - 0.1 - k * 0.5); a.array[i * 3 + 1] = 0.15 + k * 1.9 * (0.5 + d.pd[i][0]); a.array[i * 3 + 2] = d.zc + d.pd[i][2] * 1.8 + Math.sin(tt * 0.5 + i) * 0.1; } a.needsUpdate = true; }
     if (!GL.visible) return; cross.rotation.y += dt * 0.14; for (const o of GL.children) if (o.userData.ph !== undefined) o.rotation.x += Math.sin(tt * 0.6 + o.userData.ph) * dt * 0.02; for (const d of debris) { d.rotation.x += d.userData.sp[0] * dt; d.rotation.y += d.userData.sp[1] * dt; d.position.y += Math.sin(tt * 0.5 + d.position.x) * dt * 0.05; }
