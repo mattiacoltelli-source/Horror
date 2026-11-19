@@ -7,7 +7,7 @@ import { W, SIDE_DOORS, Z_END } from '../world/tunnel.js';
 import { TILES } from '../world/materials.js';
 import { mergeGeometries } from '../../vendor/three/utils/BufferGeometryUtils.js';
 
-const R_DOOR = SIDE_DOORS[0], L_DOOR = SIDE_DOORS[1], ZR = R_DOOR.z, ZL = L_DOOR.z, XD = W, PW = 0.7, PH = R_DOOR.h, LEN = 14, S0 = XD + 2.6, KEND = 0.4;
+const R_DOOR = SIDE_DOORS[0], L_DOOR = SIDE_DOORS[1], ZR = R_DOOR.z, ZL = L_DOOR.z, XD = W, PW = 0.7, PH = R_DOOR.h, LEN = 14, S0 = XD + 2.6, KEND = 2 / (ZR - ZL);   // la piega curva verso -z di 5,7 m: il ritorno arriva esattamente davanti alla porta sinistra
 const RADIUS = 0.32;
 
 const radial = (stops, size = 128) => { const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d'), r = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2); for (const [o, col] of stops) r.addColorStop(o, col); g.fillStyle = r; g.fillRect(0, 0, size, size); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
@@ -22,13 +22,13 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     Object.assign(sh.uniforms, U);
     sh.vertexShader = 'uniform float uK, uS0, uZ0; varying float vRx;\n' + sh.vertexShader
       .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
-        { vec3 wp0 = (modelMatrix * vec4(position, 1.0)).xyz; if (uK > 1e-4 && wp0.x > uS0) { float ph = min(uK * (wp0.x - uS0), 3.14159), c = cos(ph), s = sin(ph); vec3 wn = mat3(modelMatrix) * objectNormal; float nx = wn.x, nz = wn.z; wn.x = nx * c - nz * s; wn.z = nx * s + nz * c; objectNormal = normalize(transpose(mat3(modelMatrix)) * wn); } }`)
+        { vec3 wp0 = (modelMatrix * vec4(position, 1.0)).xyz; if (uK > 1e-4 && wp0.x > uS0) { float ph = min(uK * (wp0.x - uS0), 3.14159), c = cos(ph), s = sin(ph); vec3 wn = mat3(modelMatrix) * objectNormal; float nx = wn.x, nz = wn.z; wn.x = nx * c - nz * s; wn.z = -(nx * s + nz * c); objectNormal = normalize(transpose(mat3(modelMatrix)) * wn); } }`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
         { vec4 wp = modelMatrix * vec4(transformed, 1.0); vRx = wp.x;
           if (uK > 1e-4 && wp.x > uS0) { float u = wp.x - uS0, ph = uK * u, d = wp.z - uZ0; vec2 c2, nr;
             if (ph < 3.14159) { c2 = vec2(uS0 + sin(ph) / uK, uZ0 + (1.0 - cos(ph)) / uK); nr = vec2(-sin(ph), cos(ph)); }
             else { float rest = u - 3.14159 / uK; c2 = vec2(uS0 - rest, uZ0 + 2.0 / uK); nr = vec2(0.0, -1.0); }
-            wp.x = c2.x + d * nr.x; wp.z = c2.y + d * nr.y; transformed = (inverse(modelMatrix) * wp).xyz; } }`);
+            wp.x = c2.x + d * nr.x; wp.z = 2.0 * uZ0 - (c2.y + d * nr.y); transformed = (inverse(modelMatrix) * wp).xyz; } }`);
     sh.fragmentShader = 'uniform float uGlow; varying float vRx;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         totalEmissiveRadiance += vec3(1.0, 0.78, 0.48) * uGlow * pow(smoothstep(5.0, 16.0, vRx), 1.8) * 0.45;`);
   }; mat.customProgramCacheKey = () => 'sidefold-' + key; return mat; };
@@ -56,13 +56,19 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   // oltre la volta le pareti sono muri veri, spessi 35 cm, con il bordo che si sgretola verso il fondo (altezza irregolare), fino a sparire
   const nz1 = (x) => { const v = Math.sin(x * 12.9898) * 43758.5453; return v - Math.floor(v); };
   const crumble = (x) => { const t = Math.min(1, Math.max(0, (x - (SV + 2.2)) / (END - SV - 2.2))); return t <= 0 ? 1 : Math.max(0.04, 1 - t * (0.35 + 0.8 * nz1(Math.floor(x * 2.6)))); };
-  { const TH = 0.35; for (const j of [-1, 1]) { const zi = ZR + j * PW, zo = ZR + j * (PW + TH), ni = -j;
-      mesh(sweep([[zi, 0, 0], [zi, SPR, 1], [zi, SPR, 1], [zo, SPR, 1], [zo, SPR, 1], [zo, 0, 0]], [[ni, 0], [ni, 0], [0, 1], [0, 1], [j, 0], [j, 0]], XD + LIN, END, Math.round((END - XD - LIN) * 4), crumble), wallM, RP); } }
+  const wallThick = (xa, xb, fn, parent, zc = ZR) => { const TH = 0.35; for (const j of [-1, 1]) { const zi = zc + j * PW, zo = zc + j * (PW + TH), ni = -j;
+      mesh(sweep([[zi, 0, 0], [zi, SPR, 1], [zi, SPR, 1], [zo, SPR, 1], [zo, SPR, 1], [zo, 0, 0]], [[ni, 0], [ni, 0], [0, 1], [0, 1], [j, 0], [j, 0]], xa, xb, Math.max(2, Math.round((xb - xa) * 4)), fn), wallM, parent); } };
+  const XF = 12.0, ENDR = 15.6;   // da XF in poi, durante la piega, il passaggio diventa intero (tratto di ritorno): le parti sgretolate spariscono
+  wallThick(XD + LIN, XF, crumble, RP);
+  const farWalls = new THREE.Group(); RP.add(farWalls); wallThick(XF, END, crumble, farWalls);
+  const RET = new THREE.Group(); RET.visible = false; RP.add(RET); wallThick(XF, ENDR, null, RET);
+  mesh(quadGeo(ENDR - FEND, PW * 2, Math.round((ENDR - FEND) * 3), M(-Math.PI / 2, 0, (FEND + ENDR) / 2, 0, ZR), (x, y, z) => [x / fu, z / fv]), floorM, RET);
   // lastre del pavimento spezzate che continuano oltre la fine, sempre piu' rade e piccole, leggermente inclinate
+  const slabs = [];
   { const rr = (() => { let sd = 5; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })();
     for (let i = 0; i < 16; i++) { const t = i / 16, w = (0.9 - t * 0.55) * (0.6 + rr() * 0.6), len = (0.8 - t * 0.4) * (0.6 + rr() * 0.8), g = new THREE.BoxGeometry(len, 0.1, w); g.rotateX((rr() - 0.5) * 0.3 * (0.4 + t)); g.rotateZ((rr() - 0.5) * 0.3 * (0.4 + t)); g.rotateY((rr() - 0.5) * 0.9); g.translate(FEND + 0.15 + t * 7.5 + rr() * 0.5, -t * 0.5 * rr() - 0.05 * i * 0.2, ZR + (rr() - 0.5) * (1.3 - t * 0.5));
-      const p = g.attributes.position, uv = g.attributes.uv; for (let q = 0; q < p.count; q++) uv.setXY(q, p.getX(q) / fu, p.getZ(q) / fv); colorAttr(g, 0.8 * (1 - t * 0.6)); mesh(g, floorM, RP); } }
-  const ceilFar = new THREE.Group(); ceilFar.visible = false; RP.add(ceilFar); { const [pl, nr] = arcPoly(ZR); mesh(sweep(pl, nr, SV, END, Math.round(FARL * 4)), wallM, ceilFar); }
+      const p = g.attributes.position, uv = g.attributes.uv; for (let q = 0; q < p.count; q++) uv.setXY(q, p.getX(q) / fu, p.getZ(q) / fv); colorAttr(g, 0.8 * (1 - t * 0.6)); slabs.push(mesh(g, floorM, RP)); } }
+  const ceilFar = new THREE.Group(); ceilFar.visible = false; RP.add(ceilFar); { const [pl, nr] = arcPoly(ZR); mesh(sweep(pl, nr, SV, ENDR, Math.round((ENDR - SV) * 4)), wallM, ceilFar); }
   // passaggio di sinistra (6 m, chiuso in fondo), nascosto finche' la porta non compare
   const LP = new THREE.Group(); LP.visible = false; G.add(LP); const lcx = -XD - 3, LL = 6;
   mesh(quadGeo(LL - LIN, PW * 2, 24, M(-Math.PI / 2, 0, (-XD - LL - XD - LIN) / 2, 0, ZL), (x, y, z) => [x / fu, z / fv]), floorM, LP);
@@ -102,12 +108,28 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     const dust = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(pp, 3)), new THREE.PointsMaterial({ color: 0xcfd8e8, size: 0.035, sizeAttenuation: true, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, map: radial([[0, 'rgba(255,255,255,1)'], [1, 'rgba(255,255,255,0)']], 32) })); dust.frustumCulled = false; g.add(dust); dustSets.push({ pts: dust, pp, pd, side, zc });
     return g; };
   // RIVESTIMENTO DI SOSTEGNO dietro i conci: un guscio continuo di pietra (arco, pareti e pavimento) lungo la profondita' dell'arco; chiude ogni fessura tra un concio e l'altro (da li' non si vede mai il vuoto o l'universo)
-  { const linM = mats.stone.clone(); linM.color.setRGB(0.5, 0.5, 0.52);
-    const lin = (zc, side, parent) => { const rad = PW - 0.004, xa = side > 0 ? XD - 0.09 : -(XD + LIN + 0.01), xb = side > 0 ? XD + LIN + 0.01 : -(XD - 0.09), nxl = 6; const [pl, nr] = arcPoly(zc, rad);
+  let lin; { const linM = mats.stone.clone(); linM.color.setRGB(0.5, 0.5, 0.52);
+    lin = (zc, side, parent) => { const rad = PW - 0.004, xa = side > 0 ? XD - 0.09 : -(XD + LIN + 0.01), xb = side > 0 ? XD + LIN + 0.01 : -(XD - 0.09), nxl = 6; const [pl, nr] = arcPoly(zc, rad);
       mesh(sweep(pl, nr, xa, xb, nxl), linM, parent); mesh(sweep([[zc - rad, 0], [zc - rad, SPR]], [[1, 0], [1, 0]], xa, xb, nxl), linM, parent); mesh(sweep([[zc + rad, SPR], [zc + rad, 0]], [[-1, 0], [-1, 0]], xa, xb, nxl), linM, parent);
       mesh(quadGeo(xb - xa, rad * 2, nxl, M(-Math.PI / 2, 0, (xa + xb) / 2, -0.004, zc), (x, y, z) => [x / fu, z / fv]), linM, parent); };
     lin(ZR, 1, RP); lin(ZL, -1, LP); }
   const frameR = frame(1, ZR, 7), frameL = frame(-1, ZL, 11); frameL.visible = false; G.add(frameR, frameL);
+  const frame2 = frame(1, ZL, 13); frame2.visible = false; G.add(frame2);
+  // corridoio di ritorno (static): compare quando, dopo la piega, si rientra nel tunnel dalla porta destra piu' avanti; dietro e' chiuso
+  const R2 = new THREE.Group(); R2.visible = false; G.add(R2); const XR2 = S0 + 0.3;
+  mesh(quadGeo(XR2 - XD, PW * 2, 12, M(-Math.PI / 2, 0, (XD + XR2) / 2, 0, ZL), (x, y, z) => [x / fu, z / fv]), floorM, R2);
+  { const [pl, nr] = arcPoly(ZL); mesh(sweep(pl, nr, XD + LIN, XR2, 12), wallM, R2); } wallsLo(ZL, XD + LIN, XR2, 12, R2); wallThick(XD + LIN, XR2, null, R2, ZL);
+  { const sh = new THREE.Shape(); sh.moveTo(-PW, 0); sh.lineTo(-PW, SPR); for (let k = 1; k <= ARC; k++) { const th = Math.PI - k / ARC * Math.PI; sh.lineTo(PW * Math.cos(th), SPR + PW * Math.sin(th)); } sh.lineTo(PW, 0); sh.lineTo(-PW, 0);
+    const gc = new THREE.ShapeGeometry(sh); const pp = gc.attributes.position, uvc = gc.attributes.uv; for (let i = 0; i < pp.count; i++) uvc.setXY(i, pp.getX(i) / bu, pp.getY(i) / bv); colorAttr(gc, 0.8); gc.rotateY(-Math.PI / 2); gc.translate(XR2, 0, ZL); mesh(gc, wallM, R2); }
+  lin(ZL, 1, R2);
+  // cielo del vuoto (solo durante la piega): nero con stelle e qualche luce lontana, segue la camera
+  const SKY = new THREE.Group(); SKY.visible = false; G.add(SKY); const skyLights = [];
+  { const N = 700, p = new Float32Array(N * 3), c = new Float32Array(N * 3), rs = (() => { let sd = 77; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })();
+    for (let i = 0; i < N; i++) { const th = rs() * 6.283, ph = Math.acos(2 * rs() - 1), r = 38; p[i * 3] = Math.sin(ph) * Math.cos(th) * r; p[i * 3 + 1] = Math.cos(ph) * r; p[i * 3 + 2] = Math.sin(ph) * Math.sin(th) * r; const b = 0.25 + rs() * rs() * 0.9, w = rs(); c[i * 3] = b * (0.8 + 0.2 * w); c[i * 3 + 1] = b * (0.85 + 0.1 * w); c[i * 3 + 2] = b; }
+    const pg = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(p, 3)).setAttribute('color', new THREE.BufferAttribute(c, 3));
+    const pts = new THREE.Points(pg, new THREE.PointsMaterial({ size: 2.2, sizeAttenuation: false, vertexColors: true, transparent: true, depthWrite: false, fog: false, map: radial([[0, 'rgba(255,255,255,1)'], [0.5, 'rgba(255,255,255,.5)'], [1, 'rgba(255,255,255,0)']], 32) })); pts.frustumCulled = false; pts.renderOrder = -6; SKY.add(pts);
+    for (const [dx, dy, dz, col, sz] of [[-0.8, 0.3, -0.5, 0xffc890, 20], [0.7, 0.45, 0.6, 0x9ab4ff, 16], [0.2, 0.15, -0.95, 0xffe2b0, 12], [-0.5, 0.6, 0.65, 0xc89aff, 18]]) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial([[0, 'rgba(255,255,255,.9)'], [0.3, 'rgba(255,255,255,.25)'], [1, 'rgba(255,255,255,0)']]), color: col, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.4 })); const v = new THREE.Vector3(dx, dy, dz).normalize().multiplyScalar(36); sp.position.copy(v); sp.scale.set(sz, sz, 1); sp.renderOrder = -6; SKY.add(sp); skyLights.push(sp); } }
+
   // ---- la stanza sospesa: pavimento di luce, croce enorme, raggi, alone, polvere e stelle. Nessun muro. Molto lontana, in fondo al passaggio ----
   const GL = new THREE.Group(); G.add(GL); const GX = XD + LEN + 34; GL.position.set(GX, 0, ZR);
   const glowMats = [], addGlow = (m, base) => { m.userData.base = base; glowMats.push(m); return m; };
@@ -166,16 +188,18 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     if ((Math.abs(z - zc) < 0.5 || inside) && cand > lim - 0.05) return [side * Math.min(xmax, Math.max(lim - 0.02, cand)), Math.max(zc - 0.5, Math.min(zc + 0.5, z))];
     return null;
   };
-  const cm = (x, z) => { const st = F.state; if (st === 'cut') return null; if (st === 'exit' || st === 'done') return corridor(-1, ZL, XD + LL - 0.6, x, z); return corridor(1, ZR, XD + LEN - 1.2, x, z); };
+  const FMAX = 16.2;   // fine del tratto di ritorno nelle coordinate "a riposo" del passaggio (oltre c'e' il tunnel)
+  const cm = (x, z) => { const st = F.state; if (st === 'fold') return corridor(1, ZR, FMAX, x, z); if (st === 'exit' || st === 'done') return corridor(-1, ZL, XD + LL - 0.6, x, z) || corridor(1, ZL, XR2 - 0.3, x, z); return corridor(1, ZR, XD + LEN - 1.2, x, z); };
   player.constrainMove = cm;
   let overlay = null; const ov = () => overlay ||= (() => { const d = document.createElement('div'); d.id = 'foldfade'; d.style.cssText = 'position:fixed;inset:0;z-index:61;background:#000;opacity:0;pointer-events:none;transition:opacity .35s'; document.body.appendChild(d); return d; })();
   const lampAll = (mode, dur) => { for (let i = 0; i < 4; i++) lights.lamp?.(i, mode, dur); };
 
   F.update = (dt) => {
     if (!F.enabled) return; const P = player.pos; tt += dt; F.t += dt;
-    const here = P.z > Z_END + 1.2 || F.state === 'fold' || F.state === 'cut'; G.visible = here || F.state === 'exit';
+    const here = P.z > Z_END + 1.2 || F.state === 'fold' || F.state === 'dark'; G.visible = here || F.state === 'exit';
     if (!G.visible) return;
     const st = F.state;
+    SKY.visible = st === 'dark' || st === 'fold'; if (SKY.visible) { SKY.position.copy(camera.position); for (let i = 0; i < skyLights.length; i++) skyLights[i].material.opacity = 0.28 + 0.16 * Math.sin(tt * (0.6 + i * 0.3) + i * 2); }
     if ((st === 'idle' || st === 'done') && lights.lamps) for (const L of lights.lamps) if (L.mode === 'off' || L.mode === 'dim') L.mode = 'on';   // salvaguardia: fuori dall'evento le lampade del tunnel non restano mai spente o attenuate
     if (st === 'idle' || st === 'done') {
       if (st === 'idle') {
@@ -187,23 +211,20 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
       return;
     }
     if (st === 'flicker') { flickerT -= dt; if (flickerT <= 0) { flickerT = 0.04 + Math.random() * 0.1; lv = Math.random() < 0.5 ? 0.1 : 1.0; } setLight(lv); if (F.t > 1.7) { F.state = 'dark'; F.t = 0; setLight(0); GL.visible = false; winQuad.visible = false; ceilFar.visible = true; spill.visible = spillSp.visible = false; lampAll('off', 99); audio.lightOff?.(); audio.scare?.(); player.speedMul = 0; } return; }
-    if (st === 'dark') { if (F.t > 1.0) { F.state = 'fold'; F.t = 0; player.speedMul = 1; say?.('La stanza non c’è più.\nIl passaggio si piega.', 3800); audio.swell?.(5, 0.55); } return; }
+    if (st === 'dark') { if (F.t > 1.0) { F.state = 'fold'; F.t = 0; player.speedMul = 1; farWalls.visible = false; for (const o of slabs) o.visible = false; RET.visible = true; say?.('La stanza non c’è più.\nIl passaggio si piega.', 3800); audio.swell?.(5, 0.55); } return; }
     if (st === 'fold') {
-      const k = Math.min(1, F.t / 5.5), e = k * k * (3 - 2 * k); U.uK.value = KEND * e;
+      const k = Math.min(1, F.t / 6.0), e = k * k * (3 - 2 * k); U.uK.value = KEND * e;
       if (F.t > 1.5) P.x += Math.min(1, (F.t - 1.5) / 2) * 0.7 * dt;   // il passaggio ti trascina avanti piano
-      P.x = Math.min(P.x, XD + LEN - 1.2);
+      P.x = Math.min(P.x, FMAX);
       if (Math.random() < dt * 0.6) player.addShake?.(0.25);
-      if (P.x >= S0 + 6.3 && F.t > 3) { F.state = 'cut'; F.t = 0; player.frozen = true; ov().style.transition = 'opacity .45s'; ov().style.opacity = '1'; audio.swell?.(1.6, 0.6); }
+      if (P.x >= FMAX - 0.15 && U.uK.value > KEND * 0.995) {   // fine del ritorno: la posizione e la direzione del mondo piegato coincidono con quelle reali nel tunnel (nessuno stacco)
+        const K = U.uK.value, u = P.x - S0, rest = Math.max(0, u - Math.PI / K); const wx = S0 - rest, wz = ZL + (P.z - ZR) * -1;
+        U.uK.value = 0; RP.visible = false; R2.visible = true; frame2.visible = true; LP.visible = true; frameL.visible = true; SKY.visible = false;
+        tunnel.userData.plugs[2].visible = false; tunnel.userData.plugs[1].visible = false; tunnel.userData.plugs[0].visible = true; frameR.visible = false;
+        P.set(wx, P.y, wz); player.yaw += Math.PI; F.state = 'exit'; F.t = 0; lampAll('flicker', 1.6); audio.lightOn?.(); say?.('Sei di nuovo nel tunnel.\nUna porta che prima non c’era.', 3800); }
       return;
     }
-    if (st === 'cut') {
-      if (F.t > 0.8 && !F.cutDone) { F.cutDone = true;   // buio completo: il passaggio si disfa, la porta sinistra compare, la destra si chiude
-        U.uK.value = 0; RP.visible = false; LP.visible = true; frameL.visible = true; tunnel.userData.plugs?.[-1] && (tunnel.userData.plugs[-1].visible = false); tunnel.userData.plugs?.[1] && (tunnel.userData.plugs[1].visible = true); frameR.visible = false;
-        P.set(-XD - LL + 1.6, 1.62, ZL); player.yaw = -Math.PI / 2; player.pitch = 0; player.frozen = false; player.speedMul = 1; lampAll('flicker', 1.6); audio.lightOn?.(); ov().style.transition = 'opacity .9s'; ov().style.opacity = '0'; }
-      if (F.t > 1.3) { F.state = 'exit'; F.t = 0; say?.('Esci da una porta che prima non c’era.', 3400); }
-      return;
-    }
-    if (st === 'exit') { if (P.x > -XD + 0.2) { F.state = 'done'; F.done = true; lampAll('on', 1); if (player.constrainMove === cm) player.constrainMove = null; } return; }
+    if (st === 'exit') { if (F.t > 2.5) { F.state = 'done'; F.done = true; lampAll('on', 1); } return; }
   };
   // la camera segue la curva: posizione e direzione dalla mappa (stessa formula dello shader)
   const qY = new THREE.Quaternion(), yA = new THREE.Vector3(0, 1, 0);
@@ -211,9 +232,9 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     const K = U.uK.value; if (K < 1e-4 || F.state !== 'fold') return; const p = camera.position, x = p.x; if (x <= S0) return;
     const u = x - S0, ph = Math.min(K * u, Math.PI), d = p.z - ZR; let cxm, czm, nx2, nz2;
     if (K * u < Math.PI) { cxm = S0 + Math.sin(ph) / K; czm = ZR + (1 - Math.cos(ph)) / K; nx2 = -Math.sin(ph); nz2 = Math.cos(ph); } else { cxm = S0 - (u - Math.PI / K); czm = ZR + 2 / K; nx2 = 0; nz2 = -1; }
-    p.x = cxm + d * nx2; p.z = czm + d * nz2; camera.quaternion.premultiply(qY.setFromAxisAngle(yA, -ph));
+    p.x = cxm + d * nx2; p.z = 2 * ZR - (czm + d * nz2); camera.quaternion.premultiply(qY.setFromAxisAngle(yA, ph));
   };
-  F.reset = () => { F.state = 'idle'; F.t = 0; F.done = false; F.cutDone = false; U.uK.value = 0; RP.visible = true; ceilFar.visible = false; winQuad.visible = false; spaceOn = false; for (const o of fallback) o.visible = true; LP.visible = false; frameL.visible = false; frameR.visible = true; GL.visible = true; spill.visible = spillSp.visible = true; tunnel.userData.plugs?.[-1] && (tunnel.userData.plugs[-1].visible = true); tunnel.userData.plugs?.[1] && (tunnel.userData.plugs[1].visible = false); player.constrainMove = cm; };
+  F.reset = () => { F.state = 'idle'; F.t = 0; F.done = false; F.cutDone = false; U.uK.value = 0; RP.visible = true; farWalls.visible = true; for (const o of slabs) o.visible = true; RET.visible = false; R2.visible = false; frame2.visible = false; SKY.visible = false; if (tunnel.userData.plugs) { tunnel.userData.plugs[0].visible = false; tunnel.userData.plugs[1].visible = true; tunnel.userData.plugs[2].visible = true; } ceilFar.visible = false; winQuad.visible = false; spaceOn = false; for (const o of fallback) o.visible = true; LP.visible = false; frameL.visible = false; frameR.visible = true; GL.visible = true; spill.visible = spillSp.visible = true;  player.constrainMove = cm; };
   // animazioni leggere della stanza (raggi che respirano, polvere che sale, frammenti che ruotano)
   F.animate = (dt) => { for (let i = 0; i < runeMats.length; i++) runeMats[i].opacity = 0.32 + 0.3 * (0.5 + 0.5 * Math.sin(tt * 0.9 + i * 1.7)) * (0.7 + 0.3 * Math.sin(tt * 4.1 + i * 3.1)); for (const d of dustSets) { const a = d.pts.geometry.attributes.position; for (let i = 0; i < d.pd.length; i++) { const k = (tt * d.pd[i][1] + d.pd[i][0] * 3) % 1; a.array[i * 3] = d.side * (W - 0.1 - k * 0.5); a.array[i * 3 + 1] = 0.15 + k * 1.9 * (0.5 + d.pd[i][0]); a.array[i * 3 + 2] = d.zc + d.pd[i][2] * 1.8 + Math.sin(tt * 0.5 + i) * 0.1; } a.needsUpdate = true; }
     if (!GL.visible) return; cross.rotation.y += dt * 0.14; for (const o of GL.children) if (o.userData.ph !== undefined) o.rotation.x += Math.sin(tt * 0.6 + o.userData.ph) * dt * 0.02; for (const d of debris) { d.rotation.x += d.userData.sp[0] * dt; d.rotation.y += d.userData.sp[1] * dt; d.position.y += Math.sin(tt * 0.5 + d.position.x) * dt * 0.05; }

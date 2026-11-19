@@ -11,7 +11,7 @@ export const DOOR = { w: 2.0, h: 2.93 };
 export const RIBS = [-2, -8, -14, -19.5, -25.5, -31.5, -38, -44];
 export const LAMPS = [-6, -17.5, -33, -41];
 // porte laterali del tunnel (evento della piega): a destra l'ingresso, a sinistra l'uscita (chiusa da un tampone di muro finche' non serve)
-export const SIDE_DOORS = [{ side: 1, z: -34.5, w: 1.4, h: 2.08, spring: 1.38 }, { side: -1, z: -40.2, w: 1.4, h: 2.08, spring: 1.38 }];
+export const SIDE_DOORS = [{ side: 1, z: -34.5, w: 1.4, h: 2.08, spring: 1.38 }, { side: -1, z: -40.2, w: 1.4, h: 2.08, spring: 1.38 }, { side: 1, z: -40.2, w: 1.4, h: 2.08, spring: 1.38 }];
 
 // rng deterministico: stessa geometria a ogni avvio
 let seed = 1337;
@@ -96,14 +96,14 @@ export function buildTunnel(mats) {
   }
 
   // pannello con varco: stessi parametri casuali e stesse UV del pannello pieno; il "tampone" (BP) riempie il varco con la stessa texture (si toglie/si mette quando serve)
-  const BP = { 1: new Builder(), [-1]: new Builder() };
+  const BP = SIDE_DOORS.map(() => new Builder());
   function wallPanelDoor(side, z0, z1, d) {   // varco ad arco: rettangolo fino alla linea d'imposta, poi mezzo cerchio di raggio w/2
     const x = side * W, k = 0.62 + rnd() * 0.38, flip = rnd() < 0.5 ? -1 : 1, ou = rnd() * 4, ov = Math.floor(rnd() * 3) * 0.33;
     const U = (z) => (flip * -z) / bu + ou, V = (y) => y / bv + ov, rad = d.w / 2;
     const q = (Bd, za, zb, ya0, yb0, ya1, yb1) => { Bd.quad('brick', [[x, ya0, za], [x, yb0, zb], [x, yb1, zb], [x, ya1, za]], [[U(za), V(ya0)], [U(zb), V(yb0)], [U(zb), V(yb1)], [U(za), V(ya1)]], [wallCol(ya0, k), wallCol(yb0, k), wallCol(yb1, k), wallCol(ya1, k)], [-side, 0, 0]); };
     const a = d.z + rad, b = d.z - rad, top = (z) => d.spring + Math.sqrt(Math.max(0, rad * rad - (z - d.z) * (z - d.z)));
     if (z0 > a) q(B, z0, a, 0, 0, H0, H0); if (b > z1) q(B, b, z1, 0, 0, H0, H0);
-    const N = 16; for (let i = 0; i < N; i++) { const za = a - (2 * rad * i) / N, zb = a - (2 * rad * (i + 1)) / N; q(B, za, zb, top(za), top(zb), H0, H0); q(BP[side], za, zb, 0, 0, top(za), top(zb)); }
+    const N = 16; for (let i = 0; i < N; i++) { const za = a - (2 * rad * i) / N, zb = a - (2 * rad * (i + 1)) / N; q(B, za, zb, top(za), top(zb), H0, H0); q(BP[SIDE_DOORS.indexOf(d)], za, zb, 0, 0, top(za), top(zb)); }
   }
   const doorAt = (side, z, z1) => SIDE_DOORS.find((d) => d.side === side && d.z < z && d.z > z1);
   // MURI
@@ -226,6 +226,6 @@ export function buildTunnel(mats) {
 
   const g = B.build(mats);
   g.userData.plugs = {};
-  for (const side of [1, -1]) { const pg = BP[side].build(mats); pg.visible = side === -1; g.add(pg); g.userData.plugs[side] = pg; }   // tamponi dei varchi: sinistro presente (porta non ancora comparsa), destro nascosto
+  SIDE_DOORS.forEach((d, i) => { const pg = BP[i].build(mats); pg.visible = i !== 0; g.add(pg); g.userData.plugs[i] = pg; });   // tamponi dei varchi (indice come in SIDE_DOORS): il primo a destra e' aperto, gli altri sono chiusi finche' non compaiono
   return g;
 }

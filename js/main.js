@@ -119,7 +119,7 @@ LAMPS.forEach((z, i) => place('assets/models/lamp.glb', 0.32, 0, H0 + W - 0.62, 
   const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.5, 5), new THREE.MeshBasicMaterial({ color: 0x050505 }));
   cord.position.set(0, H0 + W - 0.2, z); scene.add(cord);
 }));
-place('assets/models/slamp2.glb', 0.9, 1.15, 1.55, -17, -Math.PI / 2); place('assets/models/slamp2.glb', 0.9, 1.15, 1.55, -39, -Math.PI / 2);
+place('assets/models/slamp2.glb', 0.9, 1.15, 1.55, -17, -Math.PI / 2); place('assets/models/slamp2.glb', 0.9, 1.15, 1.55, -43, -Math.PI / 2);
 place('assets/models/can.glb', 0.12, -0.7, 0, -4.5, 0.6);
 place('assets/models/can.glb', 0.12, 0.55, 0, -29, 2.1);
 place('assets/models/tank.glb', 0.55, -W + 0.3, 0, -36, 0.3);
@@ -131,7 +131,7 @@ const glassEvent = createGlassEvent({ scene, renderer, camera, player, audio, li
 const hound = createHound({ scene, player, lights, audio, glass: glassEvent });
 // porta laterale del tunnel + passaggio che si piega (?porta=0 la spegne; i varchi restano chiusi dai tamponi)
 const sideFold = createSideFold({ scene, tunnel: tunnelG, mats, player, camera, audio, lights, instab, getSpace: () => space, say: (...a) => say(...a) });
-if (new URLSearchParams(location.search).get('porta') === '0') { sideFold.enabled = false; sideFold.group.visible = false; player.constrainMove = null; tunnelG.userData.plugs[1].visible = true; }
+if (new URLSearchParams(location.search).get('porta') === '0') { sideFold.enabled = false; sideFold.group.visible = false; player.constrainMove = null; tunnelG.userData.plugs[0].visible = true; }
 
 // grana della pellicola (leggerissima, generata una volta)
 try {
@@ -310,11 +310,11 @@ async function enter() {
     writingDecals(scene, [{ img: 'assets/tex/sym_house.png', aspect: 0.9042, dry: true, p: [-1.38, 1.1, -5.0], wall: '+x', w: 0.62, rot: -0.04 }]);
     writingDecals(morgue.group, [{ img: 'assets/tex/sym_face.png', aspect: 1.0278, dry: true, p: [-4.22, 1.7, MZ - 10.5], wall: '+x', w: 0.8, rot: 0.03 }]);
     // solo Laya: scritte in thailandese, col sangue, sulla parete destra del primo corridoio (tra due costoloni, a destra del tubo)
-    if (PKEY === 'laya') writingDecals(scene, [{ img: 'assets/tex/wr_thai.webp', aspect: 2.2928, dry: true, p: [1.375, 1.0, -42.3], wall: '-x', w: 3.2 }]);   // muro destro, tra le ultime due costole (lontano dal simbolo e dalla mano a z -34.8)
+    if (PKEY === 'laya') writingDecals(scene, [{ img: 'assets/tex/wr_thai.webp', aspect: 2.2928, dry: true, p: [1.375, 1.0, -42.45], wall: '-x', w: 2.7 }]);   // muro destro, tra le ultime due costole (lontano dal simbolo e dalla mano a z -34.8)
     // solo Elisa: scherzo, sul muro destro del tunnel tra due costoloni
-    if (PKEY === 'elisa') { const pz = (RIBS[6] + RIBS[7]) / 2, T = 'PAGLIACCINA\nSEXY', ta = bloodText(T).aspect; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.6, pz], wall: '-x', w: Math.min(0.75 * ta, Math.abs(RIBS[6] - RIBS[7]) - 1.0) }]); }
+    if (PKEY === 'elisa') { const pz = -42.4, T = 'PAGLIACCINA\nSEXY', ta = bloodText(T).aspect; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.6, pz], wall: '-x', w: Math.min(0.75 * ta, 2.2) }]); }
     // solo Yana: frase piccola e bassa, quasi nascosta, sul muro destro del tunnel (poco in vista)
-    if (PKEY === 'yana') { const T = 'Я ТЕБЕ\nБАЧУ', ta = bloodText(T).aspect; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.4, (RIBS[6] + RIBS[7]) / 2], wall: '-x', w: Math.min(0.7 * ta, 1.7) }]); }   // Yana: frase ucraina piccola («io ti vedo») con le lettere vere
+    if (PKEY === 'yana') { const T = 'Я ТЕБЕ\nБАЧУ', ta = bloodText(T).aspect; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.4, -42.4], wall: '-x', w: Math.min(0.7 * ta, 1.7) }]); }   // Yana: frase ucraina piccola («io ti vedo») con le lettere vere
     const towerMessage = writingDecals(tower.group, [{ ...spec('w4'), p: [0, 4.3, TZ - 0.05], wall: '-z', w: WR.w4[2] * 2.5 }])[0];   // torre: sopra la porta, 2,5 volte le dimensioni precedenti
     towerMessage.name = 'scritta-torre-non-sei-solo';
   }

@@ -15,7 +15,7 @@ const fenceZ = (x, z0, z1) => { const out = []; for (let z = z0 - 0.955; z > z1 
 const cableRun = (x, y, z0, z1) => [...runZ('cable_straight_long', 0.61, x, y, z0, Math.max(z1, z0 - 1.9)), { n: 'cable_box_turn', p: [x, y - 0.034, z0 + 0.051], r: [0, 0, 0] }];   // misurato sui vertici reali: lo spuntone della scatola entra di ~1 cm nel capo del cavo, alla stessa altezza
 
 export function decorTunnel(group) {
-  stainDecals(group, [{ p: [-1.395, 1.2, -7.5], wall: '+x', w: 2.2, h: 2.6 }, { p: [1.395, 1.4, -19], wall: '-x', w: 2.0, h: 2.8, flip: true }, { p: [-1.395, 1.0, -30], wall: '+x', w: 2.4, h: 2.6, a: 0.8 }, { p: [1.395, 1.2, -39], wall: '-x', w: 2.2, h: 2.6 }]);
+  stainDecals(group, [{ p: [-1.395, 1.2, -7.5], wall: '+x', w: 2.2, h: 2.6 }, { p: [1.395, 1.4, -19], wall: '-x', w: 2.0, h: 2.8, flip: true }, { p: [-1.395, 1.0, -30], wall: '+x', w: 2.4, h: 2.6, a: 0.8 }, { p: [1.395, 1.2, -43.4], wall: '-x', w: 2.2, h: 2.6 }]);
   // tracce di mani sul muro sinistro: una scia che porta verso il portone, come se qualcuno si fosse trascinato lungo la parete
   bloodDecals(group, [
     { k: 'C', p: [-1.397, 1.346, -39.2], wall: '+x', h: 0.3, rot: 0.2 }, { k: 'A', p: [-1.397, 1.22, -41.2], wall: '+x', h: 0.31, rot: -0.15, flip: true },
