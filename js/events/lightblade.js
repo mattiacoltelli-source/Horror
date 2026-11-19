@@ -92,24 +92,6 @@ export function createLightBlade({ group, camera, player, audio, say, warm, fini
     };
     mt.customProgramCacheKey = () => 'nun-dissolve';
   };
-  // ---- ombra mutaforma: dalla suora che si scioglie si stacca un'ombra scura che cambia forma (corpo, testa, braccia, filamenti), scivola via e svanisce ----
-  const shMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, fog: false, uniforms: { uT: { value: 0 }, uA: { value: 0 } },
-    vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: `varying vec2 vUv; uniform float uT, uA;
-      float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-      float n2(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h2(i), h2(i + vec2(1, 0)), f.x), mix(h2(i + vec2(0, 1)), h2(i + vec2(1, 1)), f.x), f.y); }
-      void main() { vec2 p = vUv * 2.0 - 1.0; float t = uT;
-        p.x += 0.10 * sin(p.y * 4.0 + t * 2.6) + 0.06 * sin(p.y * 9.0 - t * 4.1);
-        float nz = n2(p * 3.0 + vec2(0.0, -t * 1.2)) * 0.5 + n2(p * 7.0 + vec2(t * 0.8, -t * 2.0)) * 0.25;
-        float tw = mix(0.40, 0.10, smoothstep(-0.7, 0.9, p.y)) * (0.85 + 0.3 * sin(t * 1.7 + p.y * 2.0));
-        float body = smoothstep(tw, tw - 0.14, abs(p.x)) * smoothstep(-1.0, -0.45, p.y + nz * 0.8) * smoothstep(0.64, 0.5, p.y);
-        float head = smoothstep(0.2, 0.1, length(vec2(p.x * (1.0 + 0.4 * sin(t * 2.0)), p.y - 0.7 - 0.05 * sin(t * 3.0))));
-        float arm = smoothstep(0.09, 0.0, abs(p.y - (0.15 + 0.2 * sin(t * 2.2)) - 0.3 * p.x * sin(t * 1.5))) * smoothstep(0.95, 0.3, abs(p.x)) * (0.55 + 0.45 * sin(t * 2.6));
-        float m = max(max(body, head), arm); m *= smoothstep(0.12, 0.5, nz + 0.28 + m * 0.35);
-        vec3 col = vec3(0.01, 0.01, 0.025) + vec3(0.12, 0.22, 0.42) * pow(1.0 - m, 3.0) * m * 0.6;
-        gl_FragColor = vec4(col, m * uA * 0.96); }` });
-  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 3.4), shMat); shadow.visible = false; shadow.frustumCulled = false; shadow.renderOrder = 7; group.add(shadow);
-  const shStart = new THREE.Vector3(), shRight = new THREE.Vector3();
   // ---- la suora ----
   const nun = new THREE.Group(); nun.visible = false; group.add(nun); let mixer = null, clips = {}, model = null, mats = [];
   B.load = () => B.loading ||= new GLTFLoader().loadAsync('assets/models/agnese/suor-agnese.glb').then((g) => {
@@ -149,7 +131,7 @@ export function createLightBlade({ group, camera, player, audio, say, warm, fini
   // la visuale si gira piano verso la suora, cosi' si vede il colpo partire e arrivare
   const aim = (dt, rate) => { const dx = nun.position.x - player.pos.x, dz = nun.position.z - player.pos.z; const ty = Math.atan2(-dx, -dz); let d = ty - player.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); player.yaw += d * Math.min(1, dt * rate); player.pitch += (0.05 - player.pitch) * Math.min(1, dt * rate); };
   const startDissolve = () => {
-    dis = 0; shStart.set(nun.position.x, 1.75, nun.position.z); shadow.visible = true; audio.whisper?.(1.6, 0.18); smoke.pts.visible = true; smoke.pts.material.opacity = 0.8;
+    dis = 0; audio.whisper?.(1.6, 0.18); smoke.pts.visible = true; smoke.pts.material.opacity = 0.8;
     away.set(nun.position.x - player.pos.x, 0, nun.position.z - player.pos.z).normalize();
     for (let i = 0; i < N; i++) { const a = Math.random() * 6.28, r = Math.random() * 0.35;
       smoke.pos[i * 3] = nun.position.x + Math.cos(a) * r; smoke.pos[i * 3 + 1] = 0.2 + Math.random() * 1.7; smoke.pos[i * 3 + 2] = nun.position.z + Math.sin(a) * r;
@@ -201,13 +183,10 @@ export function createLightBlade({ group, camera, player, audio, say, warm, fini
     if (dis >= 0) {   // la suora si scioglie: spirale di fumo dai piedi alla testa, bordo di plasma, particelle nere che salgono
       dis += dt; const k = Math.min(1, dis / 2.9); DIS.uDis.value = k * k * (3 - 2 * k) * 0.35 + k * 0.65; DIS.uC.value.set(nun.position.x, 0, nun.position.z); DIS.uImp.value.copy(waveO);
       const h = Math.max(0, 1 - dis / 0.35); for (const m of mats) m.color.setScalar(1 + 0.6 * h);
-      { const u = Math.min(1, Math.max(0, (dis - 0.5) / 2.6)); shMat.uniforms.uT.value = tAll; shMat.uniforms.uA.value = Math.sin(Math.min(1, u * 1.15) * Math.PI) ** 0.7 * (u > 0 ? 1 : 0);
-        shRight.set(Math.cos(camera.rotation.y), 0, -Math.sin(camera.rotation.y)); shadow.quaternion.copy(camera.quaternion);
-        shadow.position.copy(shStart).addScaledVector(away, u * 4.2).addScaledVector(shRight, Math.sin(u * 5.0) * 0.9).setY(1.75 + u * 0.5); shadow.scale.set(0.9 + 0.5 * u, 0.9 + 0.35 * u, 1); }
       nun.position.addScaledVector(away, dt * 0.15 * (1 - k)); nun.rotation.y += dt * (0.3 + k * 0.6);
       for (let i = 0; i < N; i++) { smoke.pos[i * 3] += smoke.vel[i].x * dt; smoke.pos[i * 3 + 1] += smoke.vel[i].y * dt; smoke.pos[i * 3 + 2] += smoke.vel[i].z * dt; }
       smoke.pts.geometry.attributes.position.needsUpdate = true; smoke.pts.material.opacity = 0.8 * (1 - Math.max(0, (k - 0.6) / 0.4));
-      if (dis >= 3.2) { shadow.visible = false; nun.visible = false; smoke.pts.visible = false; dis = -2; DIS.uDis.value = 0; }
+      if (dis >= 3.2) { nun.visible = false; smoke.pts.visible = false; dis = -2; DIS.uDis.value = 0; }
     }
     if (st === 'after') { flash.material.opacity = Math.max(0, flash.material.opacity - dt * 2); charge = Math.max(0, charge - dt * 1.5); B.lightUp(0.6);
       if (dis === -2) { B.state = 'end'; B.t = 0; } }
@@ -217,8 +196,8 @@ export function createLightBlade({ group, camera, player, audio, say, warm, fini
       if (B.t >= 3.2) B.finish();
     }
   };
-  const cleanup = () => { hand.visible = false; showBtn(false); wave.visible = ring.visible = bolt.visible = burst.visible = bursts.visible = shadow.visible = false; flash.material.opacity = 0; if (onKey) removeEventListener('keydown', onKey); const b = btn(); if (b && B.onBtn) b.removeEventListener('pointerdown', B.onBtn); if (saved) { warm.color.setHex(saved.c); warm.intensity = saved.i; } };
+  const cleanup = () => { hand.visible = false; showBtn(false); wave.visible = ring.visible = bolt.visible = burst.visible = bursts.visible = false; flash.material.opacity = 0; if (onKey) removeEventListener('keydown', onKey); const b = btn(); if (b && B.onBtn) b.removeEventListener('pointerdown', B.onBtn); if (saved) { warm.color.setHex(saved.c); warm.intensity = saved.i; } };
   B.finish = () => { if (!B.active) return; B.active = false; B.state = 'done'; cleanup(); finish?.(text); };
-  B.abort = () => { if (!B.active) return; B.active = false; nun.visible = false; shadow.visible = false; smoke.pts.visible = false; dis = -1; cleanup(); };
+  B.abort = () => { if (!B.active) return; B.active = false; nun.visible = false; smoke.pts.visible = false; dis = -1; cleanup(); };
   return B;
 }
