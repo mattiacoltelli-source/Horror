@@ -203,7 +203,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     portal.update(dt, C.tt || 0);
     {   // finestra sullo spazio nel buco (solo se il portale e' aperto, vicino e davanti a chi guarda) + caduta dentro il buco
       const dx = portal.x - P.x, dz = portal.z - P.z, dist = Math.hypot(dx, dz); let use = 0;
-      if (portal.open && portal.u > 0.05 && space && !space.active && !C.portalUsed) { camera.getWorldDirection(fwdTmp); const vis = dist < 16 && (fwdTmp.x * dx + fwdTmp.z * dz) / Math.max(0.001, dist) > -0.2 || fwdTmp.y < -0.5;
+      if (portal.open && portal.u > 0.05 && space && !space.active && !C.portalUsed) { camera.getWorldDirection(fwdTmp); const vis = dist < 16 && (fwdTmp.x * dx + fwdTmp.z * dz) / Math.max(0.001, dist) > 0.15 || fwdTmp.y < -0.5;
         if (vis) { use = 1; C.winWant = dt; } }
       portal.mat.uniforms.uUse.value += (use * Math.min(1, portal.u * 1.2) - portal.mat.uniforms.uUse.value) * Math.min(1, dt * 4);
       if (!C.portalUsed && !C.dive && portal.open && portal.u > 0.8 && !player.frozen && dist < 0.55) { C.portalUsed = true; C.dive = { t: 0, x: player.pos.x, z: player.pos.z, y: player.pos.y, pitch: player.pitch }; player.frozen = true; audio.swell?.(1.4, 0.7); }

@@ -213,7 +213,8 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   const lampAll = (mode, dur) => { for (let i = 0; i < 4; i++) lights.lamp?.(i, mode, dur); };
 
   F.update = (dt) => {
-    if (!F.enabled) return; const P = player.pos; tt += dt; F.t += dt;
+    if (!F.enabled) return; const P = player.pos;
+    { const inT = P.z > Z_END + 1.2 && P.z < 6; if (inT && camera.far > 30.5) { F.farSaved = camera.far; camera.far = 30; camera.updateProjectionMatrix(); } else if (!inT && F.farSaved && camera.far === 30) { camera.far = F.farSaved; F.farSaved = 0; camera.updateProjectionMatrix(); } }   // nel tunnel la nebbia nasconde tutto oltre ~28 m: meno geometria da disegnare tt += dt; F.t += dt;
     const here = P.z > Z_END + 1.2 || F.state === 'fold' || F.state === 'dark'; G.visible = here || F.state === 'exit';
     if (!G.visible) return;
     const st = F.state;
@@ -222,8 +223,8 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     if (st === 'idle' || st === 'done') {
       if (st === 'idle') {
         const sp = getSpace?.(); if (sp) { if (P.z < -12) sp.prepare?.(); camera.getWorldDirection(fw);
-          const dx = XD + LEN - P.x, dz = ZR - P.z, dist = Math.hypot(dx, dz), facing = (fw.x * dx + fw.z * dz) / Math.max(0.01, dist) > 0.3;
-          if (sp.prepared && !sp.active && dist < 26 && facing && sp.drawWindow(dt, camera.position, camera.quaternion, pcWin, qWin, { eye: true, portal: true })) { if (!spaceOn) { spaceOn = true; winMat.uniforms.uTex.value = sp.win.tex; winQuad.visible = true; for (const o of fallback) o.visible = false; } winMat.uniforms.uRes.value = sp.win.res; } }
+          const dx = XD + LEN - P.x, dz = ZR - P.z, dist = Math.hypot(dx, dz), facing = (fw.x * dx + fw.z * dz) / Math.max(0.01, dist) > 0.55;
+          if (sp.prepared && !sp.active && dist < 22 && facing && sp.drawWindow(dt, camera.position, camera.quaternion, pcWin, qWin, { eye: true, portal: true })) { if (!spaceOn) { spaceOn = true; winMat.uniforms.uTex.value = sp.win.tex; winQuad.visible = true; for (const o of fallback) o.visible = false; } winMat.uniforms.uRes.value = sp.win.res; } }
         dip -= dt; if (dip > 0) lv = 0.08 + Math.random() * 0.2; else { lv = 0.82 + 0.12 * Math.sin(tt * 2.3) + 0.05 * Math.sin(tt * 17); if (Math.random() < dt * 0.45) dip = 0.05 + Math.random() * 0.12; } setLight(lv);
         if (P.x > XD + 1.7 && Math.abs(P.z - ZR) < 0.7 && !player.frozen) { F.state = 'flicker'; F.t = 0; lampAll('flicker', 1.7); audio.swell?.(2.2, 0.45); audio.whisper?.(1.4, 0.2); instab?.push?.(0.6, 6); } }
       return;
