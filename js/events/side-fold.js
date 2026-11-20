@@ -218,17 +218,30 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   RP.visible = true; for (const o of slabs) o.visible = false; GL.visible = false; winQuad.visible = false; SKY.visible = false; spill.visible = spillSp.visible = false; for (const o of fallback) o.visible = false; frame2.visible = false; frameL.visible = false;
   const PL = new THREE.Group(); PL.name = 'pianeta-alieno'; G.add(PL);
   const PX0 = XD + 0.4, PXMAX = XD + 7.0, PZH = 0.5, FRONT = XD + 0.62;   // inizio del terreno, limite del tratto percorribile (mai visibile), semi-larghezza dell'area, fine del varco
-  { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'), rr = (() => { let sd = 5; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })();
-    g.fillStyle = '#242830'; g.fillRect(0, 0, 256, 256); for (let i = 0; i < 1800; i++) { g.fillStyle = `rgba(${rr() < 0.5 ? '10,12,16' : '70,78,92'},${0.08 + rr() * 0.22})`; g.fillRect(rr() * 256, rr() * 256, 1 + rr() * 6, 1 + rr() * 4); }
-    for (let i = 0; i < 14; i++) { g.strokeStyle = 'rgba(6,7,10,.55)'; g.lineWidth = 1 + rr() * 1.4; g.beginPath(); let x = rr() * 256, y = rr() * 256; g.moveTo(x, y); for (let k = 0; k < 5; k++) { x += (rr() - 0.5) * 50; y += (rr() - 0.5) * 50; g.lineTo(x, y); } g.stroke(); }
-    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(70, 70); t.anisotropy = 4;
-    { const t2 = t.clone(); t2.repeat.set(1, 1); t2.needsUpdate = true; mainFloor.material = new THREE.MeshLambertMaterial({ map: t2, color: 0x6c7280, vertexColors: true }); }   // dentro i muretti si cammina direttamente sulla terra del pianeta: cambia solo la texture del pavimento
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(420, 420), new THREE.MeshBasicMaterial({ color: 0x0a0e15, depthWrite: false, fog: false })); ground.renderOrder = -9; ground.rotation.x = -Math.PI / 2; ground.position.set(PX0 + 205, -0.012, ZR); ground.frustumCulled = false; PL.add(ground);
-    // rocce basse e scure, solo ai lati e oltre il tratto percorribile (nessun ostacolo nel percorso)
-    const rr2 = (() => { let sd = 13; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })(), parts = [];
-    for (let i = 0; i < 16; i++) { const x = PXMAX + 1.0 + rr2() * 20, z = ZR + (rr2() < 0.5 ? -1 : 1) * (2.6 + rr2() * 9), sc = 0.35 + rr2() * 1.4, g2 = new THREE.DodecahedronGeometry(1, 0); g2.scale(sc * (0.8 + rr2() * 0.8), sc * (0.5 + rr2() * 0.8), sc * (0.8 + rr2() * 0.8)); g2.rotateY(rr2() * 6); g2.translate(x, sc * 0.3, z); parts.push(g2); }
-    for (let i = 0; i < 5; i++) { const x = PX0 + 0.8 + rr2() * 2.2, z = ZR + (rr2() < 0.5 ? -1 : 1) * (2.1 + rr2() * 1.4), sc = 0.15 + rr2() * 0.3, g2 = new THREE.DodecahedronGeometry(1, 0); g2.scale(sc, sc * 0.6, sc * 1.1); g2.rotateY(rr2() * 6); g2.translate(x, sc * 0.25, z); parts.push(g2); }
-    const rocks = new THREE.Mesh(mergeGeometries(parts), new THREE.MeshBasicMaterial({ color: 0x14161b })); rocks.frustumCulled = false; }   // (le rocce 3D sono tolte: il terreno e le montagne vengono dall'immagine)
+  // ---- terreno: texture del suolo (regolite, sassi, crepe) + rilievo vero lontano dal sentiero, ombreggiatura cotta nei vertici (luce fredda dal cielo), dissolvenza verso la foschia ----
+  const TS = 2.4, loadTex = (u, f) => new THREE.TextureLoader().load(u, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; f?.(t); });
+  const gTex = loadTex('assets/tex/planet_ground.webp');
+  mainFloor.material = new THREE.MeshBasicMaterial({ map: gTex, color: 0xa0a8bc, fog: false }); gTex.repeat.set(fu / TS, fv / TS);   // dentro i muretti: lo stesso suolo, stessa scala del terreno
+  const phash = (i, j) => { const s = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return s - Math.floor(s); };
+  const pvn = (x, z) => { const i = Math.floor(x), j = Math.floor(z), fx = x - i, fz = z - j, u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz); return (phash(i, j) * (1 - u) + phash(i + 1, j) * u) * (1 - v) + (phash(i, j + 1) * (1 - u) + phash(i + 1, j + 1) * u) * v; };
+  const pfbm = (x, z, o = 4) => { let a = 0.5, f = 1, r = 0; for (let k = 0; k < o; k++) { r += a * pvn(x * f + k * 17, z * f - k * 9); a *= 0.5; f *= 2.03; } return r; };
+  const psstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const terrH = (x, z) => { const dz = Math.max(0, Math.abs(z - ZR) - 1.1), dx = Math.max(0, x - (XD + 9)), d = Math.hypot(dz, dx), m = psstep(0, 7, d), dist = Math.hypot(x - XD, z - ZR);
+    return m * ((pfbm(x * 0.07, z * 0.07) - 0.45) * 3 + (1 - Math.abs(pfbm(x * 0.11 + 3, z * 0.11) * 2 - 1)) * 2.2 * psstep(6, 28, dist) + (1 - Math.abs(pfbm(x * 0.035 + 9, z * 0.035) * 2 - 1)) * 9 * psstep(16, 46, dist)) + (pfbm(x * 0.6, z * 0.6, 3) - 0.5) * 0.18 * m - 0.02; };
+  const TX0 = PX0, TX1 = XD + 54, TZ = 34, NX = 110, NZ = 100, tp = [], tc = [], tu = [], ti = [];
+  const LD = new THREE.Vector3(0.45, 0.8, 0.35).normalize(), nv = new THREE.Vector3();
+  for (let a = 0; a <= NX; a++) for (let b = 0; b <= NZ; b++) { const x = TX0 + (TX1 - TX0) * a / NX, z = ZR - TZ + 2 * TZ * b / NZ, h = terrH(x, z), e = 0.5;
+    nv.set(terrH(x - e, z) - terrH(x + e, z), 2 * e, terrH(x, z - e) - terrH(x, z + e)).normalize(); const dist = Math.hypot(x - XD, z - ZR), k = (0.45 + 0.75 * Math.max(0, nv.dot(LD))) * (1 - psstep(24, 50, dist));
+    tp.push(x, h, z); tu.push(x / TS, z / TS); tc.push(0.5 * k, 0.55 * k, 0.66 * k); }
+  for (let a = 0; a < NX; a++) for (let b = 0; b < NZ; b++) { const i = a * (NZ + 1) + b, j = i + NZ + 1; ti.push(i, i + 1, j, i + 1, j + 1, j); }
+  const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(tp, 3)); tg.setAttribute('color', new THREE.Float32BufferAttribute(tc, 3)); tg.setAttribute('uv', new THREE.Float32BufferAttribute(tu, 2)); tg.setIndex(ti);
+  const terrain = new THREE.Mesh(tg, new THREE.MeshBasicMaterial({ map: gTex, vertexColors: true, fog: false })); terrain.frustumCulled = false; PL.add(terrain);
+  // massi arrotondati sparsi (icosaedri deformati, una sola mesh): mai sul sentiero
+  { const rr2 = (() => { let sd = 13; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })(), parts = [];
+    for (let i = 0; i < 90; i++) { const x = PX0 + 0.6 + Math.pow(rr2(), 1.3) * 40, side = rr2() < 0.5 ? -1 : 1, z = ZR + side * (1.7 + Math.pow(rr2(), 1.2) * 26), sc = 0.12 + Math.pow(rr2(), 3) * 1.6 + (rr2() < 0.07 ? 1.2 : 0), g2 = new THREE.IcosahedronGeometry(1, 2), pa = g2.attributes.position, c3 = [], sd2 = rr2() * 50, fade = 1 - psstep(24, 50, Math.hypot(x - XD, z - ZR));
+      for (let v = 0; v < pa.count; v++) { const px = pa.getX(v), py = pa.getY(v), pz = pa.getZ(v), d = 0.78 + 0.45 * pvn(px * 1.7 + sd2, pz * 1.7 + py * 1.3), q = 1 + 0.05 * Math.sin(px * 9 + sd2); pa.setXYZ(v, px * d * q * sc * 1.15, py * d * sc * 0.62, pz * d * q * sc); const sh = (0.1 + 0.95 * Math.max(0, px * LD.x + py * LD.y + pz * LD.z)) * (0.55 + 0.6 * d); c3.push(0.05 * sh * fade, 0.056 * sh * fade, 0.07 * sh * fade); }
+      g2.setAttribute('color', new THREE.Float32BufferAttribute(c3, 3)); g2.deleteAttribute('uv'); g2.deleteAttribute('normal'); g2.rotateY(rr2() * 6.28); g2.translate(x, terrH(x, z) + sc * 0.12, z); parts.push(g2); }
+    const rocks = new THREE.Mesh(mergeGeometries(parts), new THREE.MeshBasicMaterial({ vertexColors: true, fog: false })); rocks.frustumCulled = false; PL.add(rocks); }
   // cielo: panorama equirettangolare (galassie, nebulose, Via Lattea) su una cupola; l'equatore e' all'altezza degli occhi, sotto c'e' la pianura nera
   const domeMat = new THREE.MeshBasicMaterial({ color: 0x9aa0b0, side: THREE.BackSide, fog: false, depthWrite: false, toneMapped: false });
   const dome = new THREE.Mesh(new THREE.SphereGeometry(60, 48, 24), domeMat); dome.position.set(XD, 1.62, ZR); dome.rotation.y = 0.5; dome.renderOrder = -10; dome.frustumCulled = false; PL.add(dome);
@@ -239,8 +252,15 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
       for (let y = 0; y < ch; y++) { const v = 1 - y / (ch - 1), a = Math.max(0, Math.min(1, (h + 0.16 - v) / 0.3)), k = (y * cw + x) * 4; im.data[k] = 6; im.data[k + 1] = 9; im.data[k + 2] = 14; im.data[k + 3] = Math.round(255 * Math.pow(a, 0.9)); } }
     g.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping;
     const hz = new THREE.Mesh(new THREE.CylinderGeometry(52, 52, 14, 48, 1, true), new THREE.MeshBasicMaterial({ map: t, transparent: true, side: THREE.BackSide, depthWrite: false, fog: false, toneMapped: false })); hz.position.set(XD, 5, ZR); hz.renderOrder = -8; hz.frustumCulled = false; PL.add(hz); }
+  // pianeti e lune: immagini con luce e atmosfera gia' cotte (zero shader, 4 piani), posti sulla cupola; il gigante ad anelli e' basso, visibile gia' dall'arco
+  const skyMats = [];
+  const addSky = (file, az, el, ang, aspect, tint = 1) => { const R = 50, w = 2 * R * Math.tan(ang * Math.PI / 360), mat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, fog: false, toneMapped: false }); mat.userData.tint = tint; mat.color.setScalar(tint); skyMats.push(mat);
+    new THREE.TextureLoader().load('assets/tex/' + file, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; mat.map = t; mat.needsUpdate = true; });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w / aspect), mat), ca = Math.cos(el), d = new THREE.Vector3(ca * Math.cos(az), Math.sin(el), ca * Math.sin(az)).multiplyScalar(R); m.position.set(XD + d.x, 1.62 + d.y, ZR + d.z); m.lookAt(XD, 1.62, ZR); m.renderOrder = -9; m.frustumCulled = false; PL.add(m); };
+  const D = Math.PI / 180;
+  addSky('sky_gas.webp', 14 * D, 17 * D, 46, 1100 / 560, 0.62); addSky('sky_ocean.webp', -30 * D, 36 * D, 10, 1, 0.7); addSky('sky_lava.webp', 34 * D, 8 * D, 4.5, 1, 0.7); addSky('sky_ice.webp', -58 * D, 54 * D, 5, 1, 0.7);
   PL.visible = true;
-  const sky = (v) => domeMat.color.setScalar(0.6 * v);   // sfarfallio economico: un solo colore
+  const sky = (v) => { domeMat.color.setScalar(0.6 * v); for (const m of skyMats) m.color.setScalar(m.userData.tint * v); };   // sfarfallio economico: solo colori dei materiali
   // movimento: dal tunnel si passa dal varco (fascia stretta) e poi si cammina in una piccola area; il limite non si raggiunge mai (il collasso parte prima)
   const cmP = (x, z) => { const st = F.state; const back = st === 'dark' || st === 'exit' || st === 'done', xm = back ? PEND - 0.7 : PXMAX; const lim = W - RADIUS, inside = player.pos.x > lim - 0.02, cand = x;
     if ((Math.abs(z - ZR) < 0.66 || inside) && cand > lim - 0.05) { const hz = cand < FRONT ? 0.5 : PZH; return [Math.min(xm, Math.max(lim - 0.02, cand)), Math.max(ZR - hz, Math.min(ZR + hz, z))]; } return null; };
