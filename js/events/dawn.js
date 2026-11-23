@@ -19,6 +19,7 @@ export function createDawn({ scene, camera, player, audio, lights, instab, say, 
     camera.far = 60; camera.updateProjectionMatrix(); scene.fog.density = 0; scene.background = new THREE.Color(0x000000); scene.environment = null;
     lights.setTorch(false); lights.override = 0; lights.setLamps([]); instab.hide();
     sky.visible = true; sky.position.set(0, 0, 0);
+    player.constrainMove = null; player.speedNow = 0;   // nessun vincolo o passo residuo della stanza precedente
     player.box = [-0.3, 0.3, -0.3, 0.3]; player.pos.set(0, 0.28, 0); player.yaw = D.yaw0 ?? 4.45; player.pitch = 0.82; player.frozen = false; player.speedMul = 0; player.lookMul = 0.9;
     audio.duck(0, 0.1); audio.unmute?.(); wind = audio.wind(0.9);
     fade.style.background = '#000'; fade.style.transition = 'none'; fade.style.opacity = 1; void fade.offsetWidth;
