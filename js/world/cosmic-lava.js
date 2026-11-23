@@ -5,8 +5,8 @@ import * as THREE from 'three';
 export function createCosmicLava({terrainGeometry,map,x,z}) {
   const position=terrainGeometry.attributes.position,index=terrainGeometry.index;
   const positions=[],uv=[];
-  // Nearby flows flank the dry walking strip; the large flow is beyond it.
-  const fields=[[6.0,-2.7,4.4,2.3,.06],[9.1,2.9,5.0,2.8,-.08],[16.8,-.6,11.8,7.4,-.14]];
+  // All flows sit on the distant hills: the foreground beyond the arch stays dry.
+  const fields=[[24.0,-5.5,8.0,5.0,.20],[29.0,6.8,9.0,6.0,-.25],[32.0,.3,12.0,8.0,-.12]];
   const clip=(vertices,axis,bound,sign)=>{
     const out=[];
     for(let i=0;i<vertices.length;i++){
