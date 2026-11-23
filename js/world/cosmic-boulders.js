@@ -5,7 +5,7 @@ import * as THREE from 'three';
 export function createCosmicBoulders({terrainGeometry,x,z,groundTint,uvScale}) {
   const models=[
     [6.0,-2.4,1.4,1.0,.58,.35,7],
-    [9.4,-.12,1.7,.72,.56,.12,19],
+    [15.1,-.35,1.7,.72,.56,.12,19],
     [15.6,-2.0,2.2,1.45,1.05,.18,31],
     [15.1,.85,1.6,1.0,.82,-.27,43],
     [18.6,-5.0,2.4,1.5,.86,.50,59],
