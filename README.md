@@ -67,6 +67,7 @@ Apri `http://localhost:8123` (su desktop: WASD + trascinamento a destra).
 
 ## Crediti asset
 - Texture e modelli Poly Haven / ambientCG (CC0).
+- Ghiaia cosmica: adattamento della texture `floorB_c.jpg` già nel progetto. Basalto e frattura della cripta: riferimento grafico dell'autore e decal originale generata e ottimizzata per il gioco.
 - Modello del cane: «Grimhound Rig» di DM-913 (CC-BY 4.0), citato nella schermata iniziale.
 - Suoni registrati: Pixabay (alesiadavina) e Mixkit (licenze gratuite); passi: Kenney «Impact Sounds» (CC0).
 - Modelli dei personaggi e murales forniti dall'autore del progetto (murales generati con strumenti di immagini); licenze originali da confermare prima di una pubblicazione più ampia.

@@ -28,6 +28,7 @@ import { FILM_DOOR } from '../world/film-shrine.js';
 import { createFilmShrineEvent } from './film-shrine.js';
 import { createReflectionSubstitute } from '../world/reflection-substitute.js';
 import { createScenePreparation } from '../render/scene.js';
+import { createCryptFissures } from '../world/crypt-fissures.js';
 
 export const CELLAR = { z0: -200, w: 8, l: 24, h: 4.4 };
 const MIRROR = new THREE.Vector3(-3.98, 1.45, -210);
@@ -39,6 +40,7 @@ export function createCellar({ scene, mats, player, camera, renderer, audio, lig
   const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23, exit: { w: 2, h: 2.5 }, sideDoors: [{ side: 1, z: CELLAR.z0 - 15.5, w: 2.0, h: 3.1, reflectionPanel: 'chapel' }, FILM_DOOR] });
   C.group.add(room.group); decorCellar(C.group, CELLAR.z0); const chapel = createChapel({ group: C.group, mats, zc: CELLAR.z0 - 15.5, P: PROF }); C.bounds = [room.bounds[0], room.bounds[1], CELLAR.z0 - CELLAR.l + 1.4, CELLAR.z0 - 0.6];
   const chapelWall = room.sidePanels.chapel; chapelWall.name = 'muro-cripta-solo-specchio';
+  const cryptFissures=C.cryptFissures=createCryptFissures({group:C.group,x:CELLAR.w/2,z:CELLAR.z0-15.5});
   chapelWall.visible = false; C.group.add(chapelWall);
   const withClosedChapelReflection = createReflectionSubstitute({ room: chapel.group, substitute: chapelWall });
   const portal = C.portal = createPortal({ group: C.group, x: -0.5, z: CELLAR.z0 - 13.6 });   // in mezzo al salone: bisogna girarsi, guardarlo ed entrare di proposito
@@ -201,7 +203,7 @@ export function createCellar({ scene, mats, player, camera, renderer, audio, lig
   const bustMove = unseenMover({ camera, getObj: () => C.bust, max: 3, gap: 7, move: (n) => { turnToward(C.bust, player.pos, n); audio.shuffle?.(0.5, 0.22); } });
   C.update = (dt) => {
     C.shrine.update(dt, C.group.visible && !C.gone && !story.busy());
-    if (C.group.visible) { red.update(dt); bustMove(dt); torch.update(dt); chapel.update(dt); if (!chapel.stamped && Math.hypot(player.pos.x - 4, player.pos.z - (CELLAR.z0 - 15.5)) < 9) { chapel.stamped = true; chapel.stamp(); } }
+    if (C.group.visible) { red.update(dt); bustMove(dt); torch.update(dt); chapel.update(dt); cryptFissures.update(dt,player.pos); if (!chapel.stamped && Math.hypot(player.pos.x - 4, player.pos.z - (CELLAR.z0 - 15.5)) < 9) { chapel.stamped = true; chapel.stamp(); } }
     if (!C.group.visible || C.gone) return;
     // Le visite laterali sono facoltative: lo specchio aspetta nella cantina.
     if (player.pos.x > 4.2) { mirror.visible = false; if (flash) flash.intensity = 0; return; }
@@ -331,6 +333,7 @@ export function createCellar({ scene, mats, player, camera, renderer, audio, lig
       if (new URLSearchParams(location.search).get('spazio') !== '0') await space.preload();
     }
     await story.warm?.('ward'); C.warmWard = true;
+    await cryptFissures.prepare(renderer,scene,camera);
     // Anche gli shader del piccolo mondo riflesso devono essere pronti prima
     // della prima occhiata, anziche' compilarsi davanti allo specchio.
     const sil = [fig, far1, runM]; burnt.scene.add(...sil);

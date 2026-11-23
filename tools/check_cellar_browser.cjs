@@ -16,9 +16,12 @@ const base=process.env.CELLAR_BASE_URL||'http://127.0.0.1:8189/',out=process.env
    window.__cellarPasses={loadingBakes:0,playingBakes:0,preview:0};
    g.renderer.render=function(s,c){const p=window.__cellarPasses;if(s.name==='preparazione-spazio')p[g.story?.preparing()?'loadingBakes':'playingBakes']++;if(s.name==='anteprima-spazio')p.preview++;return render(s,c);};
   });
-  await page.locator('#enter').click();console.log('Preparing cellar behind fade...');
+  await page.locator('#enter').click({timeout:90000});console.log('Preparing cellar behind fade...');
   await page.waitForFunction(()=>__g.cellar?.group.visible&&!__g.story.busy(),null,{timeout:300000});
   const prepared=await page.evaluate(()=>({space:__g.space.prepared,ward:__g.ward.warmed,passes:{...__cellarPasses}}));
+  const fissuresPrepared=await page.evaluate(()=>{__g.sim(.1);return{...__g.cellar.cryptFissures.status,visible:__g.cellar.cryptFissures.group.visible};});
+  assert.ok(fissuresPrepared.loaded&&fissuresPrepared.prepared);assert.equal(fissuresPrepared.error,null);assert.equal(fissuresPrepared.visible,false);
+  const basaltRequests=requests.filter(u=>u.endsWith('/assets/tex/crypt_basalt.webp')).length;assert.equal(basaltRequests,1);
   assert.ok(prepared.space&&prepared.ward);assert.ok(prepared.passes.loadingBakes>0);assert.equal(prepared.passes.playingBakes,0);
   assert.equal(requests.filter(u=>u.includes('space_cross')).length,0,'cross backdrop is never loaded');
   console.log('Cellar ready',JSON.stringify(prepared));
@@ -26,6 +29,8 @@ const base=process.env.CELLAR_BASE_URL||'http://127.0.0.1:8189/',out=process.env
   await page.evaluate(()=>{const g=__g;g.player.pos.set(3,1.62,-215.5);g.player.yaw=-Math.PI/2;g.player.pitch=0;g.sim(.05);});
   await page.keyboard.down('KeyW');await page.evaluate(()=>__g.sim(1.3,1/60));await page.keyboard.up('KeyW');
   assert.ok(await page.evaluate(()=>__g.player.pos.x)>4.5,'crypt approach remains open');
+  assert.equal(await page.evaluate(()=>__g.cellar.cryptFissures.group.visible),true);
+  assert.equal(requests.filter(u=>u.endsWith('/assets/tex/crypt_basalt.webp')).length,basaltRequests,'no texture loading on approach');
   await page.evaluate(()=>{const g=__g;g.player.pos.set(-2.3,1.62,-210);g.player.yaw=Math.PI/2;g.player.pitch=0;g.sim(.05);});
   await page.screenshot({path:path.join(out,'mirror.png'),timeout:90000});
   // Deterministic scheduler probe: run the actual Reflector callback, intercept
@@ -76,7 +81,7 @@ const base=process.env.CELLAR_BASE_URL||'http://127.0.0.1:8189/',out=process.env
   });
   assert.equal(fall.entered.active,true);assert.equal(fall.entered.phase,'fall');assert.equal(fall.completed,true);assert.equal(fall.active,false);assert.equal(fall.phase,'idle');assert.equal(fall.speed,1);
   assert.deepEqual(errors,[]);assert.deepEqual(bad,[]);
-  const result={result:'PASS',prepared,reflection,portal,shading,cull,fall,errors,bad,performance:'Software Chromium: scheduling/render budgets verified; real Android FPS not measured.'};
+  const result={result:'PASS',prepared,fissuresPrepared,reflection,portal,shading,cull,fall,errors,bad,performance:'Software Chromium: scheduling/render budgets verified; real Android FPS not measured.'};
   fs.writeFileSync(path.join(out,'results.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

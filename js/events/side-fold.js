@@ -218,12 +218,16 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   // Quattro draw call, nessun secondo render. Sfarfallio, blackout e ritorno restano quelli esistenti.
   RP.visible = true; for (const o of slabs) o.visible = false; GL.visible = false; winQuad.visible = false; SKY.visible = false; spill.visible = spillSp.visible = false; for (const o of fallback) o.visible = false; frame2.visible = false; frameL.visible = false;
   const PX0 = XD + 0.4, PXMAX = XD + 7.0, PZH = 0.5, FRONT = XD + 0.62;   // collisioni e soglie dell'evento invariate
-  const landscape = createCosmicLandscape({ x: XD, z: ZR, xStart: PX0, uvScale: [fu, fv] });
+  const landscape = createCosmicLandscape({ x: XD, z: ZR, xStart: SV, uvScale: [fu, fv] });
   const PL = landscape.group; G.add(PL);
-  const gTex = landscape.groundTexture, TS = 3.6;
-  mainFloor.name = 'cosmo-soglia'; mainFloor.material = landscape.groundMaterial;
-  landscape.shadeFloor(mainFloor.geometry);   // ombra dipinta nei vertici, identica a quella del terreno esterno
-  gTex.repeat.set(fu / TS, fv / TS);   // stessa scala UV su soglia e terreno
+  const gTex = landscape.groundTexture, TS = 2.2;
+  // Sotto la volta resta il pavimento vero del tunnel, illuminato dalla torcia.
+  // Oltre l'arco si cammina sul terreno gia' presente: niente lunga corsia piatta
+  // sovrapposta al paesaggio e nessuna geometria aggiunta.
+  mainFloor.geometry.dispose();
+  mainFloor.geometry = quadGeo(SV - XD - LIN, PW * 2, Math.ceil((SV - XD - LIN) * 3), M(-Math.PI / 2, 0, (XD + LIN + SV) / 2, 0, ZR), (x, y, z) => [x / fu, z / fv]);
+  mainFloor.name = 'cosmo-soglia'; mainFloor.material = floorM;
+  gTex.repeat.set(fu / TS, fv / TS);
   const sky = (v) => landscape.setSkyBrightness(v);   // la macchina a stati continua a comandare lo stesso sfarfallio
   F.landscape = landscape;
   F.prepare = (renderer) => landscape.prepare(renderer, scene, camera);
