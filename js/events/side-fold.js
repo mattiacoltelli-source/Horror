@@ -220,8 +220,9 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   const PX0 = XD + 0.4, PXMAX = XD + 7.0, PZH = 0.5, FRONT = XD + 0.62;   // collisioni e soglie dell'evento invariate
   const landscape = createCosmicLandscape({ x: XD, z: ZR, xStart: PX0, uvScale: [fu, fv] });
   const PL = landscape.group; G.add(PL);
-  const gTex = landscape.groundTexture, TS = 2.4;
-  mainFloor.material = new THREE.MeshBasicMaterial({ map: gTex, color: 0xa0a8bc, fog: false });
+  const gTex = landscape.groundTexture, TS = 3.6;
+  mainFloor.name = 'cosmo-soglia'; mainFloor.material = landscape.groundMaterial;
+  landscape.shadeFloor(mainFloor.geometry);   // ombra dipinta nei vertici, identica a quella del terreno esterno
   gTex.repeat.set(fu / TS, fv / TS);   // stessa scala UV su soglia e terreno
   const sky = (v) => landscape.setSkyBrightness(v);   // la macchina a stati continua a comandare lo stesso sfarfallio
   F.landscape = landscape;
