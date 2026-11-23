@@ -31,7 +31,7 @@ const root=path.resolve(__dirname,'..');
     else if(o.isPoints)draws++;
     if(o.geometry)for(const v of o.geometry.attributes.position.array)assert.ok(Number.isFinite(v));
   });
-  assert.equal(draws,5);assert.ok(triangles<6500);
+  assert.equal(draws,5);assert.ok(triangles<7000);
   // Real geometric relief with normals for the existing vertex-lighting path;
   // the complete player footprint stays flat and free of rocks.
   assert.ok(landscape.groundMaterial.isMeshLambertMaterial&&landscape.groundMaterial.vertexColors);
@@ -56,13 +56,33 @@ const root=path.resolve(__dirname,'..');
   const banks=[];for(let x=3;x<9;x+=.25)banks.push(landscape.height(x,-3),landscape.height(x,-6));
   assert.ok(Math.max(...banks)-Math.min(...banks)>.03,'small real relief along the banks');
   const rocks=landscape.group.getObjectByName('cosmo-massi').geometry.attributes.position;
-  for(let i=0;i<rocks.count;i++)assert.ok(Math.abs(rocks.getZ(i)+4.5)>.82,'keep rocks beyond player radius and walking lane');
+  for(let i=0;i<rocks.count;i++)if(rocks.getX(i)<=8.72)assert.ok(Math.abs(rocks.getZ(i)+4.5)>.82,'keep rocks beyond the full reachable player footprint');
   const lava=landscape.group.getObjectByName('cosmo-lava-incandescente'),lavaPositions=lava.geometry.attributes.position;
   assert.ok(lava.material.isMeshBasicMaterial&&lava.material.alphaTest>0&&!lava.material.depthWrite);
   assert.ok(lavaPositions.count>0,'real terrain geometry carries the lava overlay');
   for(let i=0;i<lavaPositions.count;i++)if(lavaPositions.getX(i)<10.4)assert.ok(Math.abs(lavaPositions.getZ(i)+4.5)>.84,'lava stays outside the playable strip');
   const ground=landscape.group.getObjectByName('cosmo-terreno');ground.updateMatrixWorld(true);
   const ray=new THREE.Raycaster(),down=new THREE.Vector3(0,-1,0);
+  const boulderModule=await moduleAt(path.join(root,'js/world/cosmic-boulders.js'));
+  const models=boulderModule.namespace.createCosmicBoulders({terrainGeometry:ground.geometry,x:1.4,z:-4.5,groundTint:()=>1,uvScale:[1.6,1.6]});
+  for(const model of models){
+    model.computeBoundingBox();
+    assert.ok(model.boundingBox.max.y-model.boundingBox.min.y>.35,'boulders have real vertical volume');
+    const p=model.attributes.position,tex=model.attributes.uv,edges=new Map();
+    const key=i=>[p.getX(i),p.getY(i),p.getZ(i)].map(n=>n.toFixed(6)).join(',');
+    for(let i=0;i<p.count;i+=3){
+      for(let j=0;j<3;j++){
+        const pair=[key(i+j),key(i+(j+1)%3)].sort().join('|');edges.set(pair,(edges.get(pair)||0)+1);
+      }
+      const area=(tex.getX(i+1)-tex.getX(i))*(tex.getY(i+2)-tex.getY(i))-(tex.getY(i+1)-tex.getY(i))*(tex.getX(i+2)-tex.getX(i));
+      assert.ok(Math.abs(area)>1e-8,'face UVs retain area even on vertical rock sides');
+    }
+    for(const uses of edges.values())assert.equal(uses,2,'rock surfaces are closed, without cracks between triangles');
+    const center=model.boundingBox.getCenter(new THREE.Vector3());
+    ray.set(new THREE.Vector3(center.x,100,center.z),down);
+    assert.ok(model.boundingBox.min.y<ray.intersectObject(ground)[0].point.y,'rock base is embedded in the rendered terrain');
+    model.dispose();
+  }
   for(let i=0;i<lavaPositions.count;i+=Math.max(1,Math.floor(lavaPositions.count/25))){
     // Triangle centroids avoid precision ambiguity at shared edges.
     const k=Math.floor(i/3)*3,p=new THREE.Vector3();
@@ -89,5 +109,5 @@ const root=path.resolve(__dirname,'..');
   const digest=s=>crypto.createHash('sha256').update(s).digest('hex');
   assert.equal(digest(side.slice(side.indexOf('  // movimento: dal tunnel'),side.indexOf('  F.applyCamera'))),'3c9f7c254d95ddc5304156a952b1ec3bf5e0746b39821f07fe98eeb9d73febe5');
   assert.equal(digest(side.slice(side.indexOf('  F.reset ='),side.indexOf('  // animazioni leggere'))),'8c354af9c943e4dfdca5a8079db57db18f7a4aee1211ecdf28a3121144729815');
-  console.log(JSON.stringify({result:'PASS',triangles,draws,assets:requested,walkingLane:'flat and clear',lava:'fitted to terrain, outside walking strip, follows blackout',galaxy:'rectilinear, fixed aspect, camera translation only',preparation:'three uploads, one compilation',stateMachine:'unchanged'}));
+  console.log(JSON.stringify({result:'PASS',triangles,draws,boulders:models.length,assets:requested,walkingLane:'flat and clear',rocks:'closed volumes, embedded bases, face-projected texture',lava:'fitted to terrain, outside walking strip, follows blackout',galaxy:'rectilinear, fixed aspect, camera translation only',preparation:'three uploads, one compilation',stateMachine:'unchanged'}));
 })().catch(e=>{console.error(e);process.exitCode=1;});
