@@ -215,7 +215,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
 
   // ===================== PIANETA ALIENO (macchina a stati: ENTER -> EXPLORE -> FLICKER -> BLACKOUT -> RETURN) =====================
   // Paesaggio nella scena principale: terreno e massi statici, stelle a 360 gradi e galassia separata.
-  // Quattro draw call, nessun secondo render. Sfarfallio, blackout e ritorno restano quelli esistenti.
+  // Cinque draw call, nessun secondo render. Sfarfallio, blackout e ritorno restano quelli esistenti.
   RP.visible = true; for (const o of slabs) o.visible = false; GL.visible = false; winQuad.visible = false; SKY.visible = false; spill.visible = spillSp.visible = false; for (const o of fallback) o.visible = false; frame2.visible = false; frameL.visible = false;
   const PX0 = XD + 0.4, PXMAX = XD + 7.0, PZH = 0.5, FRONT = XD + 0.62;   // collisioni e soglie dell'evento invariate
   const landscape = createCosmicLandscape({ x: XD, z: ZR, xStart: SV, uvScale: [fu, fv] });

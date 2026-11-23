@@ -23,7 +23,7 @@ const root=path.resolve(__dirname,'..');
   const module=await moduleAt(path.join(root,'js/world/cosmic-landscape.js'));await module.evaluate();
   const landscape=module.namespace.createCosmicLandscape({x:1.4,z:-4.5,uvScale:[1.6,1.6]});
   assert.equal(await landscape.ready,true);assert.equal(landscape.status.loaded,true);
-  assert.deepEqual(requested,['assets/tex/cosmic_ground.webp','assets/tex/cosmic_galaxy.webp']);
+  assert.deepEqual(requested,['assets/tex/cosmic_ground.webp','assets/tex/cosmic_galaxy.webp','assets/tex/cosmic_lava.webp']);
   assert.ok(fs.readFileSync(path.join(root,requested[1])).includes(Buffer.from('ALPH')),'galaxy must have real alpha, not a black rectangle');
   let triangles=0,draws=0;
   landscape.group.traverse(o=>{
@@ -31,7 +31,7 @@ const root=path.resolve(__dirname,'..');
     else if(o.isPoints)draws++;
     if(o.geometry)for(const v of o.geometry.attributes.position.array)assert.ok(Number.isFinite(v));
   });
-  assert.equal(draws,4);assert.ok(triangles<6000);
+  assert.equal(draws,5);assert.ok(triangles<6500);
   // Real geometric relief with normals for the existing vertex-lighting path;
   // the complete player footprint stays flat and free of rocks.
   assert.ok(landscape.groundMaterial.isMeshLambertMaterial&&landscape.groundMaterial.vertexColors);
@@ -57,6 +57,19 @@ const root=path.resolve(__dirname,'..');
   assert.ok(Math.max(...banks)-Math.min(...banks)>.03,'small real relief along the banks');
   const rocks=landscape.group.getObjectByName('cosmo-massi').geometry.attributes.position;
   for(let i=0;i<rocks.count;i++)assert.ok(Math.abs(rocks.getZ(i)+4.5)>.82,'keep rocks beyond player radius and walking lane');
+  const lava=landscape.group.getObjectByName('cosmo-lava-incandescente'),lavaPositions=lava.geometry.attributes.position;
+  assert.ok(lava.material.isMeshBasicMaterial&&lava.material.alphaTest>0&&!lava.material.depthWrite);
+  assert.ok(lavaPositions.count>0,'real terrain geometry carries the lava overlay');
+  for(let i=0;i<lavaPositions.count;i++)if(lavaPositions.getX(i)<10.4)assert.ok(Math.abs(lavaPositions.getZ(i)+4.5)>.84,'lava stays outside the playable strip');
+  const ground=landscape.group.getObjectByName('cosmo-terreno');ground.updateMatrixWorld(true);
+  const ray=new THREE.Raycaster(),down=new THREE.Vector3(0,-1,0);
+  for(let i=0;i<lavaPositions.count;i+=Math.max(1,Math.floor(lavaPositions.count/25))){
+    // Triangle centroids avoid precision ambiguity at shared edges.
+    const k=Math.floor(i/3)*3,p=new THREE.Vector3();
+    for(let j=0;j<3;j++)p.add(new THREE.Vector3().fromBufferAttribute(lavaPositions,k+j));p.divideScalar(3);
+    ray.set(new THREE.Vector3(p.x,p.y+5,p.z),down);
+    const hit=ray.intersectObject(ground)[0];assert.ok(hit&&Math.abs(p.y-hit.point.y-.006)<1e-5,'lava conforms to rendered triangles instead of floating or flickering');
+  }
   const galaxy=landscape.group.getObjectByName('cosmo-galassia');galaxy.geometry.computeBoundingBox();
   const size=galaxy.geometry.boundingBox.getSize(new THREE.Vector3());assert.ok(Math.abs(size.x/size.y-1500/768)<1e-6);
   const camera=new THREE.PerspectiveCamera(),scene=new THREE.Scene(),sky=landscape.group.getObjectByName('cosmo-cielo-infinito');
@@ -65,15 +78,16 @@ const root=path.resolve(__dirname,'..');
   const original=galaxy.quaternion.clone();camera.rotation.set(.3,1.8,0);landscape.followCamera(camera);
   assert.ok(galaxy.quaternion.angleTo(original)<1e-7,'look must not rotate the celestial plate');
   const matVersion=galaxy.material.version;landscape.setSkyBrightness(.2);assert.equal(galaxy.material.color.r,.2);assert.equal(galaxy.material.version,matVersion);
+  landscape.setSkyBrightness(0);assert.equal(lava.material.color.r,0,'existing blackout also extinguishes lava');
   let uploads=0,compiles=0;
   const renderer={initTexture(){uploads++;},async compileAsync(group,c,s){assert.equal(group,landscape.group);assert.equal(c,camera);assert.equal(s,scene);compiles++;}};
   await Promise.all([landscape.prepare(renderer,scene,camera),landscape.prepare(renderer,scene,camera)]);
-  assert.equal(uploads,2);assert.equal(compiles,1);assert.equal(landscape.status.prepared,true);
+  assert.equal(uploads,3);assert.equal(compiles,1);assert.equal(landscape.status.prepared,true);
   // Guard movement/event timing/reset (including the hidden-tunnel guard);
   // exploration look is controlled only by the player.
   const side=fs.readFileSync(path.join(root,'js/events/side-fold.js'),'utf8');
   const digest=s=>crypto.createHash('sha256').update(s).digest('hex');
   assert.equal(digest(side.slice(side.indexOf('  // movimento: dal tunnel'),side.indexOf('  F.applyCamera'))),'3c9f7c254d95ddc5304156a952b1ec3bf5e0746b39821f07fe98eeb9d73febe5');
   assert.equal(digest(side.slice(side.indexOf('  F.reset ='),side.indexOf('  // animazioni leggere'))),'8c354af9c943e4dfdca5a8079db57db18f7a4aee1211ecdf28a3121144729815');
-  console.log(JSON.stringify({result:'PASS',triangles,draws,assets:requested,walkingLane:'flat and clear',galaxy:'rectilinear, fixed aspect, camera translation only',preparation:'two uploads, one compilation',stateMachine:'unchanged'}));
+  console.log(JSON.stringify({result:'PASS',triangles,draws,assets:requested,walkingLane:'flat and clear',lava:'fitted to terrain, outside walking strip, follows blackout',galaxy:'rectilinear, fixed aspect, camera translation only',preparation:'three uploads, one compilation',stateMachine:'unchanged'}));
 })().catch(e=>{console.error(e);process.exitCode=1;});

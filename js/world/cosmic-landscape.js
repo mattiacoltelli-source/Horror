@@ -3,8 +3,9 @@
 // the reference galaxy is never stretched around an equirectangular sphere.
 import * as THREE from 'three';
 import { mergeGeometries } from '../../vendor/three/utils/BufferGeometryUtils.js';
+import { createCosmicLava } from './cosmic-lava.js';
 
-export const COSMIC_ASSETS = ['assets/tex/cosmic_ground.webp', 'assets/tex/cosmic_galaxy.webp'];
+export const COSMIC_ASSETS = ['assets/tex/cosmic_ground.webp', 'assets/tex/cosmic_galaxy.webp', 'assets/tex/cosmic_lava.webp'];
 const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
 const smooth = (a,b,x) => { const u=clamp((x-a)/(b-a),0,1);return u*u*(3-2*u); };
 const hash = (x,z) => {const a=Math.sin(x*127.1+z*311.7)*43758.5453;return a-Math.floor(a);};
@@ -28,6 +29,7 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
   const groundTexture=load(COSMIC_ASSETS[0]);
   groundTexture.wrapS=groundTexture.wrapT=THREE.RepeatWrapping;
   const galaxyTexture=load(COSMIC_ASSETS[1]);
+  const lavaTexture=load(COSMIC_ASSETS[2]);
   // Fine photographic gravel plus real vertex lighting. Lambert reuses the
   // existing flashlight/hemisphere lights, with one albedo sample and no PBR maps.
   const terrainMaterial=new THREE.MeshLambertMaterial({map:groundTexture,vertexColors:true,fog:false});
@@ -74,6 +76,7 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
   geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
   geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.setIndex(indices);geo.computeVertexNormals();geo.computeBoundingSphere();
   const terrain=new THREE.Mesh(geo,terrainMaterial);terrain.name='cosmo-terreno';group.add(terrain);
+  const lava=createCosmicLava({terrainGeometry:geo,map:lavaTexture,x,z});group.add(lava.mesh);
 
   let seed=613;
   const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
@@ -127,11 +130,11 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
   return {
     group,groundTexture,groundMaterial:terrainMaterial,ready,status,height,
     followCamera(camera) {if(group.visible)skyGroup.position.copy(camera.position);},
-    setSkyBrightness(v) {galaxyMaterial.color.setScalar(v);starMaterial.color.setScalar(v);},
+    setSkyBrightness(v) {galaxyMaterial.color.setScalar(v);starMaterial.color.setScalar(v);lava.setBrightness(v);},
     prepare(renderer,scene,camera) {
       return prepared??=(async()=>{
         await ready;
-        for(const t of [groundTexture,galaxyTexture])if(t.image)renderer.initTexture(t);
+        for(const t of [groundTexture,galaxyTexture,lavaTexture])if(t.image)renderer.initTexture(t);
         group.updateMatrixWorld(true);
         if(renderer.compileAsync)await renderer.compileAsync(group,camera,scene);else renderer.compile(group,camera,scene);
         status.prepared=true;
