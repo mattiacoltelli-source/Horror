@@ -5,6 +5,8 @@
 import * as THREE from 'three';
 import { portalMaterial } from '../world/portal.js';
 import { createGiantEye } from '../world/giant-eye.js';
+import { createSpacePreview } from '../world/space-preview.js';
+import { createScenePreparation } from '../render/scene.js';
 
 const NOISE = `
 float h31(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
@@ -31,11 +33,12 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   const S = { active: false, t: 0, phase: 'idle' };
   const scene = new THREE.Scene(); scene.background = new THREE.Color(0x000004); S.scene = scene;
   const sc = new THREE.PerspectiveCamera(68, 1, 0.1, 2000); S.camera = sc;
+  const prepareFall = createScenePreparation(renderer, scene, sc);
   const clock = { t: 0 };
   const U = { uT: { value: 0 } };
   // COTTURA DELLE TEXTURE: cielo, nebulose, galassie, superfici dei pianeti, Sole, corona e disco del buco nero si calcolano UNA volta in texture
-  // (a strisce, una per fotogramma, mentre si e' ancora in cantina) e a runtime si legge solo la texture: niente rumore frattale per pixel durante la caduta.
-  const bakeScene = new THREE.Scene(), bakeCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), bakeQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)); bakeQuad.frustumCulled = false; bakeScene.add(bakeQuad);
+  // (a strisce durante il caricamento della cantina) e a runtime si legge solo la texture: niente rumore frattale per pixel durante la caduta.
+  const bakeScene = new THREE.Scene(), bakeCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), bakeQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)); bakeQuad.frustumCulled = false; bakeScene.add(bakeQuad); bakeScene.name = 'preparazione-spazio';
   const BAKE_VS = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
   const jobs = [];
   const SPHERE_DIR = 'vec3 sphereDir(vec2 uv) { float ph = uv.x * 6.2831853, th = (1.0 - uv.y) * 3.1415927; return vec3(-cos(ph) * sin(th), cos(th), sin(ph) * sin(th)); }';
@@ -238,43 +241,8 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   const pMat = portalMaterial({ r: PR, reach: 9, wallX: 1e5, zMin: -1e6 });
   const portal = new THREE.Mesh(new THREE.PlaneGeometry(18, 18), pMat); portal.position.copy(PORTAL); portal.renderOrder = 8; portal.frustumCulled = false; scene.add(portal);
 
-  // ---- elementi che compaiono SOLO nelle finestre (dalla porta del tunnel e dal portale della cantina), lontani e non in primo piano: croce enorme che gira, secondo portale defilato ----
-  const crossG = new THREE.Group(); crossG.visible = false; scene.add(crossG);
-  { const m = new THREE.MeshBasicMaterial({ color: 0x000000, fog: false, toneMapped: false });
-    const bar = (sx, sy, sz, y) => { const b = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), m); b.position.y = y; crossG.add(b); };
-    bar(2.4, 26, 2.4, 13); bar(14, 2.4, 2.4, 19);   // croce completamente nera: senza ombre, riflessi o contorni
-    // illuminazione "impossibile": alone freddo e caldo dietro, raggi sottili che escono da dietro, anello sottile che pulsa; la croce resta una sagoma nera
-    const mk = (map, col, sc, op, z, y) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map, color: col, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: op })); sp.scale.set(sc, sc, 1); sp.position.set(0, y, z); sp.renderOrder = -3; crossG.add(sp); return sp; };
-    crossG.userData.halos = [];
-    crossG.position.set(-3, -3, -46); crossG.scale.setScalar(0.62); crossG.renderOrder = -2; }
-  const pMat2 = portalMaterial({ r: 4.2, reach: 9, wallX: 1e5, zMin: -1e6 }); pMat2.uniforms.uOpen.value = 1;
-  const portal2 = new THREE.Mesh(new THREE.PlaneGeometry(18, 18), pMat2); portal2.position.set(30, 9, -80); portal2.scale.setScalar(0.55); portal2.renderOrder = 8; portal2.frustumCulled = false; portal2.visible = false; scene.add(portal2);
-  const EYE_FALL = new THREE.Vector3(-0.62, 0.78, 0.0), EYE_WIN = new THREE.Vector3(-0.38, 0.2, -0.9).normalize();
-  // ---- solo nelle finestre: una Via Lattea sottile (fascia diagonale di stelle e foschia fredda) e una piccola nebulosa colorata, lontane ----
-  const winExtra = new THREE.Group(); winExtra.visible = false; scene.add(winExtra);
-  { const W2 = 1024, H2 = 256, c = document.createElement('canvas'); c.width = W2; c.height = H2; const g = c.getContext('2d'), rr = (() => { let sd = 91; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })();
-    for (let i = 0; i < 90; i++) { const x = rr() * W2, y = H2 / 2 + (rr() - 0.5) * 60, rad = 30 + rr() * 60, gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(150,170,215,${0.05 + rr() * 0.07})`); gr.addColorStop(1, 'rgba(150,170,215,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, 2 * rad, 2 * rad); }
-    for (let i = 0; i < 1400; i++) { const x = rr() * W2, y = H2 / 2 + (rr() + rr() + rr() - 1.5) * 38, b = 0.25 + rr() * 0.6; g.fillStyle = `rgba(225,232,255,${b})`; g.fillRect(x, y, 1, 1); }
-    g.globalCompositeOperation = 'destination-in'; const m = g.createLinearGradient(0, 0, W2, 0); m.addColorStop(0, 'rgba(0,0,0,0)'); m.addColorStop(0.25, 'rgba(0,0,0,1)'); m.addColorStop(0.75, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = m; g.fillRect(0, 0, W2, H2);
-    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const mw = new THREE.Mesh(new THREE.PlaneGeometry(520, 130), new THREE.MeshBasicMaterial({ map: t, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.8 })); mw.position.set(0, 30, -330); mw.rotation.z = 0.35; mw.renderOrder = -7; mw.frustumCulled = false; winExtra.add(mw); }
-  { const c = document.createElement('canvas'); c.width = c.height = 192; const g = c.getContext('2d'), rr = (() => { let sd = 17; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })();
-    for (let i = 0; i < 34; i++) { const x = 96 + (rr() - 0.5) * 70, y = 96 + (rr() - 0.5) * 70, rad = 14 + rr() * 34, gr = g.createRadialGradient(x, y, 0, x, y, rad), col = rr() < 0.55 ? '60,170,200' : '170,70,200'; gr.addColorStop(0, `rgba(${col},${0.18 + rr() * 0.2})`); gr.addColorStop(1, `rgba(${col},0)`); g.fillStyle = gr; g.fillRect(x - rad, y - rad, 2 * rad, 2 * rad); }
-    for (let i = 0; i < 60; i++) { g.fillStyle = `rgba(255,255,255,${0.4 + rr() * 0.6})`; g.fillRect(96 + (rr() - 0.5) * 90, 96 + (rr() - 0.5) * 90, 1, 1); }
-    g.globalCompositeOperation = 'destination-in'; const m = g.createRadialGradient(96, 96, 8, 96, 96, 96); m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = m; g.fillRect(0, 0, 192, 192);
-    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.75 })); sp.scale.set(34, 34, 1); sp.position.set(-12, 6, -110); winExtra.add(sp); }
-  // sfondo delle finestre: stelle bianche e azzurre di varie grandezze, qualche pianeta piccolo e lontano (sfere con una sola texture disegnata), tinte tenui di colore
-  { const rr = (() => { let sd = 29; return () => ((sd = (sd * 16807) % 2147483647) / 2147483647); })();
-    const NS = 420, p = new Float32Array(NS * 3), col = new Float32Array(NS * 3); for (let i = 0; i < NS; i++) { const th = rr() * 6.283, ph = Math.acos(1 - rr() * 1.1), r = 480; p[i * 3] = Math.sin(ph) * Math.cos(th) * r; p[i * 3 + 1] = Math.cos(ph) * r * 0.7 - 20; p[i * 3 + 2] = -Math.abs(Math.sin(ph) * Math.sin(th)) * r - 60; const b = 0.35 + rr() * rr() * 0.8, k = rr(); col[i * 3] = b * (k < 0.3 ? 0.75 : 1); col[i * 3 + 1] = b * (k < 0.3 ? 0.85 : 0.97); col[i * 3 + 2] = b; }
-    winExtra.add(Object.assign(new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(p, 3)).setAttribute('color', new THREE.BufferAttribute(col, 3)), new THREE.PointsMaterial({ size: 2.4, sizeAttenuation: false, vertexColors: true, transparent: true, depthWrite: false, fog: false, map: (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), r2 = g.createRadialGradient(16, 16, 0, 16, 16, 16); r2.addColorStop(0, 'rgba(255,255,255,1)'); r2.addColorStop(0.4, 'rgba(255,255,255,.35)'); r2.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r2; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c); })() })), { frustumCulled: false }));
-    const planetTex = (c1, c2, bands) => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, c1); gr.addColorStop(1, c2); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); if (bands) for (let i = 0; i < 9; i++) { g.fillStyle = `rgba(0,0,0,${0.06 + rr() * 0.1})`; g.fillRect(0, rr() * 128, 128, 3 + rr() * 8); } const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
-    const lightDir = new THREE.Vector3(-0.7, 0.4, 0.6).normalize();
-    for (const [x, y, z, r, c1, c2, b] of [[-60, 16, -210, 5.5, '#7a8aa8', '#2b3550', true], [58, -4, -190, 3.4, '#a68a70', '#3a2e28', true], [-18, 34, -260, 2.4, '#8aa0a0', '#26363a', false], [96, 22, -300, 4.2, '#9a7c9a', '#30243a', true]]) {
-      const m = new THREE.Mesh(new THREE.SphereGeometry(r, 24, 16), new THREE.ShaderMaterial({ uniforms: { uTex: { value: planetTex(c1, c2, b) }, uL: { value: lightDir } }, vertexShader: 'varying vec2 vUv; varying vec3 vN; void main() { vUv = uv; vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }', fragmentShader: 'varying vec2 vUv; varying vec3 vN; uniform sampler2D uTex; uniform vec3 uL; void main() { float d = clamp(dot(normalize(vN), uL) * 0.9 + 0.12, 0.0, 1.0); gl_FragColor = vec4(texture2D(uTex, vUv).rgb * d * 0.8, 1.0); }' })); m.position.set(x, y, z); m.frustumCulled = false; winExtra.add(m); }
-    for (const [x, y, z, sz, col, op] of [[40, 20, -240, 70, '70,110,200', 0.1], [-70, -8, -230, 60, '120,70,170', 0.09]]) { const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'), r2 = g.createRadialGradient(48, 48, 0, 48, 48, 48); r2.addColorStop(0, `rgba(${col},1)`); r2.addColorStop(1, `rgba(${col},0)`); g.fillStyle = r2; g.fillRect(0, 0, 96, 96); const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: op * 4 })); sp.scale.set(sz, sz, 1); sp.position.set(x, y, z); winExtra.add(sp); } }
-  // sfondo "finto" delle finestre: UNA immagine statica (assets/tex/space_cross.webp: cielo, Via Lattea, pianeti lontani e croce nera) su un piano grande e lontano, come un fondale.
-  // Dalle finestre sostituisce sole, pianeti, croce 3D e tutto lo sfondo disegnato: costa un solo piano con una texture.
-  const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(470, 470 * 768 / 1376), new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false, toneMapped: false, depthWrite: false })); backdrop.position.set(0, 10, -420); backdrop.renderOrder = -8; backdrop.frustumCulled = false; backdrop.visible = false; scene.add(backdrop);
-  new THREE.TextureLoader().load('assets/tex/space_cross.webp', (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; backdrop.material.map = t; backdrop.material.needsUpdate = true; S.backdropReady = true; });
+  const EYE_FALL = new THREE.Vector3(-0.62, 0.78, 0.0);
+
   // ---- polvere cosmica vicino alla camera: da' il senso della caduta ----
   const ND = 130, dust = { pos: new Float32Array(ND * 3), pts: null };
   for (let i = 0; i < ND; i++) { const a = rnd() * 6.283, r = 1.2 + rnd() * 7; dust.pos[i * 3] = Math.cos(a) * r; dust.pos[i * 3 + 1] = Math.sin(a) * r; dust.pos[i * 3 + 2] = -rnd() * 70; }
@@ -299,17 +267,24 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
 
   let vigEl = null;   // vignettatura da obiettivo: bordi scuri, centro luminoso
   const vig = () => vigEl ||= (() => { const d = document.createElement('div'); d.id = 'spacevig'; d.style.cssText = 'position:fixed;inset:0;z-index:59;pointer-events:none;opacity:0;transition:opacity 1.2s;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 48%,rgba(0,0,6,.55) 100%)'; document.body.appendChild(d); return d; })();
-  // preparazione in anticipo (durante la cantina): cottura delle texture a strisce e precompilazione degli shader; a runtime resta solo il disegno
-  S.prepared = false; S.preparing = false; S.compiled = false;
-  // occhio gigante dietro di te (alto, a sinistra): quasi invisibile, lo si nota solo cercandolo; fa parte della caduta, non della finestra del portale
+  // Texture pesanti preparate sotto la dissolvenza d'ingresso, mai mentre
+  // il giocatore cammina davanti alla cripta o allo specchio.
+  S.prepared = false; S.compiled = false;
   const makeEye = () => { if (S.eye) return; S.eye = createGiantEye({ dir: new THREE.Vector3(-0.62, 0.78, 0.0), size: 600, distance: 850 }); S.eye.mat.depthTest = true; scene.add(S.eye.mesh); };
-  S.prepare = () => { if (S.preparing || S.prepared) return; S.preparing = true; S.waitT = 0; };
-  S.warm = (dt = 0.016) => {   // un passo per fotogramma
-    if (!S.preparing || S.prepared) return; S.waitT += dt; if (S.waitT < 3.0) return;   // lascia passare l'ingresso nella cantina
-    if (bakeStep()) return;
-    makeEye(); S.prepared = true; try { renderer.compileAsync(scene, sc).then(() => { S.compiled = true; }).catch(() => { S.compiled = true; }); } catch (e) { S.compiled = true; }
-  };
-  S.finish = () => { let n = 0; while (bakeStep() && n++ < 400); makeEye(); S.prepared = true; if (!S.compiled) { try { renderer.compile(scene, sc); } catch (e) {} S.compiled = true; } };   // se serve subito, si fa sotto il nero
+  let loading = null;
+  S.preload = () => loading ||= (async () => {
+    while (bakeStep()) await new Promise(requestAnimationFrame);
+    makeEye(); core(0, 0);
+    await prepareFall();   // carica anche le texture canvas, non soltanto i programmi
+    if (renderer.compileAsync) await renderer.compileAsync(scene, sc);
+    else renderer.compile(scene, sc);
+    S.compiled = S.prepared = true;
+  })();
+  S.finish = () => {
+    if (S.prepared) return;
+    while (bakeStep());
+    makeEye(); core(0, 0); renderer.compile(scene, sc); S.compiled = S.prepared = true;
+  };   // fallback per un avvio diretto della caduta, fuori dal percorso normale
   // qualita' adattiva durante la caduta: scala la risoluzione se i fotogrammi sono lenti
   S.perf = (elapsed) => { if (!S.active) return; S.pf = (S.pf ?? 0) * 0.9 + elapsed * 0.1; S.pn = (S.pn || 0) + 1;
     if (S.pn > 10 && S.pf > 0.034 && S.pr > 0.55) { S.pr = Math.max(0.55, S.pr * 0.88); renderer.setPixelRatio(S.pr); S.pn = 0; } };
@@ -330,10 +305,8 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
   // ---- nucleo del disegno: aggiorna tutto cio' che si muove nella scena per il tempo T, con la camera data (percorso della caduta, oppure posa esterna S.ext) ----
   const core = (dt, T, win = false) => {
     U.uT.value = T;
-    { const lite = win; dust.pts.visible = !lite; windPts.visible = !lite; streaks.visible = !lite; S.ast.visible = !lite; const bd = lite && S.backdropReady; backdrop.visible = bd; winExtra.visible = lite && !bd; for (const o of [sun, rings, gas]) o.visible = !bd; corona.visible = !lite; for (const [sp] of sunGlows) sp.visible = !bd; { const k = lite ? 1.75 : 1; gas.position.set(17 * k, 3.5 * k, -50 * k); gas.scale.setScalar(8.5 * (lite ? 0.8 : 1)); rings.position.copy(gas.position); rings.scale.setScalar(8.5 * (lite ? 0.8 : 1)); sun.position.set(SUN.x * (lite ? 1.7 : 1), SUN.y * (lite ? 1.7 : 1), SUN.z * (lite ? 1.7 : 1)); sun.scale.setScalar(SUNR * (lite ? 0.62 : 1)); corona.position.copy(sun.position); corona.scale.setScalar(SUNR * 12 * (lite ? 0.62 : 1)); for (const [sp, sz] of sunGlows) { sp.position.copy(sun.position); sp.scale.setScalar(sz * (lite ? 0.62 : 1)); } } field.visible = !lite; skyMat.uniforms.uWin.value = lite ? 1 : 0; for (const m of scene.children) if (m.userData.bb) m.visible = !lite; for (const pl of planets) if (pl.m !== gas) pl.m.visible = !lite; corona.visible = !lite; for (const m of moons) m.m.visible = !lite; for (const m of proms) m.m.visible = !lite; for (const b of brights) b.sp.visible = !lite; jets.visible = halo.visible = !lite; for (const o of sky.children) if (o !== skyMesh) o.visible = !lite || o.userData.keepWin === true; }   // nelle finestre: meno particolari (lune, protuberanze, stelle a raggi, getti, galassie piccole)   // nelle finestre: via polvere, vento solare, scie e asteroidi (poco visibili da lontano, molto costosi)
-    disk.visible = lensed.visible = !win; if (win) for (const f of flares) f.sp.material.opacity = 0;
-    { const showEye = !!S.eye && (!win || !!S.opts?.eye); if (S.eye) { S.eye.mesh.visible = showEye; if (showEye) { S.eye.dir.copy(win ? EYE_WIN : EYE_FALL); S.eye.mesh.scale.setScalar(win ? 0.25 : 1); } }
-      crossG.visible = win && !S.backdropReady; if (crossG.visible) { const tt2 = T * 1.0; crossG.rotation.y = tt2 * 0.42; } portal2.visible = win && !!S.opts?.portal; pMat2.uniforms.uT.value = T; }
+    if (S.eye) { S.eye.mesh.visible = true; S.eye.dir.copy(EYE_FALL); S.eye.mesh.scale.setScalar(1); }
+    disk.visible = lensed.visible = true;
     for (const p of planets) p.m.rotation.y += p.spin * dt;
     if (S.ext) sc.position.copy(S.ext.pos); else { const t = Math.min(10, T); pathPos(t, tmp); sc.position.copy(tmp); }
     sc.aspect = camera.aspect; { const u = win ? 0 : Math.min(1, Math.max(0, (T - 5.5) / 4.5)); sc.fov = camera.fov * (1 + 0.2 * u * u * (3 - 2 * u)); } sc.updateProjectionMatrix();
@@ -370,18 +343,13 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
     dust.pts.geometry.attributes.position.needsUpdate = true;
     pMat.uniforms.uOpen.value = win ? 0 : Math.min(1, Math.max(0, (T - 5.2) / 3.4)); pMat.uniforms.uT.value = T;
   };
-  // ---- FINESTRA SUL PORTALE: la scena dello spazio vista attraverso il buco nel pavimento della cantina, a bassa risoluzione, con la stessa camera del giocatore
-  // (la direzione "giu'" della cantina diventa "avanti" nello spazio, cosi' dal buco si vede il cielo con i pianeti, il Sole e il buco nero). ----
-  const qR = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2), vtmp = new THREE.Vector2();
-  const winRT = new THREE.WebGLRenderTarget(64, 64, { depthBuffer: true, samples: 2, generateMipmaps: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }); winRT.texture.colorSpace = THREE.SRGBColorSpace;
-  S.win = { tex: winRT.texture, res: new THREE.Vector2(2, 2), wt: 0 }; S.ext = null; S.seam = null;
-  const mapPose = (camPos, camQuat, pc, out, q = qR) => { out.pos.copy(camPos).sub(pc).applyQuaternion(q); out.quat.copy(camQuat).premultiply(q); return out; };
-  const extWin = { pos: new THREE.Vector3(), quat: new THREE.Quaternion() };
-  S.drawWindow = (dt, camPos, camQuat, pc, q, opts = null) => { S.opts = opts;
-    if (!S.prepared || S.active) return false;
-    renderer.getDrawingBufferSize(vtmp); const w = Math.max(64, Math.round(vtmp.x * 0.32)), h = Math.max(64, Math.round(vtmp.y * 0.32)); if (winRT.width !== w || winRT.height !== h) winRT.setSize(w, h); S.win.res.copy(vtmp);
-    S.win.wt += dt; S.ext = mapPose(camPos, camQuat, pc, extWin, q); core(dt, S.win.wt, true); const prev = renderer.getRenderTarget(); renderer.setRenderTarget(winRT); renderer.render(scene, sc); renderer.setRenderTarget(prev); S.ext = null; S.opts = null; return true;
-  };
+  // La finestra usa solo stelle sferiche: non disegna una seconda volta
+  // l'intera caduta e non contiene fondali rettangolari o croci.
+  const qR = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+  const mapPose = (camPos, camQuat, pc, out) => { out.pos.copy(camPos).sub(pc).applyQuaternion(qR); out.quat.copy(camQuat).premultiply(qR); return out; };
+  const preview = S.preview = createSpacePreview({ renderer, camera });
+  S.win = { tex: preview.tex, res: preview.res }; S.ext = null; S.seam = null;
+  S.drawWindow = (...args) => !S.active && preview.draw(...args);
   S.update = (dt) => {
     if (!S.active) return; S.t += dt; const TR = S.t, T = S.t * K;
     if (S.seam) {   // arrivo senza stacco: la posa parte esattamente da quella vista dal buco, poi si scioglie nel percorso e nella visuale libera

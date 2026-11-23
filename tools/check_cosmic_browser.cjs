@@ -70,12 +70,35 @@ const evidence=process.env.COSMIC_EVIDENCE||'/tmp/horror-cosmic-evidence';fs.mkd
     const hidden=await page.evaluate(()=>({visible:__g.sideFold.landscape.group.visible,yaw:__g.player.yaw,state:__g.sideFold.state}));
     assert.equal(hidden.visible,false);assert.ok(Math.abs(hidden.yaw-eventStart.yaw-Math.PI)<1e-8);
     await page.evaluate(()=>__g.sim(2));assert.equal(await page.evaluate(()=>__g.sideFold.state),'done');
-    await page.keyboard.down('KeyW');await page.evaluate(()=>__g.sim(3.5));await page.keyboard.up('KeyW');
+    await page.keyboard.down('KeyW');await page.evaluate(()=>__g.sim(3.5,1/60));await page.keyboard.up('KeyW');
     const returned=await page.evaluate(()=>({x:__g.player.pos.x,z:__g.player.pos.z,state:__g.sideFold.state,visible:__g.sideFold.landscape.group.visible}));
-    assert.ok(returned.x<1.4);assert.equal(returned.visible,false);
+    assert.ok(returned.x<.8);assert.equal(returned.visible,false);
+    // Regressione della soglia: i passi piccoli non devono restare imprigionati
+    // nella fascia tra il corridoio laterale e il limite del tunnel principale.
+    const clearance=[];
+    for(const fps of [30,60,90,120,240])for(const offset of [-.45,0,.45])for(const angle of [-.3,0,.3]){
+      await page.evaluate(({offset,angle})=>{
+        const p=__g.player;p.pos.set(1.65,1.62,-4.5+offset);p.yaw=Math.PI/2+angle;p.speedNow=1.55;p.frozen=false;
+      },{offset,angle});
+      await page.keyboard.down('KeyW');await page.evaluate(fps=>__g.sim(1,1/fps),fps);await page.keyboard.up('KeyW');
+      const x=await page.evaluate(()=>__g.player.pos.x);assert.ok(x<.3,`free exit at ${fps} Hz, offset ${offset}, angle ${angle}: ${x}`);
+      clearance.push({fps,offset,angle,x});
+    }
+    await page.evaluate(()=>{const p=__g.player;p.pos.set(1.65,1.62,-4.5);p.yaw=-Math.PI/2;p.speedNow=1.55;});
+    await page.keyboard.down('KeyS');await page.evaluate(()=>__g.sim(1,1/120));await page.keyboard.up('KeyS');
+    assert.ok(await page.evaluate(()=>__g.player.pos.x)<.3,'backwards exit at 120 Hz');
+    for(const x of [1.07,1.08]){
+      await page.evaluate(x=>{const p=__g.player;p.pos.set(x,1.62,-3.7);p.yaw=0;p.speedNow=1.55;},x);
+      await page.keyboard.down('KeyW');await page.evaluate(()=>__g.sim(1.3,1/120));await page.keyboard.up('KeyW');
+      assert.ok(await page.evaluate(()=>__g.player.pos.z)<-5.5,'walking parallel to the main wall remains free');
+    }
+    await page.evaluate(()=>{const p=__g.player;p.pos.set(1.08,1.62,-2.5);p.yaw=-Math.PI/2;p.speedNow=1.55;});
+    await page.keyboard.down('KeyW');await page.evaluate(()=>__g.sim(.5,1/60));await page.keyboard.up('KeyW');
+    const wall=await page.evaluate(()=>[__g.player.pos.x,__g.player.pos.z]);
+    assert.ok(Math.abs(wall[0]-1.08)<1e-8&&Math.abs(wall[1]+2.5)<1e-8,'solid wall beside the opening remains solid');
     assert.equal(cosmicRequests().length,preparedRequests,'no cosmic asset loading during traversal/effects');
     assert.deepEqual(errors,[]);assert.deepEqual(bad,[]);
-    const result={result:'PASS',base,loaded,view,before,entered,back,eventStart,dark,hidden,returned,errors,bad,
+    const result={result:'PASS',base,loaded,view,before,entered,back,eventStart,dark,hidden,returned,clearance,errors,bad,
       checks:['visible before entry','assets preloaded','same touch controls','two simultaneous pointers','two-three steps','stop','look','back out','original flicker/blackout/return','no runtime asset fetches','no JS errors'],
       performance:'software Chromium; real Android FPS not measured'};
     fs.writeFileSync(path.join(evidence,'results.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));

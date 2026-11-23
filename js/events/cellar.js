@@ -27,12 +27,13 @@ import { createPortal } from '../world/portal.js';
 import { FILM_DOOR } from '../world/film-shrine.js';
 import { createFilmShrineEvent } from './film-shrine.js';
 import { createReflectionSubstitute } from '../world/reflection-substitute.js';
+import { createScenePreparation } from '../render/scene.js';
 
 export const CELLAR = { z0: -200, w: 8, l: 24, h: 4.4 };
 const MIRROR = new THREE.Vector3(-3.98, 1.45, -210);
 const DIST = [7, 4.6, 2.6, 1.3, 0.7];
 
-export function createCellar({ scene, mats, player, camera, audio, lights, instab, say, hall, flags, story, flash, warm, space, actBtn, onSave }) {
+export function createCellar({ scene, mats, player, camera, renderer, audio, lights, instab, say, hall, flags, story, flash, warm, space, actBtn, onSave }) {
   const C = { group: new THREE.Group(), state: 'idle', step: -1, gaze: 0, away: 0, started: false, apDone: false };
   C.group.visible = false; scene.add(C.group);
   const room = buildRoom(mats, { z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h, wall: 'brick', floor: 'floorA', ceil: 'stone', pillarEvery: 5, dark: 0.85, seed: 23, exit: { w: 2, h: 2.5 }, sideDoors: [{ side: 1, z: CELLAR.z0 - 15.5, w: 2.0, h: 3.1, reflectionPanel: 'chapel' }, FILM_DOOR] });
@@ -41,7 +42,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   chapelWall.visible = false; C.group.add(chapelWall);
   const withClosedChapelReflection = createReflectionSubstitute({ room: chapel.group, substitute: chapelWall });
   const portal = C.portal = createPortal({ group: C.group, x: -0.5, z: CELLAR.z0 - 13.6 });   // in mezzo al salone: bisogna girarsi, guardarlo ed entrare di proposito
-  C.keypad = createKeypad({ group: C.group, player, audio, say, actBtn, flags, x: CELLAR.w / 2, y: 1.32, z: CELLAR.z0 - 20.7, onOpen: () => { space?.finish?.(); portal.openIt(); audio.swell?.(3.2, 0.5); } });   // muro destro, sotto la luce rossa, a ~4 m dall'arco della cripta
+  C.keypad = createKeypad({ group: C.group, player, audio, say, actBtn, flags, x: CELLAR.w / 2, y: 1.32, z: CELLAR.z0 - 20.7, onOpen: () => { portal.openIt(); audio.swell?.(3.2, 0.5); } });   // muro destro, sotto la luce rossa, a ~4 m dall'arco della cripta
   C.shrine = createFilmShrineEvent({ group: C.group, mats, panel: room.sidePanels.film, player, flags, audio, say, actBtn, onSave });
   // la lampadina del santuario non ha una luce sua: usa la luce "warm" della scena (libera in cantina), cosi' in cantina ci sono 7 luci invece di 10
   if (warm && C.shrine.light) { const sl = C.shrine.light, slPos = new THREE.Vector3(); C.group.updateMatrixWorld(true); sl.getWorldPosition(slPos); sl.parent?.remove(sl); let cur = 0;
@@ -53,14 +54,18 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   // specchio
   const mw = 1.7, mh = 2.4;
   // lo specchio mostra un ALTRO ambiente: la cantina bruciata (scena minuscola, js/world/burnt-room.js), vista con la parallasse giusta come un vero riflesso.
-  // E' molto piu' leggera del riflesso della stanza vera e si aggiorna un disegno si' e uno no.
+  // Il riflesso mantiene la parallasse, con frequenza limitata quando la camera e' ferma.
   const burnt = createBurntRoom({ z0: CELLAR.z0, w: CELLAR.w, l: CELLAR.l, h: CELLAR.h });
-  const mirror = new Reflector(new THREE.PlaneGeometry(mw, mh), { textureWidth: globalThis.__quality === 'low' ? 160 : 240, textureHeight: globalThis.__quality === 'low' ? 240 : 352, color: new THREE.Color(0x929490), clipBias: 0.003, multisample: 2 });
-  mirror.position.copy(MIRROR); mirror.rotation.y = Math.PI / 2; C.group.add(mirror);
+  const mirror = new Reflector(new THREE.PlaneGeometry(mw, mh), { textureWidth: globalThis.__quality === 'low' ? 160 : 240, textureHeight: globalThis.__quality === 'low' ? 240 : 352, color: new THREE.Color(0x929490), clipBias: 0.003, multisample: 0 });
+  mirror.name = 'specchio-cantina'; mirror.position.copy(MIRROR); mirror.rotation.y = Math.PI / 2; C.group.add(mirror);
   mirror.camera.userData.planarReflection = true;
-  { const orig = mirror.onBeforeRender; let tick = 0, lastT = 0;
+  const prepareMirror = createScenePreparation(renderer, burnt.scene, mirror.camera);
+  { const orig = mirror.onBeforeRender; let lastT = -Infinity; const pos = new THREE.Vector3(), quat = new THREE.Quaternion();
     mirror.onBeforeRender = function (...a) {
-      const nowT = performance.now(); if (nowT - lastT > 120) tick = 0; lastT = nowT; if ((tick++ & 1) !== 0) return;
+      const nowT = performance.now(), cam = a[2];
+      const moving = pos.distanceToSquared(cam.position) > 0.0001 || quat.angleTo(cam.quaternion) > 0.003;
+      if (nowT - lastT < 1000 / (moving ? 30 : 12)) return;
+      lastT = nowT; pos.copy(cam.position); quat.copy(cam.quaternion);
       burnt.update(nowT / 1000);
       const sil = [fig, far1, runM]; burnt.scene.add(...sil);   // le sagome degli eventi (dietro di te, ai margini) compaiono anche nello specchio bruciato
       a[1] = burnt.scene;
@@ -177,14 +182,14 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
   const shade = hall.silhouette(0); shade.visible = false; C.group.add(shade);
   let ap = -1;
 
-  // portale: ci si CADE dentro (nessun tasto, nessun caricamento): passando sul buco si precipita; il buco mostra gia' lo spazio vero, la caduta riparte da quell'immagine
+  // portale: ci si CADE dentro (nessun tasto, nessun caricamento): passando sul buco si precipita; il buco mostra lo spazio, la caduta conserva l'orientamento relativo al portale
   C.onPortal = () => { const go = () => { flags.bladeEnding = true; story.goto('tower', true); }; if (space && new URLSearchParams(location.search).get('spazio') !== '0') space.start(go, { camPos: camera.position.clone(), camQuat: camera.quaternion.clone(), portalC: new THREE.Vector3(portal.x, 0, portal.z) }); else { player.frozen = false; go(); } };
-  // la finestra sullo spazio si disegna DOPO l'aggiornamento del giocatore (stessa camera del fotogramma): cosi' i pianeti restano fissi mentre ci si gira
-  C.drawWindow = () => { if (C.winWant === undefined) return; const dt = C.winWant; C.winWant = undefined; if (space && !space.active && space.drawWindow(dt, camera.position, camera.quaternion, portalC, undefined, { cross: true })) { portal.mat.uniforms.uSpace.value = space.win.tex; portal.mat.uniforms.uRes.value = space.win.res; } };
+  // la finestra sullo spazio si disegna DOPO l'aggiornamento del giocatore (stessa camera del fotogramma): cosi' le stelle restano fisse mentre ci si gira
+  C.drawWindow = () => { if (C.winWant === undefined) return; const dt = C.winWant; C.winWant = undefined; if (space && !space.active && space.drawWindow(dt, camera.position, camera.quaternion, portalC)) { portal.mat.uniforms.uSpace.value = space.win.tex; portal.mat.uniforms.uRes.value = space.win.res; } };
   C.enterPortal = () => {};   // compatibilita': non serve piu' un tasto
   const portalC = new THREE.Vector3(portal.x, 0, portal.z), fwdTmp = new THREE.Vector3();
   C.enter = () => {
-    space?.prepare?.(); torch.reset(); chapel.stamped = false; C.gone = false; C.portalUsed = false; C.dive = null; portal.close(); portal.mat.uniforms.uUse.value = 0; C.portalNear = false; C.keypad.reset(); C.warmWard = false; C.exitStarted = false; if (exCap) exCap.visible = true; if (exL) { exL.rotation.y = 0; exR.rotation.y = 0; } C.group.position.z = 0; C.bounds[2] = CELLAR.z0 - CELLAR.l + 1.4; if (C.bx) { C.bounds[0] = C.bx[0]; C.bounds[1] = C.bx[1]; }
+    torch.reset(); chapel.stamped = false; C.gone = false; C.portalUsed = false; C.dive = null; portal.close(); portal.mat.uniforms.uUse.value = 0; C.portalNear = false; C.keypad.reset(); C.warmWard = false; C.exitStarted = false; if (exCap) exCap.visible = true; if (exL) { exL.rotation.y = 0; exR.rotation.y = 0; } C.group.position.z = 0; C.bounds[2] = CELLAR.z0 - CELLAR.l + 1.4; if (C.bx) { C.bounds[0] = C.bx[0]; C.bounds[1] = C.bx[1]; }
     C.group.visible = true; C.state = 'play'; C.step = -1; C.gaze = 0; C.away = 0; C.started = false; C.apDone = false; flags.mirror = false; C.glanced = false; cornerDone = false; cornerT = -1; corner.visible = false; runDone = false; runT = -1; runM.visible = false; C.near0 = false; C.gl = undefined; C.blood0 = false; C.since = 0; C.tt = 0; mdTarget[0] = mdTarget[1] = mdTarget[2] = 0; mdecals.forEach((m) => (m.material.opacity = 0)); fig.visible = false; shFar.material.uniforms.uA.value = 0; mist.material.opacity = 0; shNear.material.uniforms.uA.value = 0; fogMat.uniforms.uM.value = 0; fogMat.uniforms.uW.value = 0; fogMat.uniforms.uMask.value = blankTex; fogMat.uniforms.uTip.value.set(0, 0, 0); fogMat.uniforms.uR.value = 0.36; fogMat.uniforms.uB.value.set(0.47, 0.52); C.wr = null; C.wName = false; C.b1 = C.b2 = C.sw = C.sw2 = C.clean = false; C.farT = -1; C.farN = 0; far1.visible = false;
     player.box = C.bounds; player.pos.set(0.4, 1.62, CELLAR.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     player.constrainMove = shrineMove; C.shrine.reset();
@@ -205,7 +210,7 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
     portal.update(dt, C.tt || 0);
     {   // finestra sullo spazio nel buco (solo se il portale e' aperto, vicino e davanti a chi guarda) + caduta dentro il buco
       const dx = portal.x - P.x, dz = portal.z - P.z, dist = Math.hypot(dx, dz); let use = 0;
-      if (portal.open && portal.u > 0.05 && space && !space.active && !C.portalUsed) { camera.getWorldDirection(fwdTmp); const vis = dist < 16 && (fwdTmp.x * dx + fwdTmp.z * dz) / Math.max(0.001, dist) > 0.15 || fwdTmp.y < -0.5;
+      if (portal.open && portal.u > 0.05 && space && !space.active && !C.portalUsed) { camera.getWorldDirection(fwdTmp); const vis = dist < 9 && ((fwdTmp.x * dx + fwdTmp.z * dz) / Math.max(0.001, dist) > 0.15 || fwdTmp.y < -0.5);
         if (vis) { use = 1; C.winWant = dt; } }
       portal.mat.uniforms.uUse.value += (use * Math.min(1, portal.u * 1.2) - portal.mat.uniforms.uUse.value) * Math.min(1, dt * 4);
       if (!C.portalUsed && !C.dive && portal.open && portal.u > 0.8 && !player.frozen && dist < 0.55) { C.portalUsed = true; C.dive = { t: 0, x: player.pos.x, z: player.pos.z, y: player.pos.y, pitch: player.pitch }; player.frozen = true; audio.swell?.(1.4, 0.7); }
@@ -319,6 +324,22 @@ export function createCellar({ scene, mats, player, camera, audio, lights, insta
       exT += dt; const a = Math.min(1.5, exT * 0.55); if (exL) exL.rotation.y = a; if (exR) exR.rotation.y = -a;
     }
     if (C.exitStarted && P.z < CELLAR.z0 - CELLAR.l - 0.7 && C.state === 'play') { C.state = 'leaving'; story.cross('cellar', 'ward', (CELLAR.z0 - CELLAR.l) - WARD.z0); }
+  };
+  C.prepare = async () => {
+    if (space) {
+      await space.preview.prepare();
+      if (new URLSearchParams(location.search).get('spazio') !== '0') await space.preload();
+    }
+    await story.warm?.('ward'); C.warmWard = true;
+    // Anche gli shader del piccolo mondo riflesso devono essere pronti prima
+    // della prima occhiata, anziche' compilarsi davanti allo specchio.
+    const sil = [fig, far1, runM]; burnt.scene.add(...sil);
+    let ready;
+    try { ready = prepareMirror(); }
+    finally { C.group.add(...sil); }
+    await ready;
+    player.update(0, 0); camera.updateMatrixWorld(true); mirror.updateMatrixWorld(true);
+    mirror.onBeforeRender(renderer, scene, camera);
   };
   C.leave = () => { C.keypad.reset(); C.shrine.leave(); if (player.constrainMove === shrineMove) player.constrainMove = null; C.group.visible = false; mirror.visible = false; };
   return C;

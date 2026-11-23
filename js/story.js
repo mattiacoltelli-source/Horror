@@ -1,7 +1,7 @@
 // Regia del gioco: stanze, scelte (flags) e passaggi tra una stanza e l'altra (dissolvenza nel buio).
 import { P, onRoom as personalRoom } from './personal.js';
 export function createStory({ scene, camera, controls, player, audio, hall, getCellar, getTower, getWh, getMorgue, getWard, say, lights, instab, prepare, onRoom }) {
-  let busy = false, current = 'tunnel';
+  let busy = false, preparing = false, current = 'tunnel';
   const fade = document.getElementById('fade');
   const hideLegacy = (keep) => scene.children.forEach((o) => { if (!o.isLight && o !== camera && !o.userData.keep && !keep.includes(o)) o.visible = false; });
   // LA TRAMA: il registro notturno dell'infermiera. All'ingresso di ogni stanza compaiono 3 righe (come le note, in corsivo, ~7 s), senza fermarti ne' coprire i pulsanti.
@@ -32,7 +32,7 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
     // viene riportato nelle coordinate della nuova stanza (invisibile: stessa posizione relativa) e la vecchia resta visibile alle spalle, spostata di -d, finche' non sei lontano.
     preview(to, d, gap = 0.25) { const t = ({ ward: getWard(), tower: getTower() })[to]; t.warm?.(); t.group.position.z = d - gap; t.group.visible = true; t.preview = true; t.pdz = d - gap; t.onPreview?.(); },   // gap: la stanza dopo e' spostata di 25 cm oltre il muro, cosi' le sue pareti non spuntano coplanari ai lati del varco
     // precompila in anticipo la stanza successiva (shader nelle condizioni d'ingresso), cosi' il passaggio non si blocca
-    warm(to) { ({ ward: getWard(), tower: getTower() })[to]?.warm?.(); },
+    warm(to) { return ({ ward: getWard(), tower: getTower() })[to]?.warm?.(); },
     cross(from, to, d) {
       const f = ({ cellar: getCellar(), warehouse: getWh() })[from], t = ({ ward: getWard(), tower: getTower() })[to];
       d = t.pdz ?? d; player.pos.z -= d; f.group.position.z = -d; t.group.position.z = 0; t.preview = false; f.gone = true;
@@ -41,11 +41,12 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
     },
     // passaggio senza dissolvenza (soglia aperta tra due stanze): cambia solo la stanza corrente e i suoi testi
     seamless(name) { current = name; tell(name); onRoom?.(name); personalRoom(name); },
-    current: () => current, busy: () => busy,
+    current: () => current, busy: () => busy, preparing: () => preparing,
     goto(name, quick = false) {
       if (busy) return; busy = true; controls.enabled = false;
       fade.style.transition = quick ? 'opacity 0.25s' : 'opacity 1.3s'; fade.style.opacity = 1; audio.duck(0, quick ? 0.2 : 0.6);
       setTimeout(async () => {
+        preparing = true;
         const cellar = getCellar(), tower = getTower(), wh = getWh(), morgue = getMorgue(), ward = getWard?.();
         player.box = null; player.frozen = false;
         if (name === 'cellar') { hideLegacy([cellar.group]); hall.group.visible = false; hall.active = false; cellar.enter(); }
@@ -55,7 +56,9 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
         if (name === 'tower') { hideLegacy([tower.group]); cellar.leave(); wh.leave(); tower.enter(); }
         camera.far = { cellar: 42, morgue: 34, warehouse: 36, tower: 46, ward: 40 }[name] ?? 60; camera.updateProjectionMatrix();   // oltre la nebbia non serve disegnare
         current = name; lights.torchKill(0.01, 0); onRoom?.(name);
+        if (name === 'cellar') await cellar.prepare?.();
         await prepare?.();
+        preparing = false;
         tell(name); personalRoom(name);
         setTimeout(() => { fade.style.transition = quick ? 'opacity 0.9s' : 'opacity 2s'; fade.style.opacity = 0; controls.enabled = true; busy = false; audio.duck(1, 2); }, 350);
       }, quick ? 320 : 1500);
