@@ -25,12 +25,17 @@ const evidence=process.env.COSMIC_EVIDENCE||'/tmp/horror-cosmic-evidence';fs.mkd
     await page.waitForTimeout(250);
     await page.screenshot({path:path.join(evidence,'01-dall-arco.png'),timeout:90000});
     const view=await page.evaluate(()=>{
-      const g=window.__g,land=g.sideFold.landscape;
+      const g=window.__g,land=g.sideFold.landscape,floor=g.scene.getObjectByName('cosmo-soglia');floor.geometry.computeBoundingBox();
       return{state:g.sideFold.state,x:g.player.pos.x,visible:land.group.visible,
         galaxyImage:[land.group.getObjectByName('cosmo-galassia').material.map.image.width,land.group.getObjectByName('cosmo-galassia').material.map.image.height],
+        groundImage:[land.groundTexture.image.width,land.groundTexture.image.height],groundMaterial:land.groundMaterial.type,
+        corridorFloor:{map:floor.material.map.image.src,end:floor.geometry.boundingBox.max.x,triangles:floor.geometry.index.count/3},
         calls:g.renderer.info.render.calls,triangles:g.renderer.info.render.triangles};
     });
     assert.equal(view.state,'idle');assert.ok(view.visible&&view.x<1.4);assert.deepEqual(view.galaxyImage,[1500,768]);
+    assert.deepEqual(view.groundImage,[1024,1024]);assert.equal(view.groundMaterial,'MeshLambertMaterial');
+    assert.ok(view.corridorFloor.map.endsWith('/assets/tex/floorA_c.jpg'),'original corridor ground retained');
+    assert.ok(Math.abs(view.corridorFloor.end-4)<1e-6&&view.corridorFloor.triangles<=14,'corridor overlay ends at the roof, not across the landscape');
     // Two fingers: joystick forward and a simultaneous right-hand look drag.
     const cdp=await context.newCDPSession(page);
     await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{id:1,x:85,y:700},{id:2,x:310,y:350}]});
@@ -45,6 +50,7 @@ const evidence=process.env.COSMIC_EVIDENCE||'/tmp/horror-cosmic-evidence';fs.mkd
     await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
     const entered=await page.evaluate(()=>({x:__g.player.pos.x,z:__g.player.pos.z,state:__g.sideFold.state,pitch:__g.player.pitch}));
     assert.ok(entered.x>3.3&&entered.x<4.6);assert.equal(entered.state,'explore');
+    assert.equal(await page.evaluate(()=>__g.player.pos.y),1.62,'crossing the surface boundary never drops the player');
     assert.equal(entered.pitch,before.pitch,'entering the universe must not raise the view');
     await page.evaluate(()=>window.__g.sim(.2));
     assert.equal(await page.evaluate(()=>window.__g.player.pos.x),entered.x,'release stops walking');

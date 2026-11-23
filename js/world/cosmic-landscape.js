@@ -28,16 +28,21 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
   const groundTexture=load(COSMIC_ASSETS[0]);
   groundTexture.wrapS=groundTexture.wrapT=THREE.RepeatWrapping;
   const galaxyTexture=load(COSMIC_ASSETS[1]);
-  const terrainMaterial=new THREE.MeshBasicMaterial({map:groundTexture,vertexColors:true,fog:false});
-  const light=new THREE.Vector3(-.22,.88,-.42).normalize(),normal=new THREE.Vector3();
-  // Static vertex lighting: a deeply shaded entrance opens gradually into the
-  // exterior. Broad irregular patches break up the repeated albedo without a
-  // custom shader, another texture sample or any per-frame terrain work.
-  const groundLight=(wx,wz,shade)=>{
+  // Fine photographic gravel plus real vertex lighting. Lambert reuses the
+  // existing flashlight/hemisphere lights, with one albedo sample and no PBR maps.
+  const terrainMaterial=new THREE.MeshLambertMaterial({map:groundTexture,vertexColors:true,fog:false});
+  // The galaxy gives a faint, constant fill outside the reach of the torch.
+  // Reuse the already sampled albedo: no extra lights or texture lookups.
+  terrainMaterial.onBeforeCompile=shader=>{
+    shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',
+      'outgoingLight += diffuseColor.rgb * vec3(0.08, 0.10, 0.14);\n#include <opaque_fragment>');
+  };
+  terrainMaterial.customProgramCacheKey=()=> 'cosmic-gravel-starlight-v1';
+  const groundTint=(wx,wz)=>{
     const forward=wx-x,cross=Math.abs(wz-z),distance=Math.hypot(forward,cross);
     const outside=Math.max(smooth(2.2,8.0,forward),smooth(.8,4.5,cross));
     const patches=.7*noise(wx*.23+11,wz*.19+17)+.3*noise(wx*.09-5,wz*.11+2);
-    return shade*(.20+.35*outside)*(.58+.42*patches)*(1-.92*smooth(22,55,distance));
+    return (.90-.28*outside)*(.85+.15*patches)*(1-.94*smooth(22,55,distance));
   };
   // The playable strip is exactly flat, matching the existing XZ controller.
   // Relief and mountains are outside that strip; there is no per-frame terrain work.
@@ -46,18 +51,20 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
     const amount=smooth(0,4,off),dist=Math.hypot(forward,cross);
     const broad=noise(wx*.10,wz*.10)*.66+noise(wx*.23+7,wz*.23)*.34;
     const ridge=1-Math.abs(2*noise(wx*.17+23,wz*.17-7)-1);
-    return -.02+amount*((broad-.45)*.65+ridge*.6+smooth(15,40,dist)*(1.3+4.3*ridge)*(.5+.5*broad));
+    const banks=smooth(.84,1.7,cross)*((noise(wx*.9+4,wz*.8)-.5)*.14+(noise(wx*1.7,wz*1.4+8)-.5)*.05);
+    return -.02+banks+amount*((broad-.45)*.65+ridge*.6+smooth(15,40,dist)*(1.3+4.3*ridge)*(.5+.5*broad));
   };
   const positions=[],colors=[],uv=[],indices=[],NX=48,NZ=40;
   for(let i=0;i<=NX;i++)for(let j=0;j<=NZ;j++) {
     // More samples around the first few metres, fewer on the distant silhouettes.
     const wx=xStart+Math.pow(i/NX,1.55)*(x+54-xStart);
-    const q=j/NZ*2-1,wz=z+Math.sign(q)*Math.pow(Math.abs(q),1.45)*34;
-    const h=height(wx,wz),e=.18;
-    normal.set(height(wx-e,wz)-height(wx+e,wz),2*e,height(wx,wz-e)-height(wx,wz+e)).normalize();
-    const shade=groundLight(wx,wz,.35+.50*Math.max(0,normal.dot(light)));
+    const q=j/NZ*2-1,row=Math.abs(j-NZ/2);
+    // Explicit rows at the player-footprint boundary prevent neighbouring
+    // relief triangles from interpolating into the safe walking strip.
+    const cross=row<=2?row*.42:Math.pow(Math.abs(q),1.7)*34,wz=z+Math.sign(q)*cross;
+    const h=height(wx,wz),shade=groundTint(wx,wz);
     positions.push(wx,h,wz);uv.push(wx/uvScale[0],wz/uvScale[1]);
-    colors.push(.32*shade,.39*shade,.45*shade);
+    colors.push(.48*shade,.49*shade,.52*shade);
   }
   for(let i=0;i<NX;i++)for(let j=0;j<NZ;j++) {
     const a=i*(NZ+1)+j,b=a+NZ+1;indices.push(a,a+1,b,a+1,b+1,b);
@@ -65,25 +72,26 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
   const geo=new THREE.BufferGeometry();
   geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
   geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
-  geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.setIndex(indices);geo.computeBoundingSphere();
+  geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.setIndex(indices);geo.computeVertexNormals();geo.computeBoundingSphere();
   const terrain=new THREE.Mesh(geo,terrainMaterial);terrain.name='cosmo-terreno';group.add(terrain);
 
   let seed=613;
   const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
   const pieces=[];
   for(let i=0;i<18;i++) {
-    const wx=x+2+random()*19,side=i%2?1:-1,wz=z+side*(1.8+random()*8);
-    const scale=.22+random()*.65,g=new THREE.IcosahedronGeometry(1,1),p=g.attributes.position;
+    const wx=x+(i<6?2.9+random()*3.6:5+random()*15),side=i%2?1:-1,scale=.18+random()*.55;
+    const wz=z+side*(.94+scale*1.5+random()*(i<6?1.3:4.5));
+    const g=new THREE.IcosahedronGeometry(1,1),p=g.attributes.position;
     const c=[],u=[];
     for(let k=0;k<p.count;k++) {
       const px=p.getX(k),py=p.getY(k),pz=p.getZ(k),r=.80+.24*noise(px*2+i,pz*2+py);
-      const dx=px*r*scale*1.4,dy=py*r*scale*.46,dz=pz*r*scale;
+      const dx=px*r*scale*1.4,dy=py*r*scale*.38,dz=pz*r*scale;
       p.setXYZ(k,dx,dy,dz);u.push((wx+dx)/uvScale[0],(wz+dz)/uvScale[1]);
-      const shade=groundLight(wx+dx,wz+dz,.16+.38*Math.max(0,px*light.x+py*light.y+pz*light.z));
-      c.push(.32*shade,.39*shade,.45*shade);
+      const shade=groundTint(wx+dx,wz+dz);
+      c.push(.40*shade,.41*shade,.44*shade);
     }
     g.setAttribute('color',new THREE.Float32BufferAttribute(c,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(u,2));
-    g.deleteAttribute('normal');g.translate(wx,height(wx,wz)+scale*.2,wz);pieces.push(g);
+    g.computeVertexNormals();g.rotateY(hash(wx+17,wz-11)*Math.PI*2);g.translate(wx,height(wx,wz)+scale*.08,wz);pieces.push(g);
   }
   const rockGeometry=mergeGeometries(pieces);for(const g of pieces)g.dispose();rockGeometry.computeBoundingSphere();
   const rocks=new THREE.Mesh(rockGeometry,terrainMaterial);rocks.name='cosmo-massi';group.add(rocks);
@@ -118,16 +126,6 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
   });
   return {
     group,groundTexture,groundMaterial:terrainMaterial,ready,status,height,
-    shadeFloor(geometry) {
-      // Reuse the corridor's existing colour buffer and segmented floor. The
-      // shared material/lighting keeps the threshold and exterior coherent.
-      const p=geometry.attributes.position,c=geometry.attributes.color,flat=.35+.50*Math.max(0,light.y);
-      for(let i=0;i<p.count;i++) {
-        const shade=groundLight(p.getX(i),p.getZ(i),flat);
-        c.setXYZ(i,.32*shade,.39*shade,.45*shade);
-      }
-      c.needsUpdate=true;
-    },
     followCamera(camera) {if(group.visible)skyGroup.position.copy(camera.position);},
     setSkyBrightness(v) {galaxyMaterial.color.setScalar(v);starMaterial.color.setScalar(v);},
     prepare(renderer,scene,camera) {
