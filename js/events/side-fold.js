@@ -227,8 +227,13 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   F.landscape = landscape;
   F.prepare = (renderer) => landscape.prepare(renderer, scene, camera);
   // movimento: dal tunnel si passa dal varco (fascia stretta) e poi si cammina in una piccola area; il limite non si raggiunge mai (il collasso parte prima)
-  const cmP = (x, z) => { const st = F.state; const back = st === 'dark' || st === 'exit' || st === 'done', xm = back ? PEND - 0.7 : PXMAX; const lim = W - RADIUS, inside = player.pos.x > lim - 0.02, cand = x;
-    if ((Math.abs(z - ZR) < 0.66 || inside) && cand > lim - 0.05) { const hz = cand < FRONT ? 0.5 : PZH; return [Math.min(xm, Math.max(lim - 0.02, cand)), Math.max(ZR - hz, Math.min(ZR + hz, z))]; } return null; };
+  const cmP = (x, z) => { const st = F.state; const back = st === 'dark' || st === 'exit' || st === 'done', xm = back ? PEND - 0.7 : PXMAX; const lim = W - RADIUS;
+    // Appena il corpo rientra nel tunnel decide il controller normale: nessuna
+    // fascia minima che rimandi indietro i passi piccoli (60/120 Hz).
+    if (x <= lim) return null;
+    const inside = player.pos.x > lim && Math.abs(player.pos.z - ZR) <= PZH + 0.01;
+    if (Math.abs(z - ZR) < 0.66 || inside) return [Math.min(xm, x), Math.max(ZR - PZH, Math.min(ZR + PZH, z))];
+    return null; };
   player.constrainMove = cmP;
   F.update = (dt) => {
     if (!F.enabled) return; const P = player.pos; tt += dt; F.t += dt;

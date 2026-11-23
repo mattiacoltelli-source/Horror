@@ -18,11 +18,22 @@ export function portalMaterial({ r = 1.05, reach = 2.7, wallX = 3.97, zMin = -22
         float R = ${r.toFixed(2)}, REACH = ${reach.toFixed(2)};
         float d = length(vP), a = atan(vP.y, vP.x);
         float open = smoothstep(0.0, 1.0, uOpen);
+        if (open < 0.001 || d > REACH) discard;
         float pulse = 0.5 + 0.5 * sin(uT * 2.1), pulse2 = 0.5 + 0.5 * sin(uT * 3.7 + 1.3);
         // bordo frastagliato: raggio modulato da rumore sull'angolo (punte e rientranze) che si muove piano
         float jag = fbm(vec2(a * 3.2 + 40.0, uT * 0.35)) * 0.55 + fbm(vec2(a * 9.0, uT * 0.8 + 7.0)) * 0.35 + (h21(vec2(floor(a * 14.0), 3.0)) - 0.5) * 0.25;
         float edgeR = R * open * (0.72 + 0.62 * jag + 0.06 * pulse);
         float inside = 1.0 - smoothstep(edgeR - 0.025, edgeR + 0.02, d);
+        float rim = exp(-pow((d - edgeR) / 0.045, 2.0)) * open, rim2 = exp(-pow((d - edgeR) / 0.2, 2.0)) * open;
+        vec3 rimCol = vec3(0.55, 0.8, 1.0) * rim * (1.2 + 0.9 * pulse) + vec3(0.25, 0.45, 1.0) * rim2 * (0.35 + 0.4 * pulse2);
+        // Il centro e' spazio opaco: niente pavimento che traspare e niente
+        // rumore frattale/venature da calcolare su tutta l'area del buco.
+        if (uUse > 0.999 && d < edgeR * 0.85 && d < edgeR - 0.20) {
+          vec3 spc = texture2D(uSpace, gl_FragCoord.xy / uRes).rgb;
+          spc *= 1.0 - 0.4 * smoothstep(0.55, 1.0, d / max(edgeR, 0.01));
+          gl_FragColor = vec4(clamp(spc + rimCol, 0.0, 3.0), 1.0);
+          return;
+        }
         // vuoto: nero profondo con vortice e stelle
         float sw = sin(a * 3.0 + d * 7.0 - uT * 1.4) * 0.5 + 0.5;
         float nebula = fbm(vec2(cos(a + d * 1.6 - uT * 0.25), sin(a + d * 1.6 - uT * 0.25)) * 2.2 + d * 1.4);
@@ -33,8 +44,6 @@ export function portalMaterial({ r = 1.05, reach = 2.7, wallX = 3.97, zMin = -22
         // finestra sullo spazio vero (universo della caduta), se disponibile: stessa camera del giocatore, letto a schermo
         { vec3 spc = texture2D(uSpace, gl_FragCoord.xy / uRes).rgb; spc *= 1.0 - 0.4 * smoothstep(0.55, 1.0, d / max(edgeR, 0.01)); voidCol = mix(voidCol, spc, uUse); }
         // luce del bordo: sottile, forte, pulsa
-        float rim = exp(-pow((d - edgeR) / 0.045, 2.0)) * open, rim2 = exp(-pow((d - edgeR) / 0.2, 2.0)) * open;
-        vec3 rimCol = vec3(0.55, 0.8, 1.0) * rim * (1.2 + 0.9 * pulse) + vec3(0.25, 0.45, 1.0) * rim2 * (0.35 + 0.4 * pulse2);
         // venature nel cemento: creste di rumore (linee sottili) che partono dal bordo e si allargano; onde luminose le percorrono verso l'esterno
         float reachNow = (edgeR + (REACH - edgeR) * open);
         float v1 = abs(fbm(vP * 2.4 + 3.1) - 0.5), v2 = abs(fbm(vP * 4.7 + 9.4) - 0.5);
@@ -47,7 +56,7 @@ export function portalMaterial({ r = 1.05, reach = 2.7, wallX = 3.97, zMin = -22
         // anche il cemento attorno si scalda: alone debole
         float glow = (1.0 - smoothstep(edgeR, edgeR + 0.9, d)) * (1.0 - inside) * open * (0.07 + 0.07 * pulse);
         vec3 col = voidCol * inside + rimCol + veinCol + vec3(0.2, 0.4, 1.0) * glow;
-        float alpha = clamp(inside * 0.97 + rim * 0.6 + vIn * 0.5 + glow, 0.0, 1.0);
+        float alpha = clamp(inside + rim * 0.6 + vIn * 0.5 + glow, 0.0, 1.0);
         col = clamp(col, 0.0, 3.0);
         if (alpha < 0.004) discard;
         gl_FragColor = vec4(col * min(1.0, alpha * 1.05 + 0.0) / max(alpha, 0.001) * alpha, alpha);

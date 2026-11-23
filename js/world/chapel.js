@@ -104,11 +104,15 @@ export function createChapel({ group, mats, zc, P, x0 = 4.0, w = 3.2, l = 3.0, h
   // Il rito resta sul davanti dell'altare; l'eventuale foto personale e' sul piano.
   // la minaccia di suor Agnese, a sangue sul davanti dell'altare (uguale in tutte le versioni, senza nome): data e ORA del giocatore (quelle del suo telefono) e «tra sette minuti».
   // La scritta si rifà quando ci si avvicina, quindi l'ora è quella dell'arrivo.
-  let stampMesh = null;
+  let stampMesh = null, stampText = '';
+
   K.stamp = () => {
-    if (stampMesh) { G.remove(stampMesh); stampMesh.geometry.dispose(); stampMesh.material.dispose(); stampMesh = null; }
     const bloodLayout = { lineHeight: 180, bottomPadding: 60 };
-    const nw = new Date(), p2 = (n) => String(n).padStart(2, '0'), T = 'È IL ' + nw.getDate() + '/' + (nw.getMonth() + 1) + '/' + String(nw.getFullYear()).slice(2) + '.\nSONO LE ' + p2(nw.getHours()) + ':' + p2(nw.getMinutes()) + '.\nTRA 3 MINUTI\nTI PORTO VIA.\n- SUOR AGNESE', ta = bloodText(T, bloodLayout).aspect, ww = Math.min(1.62, 0.92 * ta);
+    const nw = new Date(), p2 = (n) => String(n).padStart(2, '0'), T = 'È IL ' + nw.getDate() + '/' + (nw.getMonth() + 1) + '/' + String(nw.getFullYear()).slice(2) + '.\nSONO LE ' + p2(nw.getHours()) + ':' + p2(nw.getMinutes()) + '.\nTRA 3 MINUTI\nTI PORTO VIA.\n- SUOR AGNESE';
+    if (T === stampText) return;
+    stampText = T;
+    if (stampMesh) { G.remove(stampMesh); stampMesh.geometry.dispose(); stampMesh.material.dispose(); }
+    const ta = bloodText(T, bloodLayout).aspect, ww = Math.min(1.62, 0.92 * ta);
     stampMesh = writingDecals(G, [{ text: T, bloodLayout, aspect: ta, p: [aX - 0.405, 0.75, zc], wall: '-x', w: ww, dry: true }])[0];
     const mt = stampMesh.material; mt.emissiveMap = mt.map; mt.emissive = new THREE.Color(0.5, 0.07, 0.05); mt.emissiveIntensity = 0.18;
     stampMesh.name = 'scritta-altare';
