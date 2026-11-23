@@ -20,8 +20,8 @@ const evidence=process.env.COSMIC_EVIDENCE||'/tmp/horror-cosmic-evidence';fs.mkd
     await page.evaluate(()=>{
       const g=window.__g;g.hold=true;g.player.pos.set(.1,1.62,-4.5);g.player.yaw=-Math.PI/2;g.player.pitch=0;g.sim(.05);
     });
-    const cosmicRequests=()=>requests.filter(u=>/cosmic_(ground|galaxy)\.webp/.test(u));
-    assert.equal(cosmicRequests().length,2);const preparedRequests=cosmicRequests().length;
+    const cosmicRequests=()=>requests.filter(u=>/cosmic_(ground|galaxy|lava)\.webp/.test(u));
+    assert.equal(cosmicRequests().length,3);const preparedRequests=cosmicRequests().length;
     await page.waitForTimeout(250);
     await page.screenshot({path:path.join(evidence,'01-dall-arco.png'),timeout:90000});
     const view=await page.evaluate(()=>{
@@ -29,11 +29,13 @@ const evidence=process.env.COSMIC_EVIDENCE||'/tmp/horror-cosmic-evidence';fs.mkd
       return{state:g.sideFold.state,x:g.player.pos.x,visible:land.group.visible,
         galaxyImage:[land.group.getObjectByName('cosmo-galassia').material.map.image.width,land.group.getObjectByName('cosmo-galassia').material.map.image.height],
         groundImage:[land.groundTexture.image.width,land.groundTexture.image.height],groundMaterial:land.groundMaterial.type,
+        lavaImage:[land.group.getObjectByName('cosmo-lava-incandescente').material.map.image.width,land.group.getObjectByName('cosmo-lava-incandescente').material.map.image.height],
         corridorFloor:{map:floor.material.map.image.src,end:floor.geometry.boundingBox.max.x,triangles:floor.geometry.index.count/3},
         calls:g.renderer.info.render.calls,triangles:g.renderer.info.render.triangles};
     });
     assert.equal(view.state,'idle');assert.ok(view.visible&&view.x<1.4);assert.deepEqual(view.galaxyImage,[1500,768]);
     assert.deepEqual(view.groundImage,[1024,1024]);assert.equal(view.groundMaterial,'MeshLambertMaterial');
+    assert.deepEqual(view.lavaImage,[768,768]);
     assert.ok(view.corridorFloor.map.endsWith('/assets/tex/floorA_c.jpg'),'original corridor ground retained');
     assert.ok(Math.abs(view.corridorFloor.end-4)<1e-6&&view.corridorFloor.triangles<=14,'corridor overlay ends at the roof, not across the landscape');
     // Two fingers: joystick forward and a simultaneous right-hand look drag.
