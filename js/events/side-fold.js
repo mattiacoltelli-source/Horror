@@ -241,7 +241,10 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     return null; };
   player.constrainMove = cmP;
   F.update = (dt) => {
-    if (!F.enabled) return; const P = player.pos; tt += dt; F.t += dt;
+    // Il passaggio e' un gruppo separato: segue la visibilita' del suo tunnel,
+    // anche quando il risveglio riporta il giocatore alle coordinate iniziali.
+    if (!F.enabled || !tunnel.visible) { G.visible = false; return; }
+    const P = player.pos; tt += dt; F.t += dt;
     { const near = P.z > Z_END + 1.2 && P.z < 6 && Math.abs(P.z - ZR) < 16; const far = near ? 62 : 30; if (P.z > Z_END + 1.2 && P.z < 6 && camera.far !== far && (camera.far === 30 || camera.far === 62 || camera.far > 30.5 && !F.farSaved)) { F.farSaved ||= camera.far; camera.far = far; camera.updateProjectionMatrix(); } else if (!(P.z > Z_END + 1.2 && P.z < 6) && F.farSaved && (camera.far === 30 || camera.far === 62)) { camera.far = F.farSaved; F.farSaved = 0; camera.updateProjectionMatrix(); } }   // nel tunnel la nebbia nasconde tutto oltre ~28 m; vicino alla porta serve vedere il fondale (56 m)
     G.visible = P.z > Z_END + 1.2; if (!G.visible) return;
     const st = F.state;

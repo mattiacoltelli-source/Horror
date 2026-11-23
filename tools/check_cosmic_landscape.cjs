@@ -69,10 +69,11 @@ const root=path.resolve(__dirname,'..');
   const renderer={initTexture(){uploads++;},async compileAsync(group,c,s){assert.equal(group,landscape.group);assert.equal(c,camera);assert.equal(s,scene);compiles++;}};
   await Promise.all([landscape.prepare(renderer,scene,camera),landscape.prepare(renderer,scene,camera)]);
   assert.equal(uploads,2);assert.equal(compiles,1);assert.equal(landscape.status.prepared,true);
-  // Guard movement/event timing/reset; exploration look is controlled only by the player.
+  // Guard movement/event timing/reset (including the hidden-tunnel guard);
+  // exploration look is controlled only by the player.
   const side=fs.readFileSync(path.join(root,'js/events/side-fold.js'),'utf8');
   const digest=s=>crypto.createHash('sha256').update(s).digest('hex');
-  assert.equal(digest(side.slice(side.indexOf('  // movimento: dal tunnel'),side.indexOf('  F.applyCamera'))),'466c6a7d1a9edc7675b8f3ade751687fc51cd3246c0b83bd1d38ad983a112f96');
+  assert.equal(digest(side.slice(side.indexOf('  // movimento: dal tunnel'),side.indexOf('  F.applyCamera'))),'3c9f7c254d95ddc5304156a952b1ec3bf5e0746b39821f07fe98eeb9d73febe5');
   assert.equal(digest(side.slice(side.indexOf('  F.reset ='),side.indexOf('  // animazioni leggere'))),'8c354af9c943e4dfdca5a8079db57db18f7a4aee1211ecdf28a3121144729815');
   console.log(JSON.stringify({result:'PASS',triangles,draws,assets:requested,walkingLane:'flat and clear',galaxy:'rectilinear, fixed aspect, camera translation only',preparation:'two uploads, one compilation',stateMachine:'unchanged'}));
 })().catch(e=>{console.error(e);process.exitCode=1;});
