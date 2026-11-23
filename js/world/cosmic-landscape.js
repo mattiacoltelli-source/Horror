@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from '../../vendor/three/utils/BufferGeometryUtils.js';
 import { createCosmicLava } from './cosmic-lava.js';
+import { createCosmicBoulders } from './cosmic-boulders.js';
 
 export const COSMIC_ASSETS = ['assets/tex/cosmic_ground.webp', 'assets/tex/cosmic_galaxy.webp', 'assets/tex/cosmic_lava.webp'];
 const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
@@ -96,6 +97,7 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
     g.setAttribute('color',new THREE.Float32BufferAttribute(c,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(u,2));
     g.computeVertexNormals();g.rotateY(hash(wx+17,wz-11)*Math.PI*2);g.translate(wx,height(wx,wz)+scale*.08,wz);pieces.push(g);
   }
+  pieces.push(...createCosmicBoulders({terrainGeometry:geo,x,z,groundTint,uvScale}));
   const rockGeometry=mergeGeometries(pieces);for(const g of pieces)g.dispose();rockGeometry.computeBoundingSphere();
   const rocks=new THREE.Mesh(rockGeometry,terrainMaterial);rocks.name='cosmo-massi';group.add(rocks);
 
