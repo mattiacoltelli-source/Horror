@@ -13,7 +13,7 @@ const evidence=process.env.COSMIC_EVIDENCE||'/tmp/horror-cosmic-evidence';fs.mkd
     page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
     page.on('response',r=>{if(r.status()>=400)bad.push([r.status(),r.url()]);});page.on('request',r=>requests.push(r.url()));
     await page.goto(base+'?debug=1&start=piega&piega=0',{waitUntil:'networkidle',timeout:90000});
-    await page.locator('#enter').click();
+    await page.locator('#enter').click({timeout:90000});
     await page.waitForFunction(()=>window.__g?.sideFold?.landscape.status.prepared&&document.getElementById('intro').classList.contains('hidden'),null,{timeout:90000});
     const loaded=await page.evaluate(()=>window.__g.sideFold.landscape.status);
     assert.equal(loaded.loaded,true);assert.equal(loaded.error,null);

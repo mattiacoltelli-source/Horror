@@ -30,6 +30,15 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
   const galaxyTexture=load(COSMIC_ASSETS[1]);
   const terrainMaterial=new THREE.MeshBasicMaterial({map:groundTexture,vertexColors:true,fog:false});
   const light=new THREE.Vector3(-.22,.88,-.42).normalize(),normal=new THREE.Vector3();
+  // Static vertex lighting: a deeply shaded entrance opens gradually into the
+  // exterior. Broad irregular patches break up the repeated albedo without a
+  // custom shader, another texture sample or any per-frame terrain work.
+  const groundLight=(wx,wz,shade)=>{
+    const forward=wx-x,cross=Math.abs(wz-z),distance=Math.hypot(forward,cross);
+    const outside=Math.max(smooth(2.2,8.0,forward),smooth(.8,4.5,cross));
+    const patches=.7*noise(wx*.23+11,wz*.19+17)+.3*noise(wx*.09-5,wz*.11+2);
+    return shade*(.20+.35*outside)*(.58+.42*patches)*(1-.92*smooth(22,55,distance));
+  };
   // The playable strip is exactly flat, matching the existing XZ controller.
   // Relief and mountains are outside that strip; there is no per-frame terrain work.
   const height=(wx,wz)=>{
@@ -46,10 +55,9 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
     const q=j/NZ*2-1,wz=z+Math.sign(q)*Math.pow(Math.abs(q),1.45)*34;
     const h=height(wx,wz),e=.18;
     normal.set(height(wx-e,wz)-height(wx+e,wz),2*e,height(wx,wz-e)-height(wx,wz+e)).normalize();
-    const distance=Math.hypot(wx-x,wz-z),shade=.35+.50*Math.max(0,normal.dot(light));
-    const fade=1-.92*smooth(22,55,distance);
+    const shade=groundLight(wx,wz,.35+.50*Math.max(0,normal.dot(light)));
     positions.push(wx,h,wz);uv.push(wx/uvScale[0],wz/uvScale[1]);
-    colors.push(.32*shade*fade,.41*shade*fade,.49*shade*fade);
+    colors.push(.32*shade,.39*shade,.45*shade);
   }
   for(let i=0;i<NX;i++)for(let j=0;j<NZ;j++) {
     const a=i*(NZ+1)+j,b=a+NZ+1;indices.push(a,a+1,b,a+1,b+1,b);
@@ -71,8 +79,8 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
       const px=p.getX(k),py=p.getY(k),pz=p.getZ(k),r=.80+.24*noise(px*2+i,pz*2+py);
       const dx=px*r*scale*1.4,dy=py*r*scale*.46,dz=pz*r*scale;
       p.setXYZ(k,dx,dy,dz);u.push((wx+dx)/uvScale[0],(wz+dz)/uvScale[1]);
-      const shade=.16+.38*Math.max(0,px*light.x+py*light.y+pz*light.z);
-      c.push(.32*shade,.43*shade,.52*shade);
+      const shade=groundLight(wx+dx,wz+dz,.16+.38*Math.max(0,px*light.x+py*light.y+pz*light.z));
+      c.push(.32*shade,.39*shade,.45*shade);
     }
     g.setAttribute('color',new THREE.Float32BufferAttribute(c,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(u,2));
     g.deleteAttribute('normal');g.translate(wx,height(wx,wz)+scale*.2,wz);pieces.push(g);
@@ -109,7 +117,17 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
     status.error=error;galaxy.visible=false;console.warn(error);return false;
   });
   return {
-    group,groundTexture,ready,status,height,
+    group,groundTexture,groundMaterial:terrainMaterial,ready,status,height,
+    shadeFloor(geometry) {
+      // Reuse the corridor's existing colour buffer and segmented floor. The
+      // shared material/lighting keeps the threshold and exterior coherent.
+      const p=geometry.attributes.position,c=geometry.attributes.color,flat=.35+.50*Math.max(0,light.y);
+      for(let i=0;i<p.count;i++) {
+        const shade=groundLight(p.getX(i),p.getZ(i),flat);
+        c.setXYZ(i,.32*shade,.39*shade,.45*shade);
+      }
+      c.needsUpdate=true;
+    },
     followCamera(camera) {if(group.visible)skyGroup.position.copy(camera.position);},
     setSkyBrightness(v) {galaxyMaterial.color.setScalar(v);starMaterial.color.setScalar(v);},
     prepare(renderer,scene,camera) {

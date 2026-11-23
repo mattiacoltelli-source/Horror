@@ -32,6 +32,21 @@ const root=path.resolve(__dirname,'..');
     if(o.geometry)for(const v of o.geometry.attributes.position.array)assert.ok(Number.isFinite(v));
   });
   assert.equal(draws,4);assert.ok(triangles<6000);
+  // The existing corridor floor is much darker near the entrance, gently
+  // brighter outside, with its original geometry/UV/colour buffers retained.
+  const floor=new THREE.BufferGeometry();
+  floor.setAttribute('position',new THREE.Float32BufferAttribute([1.9,0,-4.5,6,0,-4.5,11,0,-4.5],3));
+  floor.setAttribute('uv',new THREE.Float32BufferAttribute([0,0,1,0,2,0],2));
+  const floorColors=new THREE.Float32BufferAttribute(new Float32Array(9).fill(.8),3);floor.setAttribute('color',floorColors);
+  const beforeFloor=Array.from(floor.attributes.position.array),beforeUV=Array.from(floor.attributes.uv.array);
+  landscape.shadeFloor(floor);
+  assert.equal(floor.attributes.color,floorColors);assert.deepEqual(Array.from(floor.attributes.position.array),beforeFloor);assert.deepEqual(Array.from(floor.attributes.uv.array),beforeUV);
+  assert.ok(landscape.groundMaterial.isMeshBasicMaterial&&landscape.groundMaterial.vertexColors);
+  const luminance=i=>.2126*floorColors.getX(i)+.7152*floorColors.getY(i)+.0722*floorColors.getZ(i);
+  assert.ok(luminance(0)<.06,'entrance stays deeply shaded');
+  assert.ok(luminance(2)>luminance(0)*2&&luminance(2)<.2,'outside opens gradually without becoming bright');
+  const firstColors=Array.from(floorColors.array);landscape.shadeFloor(floor);
+  assert.deepEqual(Array.from(floorColors.array),firstColors,'static lighting is deterministic');
   for(let x=1.8;x<=8.4;x+=.1)for(const z of [-5,-4.5,-4])assert.ok(Math.abs(landscape.height(x,z)+.02)<1e-8,'existing walking lane must remain flat');
   const rocks=landscape.group.getObjectByName('cosmo-massi').geometry.attributes.position;
   for(let i=0;i<rocks.count;i++)assert.ok(Math.abs(rocks.getZ(i)+4.5)>.82,'keep rocks beyond player radius and walking lane');
