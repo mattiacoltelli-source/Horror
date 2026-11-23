@@ -36,16 +36,19 @@ const evidence=process.env.COSMIC_EVIDENCE||'/tmp/horror-cosmic-evidence';fs.mkd
     await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{id:1,x:85,y:700},{id:2,x:310,y:350}]});
     await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{id:1,x:85,y:654},{id:2,x:322,y:344}]});
     await page.evaluate(()=>window.__g.sim(1.15));
-    const before=await page.evaluate(()=>({state:__g.sideFold.state,x:__g.player.pos.x,yaw:__g.player.yaw}));
+    const before=await page.evaluate(()=>({state:__g.sideFold.state,x:__g.player.pos.x,yaw:__g.player.yaw,pitch:__g.player.pitch}));
     assert.ok(before.x>.9&&before.x<2.02);assert.equal(before.state,'idle');assert.notEqual(before.yaw,-Math.PI/2);
+    assert.notEqual(before.pitch,0,'right-hand touch changes pitch');
     await page.evaluate(()=>window.__g.sim(.55));
     assert.equal(await page.evaluate(()=>window.__g.sideFold.state),'explore');
     await page.evaluate(()=>window.__g.sim(.9));
     await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
     const entered=await page.evaluate(()=>({x:__g.player.pos.x,z:__g.player.pos.z,state:__g.sideFold.state,pitch:__g.player.pitch}));
     assert.ok(entered.x>3.3&&entered.x<4.6);assert.equal(entered.state,'explore');
+    assert.equal(entered.pitch,before.pitch,'entering the universe must not raise the view');
     await page.evaluate(()=>window.__g.sim(.2));
     assert.equal(await page.evaluate(()=>window.__g.player.pos.x),entered.x,'release stops walking');
+    assert.equal(await page.evaluate(()=>window.__g.player.pitch),entered.pitch,'no automatic pitch drift while exploring');
     await page.waitForTimeout(250);
     await page.screenshot({path:path.join(evidence,'02-paesaggio.png'),timeout:90000});
     // Free look leaves the galaxy fixed in the sky; it is not a screen overlay.

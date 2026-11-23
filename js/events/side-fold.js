@@ -230,7 +230,6 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   const cmP = (x, z) => { const st = F.state; const back = st === 'dark' || st === 'exit' || st === 'done', xm = back ? PEND - 0.7 : PXMAX; const lim = W - RADIUS, inside = player.pos.x > lim - 0.02, cand = x;
     if ((Math.abs(z - ZR) < 0.66 || inside) && cand > lim - 0.05) { const hz = cand < FRONT ? 0.5 : PZH; return [Math.min(xm, Math.max(lim - 0.02, cand)), Math.max(ZR - hz, Math.min(ZR + hz, z))]; } return null; };
   player.constrainMove = cmP;
-  let nudge = 0;
   F.update = (dt) => {
     if (!F.enabled) return; const P = player.pos; tt += dt; F.t += dt;
     { const near = P.z > Z_END + 1.2 && P.z < 6 && Math.abs(P.z - ZR) < 16; const far = near ? 62 : 30; if (P.z > Z_END + 1.2 && P.z < 6 && camera.far !== far && (camera.far === 30 || camera.far === 62 || camera.far > 30.5 && !F.farSaved)) { F.farSaved ||= camera.far; camera.far = far; camera.updateProjectionMatrix(); } else if (!(P.z > Z_END + 1.2 && P.z < 6) && F.farSaved && (camera.far === 30 || camera.far === 62)) { camera.far = F.farSaved; F.farSaved = 0; camera.updateProjectionMatrix(); } }   // nel tunnel la nebbia nasconde tutto oltre ~28 m; vicino alla porta serve vedere il fondale (56 m)
@@ -238,9 +237,8 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     const st = F.state;
     if ((st === 'idle' || st === 'done') && lights.lamps) for (const L of lights.lamps) if (L.mode === 'off' || L.mode === 'dim') L.mode = 'on';   // salvaguardia: fuori dall'evento le lampade del tunnel non restano mai spente
     if (st === 'idle') { sky(0.85 + 0.12 * Math.sin(tt * 0.7));
-      if (P.x > FRONT && Math.abs(P.z - ZR) < 0.8 && !player.frozen) { F.state = 'explore'; F.t = 0; nudge = 0.3; audio.swell?.(2.0, 0.35); audio.whisper?.(1.6, 0.18); say?.('Un altro mondo.', 2600); } return; }
+      if (P.x > FRONT && Math.abs(P.z - ZR) < 0.8 && !player.frozen) { F.state = 'explore'; F.t = 0; audio.swell?.(2.0, 0.35); audio.whisper?.(1.6, 0.18); say?.('Un altro mondo.', 2600); } return; }
     if (st === 'explore') { sky(0.85 + 0.12 * Math.sin(tt * 0.7));
-      if (nudge > 0) { const d = Math.min(nudge, dt * 0.28); player.pitch = Math.min(0.3, player.pitch + d); nudge -= d; }   // lo sguardo sale piano verso il cielo
       if (P.x < XD - 0.05) { F.state = 'idle'; return; }
       if (P.x > XD + 3.2 || F.t > 9) { F.state = 'flicker'; F.t = 0; audio.swell?.(2.2, 0.4); instab?.push?.(0.6, 6); } return; }
     if (st === 'flicker') {   // il cielo sfarfalla come una lampadina difettosa, sempre piu' spezzato
