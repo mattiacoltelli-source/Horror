@@ -22,6 +22,7 @@ const evidence=process.env.COSMIC_EVIDENCE||'/tmp/horror-cosmic-evidence';fs.mkd
     });
     const cosmicRequests=()=>requests.filter(u=>/cosmic_(ground|galaxy|lava)\.webp/.test(u));
     assert.equal(cosmicRequests().length,3);const preparedRequests=cosmicRequests().length;
+    await page.waitForFunction(()=>getComputedStyle(document.getElementById('fade')).opacity==='0',null,{timeout:15000});
     await page.waitForTimeout(250);
     await page.screenshot({path:path.join(evidence,'01-dall-arco.png'),timeout:90000});
     const view=await page.evaluate(()=>{
