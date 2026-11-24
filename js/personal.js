@@ -12,6 +12,8 @@ PRESETS.laya = { name: 'Laya', f: true, hair: '', hairHex: 0x14100c, joke: 'molt
 PRESETS.steve = { name: 'Steve', f: false, hair: '', hairHex: 0x7a4e2a, frase: "F. MERDA", joke: 'elegante anche in reparto, annota suor Agnese.', detail: 'quella faccia non è la sua', sister: 'quella con la sua stessa faccia' };   // link pulito: ?per=steve (maschio, Bologna, 23/4/88, foto col volto bruciato)
 PRESETS.tommy = { name: 'Tommy', f: false, hair: '', hairHex: 0x3a2412, joke: 'non si lamenta mai, annota suor Agnese. mangia tutto e chiede solo che la luce resti accesa.', detail: 'quella faccia non è la sua', sister: 'quella con la sua stessa faccia' };   // link pulito: ?per=tommy (maschio, senza capelli nominati)
 PRESETS.gabriele = { name: 'Gabriele', f: false, hair: '', hairHex: 0x3a2412, joke: 'non si lamenta mai, annota suor Agnese. mangia tutto e chiede solo che la luce resti accesa.', detail: 'quella faccia non è la sua', sister: 'quella con la sua stessa faccia' };   // link pulito: ?per=gabriele
+PRESETS.matilde = { name: 'Matilde', f: true, hair: 'biondi', hairHex: 0x8c7440, joke: 'capelli biondi. molto carina, annota suor Agnese. in reparto la chiamano Mati.', detail: 'quei capelli biondi non sono i suoi', sister: 'quella con i capelli biondi come i suoi', whisper: ['Mati.', 'Mati.'] };
+PRESETS.mati = PRESETS.matilde;   // Entrambi i link aprono la stessa versione di Matilde.
 const qs = new URLSearchParams(location.search), raw = (qs.get('per') || '').trim(), key = raw.toLowerCase();
 // profilo generico: basta il nome (?per=gabriele). Opzionali: &g=m|f (genere, default f), &capelli=biondi|rossi|castani|neri|grigi (default castani) oppure &capelli=no per non nominarli mai
 const HAIR = { biondi: 0x8c7440, rossi: 0x6a1708, castani: 0x3a2412, neri: 0x14100c, grigi: 0x777777 };
@@ -29,10 +31,11 @@ export const CITY = P && /^[A-Za-zÀ-ÖØ-öø-ÿ' -]{2,20}$/.test(_c) ? _c.toLo
 const _BD = { steve: '23/4/88', rebecca: '20/6/97', tommy: '1/11/90', gabriele: '31/12/90', elisa: '2/8/90', alice: '5/9/93' }, _qn = /^(\d{1,2})-(\d{1,2})-(\d{2})$/.exec(qs.get('nasc') || '');
 export const BDAY = P ? (_qn ? _qn[1] + '/' + _qn[2] + '/' + _qn[3] : (_BD[key] || '')) : '';
 // foto con il viso coperto (solo i profili che ne hanno una)
-export const PHOTO = { elisa: 'pic_elisa.jpg', alice: 'pic_alice.jpg', rebecca: 'pic_rebecca.jpg', laya: 'pic_laya.jpg', yana: 'pic_yana.jpg', steve: 'pic_steve.jpg' }[key] || '';
+export const PHOTO = { elisa: 'pic_elisa.jpg', alice: 'pic_alice.jpg', rebecca: 'pic_rebecca.jpg', laya: 'pic_laya.jpg', yana: 'pic_yana.jpg', steve: 'pic_steve.jpg', matilde: 'pic_mati_altar_burnt.webp', mati: 'pic_mati_altar_burnt.webp' }[key] || '';
 // Stesso altarino per tutti. Nessuna immagine di un'altra persona come ripiego.
 export const ALTAR_PHOTO = !P || !PHOTO ? null : key === 'elisa'
   ? { file: 'pic_elisa_altar_burnt.webp', aspect: (0.74 * 0.545 + 0.05) / 0.79, baked: true }
+  : key === 'matilde' || key === 'mati' ? { file: PHOTO, aspect: 0.8, baked: true }
   : { file: PHOTO, aspect: { alice: 0.788, rebecca: 0.562, laya: 0.572, yana: 0.741, steve: 0.762 }[key] * 0.93 / 0.946, baked: false };
 
 // sussurro con la voce sintetica del telefono: basso, lento, una o due volte in tutta la partita.
