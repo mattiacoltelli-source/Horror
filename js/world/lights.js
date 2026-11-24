@@ -78,7 +78,15 @@ export function createLights(scene, camera) {
       const order = [...lamps].sort((a, b) => Math.hypot(a.x - px, a.z - playerZ) - Math.hypot(b.x - px, b.z - playerZ));
       for (let i = 0; i < pool.length; i++) {
         const L = order[i];
-        if (L) { pool[i].position.set(L.x, L.y, L.z); api.mapPoint?.(pool[i].position); pool[i].intensity = 14 * poolGain * L.level; pool[i].color.setHex(L.col ?? curColor); } else pool[i].intensity = 0;
+        if (L) {
+          // Lower the virtual fill below the fixture, compensating its power
+          // so the floor keeps its original illumination. Darker medical-room
+          // ceilings soften the upward spill. No shadow maps or new lights.
+          const drop=Math.min(.45,Math.max(0,L.y)*.2),height=L.y-drop;
+          pool[i].position.set(L.x,height,L.z); api.mapPoint?.(pool[i].position);
+          const gain=L.y>0?Math.pow(height/L.y,1.8):1;
+          pool[i].intensity=14*poolGain*L.level*gain;pool[i].color.setHex(L.col??curColor);
+        } else pool[i].intensity = 0;
       }
       for (const L of lamps) if (L.mesh) { L.mesh.userData.setGlow?.(L.level); }
     },

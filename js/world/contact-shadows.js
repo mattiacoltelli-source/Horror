@@ -29,3 +29,22 @@ export function addContactShadow(parent, { x = 0, y = 0, z = 0, w, d, angle = 0,
   batch.mesh.geometry.dispose(); batch.mesh.geometry = geo;
   return batch.mesh;
 }
+
+// Measure a loaded prop in its shadow parent's coordinates once. Translated
+// room previews and moving furniture then carry the same soft contact patch.
+export function addObjectContactShadow(parent,object,{floorParent=parent,floorY=0,strength=.23,scale=.82}={}) {
+  object.updateWorldMatrix(true,true);parent.updateWorldMatrix(true,false);
+  const inverse=parent.matrixWorld.clone().invert(),bounds=new THREE.Box3(),matrix=new THREE.Matrix4();
+  object.traverse(o=>{
+    if(!o.isMesh||!o.geometry||o.userData.contactShadow)return;
+    if(!o.geometry.boundingBox)o.geometry.computeBoundingBox();matrix.multiplyMatrices(inverse,o.matrixWorld);
+    bounds.union(o.geometry.boundingBox.clone().applyMatrix4(matrix));
+  });
+  if(bounds.isEmpty())return null;
+  const c=bounds.getCenter(new THREE.Vector3()),size=bounds.getSize(new THREE.Vector3());
+  floorParent.updateWorldMatrix(true,false);
+  const floor=new THREE.Vector3(0,floorY,0).applyMatrix4(floorParent.matrixWorld).applyMatrix4(inverse);
+  const shadow=addContactShadow(parent,{x:c.x,y:floor.y,z:c.z,w:Math.max(.035,size.x*scale),d:Math.max(.035,size.z*scale),strength});
+  if(floorParent!==parent)shadow.userData.keepParent=true;
+  return shadow;
+}

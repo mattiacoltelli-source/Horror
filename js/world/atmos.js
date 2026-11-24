@@ -44,10 +44,14 @@ export function addAtmosphere(group, o) {
   }
   // Umidita' sottile: riflesso dielettrico, rugosita' variabile e nessun velo luminoso aggiunto.
   roughT ??= canvasTex(64,64,(g,w,h)=>{const random=rnd0(81);g.fillStyle='#b8b8b8';g.fillRect(0,0,w,h);for(let i=0;i<28;i++){const x=random()*w,y=random()*h,rad=4+random()*15;const gr=g.createRadialGradient(x,y,0,x,y,rad);gr.addColorStop(0,i%2?'rgba(40,40,40,.32)':'rgba(245,245,245,.38)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(x-rad,y-rad,rad*2,rad*2);}});
-  const pm = new THREE.MeshStandardMaterial({ color: 0x303a35, roughness: 0.45, roughnessMap:roughT, metalness: 0, alphaMap: blobTex(), transparent: true, opacity: 0.48, depthWrite: false, envMapIntensity: 0.55, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+  const pm = new THREE.MeshStandardMaterial({ color: 0x303a35, roughness: 0.45, roughnessMap:roughT, metalness: 0, alphaMap: blobTex(), transparent: true, vertexColors:true, opacity: 0.48, depthWrite: false, envMapIntensity: 0.55, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
   for (let i = 0; i < (o.puddles ?? 4); i++) {
     const s = 0.9 + r() * 1.6, m = new THREE.Mesh(new THREE.PlaneGeometry(s, s * (0.6 + r() * 0.6)), pm);
     m.rotation.x = -Math.PI / 2; m.rotation.z = r() * 6.28; m.position.set(o.xl + 1.2 + r() * (o.xr - o.xl - 2.4), 0.006, o.z0 - 2 - r() * (len - 4)); if (o.noPuddleNearEnd && m.position.z < o.z1 + o.noPuddleNearEnd) continue;
+    // Different wetness and soft asymmetry, using the same map/material/draws.
+    const n=Math.sin(i*41.7+(o.seed||1)*13.1)*43758.5453,wet=.56+.40*(n-Math.floor(n));
+    const colors=[];for(let k=0;k<4;k++)colors.push(1,1,1,wet*(k%2?.82:1));
+    m.geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,4));
     m.name='umidita-pavimento';m.userData.wetPatch=true;add(m);
   }
 }
