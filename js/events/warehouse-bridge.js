@@ -93,7 +93,7 @@ export function createWarehouseBridge({group,room,mats,player,audio,renderer,sce
   Object.defineProperties(B,{
     busy:{get:()=>!B.done&&B.state!=='idle'},holdNarration:{get:()=>B.busy||(!B.done&&B.roomTime<12)},ownsController:{get:()=>player.constrainMove===move},
     preparing:{get:()=>!!preparing||compileQueue.size>0},
-    stats:{get:()=>({surfaces:surfaces.size,props:props.length,vertices:[...surfaces.values()].reduce((n,s)=>n+s.restY.length,0),pitTriangles:pit.children.filter(m=>m.isMesh).reduce((n,m)=>n+(m.geometry.index?.count??m.geometry.attributes.position.count)/3,0),stars:pit.getObjectByName('abisso-stelle').geometry.attributes.position.count})},
+    stats:{get:()=>{let pitTriangles=0;pit.traverse(o=>{if(o.isMesh)pitTriangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;});return{surfaces:surfaces.size,props:props.length,vertices:[...surfaces.values()].reduce((n,s)=>n+s.restY.length,0),pitTriangles,stars:pit.getObjectByName('abisso-stelle').geometry.attributes.position.count};}},
   });
   B.reset=()=>{
     release();B.state='idle';B.time=B.roomTime=B.left=B.right=0;B.done=false;scan();lastLeft=lastRight=-1;apply();
@@ -123,7 +123,7 @@ export function createWarehouseBridge({group,room,mats,player,audio,renderer,sce
       if(B.time>=(reduced?5.5:3.6)){B.left=B.right=0;B.done=true;B.state='done';release();}
     }
     apply();
-    pit.userData.update(dt,(player.pitch??0)<-.28);
+    pit.userData.update(dt);
   };
   B.prepare=async()=>{await pit.userData.ready;scan();while(preparing){await preparing;scan();}};
   B.scan=scan;B.group=pit;return B;
