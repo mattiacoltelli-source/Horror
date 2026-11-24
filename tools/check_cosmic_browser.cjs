@@ -23,6 +23,11 @@ const evidence=process.env.COSMIC_EVIDENCE||'/tmp/horror-cosmic-evidence';fs.mkd
     const cosmicRequests=()=>requests.filter(u=>/cosmic_(ground|galaxy|lava)\.webp/.test(u));
     assert.equal(cosmicRequests().length,3);const preparedRequests=cosmicRequests().length;
     await page.waitForFunction(()=>getComputedStyle(document.getElementById('fade')).opacity==='0',null,{timeout:15000});
+    await page.evaluate(()=>{const g=__g;g.player.pos.set(-.8,1.62,-2.8);g.player.yaw=-.94;g.player.pitch=-.13;g.sim(.05);});
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    await page.screenshot({path:path.join(evidence,'00-ingresso-esterno.png'),timeout:90000});
+    await page.evaluate(()=>{const g=__g;g.player.pos.set(.1,1.62,-4.5);g.player.yaw=-Math.PI/2;g.player.pitch=0;g.sim(.05);});
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     await page.waitForTimeout(250);
     await page.screenshot({path:path.join(evidence,'01-dall-arco.png'),timeout:90000});
     const view=await page.evaluate(()=>{
@@ -41,8 +46,10 @@ const evidence=process.env.COSMIC_EVIDENCE||'/tmp/horror-cosmic-evidence';fs.mkd
     assert.ok(Math.abs(view.corridorFloor.end-4)<1e-6&&view.corridorFloor.triangles<=14,'corridor overlay ends at the roof, not across the landscape');
     // Two fingers: joystick forward and a simultaneous right-hand look drag.
     const cdp=await context.newCDPSession(page);
+    await page.evaluate(()=>{window.__cosmicRightMove=false;document.body.addEventListener('pointermove',e=>{if(e.clientX>300&&e.clientY<400)window.__cosmicRightMove=true;});});
     await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{id:1,x:85,y:700},{id:2,x:310,y:350}]});
     await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{id:1,x:85,y:654},{id:2,x:322,y:344}]});
+    await page.waitForFunction(()=>window.__cosmicRightMove,null,{timeout:10000});
     await page.evaluate(()=>window.__g.sim(1.15));
     const before=await page.evaluate(()=>({state:__g.sideFold.state,x:__g.player.pos.x,yaw:__g.player.yaw,pitch:__g.player.pitch}));
     assert.ok(before.x>.9&&before.x<2.02);assert.equal(before.state,'idle');assert.notEqual(before.yaw,-Math.PI/2);
@@ -64,8 +71,13 @@ const evidence=process.env.COSMIC_EVIDENCE||'/tmp/horror-cosmic-evidence';fs.mkd
     const original=await page.evaluate(()=>__g.sideFold.landscape.group.getObjectByName('cosmo-galassia').quaternion.toArray());
     await page.evaluate(()=>{const g=__g;g.player.yaw-=.9;g.sim(.05);});
     assert.deepEqual(await page.evaluate(()=>__g.sideFold.landscape.group.getObjectByName('cosmo-galassia').quaternion.toArray()),original);
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    await page.screenshot({path:path.join(evidence,'03-cielo-laterale.png'),timeout:90000});
+    await page.evaluate(()=>{const g=__g;g.player.yaw=-Math.PI/2+.32;g.player.pitch=-.10;g.sim(.05);});
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    await page.screenshot({path:path.join(evidence,'04-tronchi-lontani.png'),timeout:90000});
     // Return early through the same physical opening, then re-enter.
-    await page.evaluate(()=>{__g.player.yaw=-Math.PI/2;});
+    await page.evaluate(pitch=>{__g.player.yaw=-Math.PI/2;__g.player.pitch=pitch;},entered.pitch);
     await page.keyboard.down('KeyS');await page.evaluate(()=>__g.sim(2.2));await page.keyboard.up('KeyS');
     const back=await page.evaluate(()=>({x:__g.player.pos.x,state:__g.sideFold.state}));
     assert.ok(back.x<1.35);assert.equal(back.state,'idle');
