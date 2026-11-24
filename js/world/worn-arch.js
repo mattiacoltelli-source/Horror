@@ -33,25 +33,27 @@ export function createWornArch({stone,side,wallX,centerZ,radius,spring,seed}) {
     for(let i=steps;i>=0;i--){const a=start+(end-start)*i/steps;points.push([inner*Math.cos(a),spring+inner*Math.sin(a)]);}
     return polygon(points);
   };
-  // Recessed dark backing fills the joints without covering the passage.
-  add(wedge(0,Math.PI,radius+.012,radius+.38),.055,.19,.025,0);
+  // Overlap the wall opening by 4 mm: the previous larger stone profile left
+  // the brick/lining rim exposed as a bright strip below the arch and pillars.
+  // The recessed backing also closes this seam between individual stones.
+  add(wedge(0,Math.PI,radius-.004,radius+.38),.055,.19,.025,0);
   for(const sign of [-1,1]){
-    const a=sign*(radius+.015),b=sign*(radius+.39);
+    const a=sign*(radius-.004),b=sign*(radius+.39);
     add(rectangle(Math.min(a,b),.008,Math.max(a,b),spring+.02),.055,.19,.025,0);
     let y=0,row=0;
     while(y<spring-.01){
       const h=Math.min(.30+.10*hash(sign,row,0,seed),spring-y),width=.31+.035*hash(sign,row,1,seed);
-      const inner=sign*(radius+.020),outer=sign*(radius+width);
+      const inner=sign*(radius+.002),outer=sign*(radius+width);
       add(rectangle(Math.min(inner,outer),y+.009,Math.max(inner,outer),y+h-.009),.49+.018*hash(sign,row,2,seed),.64+.09*hash(sign,row,3,seed));
       y+=h;row++;
     }
-    const inner=sign*(radius+.019),outer=sign*(radius+.43);
+    const inner=sign*(radius+.002),outer=sign*(radius+.43);
     add(rectangle(Math.min(inner,outer),spring-.045,Math.max(inner,outer),spring+.075),.52,.68);
   }
   const count=13;
   for(let i=0;i<count;i++){
     const key=i===(count-1)/2,outer=radius+.32+(key ? .065 : .018*hash(i,0,0,seed));
-    add(wedge(i/count*Math.PI+.010,(i+1)/count*Math.PI-.010,radius+.022,outer),key ? .535 : .495,.65+.08*hash(i,1,0,seed));
+    add(wedge(i/count*Math.PI+.010,(i+1)/count*Math.PI-.010,radius+.002,outer),key ? .535 : .495,.65+.08*hash(i,1,0,seed));
   }
   const geometry=mergeGeometries(parts);for(const part of parts)part.dispose();geometry.computeBoundingSphere();
   const material=stone.clone();material.vertexColors=true;material.color.setRGB(.48,.45,.41);material.roughness=1;material.normalScale?.set(1.25,1.25);
