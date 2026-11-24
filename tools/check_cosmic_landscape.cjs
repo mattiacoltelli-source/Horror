@@ -31,7 +31,7 @@ const root=path.resolve(__dirname,'..');
     else if(o.isPoints)draws++;
     if(o.geometry)for(const v of o.geometry.attributes.position.array)assert.ok(Number.isFinite(v));
   });
-  assert.equal(draws,6);assert.ok(triangles<9000);
+  assert.equal(draws,7);assert.ok(triangles<9000);
   // Real geometric relief with normals for the existing vertex-lighting path;
   // the complete player footprint stays flat and free of rocks.
   assert.ok(landscape.groundMaterial.isMeshLambertMaterial&&landscape.groundMaterial.vertexColors);
@@ -107,6 +107,7 @@ const root=path.resolve(__dirname,'..');
   const matVersion=galaxy.material.version;landscape.setSkyBrightness(.2);assert.equal(galaxy.material.color.r,.2);assert.equal(galaxy.material.version,matVersion);
   landscape.setSkyBrightness(0);assert.equal(lava.material.color.r,0,'existing blackout also extinguishes lava');
   assert.equal(landscape.group.getObjectByName('cosmo-luna-laterale').material.color.r,0,'side moon follows the same blackout');
+  const campfire=landscape.group.getObjectByName('cosmo-falo-lontano');assert.ok(campfire.position.x>20&&campfire.position.z>-4.5+8,'campfire is distant and outside the lane');assert.equal(campfire.material.opacity,0,'fire follows the existing blackout');assert.equal(campfire.material.map,null,'fire adds no texture download');
   let uploads=0,compiles=0;
   const renderer={initTexture(){uploads++;},async compileAsync(group,c,s){assert.equal(group,landscape.group);assert.equal(c,camera);assert.equal(s,scene);compiles++;}};
   await Promise.all([landscape.prepare(renderer,scene,camera),landscape.prepare(renderer,scene,camera)]);

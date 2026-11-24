@@ -214,7 +214,7 @@ async function enter() {
   ward ??= createWard({ scene, mats, player, camera, audio, lights, instab, say, renderer, prepare: prepareScene, getCellar: () => cellar, getMorgue: () => morgue, get story() { return story; } });
   morgue ??= createMorgue({ scene, mats, player, camera, audio, lights, instab, say, hall, story, flags, actBtn: $('act') });
   ambient ??= createAmbient({ player, audio, story, combat });
-  wh ??= createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, flags, actBtn: $('act') });
+  wh ??= createWarehouse({ scene, mats, player, camera, audio, lights, renderer, instab, say, hall, combat, story, flags, actBtn: $('act') });
   space ??= createSpaceFall({ renderer, camera, player, audio, say });
   cellar ??= createCellar({ scene, mats, player, camera, renderer, audio, lights, instab, say, hall, flags, story, flash, warm, space, actBtn: $('act'), onSave: () => saveCkpt('cellar') });
   tower ??= createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish: (m, f, l) => (dawn ? dawn.start(m) : finish(m, f, l)), warm, actBtn: $('act'), combat });

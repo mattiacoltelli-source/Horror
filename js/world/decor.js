@@ -8,6 +8,19 @@ import { SIDE_DOORS } from './tunnel.js';
 const clearDoors = (pl, len) => pl.filter((q) => !SIDE_DOORS.some((d) => d.side === -1 && Math.abs(q.p[2] - d.z) < d.w / 2 + len / 2 + 0.02));
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 const P2 = Math.PI / 2;
+// At a side opening the two runs turn into the masonry, rather than leaving
+// exposed, disconnected ends. Measured endpoints of the centred kit elbows;
+// their other mouth is buried inside the wall. No geometry in the doorway.
+export function tunnelPipeReturns(len,x,y,thin=false){
+  const removed=runZ('',len,x,y,2.4,-48.4).filter(q=>!clearDoors([q],len).length);
+  if(!removed.length)return[];
+  const scale=thin?1:2,ax=(thin?.0828867:.0716867)*scale,ay=(thin?.1159137:.1263133)*scale;
+  const first=Math.max(...removed.map(q=>q.p[2]))+len/2,last=Math.min(...removed.map(q=>q.p[2]))-len/2;
+  return[
+    {n:thin?'pipe_thin_turn_long_metal':'pipe_turn_long_metal',p:[x-ax,y,first-ay+.002],r:[P2,0,Math.PI],s:scale},
+    {n:thin?'pipe_thin_turn_long_metal':'pipe_turn_long_metal',p:[x-ax,y,last+ay-.002],r:[P2,Math.PI,0],s:scale},
+  ];
+}
 const add = async (group, kit, pl) => { try { const m = await kitMesh(kit, pl); if (m) { m.traverse((o) => { o.userData.decor = true; if (globalThis.__lowQ) o.visible = false; }); group.add(m); } } catch (e) { console.warn('decor', kit, e); } };
 const manhole = (x, z, rot = 0) => [{ n: 'water_manhole_cover_frame', p: [x, -0.033, z], r: [0, rot, 0] }, { n: 'water_manhole_cover', p: [x, -0.007, z], r: [0, rot, 0] }]   // incassati: il bordo sporge di ~2 mm;
 // pezzo di recinzione lungo l'asse z (altezza 2.37): n pannelli da 0.93 + paletti
@@ -26,7 +39,7 @@ export function decorTunnel(group) {
   burnDecals(group, [{ k: 'wall', p: [-1.393, 1.0, -46.5], wall: '+x', w: 1.7, h: 1.8, a: 0.3 }]);   // un segno di fumo vicino al portone: il fuoco ha toccato anche qui
   patchDecals(group, [{ img: 'assets/tex/pt_gravel.webp', p: [-0.5, 0.012, -16.7], wall: 'floor', w: 1.5, h: 2.3, rot: 0.55 }, { img: 'assets/tex/pt_layers.webp', p: [-0.3, 0.012, -33.5], wall: 'floor', w: 1.8, h: 2.8, rot: -0.15 }]);   // tunnel: cemento grezzo a chiazze sul pavimento
   add(group, 'ind', clearDoors(runZ('modular_industrial_pipes_01_pipe02', 1.95, -1.27, 2.0, 2.4, -48.4), 1.95));
-  add(group, 'pipes', clearDoors([...runZ('pipe_thin_200cm_metal', 2.0, -1.33, 1.62, 2.4, -48.4).map((p) => ({ ...p, r: [0, P2, 0] }))], 2.0));
+  add(group, 'pipes', [...clearDoors(runZ('pipe_thin_200cm_metal', 2.0, -1.33, 1.62, 2.4, -48.4).map((p) => ({ ...p, r: [0, P2, 0] })), 2.0),...tunnelPipeReturns(1.95,-1.27,2.0),...tunnelPipeReturns(2,-1.33,1.62,true)]);
   add(group, 'cables', [...cableRun(1.38, 2.0, -28, -31.5)]);
   add(group, 'manhole', [...manhole(-0.15, -14.5), ...manhole(0.3, -45, 0.7)]);
   sideGate(group, 1.4, -11);
@@ -60,7 +73,8 @@ export function decorCellar(group, z0) {
   stainDecals(group, [{ p: [-3.99, 1.2, z0 - 5], wall: '+x', w: 2.6, h: 2.8 }, { p: [3.99, 1.3, z0 - 8], wall: '-x', w: 2.4, h: 2.8, flip: true }, { p: [-3.99, 1.1, z0 - 15], wall: '+x', w: 2.6, h: 2.8, a: 0.8 }]);
   entryDoor(group, z0);
   bloodDecals(group, [{ k: 'X', p: [3.995, 1.7, z0 - 14], wall: '-x', h: 0.7, rot: 0.1 }, { k: 'C', p: [3.995, 1.5, z0 - 10], wall: '-x', h: 0.3, rot: 0.15 }]);
-  add(group, 'pipes', [...runZ('pipe_200cm_metal', 2.0, 3.85, 3.6, z0 - 1, z0 - 23), ...runZ('pipe_thin_200cm_metal', 2.0, 3.9, 3.2, z0 - 1, z0 - 23).map((p) => ({ ...p, r: [0, P2, 0] }))]);
+  // Both ends enter the front/back masonry; previously they stopped 1 m short.
+  add(group, 'pipes', [...runZ('pipe_200cm_metal', 2.0, 3.85, 3.6, z0, z0 - 24), ...runZ('pipe_thin_200cm_metal', 2.0, 3.9, 3.2, z0, z0 - 24).map((p) => ({ ...p, r: [0, P2, 0] }))]);
   add(group, 'fence', fenceZ(3.25, z0 - 16.7, z0 - 18.7));
   add(group, 'cables', cableRun(-3.97, 3.0, z0 - 2, z0 - 5));
   add(group, 'manhole', manhole(-1.0, z0 - 5.5, 0.3));

@@ -19,7 +19,7 @@ export function addExtras(group, list) {
     const c = b.getCenter(new THREE.Vector3()); o.position.set(-c.x, -b.min.y, -c.z);
     if (dark < 1) o.traverse((m) => { if (!m.isMesh) return; m.material = m.material.clone(); const c = m.material.color, gr = (c.r + c.g + c.b) / 3; c.setRGB(c.r + (gr - c.r) * 0.6, c.g + (gr - c.g) * 0.6, c.b + (gr - c.b) * 0.6).multiplyScalar(dark); if (m.material.emissive) m.material.emissive.multiplyScalar(dark); });
     if (/x_clock|x_bust|x_basket|x_gnome|x_lion|x_tv|x_screen|bin|stove|cabinet|chair|stool|tank|rim|can$/.test(name)) aged(o, name === 'x_clock' ? 0.85 : 0.7);
-    const g = new THREE.Group(); g.add(o); g.position.set(x, y, z); g.rotation.y = ry; group.add(g); cb?.(g);
+    const g = new THREE.Group(); g.add(o); g.position.set(x, y, z); g.rotation.y = ry; g.userData.supportHeight=y; group.add(g); cb?.(g);
     // I props con callback possono muoversi: le loro ombre non vanno fissate a terra.
     if (!cb) { const size=b.getSize(new THREE.Vector3()); addContactShadow(group,{x,y,z,w:Math.max(.025,size.x*.78),d:Math.max(.025,size.z*.78),angle:ry,strength:h<.2?.16:.25}); }
   });

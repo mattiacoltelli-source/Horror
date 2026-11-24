@@ -6,6 +6,7 @@ import { mergeGeometries } from '../../vendor/three/utils/BufferGeometryUtils.js
 import { createCosmicLava } from './cosmic-lava.js';
 import { createCosmicBoulders } from './cosmic-boulders.js';
 import { createCosmicDeadwood, createCosmicSkyAccent } from './cosmic-details.js';
+import { createCosmicCampfire } from './cosmic-campfire.js';
 
 export const COSMIC_ASSETS = ['assets/tex/cosmic_ground.webp', 'assets/tex/cosmic_galaxy.webp', 'assets/tex/cosmic_lava.webp'];
 const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
@@ -100,6 +101,7 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
   }
   pieces.push(...createCosmicBoulders({terrainGeometry:geo,x,z,groundTint,uvScale}));
   pieces.push(createCosmicDeadwood({terrainGeometry:geo,x,z}));
+  const campfire=createCosmicCampfire({terrainGeometry:geo,x,z,uvScale});pieces.push(campfire.wood);group.add(campfire.flames);
   const rockGeometry=mergeGeometries(pieces);for(const g of pieces)g.dispose();rockGeometry.computeBoundingSphere();
   const rocks=new THREE.Mesh(rockGeometry,terrainMaterial);rocks.name='cosmo-massi';group.add(rocks);
 
@@ -134,8 +136,8 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
   });
   return {
     group,groundTexture,groundMaterial:terrainMaterial,ready,status,height,
-    followCamera(camera) {if(group.visible)skyGroup.position.copy(camera.position);},
-    setSkyBrightness(v) {galaxyMaterial.color.setScalar(v);starMaterial.color.setScalar(v);moon.material.color.setScalar(v);lava.setBrightness(v);},
+    followCamera(camera) {if(group.visible){skyGroup.position.copy(camera.position);campfire.update((globalThis.performance?.now?.()??0)/1000);}},
+    setSkyBrightness(v) {galaxyMaterial.color.setScalar(v);starMaterial.color.setScalar(v);moon.material.color.setScalar(v);lava.setBrightness(v);campfire.setBrightness(v);},
     prepare(renderer,scene,camera) {
       return prepared??=(async()=>{
         await ready;

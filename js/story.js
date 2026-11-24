@@ -21,10 +21,11 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
   const EXTRA = { warehouse: 'qualcuno ha lasciato qualcosa per te, vicino al carrello.', tower: 'non si arrabbia. aspetta.' };   // seconda riga, piu' tardi
   const tell = (name) => {
     const l = LINES[name]; if (!l) return;
+    const focused=()=>name==='warehouse'&&getWh()?.bridge?.holdNarration;
     // se un'altra nota e' ancora a schermo (es. quella del reparto mentre entri nell'obitorio) aspetta che finisca, invece di cancellarla a meta'
-    const show = () => { if (current !== name || busy) return; const wait = (say.noteUntil || 0) - performance.now(); if (wait > 0) { setTimeout(show, wait + 350); return; } say?.(l.join('\n'), 7000, 'note'); };
+    const show = () => { if (current !== name || busy) return; if(focused()){setTimeout(show,400);return;} const wait = (say.noteUntil || 0) - performance.now(); if (wait > 0) { setTimeout(show, wait + 350); return; } say?.(l.join('\n'), 7000, 'note'); };
     setTimeout(show, 3000);
-    if (EXTRA[name]) setTimeout(() => { if (current === name && !busy) say?.(EXTRA[name], 5200); }, 13500);
+    if (EXTRA[name]) { const extra=()=>{if(current!==name||busy)return;if(focused()){setTimeout(extra,400);return;}say?.(EXTRA[name],5200);};setTimeout(extra,13500); }
   };
   const S = {
     tell,
