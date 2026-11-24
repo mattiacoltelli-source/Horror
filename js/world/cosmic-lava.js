@@ -4,7 +4,7 @@ import * as THREE from 'three';
 
 export function createCosmicLava({terrainGeometry,map,x,z}) {
   const position=terrainGeometry.attributes.position,index=terrainGeometry.index;
-  const positions=[],uv=[];
+  const positions=[],uv=[],colors=[];
   // All flows sit on the distant hills: the foreground beyond the arch stays dry.
   const fields=[[24.0,-5.5,8.0,5.0,.20],[29.0,6.8,9.0,6.0,-.25],[32.0,.3,12.0,8.0,-.12]];
   const clip=(vertices,axis,bound,sign)=>{
@@ -18,7 +18,8 @@ export function createCosmicLava({terrainGeometry,map,x,z}) {
     }
     return out;
   };
-  for(const [ox,oz,width,depth,angle]of fields){
+  for(let field=0;field<fields.length;field++){
+    const [ox,oz,width,depth,angle]=fields[field];
     const cx=x+ox,cz=z+oz,c=Math.cos(angle),s=Math.sin(angle);
     for(let i=0;i<index.count;i+=3){
       let polygon=[];
@@ -28,15 +29,27 @@ export function createCosmicLava({terrainGeometry,map,x,z}) {
       }
       for(const [axis,bound,sign]of [[3,0,1],[3,1,-1],[4,0,1],[4,1,-1]])polygon=clip(polygon,axis,bound,sign);
       for(let j=1;j<polygon.length-1;j++)for(const v of [polygon[0],polygon[j],polygon[j+1]]){
-        positions.push(v[0],v[1]+.006,v[2]);uv.push(v[3],v[4]);
+        positions.push(v[0],v[1]+.006,v[2]);uv.push(field===1?1-v[3]:v[3],field===2?1-v[4]:v[4]);
+        const shade=.94+.06*Math.sin(v[0]*.57+v[2]*.41);colors.push(shade,shade,shade);
       }
     }
   }
   const geometry=new THREE.BufferGeometry();
   geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-  geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geometry.computeBoundingSphere();
-  const material=new THREE.MeshBasicMaterial({map,transparent:true,alphaTest:.02,depthWrite:false,fog:false,toneMapped:false,
+  geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geometry.computeBoundingSphere();
+  const material=new THREE.MeshBasicMaterial({map,vertexColors:true,transparent:true,alphaTest:.02,depthWrite:false,fog:false,toneMapped:false,
     polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-2});
+  // Reuse the existing albedo sample: cool crust blends into the dark terrain
+  // while saturated molten rock stays incandescent. No extra texture reads.
+  material.onBeforeCompile=shader=>{
+    shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
+      #ifdef USE_MAP
+        float molten=smoothstep(.12,.55,sampledDiffuseColor.r-sampledDiffuseColor.b*.8);
+        float fringe=smoothstep(.08,.78,sampledDiffuseColor.a);
+        diffuseColor.rgb*=mix(.16,1.0,molten)*mix(.35,1.0,fringe);
+      #endif`);
+  };
+  material.customProgramCacheKey=()=> 'cosmic-lava-crust-v1';
   const mesh=new THREE.Mesh(geometry,material);mesh.name='cosmo-lava-incandescente';
   return {mesh,setBrightness(v){material.color.setScalar(v*1.15);}};
 }

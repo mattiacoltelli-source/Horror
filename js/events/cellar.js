@@ -29,6 +29,7 @@ import { createFilmShrineEvent } from './film-shrine.js';
 import { createReflectionSubstitute } from '../world/reflection-substitute.js';
 import { createScenePreparation } from '../render/scene.js';
 import { createCryptFissures } from '../world/crypt-fissures.js';
+import { addObjectContactShadow } from '../world/contact-shadows.js';
 
 export const CELLAR = { z0: -200, w: 8, l: 24, h: 4.4 };
 const MIRROR = new THREE.Vector3(-3.98, 1.45, -210);
@@ -160,7 +161,7 @@ export function createCellar({ scene, mats, player, camera, renderer, audio, lig
   // lampade, oggetti di scena
   const loader = new GLTFLoader(), lampPos = [[0, 3.75, CELLAR.z0 - 6], [0, 3.75, CELLAR.z0 - 18]];
   addRoundLamps(C.group, lampPos, CELLAR.h);
-  const prop = (url, h, x, z, ry) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y, c.z - z)); o.rotation.y = ry; if (/cabinet|stool/.test(url)) aged(o, 0.6); C.group.add(o); });
+  const prop = (url, h, x, z, ry) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y, c.z - z)); o.rotation.y = ry; if (/cabinet|stool/.test(url)) aged(o, 0.6); C.group.add(o); addObjectContactShadow(C.group,o,{strength:h<.2?.16:.23}); });
   prop('assets/models/can.glb', 0.12, -2.6, CELLAR.z0 - 3, 0.5); prop('assets/models/tank.glb', 0.55, 3.1, CELLAR.z0 - 12.5, 0.4); prop('assets/models/rim.glb', 0.5, 2.4, CELLAR.z0 - 4.2, 1.2);
   prop('assets/models/stool.glb', 0.46, -2.2, CELLAR.z0 - 8.4, 0.3); prop('assets/models/cabinet.glb', 1.1, 3.4, CELLAR.z0 - 17, -Math.PI / 2);
   // atmosfera: fasci freddi sotto le lampade, pozzanghere, colature (non sul muro dello specchio)

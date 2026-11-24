@@ -8,6 +8,7 @@ import { PKEY, P } from '../personal.js';
 import { bloodText } from '../world/bloodfont.js';
 import { createElevator } from '../world/elevator.js';
 import { createElectricalPanel } from '../world/electrical-panel.js';
+import { addObjectContactShadow } from '../world/contact-shadows.js';
 
 export const WARD = { z0: -480, w: 4, l: 20, h: 2.5 };   // la fine del corridoio coincide con l'ingresso dell'obitorio (z0 -500): un unico ambiente
 const loader = new GLTFLoader(), cache = {};
@@ -84,7 +85,7 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
     }
     // soffitto: le stesse piastrelle bianche delle pareti (ritaglio pulito della loro texture), ripetute
     { const t = new THREE.TextureLoader().load('assets/tex/ward_ceiling.jpg'); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(w / 3, l / 0.75); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, l), new THREE.MeshStandardMaterial({ map: t, roughness: 0.85, metalness: 0, color: new THREE.Color(0.72, 0.72, 0.7) })); m.rotation.x = Math.PI / 2; m.position.set(0, h - 0.02, z0 - l / 2); R.group.add(m); }
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, l), new THREE.MeshStandardMaterial({ map: t, roughness: 0.85, metalness: 0, color: new THREE.Color(0.38, 0.39, 0.38) })); m.rotation.x = Math.PI / 2; m.position.set(0, h - 0.02, z0 - l / 2); m.name='soffitto-reparto'; R.group.add(m); }
     const A = { atlas: true };
     // due porte sulle pareti: un'apertura nera sul muro e la porta (una chiusa, una socchiusa)
     const hole = (x, z, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 2.05), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })); m.position.set(x, 1.02, z); m.rotation.y = ry; R.group.add(m); };
@@ -94,7 +95,11 @@ export function createWard({ scene, mats, player, camera, audio, lights, instab,
     // (nessun cartello EXIT: restava visibile e luminoso anche dall'obitorio)
     { const lp = await get('../wlamp'); if (lp) for (const [x, , z] of lampPos) { const o = lp.clone(true), b = new THREE.Box3().setFromObject(o), g = new THREE.Group(); const sc = 0.5 / Math.max(b.max.x - b.min.x, b.max.y - b.min.y); o.scale.setScalar(sc); o.rotation.x = Math.PI / 2; o.updateMatrixWorld(true); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.set(-c.x, -b.max.y, -c.z); g.add(o); g.position.set(x, h - 0.02, z); R.group.add(g); } }
     R.chair = await place('wheel_chair', 0.9, 0.43 * 0.68, z0 - 11, 2.6, { dark: 0.7, desat: 0.85, scale: 0.68 });
-    { const bd = await get('../hs_bed'); if (bd) { const o = bd.clone(true), b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()), g = new THREE.Group(); o.traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); m.material.color.multiplyScalar(0.55); desat(m.material, 0.6); } }); const sc = 2.0 / Math.max(b.max.x - b.min.x, b.max.z - b.min.z); o.scale.setScalar(sc); b.setFromObject(o); o.position.set(-c.x * sc, -b.min.y, -c.z * sc); g.add(o); g.position.set(-1.2, 0, z0 - 15.2); g.rotation.y = 0.04; R.group.add(g); } }
+    if(R.chair){
+      R.chair.traverse(o=>{if(o.isMesh)o.userData.keepParent=true;});
+      addObjectContactShadow(R.chair,R.chair,{floorParent:R.group,strength:.28});
+    }
+    { const bd = await get('../hs_bed'); if (bd) { const o = bd.clone(true), b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()), g = new THREE.Group(); o.traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); m.material.color.multiplyScalar(0.55); desat(m.material, 0.6); } }); const sc = 2.0 / Math.max(b.max.x - b.min.x, b.max.z - b.min.z); o.scale.setScalar(sc); b.setFromObject(o); o.position.set(-c.x * sc, -b.min.y, -c.z * sc); g.add(o); g.position.set(-1.2, 0, z0 - 15.2); g.rotation.y = 0.04; R.group.add(g); addObjectContactShadow(R.group,g,{strength:.24}); } }
     R.loaded = true; R.resolveReady?.(); R.bend?.prepare();   // tutto il reparto e' arrivato: se la piega e' attiva, lo prepara a fette (con il reparto nascosto)
   })().catch((e) => console.error('reparto: caricamento dei pezzi', e));
   // sporco sui muri e sangue vecchio

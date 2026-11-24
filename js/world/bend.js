@@ -127,9 +127,14 @@ vec3 bPos(vec3 w, out float th, out float ro) {
   const todo = () => { const l = []; group.traverse((o) => { if (o.isMesh && !o.isInstancedMesh && !o.isSkinnedMesh && (o.userData.bent === undefined || [].concat(o.material || []).some((m) => !m.userData.bendPatched))) l.push(o); }); return l; };
   const box = new THREE.Box3();
   const one = (m) => {
+    // Contact materials are shared by all rooms. Isolate this batch before
+    // patching its shader, retaining the shared texture and program reuse.
+    if(m.userData.contactShadow&&!m.userData.isolatedContactMaterial){m.material=m.material.clone();m.userData.isolatedContactMaterial=true;}
     if (m.userData.bent === undefined && m.geometry && visibleChain(m)) {
       m.updateWorldMatrix(true, false); box.setFromObject(m);
-      if (box.max.z - box.min.z > 0.7) { try { bake(m); } catch (e) { console.warn('piega: pezzo non diviso', m.name, e); m.userData.bent = false; } } else m.userData.bent = false;
+      // Moving furniture keeps its contact patch parented; the shader still
+      // bends it, but static baking must not detach it from the moving prop.
+      if (!m.userData.keepParent && box.max.z - box.min.z > 0.7) { try { bake(m); } catch (e) { console.warn('piega: pezzo non diviso', m.name, e); m.userData.bent = false; } } else m.userData.bent = false;
     }
     if (!meshes.includes(m)) meshes.push(m);
     m.frustumCulled = !B.active;   // il riquadro di un pezzo piegato non e' piu' quello originale: senza piega si torna al taglio normale (meno disegno)

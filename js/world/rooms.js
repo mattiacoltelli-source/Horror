@@ -5,19 +5,28 @@ import { Builder, gray } from './tunnel.js';
 import { TILES } from './materials.js';
 
 export function buildRoom(mats, o) {
-  const { cx = 0, z0, w, l, h, wall = 'brick', floor = 'floorA', ceil = 'brick', pillarEvery = 0, door = null, dark = 1, seed = 7 } = o;
+  const { cx = 0, z0, w, l, h, wall = 'brick', floor = 'floorA', ceil = 'brick', ceilingShade = .22, pillarEvery = 0, door = null, dark = 1, seed = 7 } = o;
   let sd = seed; const rnd = () => ((sd = (sd * 1664525 + 1013904223) >>> 0) / 4294967296);
   const B = new Builder(), xl = cx - w / 2, xr = cx + w / 2, z1 = z0 - l;
   const [wu, wv] = TILES[wall], [fu, fv] = TILES[floor], [cu, cv] = TILES[ceil];
   const col = (y, k) => gray(k * dark * (0.5 + 0.5 * Math.min(1, y / (h * 0.55))));
+  // Continuous world UVs and shared corner colours: adjacent panels must not
+  // look like separate photographs. Large, quiet variations are baked once.
+  const floorColor = (x, z) => {
+    const variation = Math.sin(x * .37 + z * .19) * Math.cos(z * .29 - x * .13);
+    const edge = 1 - Math.min(1, Math.max(0, Math.min(x-xl, xr-x, z0-z, z-z1)) / 1.4);
+    return gray((.45 + .025 * variation) * (1 - .08 * edge) * dark);
+  };
 
   // pavimento e soffitto a pannelli
   for (let x = xl; x < xr - 0.01; x += 4) for (let z = z0; z > z1 + 0.01; z -= 4) {
-    const xe = Math.min(x + 4, xr), ze = Math.max(z - 4, z1), ou = rnd() * 3, ov = rnd() * 3, k = 0.38 + rnd() * 0.12;
+    const xe = Math.min(x + 4, xr), ze = Math.max(z - 4, z1);
+    rnd(); rnd(); rnd();   // preserve the existing wall/panel seed sequence
     B.quad(floor, [[x, 0, z], [xe, 0, z], [xe, 0, ze], [x, 0, ze]],
-      [[x / fu + ou, -z / fv + ov], [xe / fu + ou, -z / fv + ov], [xe / fu + ou, -ze / fv + ov], [x / fu + ou, -ze / fv + ov]], [gray(k * dark), gray(k * dark), gray(k * dark), gray(k * dark)], [0, 1, 0]);
+      [[x / fu, -z / fv], [xe / fu, -z / fv], [xe / fu, -ze / fv], [x / fu, -ze / fv]],
+      [floorColor(x,z), floorColor(xe,z), floorColor(xe,ze), floorColor(x,ze)], [0, 1, 0]);
     B.quad(ceil, [[x, h, z], [xe, h, z], [xe, h, ze], [x, h, ze]],
-      [[x / cu, -z / cv], [xe / cu, -z / cv], [xe / cu, -ze / cv], [x / cu, -ze / cv]], [gray(.22 * dark), gray(.22 * dark), gray(.22 * dark), gray(.22 * dark)], [0, -1, 0]);
+      [[x / cu, -z / cv], [xe / cu, -z / cv], [xe / cu, -ze / cv], [x / cu, -ze / cv]], [gray(ceilingShade * dark), gray(ceilingShade * dark), gray(ceilingShade * dark), gray(ceilingShade * dark)], [0, -1, 0]);
   }
   // muri laterali
   // sideDoor / sideDoors: { side: 1 (destro) | -1 (sinistro), z, w, h }.

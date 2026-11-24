@@ -13,6 +13,7 @@ import { createSorella } from './sorella.js';
 import { redLight, doorGlow } from '../world/redlight.js';
 import { addExtras, pedestal } from '../world/extra.js';
 import { addAtmosphere } from '../world/atmos.js';
+import { addObjectContactShadow } from '../world/contact-shadows.js';
 
 export const WH = { z0: -400, w: 12, l: 36, h: 6.5 };
 
@@ -22,7 +23,7 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
   const room = buildRoom(mats, { z0: WH.z0, w: WH.w, l: WH.l, h: WH.h, wall: 'brick', floor: 'floorB', ceil: 'stone', pillarEvery: 6, dark: 0.8, seed: 41, exit: { w: 2, h: 2.6 } });
   W.group.add(room.group); const entry = decorWarehouse(W.group, WH.z0); W.bounds = [room.bounds[0], room.bounds[1], WH.z0 - WH.l + 1.5, WH.z0 - 0.6];
   const zFar = WH.z0 - WH.l, loader = new GLTFLoader();
-  const prop = (url, h, x, y, z, ry, cb) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y - y, c.z - z)); o.rotation.y = ry; if (/rack|stool|cart|shelf|chair|rim|can|tank|bin/.test(url)) aged(o, 0.9, /rack|cart|rim|can|tank|bin/.test(url) ? 0.85 : 0); W.group.add(o); cb?.(o); });
+  const prop = (url, h, x, y, z, ry, cb) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y - y, c.z - z)); o.rotation.y = ry; if (/rack|stool|cart|shelf|chair|rim|can|tank|bin/.test(url)) aged(o, 0.9, /rack|cart|rim|can|tank|bin/.test(url) ? 0.85 : 0); W.group.add(o); cb?.(o); if(y<.02)addObjectContactShadow(cb?o:W.group,o,{floorParent:W.group,floorY:y,strength:h<.2?.16:.23}); });
 
   // scaffali e cestini lungo i muri, un po' sparsi (non una fila perfetta)
   [-9, -13.5, -19, -26.5, -31, -33.5].forEach((dz, i) => { prop('assets/models/rack.glb', 1.9, i % 2 ? 5.2 : -5.2, 0, WH.z0 + dz - 0.4, (i % 2 ? -1 : 1) * Math.PI / 2 + (i % 3) * 0.05); });

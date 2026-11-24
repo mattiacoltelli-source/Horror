@@ -33,4 +33,5 @@ export function turnToward(g, target, n) {
 export function pedestal(group, x, z, h = 0.95, w = 0.42) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), new THREE.MeshStandardMaterial({ color: 0x4a4744, roughness: 0.85 }));
   m.position.set(x, h / 2, z); group.add(m);
+  addContactShadow(group,{x,z,w:w*.9,d:w*.9,strength:.23});
 }

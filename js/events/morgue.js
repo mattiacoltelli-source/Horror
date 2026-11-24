@@ -19,7 +19,7 @@ export function createMorgue({ scene, mats, player, camera, audio, lights, insta
   const M = { group: new THREE.Group(), state: 'idle', t: 0, near: null };
   M.group.visible = false; scene.add(M.group);
   const { z0, w, l, h } = MORGUE, zFar = z0 - l;
-  const room = buildRoom(mats, { z0, w, l, h, wall: 'stone', floor: 'mfloor', ceil: 'stone', dark: 0.5, seed: 57, door: { w: 2, h: 2.6 } });   // vano d'ingresso aperto (si arriva dal reparto senza dissolvenza)
+  const room = buildRoom(mats, { z0, w, l, h, wall: 'stone', floor: 'mfloor', ceil: 'stone', ceilingShade:.15, dark: 0.5, seed: 57, door: { w: 2, h: 2.6 } });   // vano d'ingresso aperto (si arriva dal reparto senza dissolvenza)
   M.group.add(room.group); patchDecals(M.group, [{ img: 'assets/tex/pt_plaster.webp', p: [-4.21, 2.0, z0 - 12.3], wall: '+x', w: 2.0, h: 1.4 }, { img: 'assets/tex/pt_stain.webp', p: [4.21, 2.0, z0 - 11.8], wall: '-x', w: 1.9, h: 1.4, rot: 0.03 }]);   // pareti verdi sopra le piastrelle: intonaco caduto e macchie
  burnDecals(M.group, [{ k: 'wall', p: [-4.21, 1.1, z0 - 2.2], wall: '+x', w: 2.4, h: 2.0, a: 0.32 }, { k: 'wall', p: [4.21, 1.0, z0 - 0.9], wall: '-x', w: 1.6, h: 1.8, a: 0.28, flip: true }]);   // poche bruciature vicino all'ingresso (il fuoco e' partito piu' lontano)
   M.bounds = [room.bounds[0], room.bounds[1], zFar + 1.4, z0 - 0.6];
