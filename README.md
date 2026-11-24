@@ -23,7 +23,7 @@ Verifica delle interazioni e delle collisioni: `node --experimental-vm-modules t
 ## Link e scorciatoie
 - **Anteprima del link** (WhatsApp, Telegram…): `index.html` ha i meta Open Graph con l'icona del gioco; le app tengono l'anteprima in cache, quindi un link già inviato può mostrare quella vecchia.
 - **Il link normale (senza parametri) è la versione personalizzabile**: chiede nome, genere, data e frase (vedi sotto). La versione di base senza domande esiste solo con `?base=1` (per provare).
-- Versione personalizzata: `?per=elisa`, `?per=yana`, `?per=gabriele`, `?per=tommy`, `?per=alice` (profili in `js/personal.js`). Qualsiasi altro nome: `?per=nome&g=m|f` (e opzionale `&capelli=biondi|rossi|castani|neri|grigi|no`).
+- Versione personalizzata: `?per=elisa`, `?per=yana`, `?per=gabriele`, `?per=tommy`, `?per=alice`, `?per=mati` (anche `?per=matilde`) (profili in `js/personal.js`). Qualsiasi altro nome: `?per=nome&g=m|f` (e opzionale `&capelli=biondi|rossi|castani|neri|grigi|no`).
 - **Link per tutti:** il link normale (o `?chiedi=1`) chiede nome e genere prima di iniziare (solo lettere, 2-14), chiede anche la data di nascita (facoltativa, scritta nel reparto come `g/m/aa`), salva nome e data sul telefono (`ng_name`) e ricarica la pagina come versione personalizzata; la seconda volta salta la domanda, con «non sei …? cambia».
 - Per provare una parte: `?start=porta` · `cantina` · `reparto` · `obitorio` · `magazzino` · `torre` · `epilogo`, con `&turned=1` (scelta «ti sei girato»), `&door=red|breath` (porta dell'obitorio), `&weapon=axe`, `&nogun=1`, `&specchio=1` (cantina, davanti allo specchio), `&debug=1` (espone `window.__g`).
 

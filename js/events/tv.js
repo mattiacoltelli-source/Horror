@@ -2,7 +2,7 @@
 // attraverso; poi si spegne. Una volta sola per partita. Lo schermo è un piano con canvas a bassa risoluzione sopra lo schermo spento del modello.
 // La luce è soffusa: un alone morbido sul pavimento davanti e uno piccolo attorno allo schermo, che tremolano col segnale (niente righe nette).
 import * as THREE from 'three';
-import { PKEY } from '../personal.js';
+import { PHOTO } from '../personal.js';
 
 const radial = (stops, w = 128, h = 128) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'), r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); stops.forEach(([o, a]) => r.addColorStop(o, `rgba(255,255,255,${a})`)); g.fillStyle = r; g.fillRect(0, 0, w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
 
@@ -28,11 +28,12 @@ export function createTv({ camera, audio }) {
     }
     cx.putImageData(img, 0, 0); tex.needsUpdate = true;
   };
-  // LA FOTO: dopo la statica, per ~1,8 s compare la foto col volto bruciato (quella di chi gioca; per gli altri quella di Yana), in bianco e nero sporco, tremolante, con un'ombra che ci passa sopra.
+  // LA FOTO: dopo la statica, per ~1,8 s compare la propria foto col volto bruciato, se esiste, in bianco e nero sporco, tremolante, con un'ombra che ci passa sopra.
   // E' una sola immagine ferma su un canvas 128x96: nessun costo in piu'.
   const PW = 128, PH = 96, pcv = document.createElement('canvas'); pcv.width = PW; pcv.height = PH; const pg = pcv.getContext('2d');
   const ptex = new THREE.CanvasTexture(pcv); ptex.magFilter = THREE.LinearFilter; ptex.colorSpace = THREE.SRGBColorSpace;
-  let photo = null; const img0 = new Image(); img0.onload = () => { photo = img0; }; img0.src = 'assets/tex/' + ({ elisa: 'pic_elisa.jpg', alice: 'pic_alice.jpg', rebecca: 'pic_rebecca.jpg', laya: 'pic_laya.jpg', steve: 'pic_steve.jpg' }[PKEY] || 'pic_yana.jpg');
+  let photo = null;
+  if (PHOTO) { const img0 = new Image(); img0.onload = () => { photo = img0; }; img0.src = 'assets/tex/' + PHOTO; }
   const drawPhoto = (t) => {
     pg.fillStyle = '#05080a'; pg.fillRect(0, 0, PW, PH);
     if (photo) { const hh = PH - 4, ww = hh * photo.width / photo.height, jx = (Math.random() - 0.5) * 3, jy = (Math.random() - 0.5) * 2; pg.save(); pg.filter = 'grayscale(1) contrast(1.25) brightness(0.9)'; pg.drawImage(photo, (PW - ww) / 2 + jx, 2 + jy, ww, hh); pg.restore(); }
