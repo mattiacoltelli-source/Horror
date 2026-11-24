@@ -23,8 +23,21 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
   for(const [y,z]of [[.6,.88],[.6,-.88],[1.38+.87,0],[1.38+.85*Math.sin(.7),.85*Math.cos(.7)]]){
    ray.set(new THREE.Vector3(0,y,-4.5+z),direction);assert.ok(ray.intersectObject(group,true).length>0,'stone/joint backing has solid visible faces');
   }
+  // The rim of the brick opening must sit behind the stone, including joints.
+  // A larger inner stone profile exposes a bright strip of wall/lining here.
+  for(let i=0;i<=18;i++){
+   const a=i/18*Math.PI;
+   ray.set(new THREE.Vector3(0,1.38+.705*Math.sin(a),-4.5+.705*Math.cos(a)),direction);
+   const hit=ray.intersectObject(group,true)[0];
+   assert.ok(hit&&Math.abs(hit.point.x)<1.39,'arch covers the brick rim before the wall plane');
+  }
+  for(const y of [.1,.6,1.2])for(const z of [-.705,.705]){
+   ray.set(new THREE.Vector3(0,y,-4.5+z),direction);
+   const hit=ray.intersectObject(group,true)[0];
+   assert.ok(hit&&Math.abs(hit.point.x)<1.39,'pillars cover the wall rim');
+  }
   assert.ok(mesh.material.color.r<.7&&mesh.material.roughness===1);
   results.push({side,triangles,draws:group.children.length});mesh.geometry.dispose();mesh.material.dispose();
  }
- console.log(JSON.stringify({result:'PASS',arches:results,opening:'clear',stoneAndJoints:'opaque',normals:'valid'}));
+ console.log(JSON.stringify({result:'PASS',arches:results,opening:'clear',stoneAndJoints:'opaque',brickRim:'covered',normals:'valid'}));
 })().catch(e=>{console.error(e);process.exitCode=1;});
