@@ -2,6 +2,7 @@
 // UVs, normals and colours are interpolated once; only Y changes during motion.
 import * as THREE from 'three';
 import { Builder, gray } from './tunnel.js';
+import { createAbyssPresence } from './abyss-presence.js';
 
 export function partitionBridgeSurface(source,{start,end,halfWidth,depth},matrix=null){
   const input=source.clone();if(matrix)input.applyMatrix4(matrix);
@@ -62,14 +63,18 @@ export function createAbyssBridgeGeometry({mats,width,start,end,halfWidth,depth,
   }
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geometry.computeBoundingSphere();
   const stars=new THREE.Points(geometry,new THREE.PointsMaterial({size:2,sizeAttenuation:false,vertexColors:true,transparent:true,opacity:0,depthWrite:false,fog:false,toneMapped:false}));stars.name='abisso-stelle';group.add(stars);
+  const presence=createAbyssPresence({z:(start+end)/2,reduced});group.add(presence.mesh);
+  group.userData.ready=presence.ready;group.userData.presence=presence;
   stars.position.z=(start+end)/2;let time=0;
   group.userData.setDepth=d=>{
     const u=Math.min(1,Math.max(0,d/5.2));stars.material.opacity=.85*u*u*(3-2*u);
+    presence.setOpenness(u*u*(3-2*u));
     if(u===0){time=0;stars.rotation.y=0;stars.material.color.setScalar(1);}
   };
   // Only one transform and one colour uniform change. Vertex buffers stay
   // static, with the pivot centred under the bridge rather than at world zero.
-  group.userData.update=dt=>{
+  group.userData.update=(dt,looking=false)=>{
+    presence.update(dt,looking);
     if(reduced||stars.material.opacity===0)return;
     time+=dt;stars.rotation.y=time*.012%(Math.PI*2);
     stars.material.color.setScalar(.88+.10*Math.sin(time*.72)+.02*Math.sin(time*1.17+.5));

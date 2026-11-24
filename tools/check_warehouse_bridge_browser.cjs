@@ -23,6 +23,7 @@ const base=process.env.BRIDGE_BASE_URL||'http://127.0.0.1:8205/',out=process.env
   }
   await enter();await page.evaluate(async()=>{__g.sim(.1);await __g.wh.bridge.prepare();});await shot('01-magazzino-prima',-.1);
   const before=await page.evaluate(()=>({stats:__g.wh.bridge.stats,programs:__g.renderer.info.programs.length,images:__g.renderer.info.memory.textures,pitch:__g.player.pitch}));
+  const preparedPresence=await page.evaluate(()=>{const e=__g.wh.bridge.group.userData.presence;return{loaded:e.status.loaded,error:e.status.error,visible:e.mesh.visible,age:e.age};});assert.ok(preparedPresence.loaded&&!preparedPresence.error&&!preparedPresence.visible&&preparedPresence.age===0,'presence is prepared and hidden below the closed floor');
   const imageRequests=()=>requests.filter(u=>/\.(webp|jpg|png)(?:\?|$)/.test(u)).length,loadedImages=imageRequests();
   await page.keyboard.down('KeyW');await page.evaluate(()=>__g.sim(4.3,1/60));await page.keyboard.up('KeyW');
   const beginning=await page.evaluate(()=>({z:__g.player.pos.z,state:__g.wh.bridge.state,pitch:__g.player.pitch,left:__g.wh.bridge.left}));
@@ -36,6 +37,7 @@ const base=process.env.BRIDGE_BASE_URL||'http://127.0.0.1:8205/',out=process.env
   const stars=await page.evaluate(()=>{const s=__g.wh.bridge.group.getObjectByName('abisso-stelle');return{count:s.geometry.attributes.position.count,opacity:s.material.opacity,map:!!s.material.map};});
   assert.ok(stars.count<=700&&stars.opacity>.8&&!stars.map,'the void uses one static starfield and no new image');
   await shot('03-ponte-aperto',-.30);await shot('04-abisso-sinistro',-.80,.85);await shot('05-abisso-destro',-.75,-.85);
+  const nebula=await page.evaluate(()=>{const e=__g.wh.bridge.group.userData.presence;return{age:e.age,life:e.uniforms.uPresenceLife.value,opacity:e.mesh.material.opacity,visible:e.mesh.visible,depth:e.mesh.position.y};});assert.ok(nebula.visible&&nebula.opacity>0&&nebula.depth<-17&&nebula.life<.5,'initially a faint, distant nebula');
   const after=await page.evaluate(()=>({programs:__g.renderer.info.programs.length,images:__g.renderer.info.memory.textures}));
   assert.equal(imageRequests(),loadedImages,'no image loading during the transformation');
   assert.equal(after.programs,before.programs,'no first-use shader compilation during the transformation');
@@ -49,8 +51,9 @@ const base=process.env.BRIDGE_BASE_URL||'http://127.0.0.1:8205/',out=process.env
   const middle=await page.evaluate(()=>({z:__g.player.pos.z,y:__g.player.pos.y}));assert.ok(middle.z<touchStart-2);assert.equal(middle.y,1.62);
   await shot('07-profondita',-.85,.95);
   await page.evaluate(()=>__g.player.pos.x=-.55);await shot('08-vuoto-stellato',-1.02,Math.PI/2);
-  const motion=await page.evaluate(()=>{const g=__g,s=g.wh.bridge.group.getObjectByName('abisso-stelle'),angle=s.rotation.y,version=s.geometry.attributes.position.version,material=s.material.version,p=g.player.pos.clone(),yaw=g.player.yaw,pitch=g.player.pitch;let min=1,max=0;for(let i=0;i<300;i++){g.sim(1/60,1/60);min=Math.min(min,s.material.color.r);max=Math.max(max,s.material.color.r);}return{angle:s.rotation.y-angle,min,max,buffersUnchanged:version===s.geometry.attributes.position.version,materialUnchanged:material===s.material.version,playerMoved:p.distanceTo(g.player.pos),yawChanged:g.player.yaw-yaw,pitchChanged:g.player.pitch-pitch};});
+  const motion=await page.evaluate(()=>{const g=__g,s=g.wh.bridge.group.getObjectByName('abisso-stelle'),entity=g.wh.bridge.group.userData.presence,life=entity.uniforms.uPresenceLife.value,ev=entity.mesh.geometry.attributes.position.version,em=entity.mesh.material.version,angle=s.rotation.y,version=s.geometry.attributes.position.version,material=s.material.version,p=g.player.pos.clone(),yaw=g.player.yaw,pitch=g.player.pitch;let min=1,max=0;for(let i=0;i<300;i++){g.sim(1/60,1/60);min=Math.min(min,s.material.color.r);max=Math.max(max,s.material.color.r);}return{angle:s.rotation.y-angle,min,max,buffersUnchanged:version===s.geometry.attributes.position.version,materialUnchanged:material===s.material.version,presence:{lifeBefore:life,lifeAfter:entity.uniforms.uPresenceLife.value,opacity:entity.mesh.material.opacity,buffersUnchanged:ev===entity.mesh.geometry.attributes.position.version,materialUnchanged:em===entity.mesh.material.version},playerMoved:p.distanceTo(g.player.pos),yawChanged:g.player.yaw-yaw,pitchChanged:g.player.pitch-pitch};});
   assert.ok(motion.angle>.05&&motion.max-motion.min>.05,'visible slow rotation and light pulsation');assert.ok(motion.buffersUnchanged&&motion.materialUnchanged);assert.equal(motion.playerMoved,0);assert.equal(motion.yawChanged,0);assert.equal(motion.pitchChanged,0);
+  assert.ok(motion.presence.lifeAfter>motion.presence.lifeBefore&&motion.presence.lifeAfter>.8&&motion.presence.buffersUnchanged&&motion.presence.materialUnchanged,'a living silhouette gradually emerges without camera intervention or vertex uploads');
   await shot('09-stelle-dopo-movimento',-1.02,Math.PI/2);await page.evaluate(()=>__g.player.pos.x=.3);
   await page.evaluate(()=>{__g.player.yaw=0;__g.player.pitch=0;__g.sim(.05);});
   await page.evaluate(()=>__g.sim(.2));assert.equal(await page.evaluate(()=>__g.player.pos.z),middle.z,'release stops on the bridge');
@@ -73,10 +76,11 @@ const base=process.env.BRIDGE_BASE_URL||'http://127.0.0.1:8205/',out=process.env
   assert.equal(await page.evaluate(()=>__g.wh.bridge.state),'idle');assert.equal(await page.evaluate(()=>__g.wh.bridge.left),0);
   assert.equal(await page.evaluate(()=>__g.wh.bridge.group.getObjectByName('abisso-stelle').material.opacity),0,'no stars leak through the reset floor');
   assert.equal(await page.evaluate(()=>__g.wh.bridge.group.getObjectByName('abisso-stelle').rotation.y),0,'motion resets at reentry');
+  assert.equal(await page.evaluate(()=>__g.wh.bridge.group.userData.presence.mesh.visible),false);assert.equal(await page.evaluate(()=>__g.wh.bridge.group.userData.presence.age),0);
   await enter('&ponte=0');assert.equal(await page.evaluate(()=>__g.wh.bridge),null);
   assert.equal(await page.evaluate(()=>__g.scene.getObjectByName('pozzo-sotto-il-ponte')!=null),false);assert.ok(await page.evaluate(()=>!__g.wh.bridge?.ownsController));
   assert.deepEqual(errors,[]);assert.deepEqual(bad,[]);
-  const result={result:'PASS',before,beginning,open,stars,after,motion,middle,edge,restored,errors,bad,checks:['real descending floor and anchored props','starfield and eroding material','rotation/pulsation without vertex uploads or camera movement','no auto pitch','touch forward, stop, strafe limit and backwards','note, weapon and tower path intact','reset and feature flag'],performance:'Software Chromium; Android FPS not measured'};
+  const result={result:'PASS',before,preparedPresence,beginning,open,stars,nebula,after,motion,middle,edge,restored,errors,bad,checks:['real descending floor and anchored props','starfield and eroding material','preloaded 2.5D presence, slow gaze reveal and quiet movement','rotation/pulsation without vertex uploads or camera movement','no auto pitch','touch forward, stop, strafe limit and backwards','note, weapon and tower path intact','reset and feature flag'],performance:'Software Chromium; Android FPS not measured'};
   fs.writeFileSync(path.join(out,'results.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
