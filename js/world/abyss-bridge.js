@@ -53,6 +53,7 @@ export function createAbyssBridgeGeometry({mats,width,start,end,halfWidth,depth,
   for(const[x,n]of[[-halfWidth,-1],[halfWidth,1]])quad([[x,-t,start],[x,-t,end],[x,top,end],[x,top,start]],[n,0,0]);
   quad([[-halfWidth,-t,start],[halfWidth,-t,start],[halfWidth,-t,end],[-halfWidth,-t,end]],[0,-1,0]);
   const group=b.build({edge:material});group.name='pozzo-sotto-il-ponte';
+  const universe=new THREE.Group();universe.name='abisso-universo';universe.position.z=(start+end)/2;group.add(universe);
   let seed=1793;const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296),positions=[],colors=[];
   const count=globalThis.__lowQ?350:700;
   for(let i=0;i<count;i++){
@@ -62,21 +63,21 @@ export function createAbyssBridgeGeometry({mats,width,start,end,halfWidth,depth,
     colors.push(light*(violet?.85:.65),light*(violet?.56:.77),light);
   }
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geometry.computeBoundingSphere();
-  const stars=new THREE.Points(geometry,new THREE.PointsMaterial({size:2,sizeAttenuation:false,vertexColors:true,transparent:true,opacity:0,depthWrite:false,fog:false,toneMapped:false}));stars.name='abisso-stelle';group.add(stars);
-  const presence=createAbyssPresence({z:(start+end)/2,reduced});group.add(presence.mesh);
-  group.userData.ready=presence.ready;group.userData.presence=presence;
-  stars.position.z=(start+end)/2;let time=0;
+  const stars=new THREE.Points(geometry,new THREE.PointsMaterial({size:2,sizeAttenuation:false,vertexColors:true,transparent:true,opacity:0,depthWrite:false,fog:false,toneMapped:false}));stars.name='abisso-stelle';universe.add(stars);
+  const presence=createAbyssPresence({z:0,reduced});universe.add(presence.mesh);
+  group.userData.ready=presence.ready;group.userData.presence=presence;group.userData.universe=universe;
+  let time=0;
   group.userData.setDepth=d=>{
     const u=Math.min(1,Math.max(0,d/5.2));stars.material.opacity=.85*u*u*(3-2*u);
     presence.setOpenness(u*u*(3-2*u));
-    if(u===0){time=0;stars.rotation.y=0;stars.material.color.setScalar(1);}
+    if(u===0){time=0;universe.rotation.y=0;stars.material.color.setScalar(1);}
   };
   // Only one transform and one colour uniform change. Vertex buffers stay
   // static, with the pivot centred under the bridge rather than at world zero.
-  group.userData.update=(dt,looking=false)=>{
-    presence.update(dt,looking);
+  group.userData.update=dt=>{
+    presence.update(dt);
     if(reduced||stars.material.opacity===0)return;
-    time+=dt;stars.rotation.y=time*.012%(Math.PI*2);
+    time+=dt;universe.rotation.y=time*.012%(Math.PI*2);
     stars.material.color.setScalar(.88+.10*Math.sin(time*.72)+.02*Math.sin(time*1.17+.5));
   };
   return group;
