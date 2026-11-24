@@ -8,7 +8,7 @@ export function createWarehouseBridge({group,room,mats,player,audio,renderer,sce
   const config={start:z0-8.5,end:z0-15.5,halfWidth:1.05,depth:8},radius=.32,limit=config.halfWidth-radius;
   const B={state:'idle',time:0,roomTime:0,left:0,right:0,done:false,config};
   const surfaces=new Map(),props=[],seen=new WeakSet(),box=new THREE.Box3(),inverse=new THREE.Matrix4();
-  const wings={uAbyssLeft:{value:0},uAbyssRight:{value:0}};
+  const motion={value:reduced?1:0},wings={uAbyssLeft:{value:0},uAbyssRight:{value:0},uAbyssReduced:motion};
   const textures=new Set(),uploaded=new WeakMap();
   const compileQueue=new Set();let preparing=null;
   const queueCompile=object=>{if(renderer?.compileAsync&&scene&&camera)compileQueue.add(object);};
@@ -16,7 +16,7 @@ export function createWarehouseBridge({group,room,mats,player,audio,renderer,sce
     for(const t of Object.values(m))if(t?.isTexture)textures.add(t);
     for(const u of Object.values(m.uniforms||{}))if(u.value?.isTexture)textures.add(u.value);
   }});
-  const pit=createAbyssBridgeGeometry({...config,mats,width});group.add(pit);
+  const pit=createAbyssBridgeGeometry({...config,mats,width,reduced});group.add(pit);
   queueCompile(pit);
   collectTextures(room.group);collectTextures(pit);
   let previous=null,installed=false,lastLeft=-1,lastRight=-1;
@@ -60,7 +60,7 @@ export function createWarehouseBridge({group,room,mats,player,audio,renderer,sce
       if(!supported||box.max.y>3||Math.abs(x)<config.halfWidth+.15||z>=config.start||z<=config.end)continue;
       if(object.isMesh&&Math.min(box.max.x-box.min.x,box.max.z-box.min.z)<.035)continue;
       const anchors=new Set(),depth={value:0},copies=new Map();
-      object.traverse(o=>{if(!o.material)return;const copy=m=>{if(!copies.has(m))copies.set(m,abyssMaterial(m,{uAbyssDepth:depth}));return copies.get(m);};o.material=Array.isArray(o.material)?o.material.map(copy):copy(o.material);for(const m of [].concat(o.material))if(m.userData?.ageFloor)anchors.add(m.userData.ageFloor);});
+      object.traverse(o=>{if(!o.material)return;const copy=m=>{if(!copies.has(m))copies.set(m,abyssMaterial(m,{uAbyssDepth:depth,uAbyssReduced:motion}));return copies.get(m);};o.material=Array.isArray(o.material)?o.material.map(copy):copy(o.material);for(const m of [].concat(o.material))if(m.userData?.ageFloor)anchors.add(m.userData.ageFloor);});
       queueCompile(object);
       props.push({object,y:object.position.y,side:x<0?-1:1,anchors:[...anchors],depth});lastLeft=lastRight=-1;
     }
@@ -123,6 +123,7 @@ export function createWarehouseBridge({group,room,mats,player,audio,renderer,sce
       if(B.time>=(reduced?5.5:3.6)){B.left=B.right=0;B.done=true;B.state='done';release();}
     }
     apply();
+    pit.userData.update(dt);
   };
   B.prepare=async()=>{scan();while(preparing){await preparing;scan();}};
   B.scan=scan;B.group=pit;return B;
