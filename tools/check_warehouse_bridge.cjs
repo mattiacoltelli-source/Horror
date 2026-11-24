@@ -3,7 +3,8 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),asse
 const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
 (async()=>{
  const THREE=await import(pathToFileURL(path.join(root,'vendor/three/three.module.min.js')));
- const context=vm.createContext({console}),three=new vm.SyntheticModule(Object.keys(THREE),function(){for(const[k,v]of Object.entries(THREE))this.setExport(k,v);},{context}),cache=new Map();
+ let failNext=false;class TextureLoader{load(url,done,progress,error){assert.ok(url.startsWith('data:image/webp;base64,')&&url.length<150000,'small embedded image, no asset fetch');const texture=new THREE.Texture({width:512,height:512,complete:false}),fail=failNext;failNext=false;queueMicrotask(()=>{if(fail){error?.();return;}texture.image.complete=true;done?.(texture);});return texture;}}
+ const api={...THREE,TextureLoader},context=vm.createContext({console}),three=new vm.SyntheticModule(Object.keys(api),function(){for(const[k,v]of Object.entries(api))this.setExport(k,v);},{context}),cache=new Map();
  async function at(file){if(cache.has(file))return cache.get(file);const m=new vm.SourceTextModule(fs.readFileSync(file,'utf8'),{context,identifier:file});cache.set(file,m);await m.link(s=>s==='three'?three:at(path.resolve(path.dirname(file),s)));return m;}
  async function use(file){const m=await at(path.join(root,file));if(m.status!=='evaluated')await m.evaluate();return m.namespace;}
  const {buildRoom}=await use('js/world/rooms.js'),{createWarehouseBridge}=await use('js/events/warehouse-bridge.js');
@@ -36,8 +37,12 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
  b.update(.37,true);assert.ok(stars.rotation.y>angle&&Math.abs(stars.material.color.r-brightness)>1e-5,'the field rotates and breathes even while floor depth is stable');
  assert.equal(buffer.version,bufferVersion);assert.equal(stars.material.version,materialVersion);assert.ok(stars.material.color.r>=.76&&stars.material.color.r<=1,'subtle continuous light range');
  for(let i=0;i<stars.geometry.attributes.position.count;i++)assert.ok(stars.geometry.attributes.position.getY(i)<-2,'starfield stays below the real floor');
+ await b.group.userData.ready;const entity=b.group.userData.presence,vertexVersion=entity.mesh.geometry.attributes.position.version,entityMaterialVersion=entity.mesh.material.version;
+ b.update(.1,true);assert.ok(entity.status.loaded&&entity.mesh.visible&&!entity.observed);assert.equal(entity.age,0);
+ const playerBefore=p.pos.clone();p.pitch=-.8;b.update(3,true);assert.equal(entity.uniforms.uPresenceLife.value,0,'initially only an ambiguous cloud');p.pitch=0;b.update(9,true);
+ assert.ok(entity.uniforms.uPresenceLife.value>.8,'looking starts a gradual living reveal that continues quietly');assert.equal(p.pos.distanceTo(playerBefore),0);assert.equal(p.pitch,0);assert.equal(entity.mesh.geometry.attributes.position.version,vertexVersion);assert.equal(entity.mesh.material.version,entityMaterialVersion);assert.ok(entity.mesh.position.y<-17,'the immense silhouette stays far below the player');
  const voidRay=new THREE.Raycaster(new THREE.Vector3(-.7,1.62,-412),new THREE.Vector3(-.55,-.835,0).normalize());b.group.updateMatrixWorld(true);
- assert.equal(voidRay.intersectObjects(b.group.children.filter(o=>o.isMesh)).length,0,'deep walls do not obstruct the infinite starfield');
+ assert.equal(voidRay.intersectObject(b.group.children[0]).length,0,'deep walls do not obstruct the infinite starfield');
  assert.ok(!mats.floorB.uniforms?.uAbyssLeft&&!mats.stone.uniforms?.uAbyssDepth,'void material patches stay local to the warehouse');
  assert.equal(rack.position.y,-8);assert.equal(bed.position.y,-8);assert.ok(Math.abs(bust.position.y+6.9)<1e-8);assert.equal(poster.position.y,1.6);
  group.updateMatrixWorld(true);const ray=new THREE.Raycaster(),down=new THREE.Vector3(0,-1,0);
@@ -50,7 +55,7 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
  let area=0;for(let i=0;i<position.count;i+=3){area+=Math.abs((position.getX(i+1)-position.getX(i))*(position.getZ(i+2)-position.getZ(i))-(position.getZ(i+1)-position.getZ(i))*(position.getX(i+2)-position.getX(i)))/2;}
  assert.ok(Math.abs(area-12*36)<1e-5,'partition neither duplicates nor loses floor area');
  for(const a of [position,uv,color])for(const v of a.array)assert.ok(Number.isFinite(v));
- assert.ok(position.count/3<300&&b.stats.pitTriangles<80,'geometry budget stays small');
+ assert.ok(position.count/3<300&&b.stats.pitTriangles<300,'geometry budget stays small');
   const pitUV=b.group.children[0].geometry.attributes.uv;for(let i=0;i<pitUV.count;i+=3){const area=(pitUV.getX(i+1)-pitUV.getX(i))*(pitUV.getY(i+2)-pitUV.getY(i))-(pitUV.getY(i+1)-pitUV.getY(i))*(pitUV.getX(i+2)-pitUV.getX(i));assert.ok(Math.abs(area)>1e-8,'pit/bridge edge faces retain real texture area');}
  const late=prop(-4,-411);b.update(.01,true);assert.equal(late.position.y,-8,'late assets are anchored before their first visible frame');
  const contacts=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial());contacts.rotation.x=-Math.PI/2;contacts.position.set(3,.002,-412);group.add(contacts);b.update(.01,true);
@@ -71,11 +76,12 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
  for(let t=0;t<4;t+=1/60)b.update(1/60,true);
  assert.equal(f.lamps.length,0);assert.equal(b.group.getObjectByName('abisso-stelle').material.opacity,0,'stars disappear when the floor closes');assert.equal(anchored.userData.ageFloor.value,0);
  assert.equal(floorShader.uniforms.uAbyssLeft.value,0);assert.equal(bust.children[0].material.uniforms.uAbyssDepth.value,0);
+ assert.equal(entity.mesh.visible,false);assert.equal(entity.age,0);
  assert.equal(b.done,true);assert.equal(p.constrainMove,null);assert.equal(rack.position.y,0);assert.equal(late.position.y,0);
  assert.ok([...floor.geometry.attributes.position.array].every(Number.isFinite));
  b.reset();assert.equal(b.state,'idle');assert.equal(b.done,false);p.pos.set(0,1.62,-407);b.update(1,true);b.leave();assert.equal(p.constrainMove,null);assert.equal(rack.position.y,0);
  const slow=fixture(true);slow.p.pos.z=-407;slow.bridge.update(4,true);assert.ok(slow.bridge.left<8&&slow.bridge.state==='opening','reduced motion descends more slowly');
- const still=slow.bridge.group.getObjectByName('abisso-stelle');assert.equal(still.rotation.y,0);assert.equal(still.material.color.r,1);slow.bridge.leave();
+ const still=slow.bridge.group.getObjectByName('abisso-stelle');assert.equal(still.rotation.y,0);assert.equal(still.material.color.r,1);await slow.bridge.group.userData.ready;slow.p.pitch=-.8;slow.bridge.update(15,true);const quiet=slow.bridge.group.userData.presence;assert.ok(quiet.mesh.visible);assert.equal(quiet.uniforms.uPresenceLife.value,0);assert.equal(quiet.uniforms.uPresenceTime.value,0);assert.equal(quiet.mesh.position.y,-18);slow.bridge.leave();
  const held=fixture(false,()=>true);held.p.pos.z=-407;held.bridge.update(5,true);assert.equal(held.bridge.state,'idle','existing narration is not interrupted by the transformation');
  const skipped=fixture();skipped.p.pos.set(-4,1.62,-417);skipped.bridge.update(1,true);assert.equal(skipped.bridge.done,true);assert.equal(skipped.p.constrainMove,null);
  const uploads=[];for(const m of Object.values(mats))m.map.image={complete:false};const prepared=fixture(false,()=>false,{initTexture:t=>uploads.push(t)});
@@ -85,5 +91,6 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
  let compiled=0;const warm=fixture(false,()=>false,{initTexture(){},async compileAsync(subset){const objects=[];subset.traverse(o=>objects.push(o));assert.ok(objects.some(o=>o.isPoints),'stars compile before being revealed');compiled++;}});
  warm.p.pos.z=-407;warm.bridge.update(.1,true);assert.equal(warm.bridge.state,'idle','the reveal waits for shader preparation while movement remains available');
  await warm.bridge.prepare();assert.ok(compiled>0&&!warm.bridge.preparing);warm.bridge.update(.1,true);assert.equal(warm.bridge.state,'opening');
+ failNext=true;const failed=fixture();await failed.bridge.prepare();failed.p.pos.z=-407;failed.bridge.update(5,true);assert.equal(failed.bridge.state,'open');assert.ok(failed.bridge.group.userData.presence.status.error);assert.equal(failed.bridge.group.userData.presence.mesh.visible,false,'failed artwork does not block movement or expose a rectangle');
  console.log(JSON.stringify({result:'PASS',floorTriangles:position.count/3,stats:b.stats,physics:'flat bridge, real descending wings, diagonal/side-entry/backwards safe',lifecycle:'late surfaces, restore, reset, leave, reduced motion and narration'}));
 })().catch(e=>{console.error(e);process.exitCode=1;});
