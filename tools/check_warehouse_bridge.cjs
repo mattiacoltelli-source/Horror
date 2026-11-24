@@ -15,8 +15,8 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
   const group=new THREE.Group(),room=buildRoom(mats,{z0:-400,w:12,l:36,h:6.5,floor:'floorB'});group.add(room.group);
   const p={pos:new THREE.Vector3(.3,1.62,-401.6),box:[-5.5,5.5,-429,-400.6],constrainMove:null},calls=[],lamps=[];
   const lights={addLamp(...args){const l={args};lamps.push(l);return l;},dropLamp(l){lamps.splice(lamps.indexOf(l),1);}};
-  const bridge=createWarehouseBridge({group,room,mats,player:p,lights,renderer,z0:-400,width:12,reduced,narrationBusy,audio:{swell:(...a)=>calls.push(a),squeak:(...a)=>calls.push(a)}});
-  bridge.reset();const floor=room.group.children.find(m=>m.material===mats.floorB);return{group,room,p,bridge,floor,calls,lamps};
+  const bridge=createWarehouseBridge({group,room,mats,player:p,lights,renderer,scene:new THREE.Scene(),camera:new THREE.PerspectiveCamera(),z0:-400,width:12,reduced,narrationBusy,audio:{swell:(...a)=>calls.push(a),squeak:(...a)=>calls.push(a)}});
+  bridge.reset();const floor=room.group.children.find(m=>m.geometry?.attributes.bridgeWing);return{group,room,p,bridge,floor,calls,lamps};
  }
  const f=fixture(),{p,bridge:b,group,floor}=f;
  const prop=(x,z,y=0)=>{const g=new THREE.Group();g.position.set(x,y,z);g.userData.supportHeight=y;const m=new THREE.Mesh(new THREE.BoxGeometry(.8,1.5,.8),mats.stone);m.position.y=.75;g.add(m);group.add(g);return g;};
@@ -27,13 +27,19 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
  p.pos.set(.3,1.62,-407);b.update(.1,true);assert.equal(b.state,'opening');
  for(let t=0;t<5;t+=1/60)b.update(1/60,true);
  assert.equal(b.state,'open');assert.equal(b.left,8);assert.equal(b.right,8);
- assert.equal(f.lamps.length,1);assert.equal(anchored.userData.ageFloor.value,-8,'age pattern moves with the supported prop');
+ assert.equal(f.lamps.length,0,'the mystical void adds no lights');assert.ok(b.group.getObjectByName('abisso-stelle').material.opacity>.8);assert.equal(anchored.userData.ageFloor.value,-8,'age pattern moves with the supported prop');
+ const stars=b.group.getObjectByName('abisso-stelle');assert.equal(stars.material.map,null);assert.ok(stars.geometry.attributes.position.count<=700);
+ for(let i=0;i<stars.geometry.attributes.position.count;i++)assert.ok(stars.geometry.attributes.position.getY(i)<-2,'starfield stays below the real floor');
+ const voidRay=new THREE.Raycaster(new THREE.Vector3(-.7,1.62,-412),new THREE.Vector3(-.55,-.835,0).normalize());b.group.updateMatrixWorld(true);
+ assert.equal(voidRay.intersectObjects(b.group.children.filter(o=>o.isMesh)).length,0,'deep walls do not obstruct the infinite starfield');
+ assert.ok(!mats.floorB.uniforms?.uAbyssLeft&&!mats.stone.uniforms?.uAbyssDepth,'void material patches stay local to the warehouse');
  assert.equal(rack.position.y,-8);assert.equal(bed.position.y,-8);assert.ok(Math.abs(bust.position.y+6.9)<1e-8);assert.equal(poster.position.y,1.6);
  group.updateMatrixWorld(true);const ray=new THREE.Raycaster(),down=new THREE.Vector3(0,-1,0);
  for(let z=-409;z>-415.4;z-=.25)for(const x of [-.72,0,.72]){
   ray.set(new THREE.Vector3(x,2,z),down);assert.ok(Math.abs(ray.intersectObject(floor)[0].point.y)<1e-7,'entire player footprint remains on the stable floor');
  }
  for(const x of [-3,3]){ray.set(new THREE.Vector3(x,2,-412),down);assert.ok(Math.abs(ray.intersectObject(floor)[0].point.y+8)<1e-7,'a real floor descends below the bridge');}
+ const floorShader={uniforms:{},vertexShader:THREE.ShaderLib.standard.vertexShader,fragmentShader:THREE.ShaderLib.standard.fragmentShader};floor.material.onBeforeCompile(floorShader);assert.equal(floorShader.uniforms.uAbyssLeft.value,8);assert.ok(floorShader.fragmentShader.includes('if(abyssFade>.999)discard'),'only dissolved floor wings reveal the depth below');assert.equal(bust.children[0].material.uniforms.uAbyssDepth.value,8);
  const g=floor.geometry,position=g.attributes.position,uv=g.attributes.uv,color=g.attributes.color;
  let area=0;for(let i=0;i<position.count;i+=3){area+=Math.abs((position.getX(i+1)-position.getX(i))*(position.getZ(i+2)-position.getZ(i))-(position.getZ(i+1)-position.getZ(i))*(position.getX(i+2)-position.getX(i)))/2;}
  assert.ok(Math.abs(area-12*36)<1e-5,'partition neither duplicates nor loses floor area');
@@ -57,7 +63,8 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
  p.pos.set(.3,1.62,-412);next=p.constrainMove(.3,-411.9);assert.ok(next[1]>p.pos.z,'backwards movement remains free');
  p.pos.set(.3,1.62,-416.5);b.update(1,true);assert.equal(b.state,'restoring');
  for(let t=0;t<4;t+=1/60)b.update(1/60,true);
- assert.equal(f.lamps.length,0,'borrowed lamp removed after restoration');assert.equal(anchored.userData.ageFloor.value,0);
+ assert.equal(f.lamps.length,0);assert.equal(b.group.getObjectByName('abisso-stelle').material.opacity,0,'stars disappear when the floor closes');assert.equal(anchored.userData.ageFloor.value,0);
+ assert.equal(floorShader.uniforms.uAbyssLeft.value,0);assert.equal(bust.children[0].material.uniforms.uAbyssDepth.value,0);
  assert.equal(b.done,true);assert.equal(p.constrainMove,null);assert.equal(rack.position.y,0);assert.equal(late.position.y,0);
  assert.ok([...floor.geometry.attributes.position.array].every(Number.isFinite));
  b.reset();assert.equal(b.state,'idle');assert.equal(b.done,false);p.pos.set(0,1.62,-407);b.update(1,true);b.leave();assert.equal(p.constrainMove,null);assert.equal(rack.position.y,0);
@@ -68,5 +75,8 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
  assert.equal(uploads.length,0);for(const m of Object.values(mats))m.map.image.complete=true;prepared.bridge.update(.1,true);
  assert.equal(new Set(uploads).size,uploads.length);assert.ok(uploads.includes(mats.floorB.map),'textures decoded after initial preparation are uploaded while approaching');
  const uploaded=uploads.length;prepared.bridge.update(.1,true);assert.equal(uploads.length,uploaded,'stable maps are not re-uploaded every frame');
+ let compiled=0;const warm=fixture(false,()=>false,{initTexture(){},async compileAsync(subset){const objects=[];subset.traverse(o=>objects.push(o));assert.ok(objects.some(o=>o.isPoints),'stars compile before being revealed');compiled++;}});
+ warm.p.pos.z=-407;warm.bridge.update(.1,true);assert.equal(warm.bridge.state,'idle','the reveal waits for shader preparation while movement remains available');
+ await warm.bridge.prepare();assert.ok(compiled>0&&!warm.bridge.preparing);warm.bridge.update(.1,true);assert.equal(warm.bridge.state,'opening');
  console.log(JSON.stringify({result:'PASS',floorTriangles:position.count/3,stats:b.stats,physics:'flat bridge, real descending wings, diagonal/side-entry/backwards safe',lifecycle:'late surfaces, restore, reset, leave, reduced motion and narration'}));
 })().catch(e=>{console.error(e);process.exitCode=1;});

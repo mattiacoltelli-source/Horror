@@ -58,6 +58,7 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
         camera.far = { cellar: 42, morgue: 34, warehouse: 36, tower: 46, ward: 40 }[name] ?? 60; camera.updateProjectionMatrix();   // oltre la nebbia non serve disegnare
         current = name; lights.torchKill(0.01, 0); onRoom?.(name);
         if (name === 'cellar') await cellar.prepare?.();
+        if (name === 'warehouse') await wh.prepare?.();
         await prepare?.();
         preparing = false;
         tell(name); personalRoom(name);
