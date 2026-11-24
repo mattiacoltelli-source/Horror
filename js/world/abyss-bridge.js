@@ -41,12 +41,12 @@ export function partitionBridgeSurface(source,{start,end,halfWidth,depth},matrix
   return{geometry,tags:new Int8Array(tags),restY:new Float32Array(restY)};
 }
 
-export function createAbyssBridgeGeometry({mats,width,start,end,halfWidth,depth}){
-  const b=new Builder(),material=new THREE.MeshBasicMaterial({vertexColors:true,fog:false,toneMapped:false});
-  const quad=(points,normal)=>b.quad('edge',points,points.map(p=>normal[1]?[p[0]/1.6,p[2]/1.6]:[p[normal[0]?2:0]/1.6,p[1]/1.6]),points.map(p=>gray(.002*Math.max(0,1+p[1]/.6))),normal);
+export function createAbyssBridgeGeometry({mats,width,start,end,halfWidth,depth,reduced=false}){
+  const b=new Builder(),material=new THREE.MeshBasicMaterial({map:mats.floorB.map,vertexColors:true,fog:false,toneMapped:false});
+  const quad=(points,normal)=>b.quad('edge',points,points.map(p=>normal[1]?[p[0]/1.6,p[2]/1.6]:[p[normal[0]?2:0]/1.6,p[1]/1.6]),points.map(p=>gray(.012+.012*Math.max(0,1+p[1]/t))),normal);
   // Only a dark masonry lip remains. Deep rectangular walls would obscure the
   // stars and make this read as a basement shaft rather than impossible space.
-  const top=-.006,bottom=-.65,xl=-width/2,xr=width/2,t=.22;
+  const top=0,t=.22,bottom=-t,xl=-width/2,xr=width/2;
   for(const[x,n]of[[xl,1],[xr,-1]])quad([[x,bottom,start],[x,bottom,end],[x,top,end],[x,top,start]],[n,0,0]);
   for(const[z,n]of[[start,-1],[end,1]])for(const[a,c]of[[xl,-halfWidth],[halfWidth,xr]])quad([[a,bottom,z],[c,bottom,z],[c,top,z],[a,top,z]],[0,0,n]);
   for(const[x,n]of[[-halfWidth,-1],[halfWidth,1]])quad([[x,-t,start],[x,-t,end],[x,top,end],[x,top,start]],[n,0,0]);
@@ -56,12 +56,23 @@ export function createAbyssBridgeGeometry({mats,width,start,end,halfWidth,depth}
   const count=globalThis.__lowQ?350:700;
   for(let i=0;i<count;i++){
     const az=random()*Math.PI*2,ny=-.15-.85*random(),r=Math.sqrt(1-ny*ny),radius=14+14*random();
-    positions.push(radius*r*Math.cos(az),-.9+radius*ny,(start+end)/2+radius*r*Math.sin(az));
+    positions.push(radius*r*Math.cos(az),-.9+radius*ny,radius*r*Math.sin(az));
     const light=.22+.68*Math.pow(random(),3),violet=i%7===0;
     colors.push(light*(violet?.85:.65),light*(violet?.56:.77),light);
   }
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geometry.computeBoundingSphere();
   const stars=new THREE.Points(geometry,new THREE.PointsMaterial({size:2,sizeAttenuation:false,vertexColors:true,transparent:true,opacity:0,depthWrite:false,fog:false,toneMapped:false}));stars.name='abisso-stelle';group.add(stars);
-  group.userData.setDepth=d=>{const u=Math.min(1,Math.max(0,d/5.2));stars.material.opacity=.85*u*u*(3-2*u);};
+  stars.position.z=(start+end)/2;let time=0;
+  group.userData.setDepth=d=>{
+    const u=Math.min(1,Math.max(0,d/5.2));stars.material.opacity=.85*u*u*(3-2*u);
+    if(u===0){time=0;stars.rotation.y=0;stars.material.color.setScalar(1);}
+  };
+  // Only one transform and one colour uniform change. Vertex buffers stay
+  // static, with the pivot centred under the bridge rather than at world zero.
+  group.userData.update=dt=>{
+    if(reduced||stars.material.opacity===0)return;
+    time+=dt;stars.rotation.y=time*.012%(Math.PI*2);
+    stars.material.color.setScalar(.88+.10*Math.sin(time*.72)+.02*Math.sin(time*1.17+.5));
+  };
   return group;
 }
