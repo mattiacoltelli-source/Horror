@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from '../../vendor/three/utils/BufferGeometryUtils.js';
 import { createCosmicLava } from './cosmic-lava.js';
 import { createCosmicBoulders } from './cosmic-boulders.js';
+import { createCosmicDeadwood, createCosmicSkyAccent } from './cosmic-details.js';
 
 export const COSMIC_ASSETS = ['assets/tex/cosmic_ground.webp', 'assets/tex/cosmic_galaxy.webp', 'assets/tex/cosmic_lava.webp'];
 const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
@@ -98,6 +99,7 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
     g.computeVertexNormals();g.rotateY(hash(wx+17,wz-11)*Math.PI*2);g.translate(wx,height(wx,wz)+scale*.08,wz);pieces.push(g);
   }
   pieces.push(...createCosmicBoulders({terrainGeometry:geo,x,z,groundTint,uvScale}));
+  pieces.push(createCosmicDeadwood({terrainGeometry:geo,x,z}));
   const rockGeometry=mergeGeometries(pieces);for(const g of pieces)g.dispose();rockGeometry.computeBoundingSphere();
   const rocks=new THREE.Mesh(rockGeometry,terrainMaterial);rocks.name='cosmo-massi';group.add(rocks);
 
@@ -116,6 +118,7 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
   starGeometry.setAttribute('color',new THREE.Float32BufferAttribute(sc,3));
   const starMaterial=new THREE.PointsMaterial({size:1.25,sizeAttenuation:false,vertexColors:true,depthWrite:false,fog:false,toneMapped:false});
   const stars=new THREE.Points(starGeometry,starMaterial);stars.frustumCulled=false;stars.renderOrder=-12;stars.name='cosmo-stelle';skyGroup.add(stars);
+  const moon=createCosmicSkyAccent(groundTexture);skyGroup.add(moon);
 
   // A camera-translated, world-oriented rectilinear plate preserves the galaxy's
   // photographed aspect and diagonal. Looking around does not rotate it with you.
@@ -132,7 +135,7 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
   return {
     group,groundTexture,groundMaterial:terrainMaterial,ready,status,height,
     followCamera(camera) {if(group.visible)skyGroup.position.copy(camera.position);},
-    setSkyBrightness(v) {galaxyMaterial.color.setScalar(v);starMaterial.color.setScalar(v);lava.setBrightness(v);},
+    setSkyBrightness(v) {galaxyMaterial.color.setScalar(v);starMaterial.color.setScalar(v);moon.material.color.setScalar(v);lava.setBrightness(v);},
     prepare(renderer,scene,camera) {
       return prepared??=(async()=>{
         await ready;

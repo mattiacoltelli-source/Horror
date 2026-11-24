@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { W, SIDE_DOORS, Z_END } from '../world/tunnel.js';
 import { TILES } from '../world/materials.js';
 import { createCosmicLandscape } from '../world/cosmic-landscape.js';
+import { createWornArch } from '../world/worn-arch.js';
 import { mergeGeometries } from '../../vendor/three/utils/BufferGeometryUtils.js';
 
 const R_DOOR = SIDE_DOORS[0], L_DOOR = SIDE_DOORS[1], ZR = R_DOOR.z, ZLL = L_DOOR.z, ZL = SIDE_DOORS[2].z, XD = W, PW = 0.7, PH = R_DOOR.h, LEN = 14, S0 = XD + 2.6, SB = XD + 0.6, SDIR = Math.sign(SIDE_DOORS[2].z - ZR), KEND = 2 / Math.abs(ZR - SIDE_DOORS[2].z), LS = 0, U3 = Math.PI / KEND + LS;   // SB = inizio della curva; SDIR = verso della curva (+1 verso +z); U unica di raggio 1,8 m   // percorso a "stadio": curva verso -z (raggio 2,9 m), rettilineo di LS metri, curva di ritorno: il ritorno arriva esattamente davanti alla seconda porta
@@ -37,7 +38,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
         totalEmissiveRadiance += vec3(1.0, 0.78, 0.48) * uGlow * pow(smoothstep(5.0, 16.0, vRx), 1.8) * 0.45;`);
   }; mat.customProgramCacheKey = () => 'sidefold-' + key; return mat; };
   const lamb = (m, k = 1) => new THREE.MeshLambertMaterial({ map: m.map, vertexColors: true, color: new THREE.Color(m.color).multiplyScalar(k) });   // materiali del passaggio: Lambert con la sola mappa colore (niente normal/roughness/ao: molto meno costo per pixel con le luci della scena)
-  const wallM = lamb(mats.brick), floorM = lamb(mats.floorA);
+  const wallM = lamb(mats.brick, 0.82), floorM = lamb(mats.floorA);
   const colorAttr = (g, v) => { const n = g.attributes.position.count, a = new Float32Array(n * 3).fill(v); g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
   const quadGeo = (w, h, nx, mat4, uvf) => { const g = new THREE.PlaneGeometry(w, h, nx, 1); g.applyMatrix4(mat4); const p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) { const [a, b] = uvf(p.getX(i), p.getY(i), p.getZ(i)); uv.setXY(i, a, b); } return colorAttr(g, 0.8); };
   const M = (rx, ry, x, y, z) => new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, 0)), new THREE.Vector3(1, 1, 1));
@@ -100,34 +101,12 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
   wallsLo(ZLL, -XD - LL, -XD - LIN, 24, LP); { const [pl, nr] = arcPoly(ZLL); mesh(sweep(pl, nr, -XD - LL, -XD - LIN, 24), wallM, LP); }
   { const sh = new THREE.Shape(); sh.moveTo(-PW, 0); sh.lineTo(-PW, SPR); for (let k = 1; k <= ARC; k++) { const th = Math.PI - k / ARC * Math.PI; sh.lineTo(PW * Math.cos(th), SPR + PW * Math.sin(th)); } sh.lineTo(PW, 0); sh.lineTo(-PW, 0);
     const gcap = new THREE.ShapeGeometry(sh); const pp = gcap.attributes.position, uvc = gcap.attributes.uv; for (let i = 0; i < pp.count; i++) uvc.setXY(i, pp.getX(i) / bu, pp.getY(i) / bv); colorAttr(gcap, 0.8); gcap.rotateY(Math.PI / 2); gcap.translate(-XD - LL, 0, ZLL); mesh(gcap, wallM, LP); }
-  // ---- ARCO DI PIETRA, rovinato e integrato nel muro: conci a filo di parete (sporgono pochi centimetri), imposte a capitello, chiave d'arco piu' grossa, pietre scheggiate e un po' sconnesse,
-  // muschio e sporco verso il basso, lastra consumata sulla soglia. Nessun disegno: solo pietra. ----
-  const frameM = mats.stone.clone(); frameM.color.setRGB(0.95, 0.95, 1);
-  const frng = (sd) => () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+  // Arco a conci sagomati e smussati, giunti incassati, chiave sporgente e
+  // pietra piu' scura verso la base. Un solo batch statico per ogni cornice.
   const runeMats = [], dustSets = [];
-  const frame = (side, zc, sd) => { const g = new THREE.Group(), r = frng(sd), parts = [], IN = -side;
-    // blocco di pietra: spigoli appena irregolari, UV a scala reale dalla posizione; ombreggiatura per vertice (sporco in basso, muschio sparso)
-    const blk = (sx, sy, sz, x, y, z, rx, rY, rz, shade, chip = 0.05) => { const gm = new THREE.BoxGeometry(sx, sy, sz, 2, 2, 2); const p0 = gm.attributes.position; for (let i = 0; i < p0.count; i++) { const e = (Math.abs(p0.getX(i)) > sx * 0.45 ? 1 : 0) + (Math.abs(p0.getY(i)) > sy * 0.45 ? 1 : 0) + (Math.abs(p0.getZ(i)) > sz * 0.45 ? 1 : 0); const k = e >= 2 ? chip : chip * 0.3; p0.setXYZ(i, p0.getX(i) + (r() - 0.5) * k, p0.getY(i) + (r() - 0.5) * k, p0.getZ(i) + (r() - 0.5) * k); }
-      gm.rotateX(rx); gm.rotateY(rY); gm.rotateZ(rz); gm.translate(x, y, z); gm.computeVertexNormals(); const p = gm.attributes.position, nn = gm.attributes.normal, uv = gm.attributes.uv, n = p.count, col = new Float32Array(n * 3);
-      for (let i = 0; i < n; i++) { const ax = Math.abs(nn.getX(i)), ay = Math.abs(nn.getY(i)), az = Math.abs(nn.getZ(i)); if (ax >= ay && ax >= az) uv.setXY(i, p.getZ(i) / 1.8, p.getY(i) / 1.8); else if (ay >= az) uv.setXY(i, p.getX(i) / 1.8, p.getZ(i) / 1.8); else uv.setXY(i, p.getX(i) / 1.8, p.getY(i) / 1.8);
-        const low = Math.max(0, 1 - p.getY(i) / 1.2), v = shade * (0.85 + r() * 0.25) * (1 - 0.35 * low), moss = r() < 0.1 + low * 0.1 ? 0.07 : 0; col[i * 3] = v * 0.94; col[i * 3 + 1] = v + moss; col[i * 3 + 2] = v * 0.88; }
-      gm.setAttribute('color', new THREE.BufferAttribute(col, 3)); parts.push(gm); };
-    const xo = side * (W - 0.04);   // centro dei conci: sporgono ~7 cm dal muro
-    const RAD = PW;   // raggio del varco
-    // piedritti: filari di conci (altezze diverse, giunti sfalsati) profondi 59 cm: fuori dal muro per 9 cm e dentro il passaggio per 50; con una pietra mancante
-    const XC = side * (W + 0.205), DEP = 0.59;   // centro e profondita' dei conci (da W-0.09 a W+0.5, nel verso del passaggio)
-    for (const j of [-1, 1]) { let y = 0, k = 0; const gap = Math.floor(r() * 3) + 1; while (y < SPR - 0.04) { const h = Math.min(0.34 + r() * 0.2, SPR - y), wdt = 0.3 + (k % 2) * 0.1 + r() * 0.04; if (!(j === 1 && k === gap && r() < 0.6)) blk(DEP + r() * 0.02, h - 0.012, wdt, XC + side * 0.01 * r(), y + h / 2, zc + j * (RAD - 0.012 + wdt / 2), 0, (r() - 0.5) * 0.015, (r() - 0.5) * 0.01, 0.5 + r() * 0.15, 0.03); y += h; k++; } }
-    // imposte: capitelli piatti che sporgono un po' di piu' e segnano l'attacco dell'arco
-    for (const j of [-1, 1]) blk(DEP + 0.03, 0.14, 0.62, XC - side * 0.015, SPR + 0.05, zc + j * (RAD + 0.2), 0, 0, 0, 0.6, 0.03);
-    // arco: conci radiali (11), spessore 0.27, uno scheggiato e storto; chiave piu' alta e sporgente
-    const NV = 11; for (let i = 0; i < NV; i++) { const th = (i + 0.5) / NV * Math.PI, key = i === (NV - 1) / 2, Rm = RAD - 0.012 + (key ? 0.15 : 0.135), tang = Math.PI * Rm / NV * 1.02;
-      blk(DEP + (key ? 0.06 : r() * 0.02), key ? 0.3 : 0.27, tang + (key ? 0.06 : 0), XC - side * (key ? 0.03 : 0.0), SPR + Math.sin(th) * Rm, zc + Math.cos(th) * Rm, -th, 0, (i === 3 ? 0.03 : (r() - 0.5) * 0.01), 0.5 + r() * 0.15, 0.03); }
-    // secondo anello, piu' sottile e a filo di parete, con un buco dove un concio e' caduto
-    const NV2 = 15; for (let i = 0; i < NV2; i++) { if (i === 11) continue; const th = (i + 0.5) / NV2 * Math.PI, Rm = RAD + 0.38; blk(0.06 + r() * 0.02, 0.24, Math.PI * Rm / NV2 * 1.02, xo + side * 0.02, SPR + Math.sin(th) * Rm, zc + Math.cos(th) * Rm, -th, 0, 0, 0.42 + r() * 0.12, 0.04); }
-    const fm = frameM.clone(); fm.vertexColors = true; g.add(new THREE.Mesh(mergeGeometries(parts), fm));
-    return g; };
+  const frame = (side, zc, seed) => createWornArch({ stone: mats.stone, side, wallX: W, centerZ: zc, radius: PW, spring: SPR, seed });
   // RIVESTIMENTO DI SOSTEGNO dietro i conci: un guscio continuo di pietra (arco, pareti e pavimento) lungo la profondita' dell'arco; chiude ogni fessura tra un concio e l'altro (da li' non si vede mai il vuoto o l'universo)
-  let lin; { const linM = mats.stone.clone(); linM.color.setRGB(0.5, 0.5, 0.52);
+  let lin; { const linM = mats.stone.clone(); linM.color.setRGB(0.35, 0.34, 0.33);
     lin = (zc, side, parent) => { const rad = PW - 0.004, xa = side > 0 ? XD - 0.09 : -(XD + LIN + 0.01), xb = side > 0 ? XD + LIN + 0.01 : -(XD - 0.09), nxl = 6; const [pl, nr] = arcPoly(zc, rad);
       mesh(sweep(pl, nr, xa, xb, nxl), linM, parent); mesh(sweep([[zc - rad, 0], [zc - rad, SPR]], [[1, 0], [1, 0]], xa, xb, nxl), linM, parent); mesh(sweep([[zc + rad, SPR], [zc + rad, 0]], [[-1, 0], [-1, 0]], xa, xb, nxl), linM, parent);
       mesh(quadGeo(xb - xa, rad * 2, nxl, M(-Math.PI / 2, 0, (xa + xb) / 2, -0.004, zc), (x, y, z) => [x / fu, z / fv]), linM, parent); };
@@ -215,7 +194,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
 
   // ===================== PIANETA ALIENO (macchina a stati: ENTER -> EXPLORE -> FLICKER -> BLACKOUT -> RETURN) =====================
   // Paesaggio nella scena principale: terreno e massi statici, stelle a 360 gradi e galassia separata.
-  // Cinque draw call, nessun secondo render. Sfarfallio, blackout e ritorno restano quelli esistenti.
+  // Sei draw call, nessun secondo render. Sfarfallio, blackout e ritorno restano quelli esistenti.
   RP.visible = true; for (const o of slabs) o.visible = false; GL.visible = false; winQuad.visible = false; SKY.visible = false; spill.visible = spillSp.visible = false; for (const o of fallback) o.visible = false; frame2.visible = false; frameL.visible = false;
   const PX0 = XD + 0.4, PXMAX = XD + 7.0, PZH = 0.5, FRONT = XD + 0.62;   // collisioni e soglie dell'evento invariate
   const landscape = createCosmicLandscape({ x: XD, z: ZR, xStart: SV, uvScale: [fu, fv] });
