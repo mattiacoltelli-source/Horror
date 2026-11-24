@@ -8,9 +8,13 @@ export function aged(obj, k = 0.7, rust = 0, ov = 'rust_ov') {   // ov: texture 
     if (!m.isMesh || !m.material) return;
     const mats = [].concat(m.material).map((mat) => {
       const c = mat.clone(); c.roughness = Math.max(c.roughness ?? 0.8, 0.8); if (c.metalness) c.metalness *= 0.5;
+      const ageFloor={value:0};c.userData.ageFloor=ageFloor;
+      // Also expose the custom map to the existing texture preparation pass.
+      // Otherwise a shelf first revealed below the bridge can upload it late.
+      c.uniforms={tRust:{value:rustTex}};
       c.onBeforeCompile = (sh) => {
-        sh.uniforms.uAge = { value: k }; sh.uniforms.uRust = { value: rust }; sh.uniforms.tRust = { value: rustTex };
-        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vAgeW;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvAgeW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+        sh.uniforms.uAge = { value: k }; sh.uniforms.uRust = { value: rust }; sh.uniforms.tRust = { value: rustTex };sh.uniforms.uAgeFloor=ageFloor;
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vAgeW; uniform float uAgeFloor;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvAgeW = (modelMatrix * vec4(transformed, 1.0)).xyz; vAgeW.y -= uAgeFloor;');
         sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
 varying vec3 vAgeW; uniform float uAge, uRust; uniform sampler2D tRust;
 float aH(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
@@ -28,7 +32,7 @@ float aN(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
     float wear = smoothstep(0.78, 0.9, aN(vAgeW * 41.0)) * 0.35 * uAge; diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.34, 0.3, 0.25), wear); }   // vernice saltata`);
       };
       // Eta', ruggine e texture sono uniformi: non richiedono programmi GPU diversi.
-      c.customProgramCacheKey = () => 'aged-v2';
+      c.customProgramCacheKey = () => 'aged-v3';
       return c;
     });
     m.material = Array.isArray(m.material) ? mats : mats[0];

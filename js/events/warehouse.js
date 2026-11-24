@@ -14,16 +14,19 @@ import { redLight, doorGlow } from '../world/redlight.js';
 import { addExtras, pedestal } from '../world/extra.js';
 import { addAtmosphere } from '../world/atmos.js';
 import { addObjectContactShadow } from '../world/contact-shadows.js';
+import { createWarehouseBridge } from './warehouse-bridge.js';
 
 export const WH = { z0: -400, w: 12, l: 36, h: 6.5 };
 
-export function createWarehouse({ scene, mats, player, camera, audio, lights, instab, say, hall, combat, story, flags = {}, actBtn }) {
+export function createWarehouse({ scene, mats, player, camera, audio, lights, renderer, instab, say, hall, combat, story, flags = {}, actBtn }) {
   const W = { group: new THREE.Group(), taken: false, state: 'idle', t: 0, near: false };
   W.group.visible = false; scene.add(W.group);
   const room = buildRoom(mats, { z0: WH.z0, w: WH.w, l: WH.l, h: WH.h, wall: 'brick', floor: 'floorB', ceil: 'stone', pillarEvery: 6, dark: 0.8, seed: 41, exit: { w: 2, h: 2.6 } });
-  W.group.add(room.group); const entry = decorWarehouse(W.group, WH.z0); W.bounds = [room.bounds[0], room.bounds[1], WH.z0 - WH.l + 1.5, WH.z0 - 0.6];
+  W.group.add(room.group);
+  const bridge=W.bridge=new URLSearchParams(location.search).get('ponte')==='0'?null:createWarehouseBridge({group:W.group,room,mats,player,audio,lights,renderer,z0:WH.z0,width:WH.w,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,narrationBusy:()=>performance.now()<(say?.noteUntil||0)});
+  const entry = decorWarehouse(W.group, WH.z0); W.bounds = [room.bounds[0], room.bounds[1], WH.z0 - WH.l + 1.5, WH.z0 - 0.6];
   const zFar = WH.z0 - WH.l, loader = new GLTFLoader();
-  const prop = (url, h, x, y, z, ry, cb) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y - y, c.z - z)); o.rotation.y = ry; if (/rack|stool|cart|shelf|chair|rim|can|tank|bin/.test(url)) aged(o, 0.9, /rack|cart|rim|can|tank|bin/.test(url) ? 0.85 : 0); W.group.add(o); cb?.(o); if(y<.02)addObjectContactShadow(cb?o:W.group,o,{floorParent:W.group,floorY:y,strength:h<.2?.16:.23}); });
+  const prop = (url, h, x, y, z, ry, cb) => loader.load(url, (g) => { const o = g.scene; const b = new THREE.Box3().setFromObject(o); o.scale.multiplyScalar(h / (b.max.y - b.min.y)); b.setFromObject(o); const c = b.getCenter(new THREE.Vector3()); o.position.sub(new THREE.Vector3(c.x - x, b.min.y - y, c.z - z)); o.rotation.y = ry; o.userData.supportHeight=y; if (/rack|stool|cart|shelf|chair|rim|can|tank|bin/.test(url)) aged(o, 0.9, /rack|cart|rim|can|tank|bin/.test(url) ? 0.85 : 0); W.group.add(o); cb?.(o); if(y<.02)addObjectContactShadow(cb?o:W.group,o,{floorParent:W.group,floorY:y,strength:h<.2?.16:.23}); });
 
   // scaffali e cestini lungo i muri, un po' sparsi (non una fila perfetta)
   [-9, -13.5, -19, -26.5, -31, -33.5].forEach((dz, i) => { prop('assets/models/rack.glb', 1.9, i % 2 ? 5.2 : -5.2, 0, WH.z0 + dz - 0.4, (i % 2 ? -1 : 1) * Math.PI / 2 + (i % 3) * 0.05); });
@@ -95,21 +98,23 @@ export function createWarehouse({ scene, mats, player, camera, audio, lights, in
     W.gone = false; W.prev = false; if (W.bx) { W.bounds[0] = W.bx[0]; W.bounds[1] = W.bx[1]; } W.bounds[2] = WH.z0 - WH.l + 1.5; if (W.cap) W.cap.visible = true; W.group.position.z = 0; tv.reset(); sorella.reset(); sorella.load(); W.group.visible = true; W.taken = false; W.state = 'walk'; W.t = 0; W.beat = false; gateT = 0; if (leaf) leaf.rotation.y = 0;
     player.box = W.box; player.pos.set(0.3, 1.62, WH.z0 - 1.6); player.yaw = 0; player.pitch = 0; player.frozen = false;
     const red = flags.door === 'red'; lights.setLamps(lampPos, red ? 1.7 : 2.2, red ? 0xff5a44 : 0xffc57a); lights.grade(red ? { fog: 0x0c0302, hemi: [0x6a2418, 0x140604, 0.42] } : { fog: 0x0a0802, hemi: [0x6a5426, 0x120c04, 0.42] }); reds.forEach((r) => (r.root.visible = red)); W.nearGate = false; W.hinted = false; flags.noGun = false; flags.weapon = null; W.red = red; entry.visible = !red; gateIn.visible = red; W.br = 6 + Math.random() * 4; W.brN = 0; lights.lamp(3, 'off'); W.sec = 0; scene.fog.density = 0.032; audio.duck(1, 1.5); instab.set(0.08, 6);
+    bridge?.reset();
   };
-  W.leave = () => { W.group.visible = false; };
+  W.leave = () => { bridge?.leave(); W.group.visible = false; };
 
   const dv = new THREE.Vector3(), fw = new THREE.Vector3(), tmp = new THREE.Vector3(); let steps = 0, stepT = 0, doorT = 0; const STEPS = flags.turned ? 5.6 : 7.4;   // chi si e' girato ha meno tempo prima che arrivi
   W.update = (dt) => {
-    if (!W.group.visible || W.gone) return; const P = player.pos; W.t += dt; tv.update(dt, !combat?.active); sorella.update(dt, !combat?.active);
+    bridge?.update(dt,W.group.visible&&!W.gone&&W.state==='walk'&&!combat?.active);
+    if (!W.group.visible || W.gone) return; const P = player.pos; W.t += dt; tv.update(dt, !combat?.active&&(!bridge||bridge.done)); sorella.update(dt, !combat?.active&&(!bridge||bridge.done));
     // faro con sensore: passi nel suo raggio e si accende con un tonfo; qualcuno è già lì, fermo, nella luce. Poi si spegne.
     // l'ombra con la campana sta vicino al muro destro, di fronte al murale con le fiamme, a guardarlo
-    if (W.sec === 0 && P.z < WH.z0 - 12) { W.sec = 1; W.secT = 0; lights.lamp(3, 'flicker', 0.5); shade.position.set(flags.turned ? 4.4 : 4.8, 0, WH.z0 - 24.4); shade.rotation.y = Math.PI / 2; shade.visible = true; audio.lightOn(); audio.whisper(1.6, 0.12); instab.push(0.7, 5); player.addShake(0.15); }
+    if (W.sec === 0 && P.z < WH.z0 - 12 && (!bridge||bridge.done)) { W.sec = 1; W.secT = 0; lights.lamp(3, 'flicker', 0.5); shade.position.set(flags.turned ? 4.4 : 4.8, 0, WH.z0 - 24.4); shade.rotation.y = Math.PI / 2; shade.visible = true; audio.lightOn(); audio.whisper(1.6, 0.12); instab.push(0.7, 5); player.addShake(0.15); }
     if (W.sec === 1) { W.secT += dt; secMats.forEach((m) => (m.emissiveIntensity = 2.2 * (lights.lamps[3]?.level ?? 0)));
       if (W.secT > 0.55 && W.secT < 0.6) lights.lamp(3, 'on');
       if ((W.secT > 4.2 || P.z < WH.z0 - 19) && W.secT > 1.2) { W.sec = 2; shade.visible = false; lights.lamp(3, 'off'); audio.lightOn(); secMats.forEach((m) => (m.emissiveIntensity = 0)); } }
-    stoolMove(dt, W.state === 'walk');
+    stoolMove(dt, W.state === 'walk'&&!bridge?.busy);
     if (W.red) { reds.forEach((r) => r.update(dt)); inGlow.update(dt); }
-    else if (W.state === 'walk' && W.brN < 4) { W.br -= dt; if (W.br <= 0) { W.br = 11 + Math.random() * 6; W.brN++; audio.breath?.(); } }   // il respiro dietro la porta scelta ti ha seguito
+    else if (W.state === 'walk' && W.brN < 4 && !bridge?.busy) { W.br -= dt; if (W.br <= 0) { W.br = 11 + Math.random() * 6; W.brN++; audio.breath?.(); } }   // il respiro dietro la porta scelta ti ha seguito
     // pulsante PRENDI vicino al carrello
     dv.set(0 - P.x, 0, cartZ - P.z); const dd = dv.length(); dv.normalize(); fw.set(player.forward.x, 0, player.forward.z).normalize();
     const near = !W.taken && W.state !== 'open' && dd < 2.1 && fw.dot(dv) > 0.5; if (near !== W.near) { W.near = near; pickEl?.classList.toggle('hidden', !near); if (near && !W.hinted) { W.hinted = true; say('la pistola o l\'ascia. ne prendi una sola.', 5200); } }

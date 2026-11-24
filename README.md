@@ -68,6 +68,7 @@ Apri `http://localhost:8123` (su desktop: WASD + trascinamento a destra).
 ## Crediti asset
 - Texture e modelli Poly Haven / ambientCG (CC0).
 - Ghiaia cosmica: adattamento della texture `floorB_c.jpg` già nel progetto. Basalto e frattura della cripta: riferimento grafico dell'autore e decal originale generata e ottimizzata per il gioco.
+- Falò lontano del pianeta: geometria da `17-camp_fire.rar` fornito dall'autore; colori dell'atlante incorporati nei vertici, senza caricatore FBX o texture aggiuntive. Fiamma leggera creata nel gioco.
 - Modello del cane: «Grimhound Rig» di DM-913 (CC-BY 4.0), citato nella schermata iniziale.
 - Suoni registrati: Pixabay (alesiadavina) e Mixkit (licenze gratuite); passi: Kenney «Impact Sounds» (CC0).
 - Modelli dei personaggi e murales forniti dall'autore del progetto (murales generati con strumenti di immagini); licenze originali da confermare prima di una pubblicazione più ampia.
@@ -78,6 +79,11 @@ Di default (in tutte le versioni; `?piega=0` la spegne) il corridoio del reparto
 
 ## Allungamento del tunnel
 Nel primo tunnel, tra 9 e 14 m dall'ingresso, il corridoio diventa lunghissimo per un attimo (il fondo schizza lontano, circa 2 s in tutto) e poi torna com'era. Solo disegno (`js/world/breath.js`): collisioni e posizioni non cambiano. Spento di default (non convinceva): si attiva solo con `?allunga=1`.
+
+## Ponte sull'abisso nel magazzino
+Avanzando al centro, i due lati del pavimento scendono realmente di 8 m, con gli oggetti appoggiati, lasciando un percorso stabile largo 2,1 m. Si può avanzare, fermarsi e tornare indietro; i bordi impediscono la caduta. Dopo il passaggio il pavimento risale e riprendono gli eventi originali. Nessuna rotazione automatica della visuale. La preferenza di sistema «movimento ridotto» rallenta la trasformazione.
+
+Prova diretta: `?start=magazzino`; disattivazione completa: `?ponte=0`. Si ripristina a ogni ingresso/checkpoint. Usa la stessa scena, i materiali del pavimento e il pool esistente di due luci; nessun asset da scaricare durante la trasformazione. Verifiche disponibili: `node --experimental-vm-modules tools/check_warehouse_bridge.cjs` e, con server locale e Chromium/Playwright, `tools/check_warehouse_bridge_browser.cjs`. I test software non misurano gli FPS su Android reale.
 
 ## App installabile e aggiornamenti
 Il gioco è una PWA: icona sulla home, schermo intero, funziona offline dopo il primo avvio. Quando esce una nuova versione compare il banner **«Aggiornamento disponibile · AGGIORNA»** (controllo a ogni apertura e ogni 30 minuti).

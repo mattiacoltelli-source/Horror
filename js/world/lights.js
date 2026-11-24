@@ -85,7 +85,7 @@ export function createLights(scene, camera) {
           const drop=Math.min(.45,Math.max(0,L.y)*.2),height=L.y-drop;
           pool[i].position.set(L.x,height,L.z); api.mapPoint?.(pool[i].position);
           const gain=L.y>0?Math.pow(height/L.y,1.8):1;
-          pool[i].intensity=14*poolGain*L.level*gain;pool[i].color.setHex(L.col??curColor);
+          pool[i].intensity=14*poolGain*L.level*gain*(L.base??1);pool[i].color.setHex(L.col??curColor);
         } else pool[i].intensity = 0;
       }
       for (const L of lamps) if (L.mesh) { L.mesh.userData.setGlow?.(L.level); }
