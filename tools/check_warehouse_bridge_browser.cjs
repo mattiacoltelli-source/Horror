@@ -21,7 +21,7 @@ const base=process.env.BRIDGE_BASE_URL||'http://127.0.0.1:8205/',out=process.env
    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
    await page.screenshot({path:path.join(out,name+'.png'),timeout:90000});
   }
-  await enter();await page.evaluate(()=>__g.sim(.1));await shot('01-magazzino-prima',-.1);
+  await enter();await page.evaluate(async()=>{__g.sim(.1);await __g.wh.bridge.prepare();});await shot('01-magazzino-prima',-.1);
   const before=await page.evaluate(()=>({stats:__g.wh.bridge.stats,programs:__g.renderer.info.programs.length,images:__g.renderer.info.memory.textures,pitch:__g.player.pitch}));
   const imageRequests=()=>requests.filter(u=>/\.(webp|jpg|png)(?:\?|$)/.test(u)).length,loadedImages=imageRequests();
   await page.keyboard.down('KeyW');await page.evaluate(()=>__g.sim(4.3,1/60));await page.keyboard.up('KeyW');
@@ -31,6 +31,8 @@ const base=process.env.BRIDGE_BASE_URL||'http://127.0.0.1:8205/',out=process.env
   await page.evaluate(()=>__g.sim(4.8,1/60));
   const open=await page.evaluate(()=>({left:__g.wh.bridge.left,right:__g.wh.bridge.right,state:__g.wh.bridge.state,sister:__g.wh.sorella.state,stats:__g.wh.bridge.stats}));
   assert.equal(open.state,'open');assert.equal(open.left,8);assert.equal(open.right,8);assert.equal(open.sister,'idle','apparitions wait for the spatial event');
+  const stars=await page.evaluate(()=>{const s=__g.wh.bridge.group.getObjectByName('abisso-stelle');return{count:s.geometry.attributes.position.count,opacity:s.material.opacity,map:!!s.material.map};});
+  assert.ok(stars.count<=700&&stars.opacity>.8&&!stars.map,'the void uses one static starfield and no new image');
   await shot('03-ponte-aperto',-.30);await shot('04-abisso-sinistro',-.80,.85);await shot('05-abisso-destro',-.75,-.85);
   const after=await page.evaluate(()=>({programs:__g.renderer.info.programs.length,images:__g.renderer.info.memory.textures}));
   assert.equal(imageRequests(),loadedImages,'no image loading during the transformation');
@@ -44,6 +46,7 @@ const base=process.env.BRIDGE_BASE_URL||'http://127.0.0.1:8205/',out=process.env
   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   const middle=await page.evaluate(()=>({z:__g.player.pos.z,y:__g.player.pos.y}));assert.ok(middle.z<touchStart-2);assert.equal(middle.y,1.62);
   await shot('07-profondita',-.85,.95);
+  await page.evaluate(()=>__g.player.pos.x=-.55);await shot('08-vuoto-stellato',-1.02,Math.PI/2);await page.evaluate(()=>__g.player.pos.x=.3);
   await page.evaluate(()=>{__g.player.yaw=0;__g.player.pitch=0;__g.sim(.05);});
   await page.evaluate(()=>__g.sim(.2));assert.equal(await page.evaluate(()=>__g.player.pos.z),middle.z,'release stops on the bridge');
   await page.keyboard.down('KeyD');await page.evaluate(()=>__g.sim(1.8,1/60));await page.keyboard.up('KeyD');
@@ -63,10 +66,11 @@ const base=process.env.BRIDGE_BASE_URL||'http://127.0.0.1:8205/',out=process.env
   assert.equal(await page.evaluate(()=>__g.story.current()),'tower');assert.ok(await page.evaluate(()=>!__g.wh.bridge?.ownsController));
   await page.evaluate(()=>__g.story.goto('warehouse',true));await page.waitForFunction(()=>!__g.story.busy(),null,{timeout:180000});
   assert.equal(await page.evaluate(()=>__g.wh.bridge.state),'idle');assert.equal(await page.evaluate(()=>__g.wh.bridge.left),0);
+  assert.equal(await page.evaluate(()=>__g.wh.bridge.group.getObjectByName('abisso-stelle').material.opacity),0,'no stars leak through the reset floor');
   await enter('&ponte=0');assert.equal(await page.evaluate(()=>__g.wh.bridge),null);
   assert.equal(await page.evaluate(()=>__g.scene.getObjectByName('pozzo-sotto-il-ponte')!=null),false);assert.ok(await page.evaluate(()=>!__g.wh.bridge?.ownsController));
   assert.deepEqual(errors,[]);assert.deepEqual(bad,[]);
-  const result={result:'PASS',before,beginning,open,after,middle,edge,restored,errors,bad,checks:['real descending floor and anchored props','no auto pitch','touch forward, stop, strafe limit and backwards','note, weapon and tower path intact','reset and feature flag'],performance:'Software Chromium; Android FPS not measured'};
+  const result={result:'PASS',before,beginning,open,stars,after,middle,edge,restored,errors,bad,checks:['real descending floor and anchored props','starfield and local material dissolve','no auto pitch','touch forward, stop, strafe limit and backwards','note, weapon and tower path intact','reset and feature flag'],performance:'Software Chromium; Android FPS not measured'};
   fs.writeFileSync(path.join(out,'results.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

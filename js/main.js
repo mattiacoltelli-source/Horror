@@ -315,7 +315,9 @@ async function enter() {
     if (PKEY === 'elisa') { const pz = -42.4, T = 'PAGLIACCINA\nSEXY', ta = bloodText(T).aspect; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.6, pz], wall: '-x', w: Math.min(0.75 * ta, 2.2) }]); }
     // solo Yana: frase piccola e bassa, quasi nascosta, sul muro destro del tunnel (poco in vista)
     if (PKEY === 'yana') { const T = 'Я ТЕБЕ\nБАЧУ', ta = bloodText(T).aspect; writingDecals(scene, [{ text: T, aspect: ta, p: [1.38, 1.4, -42.4], wall: '-x', w: Math.min(0.7 * ta, 1.7) }]); }   // Yana: frase ucraina piccola («io ti vedo») con le lettere vere
-    const towerMessage = writingDecals(tower.group, [{ ...spec('w4'), p: [0, 4.3, TZ - 0.05], wall: '-z', w: WR.w4[2] * 2.5 }])[0];   // torre: sopra la porta, 2,5 volte le dimensioni precedenti
+    const towerSpec = spec('w4');
+    const towerWidth = Math.min(4.2, towerSpec.aspect * 2.4);   // grande ma intera nella vista verticale quando ci si gira; anche i nomi restano sopra la porta
+    const towerMessage = writingDecals(tower.group, [{ ...towerSpec, p: [0, 4.3, TZ - 0.05], wall: '-z', w: towerWidth }])[0];
     towerMessage.name = 'scritta-torre-non-sei-solo';
   }
   doorEvent ??= createDoorEvent({ scene, player, audio, lights, instab, say, camera, hall, onHallDone: (turned) => { flags.turned = turned; story.goto('cellar', true); } });

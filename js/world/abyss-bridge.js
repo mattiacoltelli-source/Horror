@@ -34,6 +34,7 @@ export function partitionBridgeSurface(source,{start,end,halfWidth,depth},matrix
   }
   const geometry=new THREE.BufferGeometry();
   names.forEach((name,i)=>geometry.setAttribute(name,new THREE.Float32BufferAttribute(arrays[i],sizes[i],input.attributes[name].normalized)));
+  geometry.setAttribute('bridgeWing',new THREE.Float32BufferAttribute(tags,1));
   geometry.attributes.position.setUsage(THREE.DynamicDrawUsage);geometry.computeBoundingBox();
   geometry.boundingBox.min.y-=depth;geometry.boundingSphere=new THREE.Sphere();geometry.boundingBox.getBoundingSphere(geometry.boundingSphere);
   input.dispose();
@@ -41,17 +42,26 @@ export function partitionBridgeSurface(source,{start,end,halfWidth,depth},matrix
 }
 
 export function createAbyssBridgeGeometry({mats,width,start,end,halfWidth,depth}){
-  const b=new Builder(),material=new THREE.MeshLambertMaterial({map:mats.floorB.map,vertexColors:true});
-  const quad=(points,normal)=>b.quad('edge',points,points.map(p=>normal[1]?[p[0]/1.6,p[2]/1.6]:[p[normal[0]?2:0]/1.6,p[1]/1.6]),points.map(p=>gray(.12+.32*Math.max(0,1+p[1]/depth))),normal);
-  const top=-.006,bottom=-depth-.08,xl=-width/2,xr=width/2,t=.22;
+  const b=new Builder(),material=new THREE.MeshBasicMaterial({vertexColors:true,fog:false,toneMapped:false});
+  const quad=(points,normal)=>b.quad('edge',points,points.map(p=>normal[1]?[p[0]/1.6,p[2]/1.6]:[p[normal[0]?2:0]/1.6,p[1]/1.6]),points.map(p=>gray(.002*Math.max(0,1+p[1]/.6))),normal);
+  // Only a dark masonry lip remains. Deep rectangular walls would obscure the
+  // stars and make this read as a basement shaft rather than impossible space.
+  const top=-.006,bottom=-.65,xl=-width/2,xr=width/2,t=.22;
   for(const[x,n]of[[xl,1],[xr,-1]])quad([[x,bottom,start],[x,bottom,end],[x,top,end],[x,top,start]],[n,0,0]);
   for(const[z,n]of[[start,-1],[end,1]])for(const[a,c]of[[xl,-halfWidth],[halfWidth,xr]])quad([[a,bottom,z],[c,bottom,z],[c,top,z],[a,top,z]],[0,0,n]);
   for(const[x,n]of[[-halfWidth,-1],[halfWidth,1]])quad([[x,-t,start],[x,-t,end],[x,top,end],[x,top,start]],[n,0,0]);
   quad([[-halfWidth,-t,start],[halfWidth,-t,start],[halfWidth,-t,end],[-halfWidth,-t,end]],[0,-1,0]);
-  // Dim, static fixtures explain the cold fill below the opening. Both share
-  // one unlit draw; their light is borrowed from the existing two-light pool.
-  for(const[x,z,n]of[[xl+.02,start-2.2,1],[xr-.02,end+1.8,-1]]){
-    b.quad('lamp',[[x,-3.18,z-.18],[x,-3.18,z+.18],[x,-3.05,z+.18],[x,-3.05,z-.18]],[[0,0],[1,0],[1,1],[0,1]],[gray(1),gray(1),gray(1),gray(1)],[n,0,0]);
+  const group=b.build({edge:material});group.name='pozzo-sotto-il-ponte';
+  let seed=1793;const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296),positions=[],colors=[];
+  const count=globalThis.__lowQ?350:700;
+  for(let i=0;i<count;i++){
+    const az=random()*Math.PI*2,ny=-.15-.85*random(),r=Math.sqrt(1-ny*ny),radius=14+14*random();
+    positions.push(radius*r*Math.cos(az),-.9+radius*ny,(start+end)/2+radius*r*Math.sin(az));
+    const light=.22+.68*Math.pow(random(),3),violet=i%7===0;
+    colors.push(light*(violet?.85:.65),light*(violet?.56:.77),light);
   }
-  const group=b.build({edge:material,lamp:new THREE.MeshBasicMaterial({color:0x455e73,toneMapped:false,vertexColors:true})});group.name='pozzo-sotto-il-ponte';return group;
+  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geometry.computeBoundingSphere();
+  const stars=new THREE.Points(geometry,new THREE.PointsMaterial({size:2,sizeAttenuation:false,vertexColors:true,transparent:true,opacity:0,depthWrite:false,fog:false,toneMapped:false}));stars.name='abisso-stelle';group.add(stars);
+  group.userData.setDepth=d=>{const u=Math.min(1,Math.max(0,d/5.2));stars.material.opacity=.85*u*u*(3-2*u);};
+  return group;
 }
