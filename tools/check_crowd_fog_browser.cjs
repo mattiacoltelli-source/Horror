@@ -47,17 +47,23 @@ const base=process.env.ATMOSPHERE_BASE_URL||'http://127.0.0.1:8214/',out=process
       const pixels=()=>{const a=new Uint8Array(w*h*4);gl.readPixels(0,0,w,h,gl.RGBA,gl.UNSIGNED_BYTE,a);return a;};
       g.renderer.render(g.scene,g.camera);const withFog={...g.renderer.info.render},a=pixels();
       f.mesh.visible=false;g.renderer.render(g.scene,g.camera);const without={...g.renderer.info.render},b=pixels();f.mesh.visible=true;
-      let changedPixels=0,covered=0,samples=0;
+      const geometry=f.mesh.geometry,oldRange={...geometry.drawRange};let baseCount=0;
+      while(baseCount<geometry.index.count&&geometry.index.getX(baseCount)<f.baseVertices)baseCount++;
+      geometry.setDrawRange(0,baseCount);g.renderer.render(g.scene,g.camera);const floorOnly=pixels();
+      geometry.setDrawRange(oldRange.start,oldRange.count);
+      let changedPixels=0,covered=0,samples=0,floorDifference=0,floorPeak=0;
       for(let y=0;y<h;y++)for(let x=0;x<w;x++){
         const i=(y*w+x)*4,changed=Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>2;
         if(changed)changedPixels++;
-        if(y<h*.4&&x>w*.1&&x<w*.9){samples++;if(changed)covered++;}
+        if(y<h*.4&&x>w*.1&&x<w*.9){samples++;if(changed)covered++;
+          for(let c=0;c<3;c++){const delta=Math.abs(floorOnly[i+c]-b[i+c]);floorDifference+=delta;floorPeak=Math.max(floorPeak,delta);}
+        }
       }
-      return {calls:withFog.calls-without.calls,triangles:withFog.triangles-without.triangles,wake:Math.max(...f.weights),changedPixels,floorCoverage:covered/samples};
+      return {calls:withFog.calls-without.calls,triangles:withFog.triangles-without.triangles,wake:Math.max(...f.weights),changedPixels,floorCoverage:covered/samples,floorTintMean:floorDifference/(samples*3),floorTintPeak:floorPeak};
     });
     assert.equal(render.calls,1);assert.equal(render.triangles,896);
     assert.ok(render.changedPixels>40,'mist is actually visible from the player camera, not occluded behind the door');
-    assert.ok(render.floorCoverage>.85,'a continuous blanket covers the visible foreground floor');
+    assert.ok(render.floorTintMean>0&&render.floorTintMean<12&&render.floorTintPeak<22,'the floor receives only a light haze, not an opaque white coat');
     await page.screenshot({path:path.join(out,'03-con-foschia.png')});
     await page.evaluate(()=>{__g.hall.fog.mesh.visible=false;__g.renderer.render(__g.scene,__g.camera);});
     await page.screenshot({path:path.join(out,'04-senza-foschia.png')});

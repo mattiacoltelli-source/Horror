@@ -22,6 +22,8 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
   assert.equal(reduced.metrics.triangles,544);
   assert.equal(normal.mesh.material.uniforms.uCeiling.value,.7,'fog reaches knee height in world space');
   assert.equal(normal.mesh.material.uniforms.uRise.value,0,'mist starts at the floor with no abrupt appearance');
+  assert.equal(normal.mesh.material.uniforms.uFloorOpacity.value,.08,'floor tint is subtle, without a dense white coating');
+  assert.equal(reduced.mesh.material.uniforms.uFloorOpacity.value,.08);
   const g=normal.mesh.geometry,a=g.attributes.position;
   for(let i=0;i<normal.baseVertices;i++){
     assert.ok(Math.abs(a.getX(i))<5.901&&a.getZ(i)<-50.59&&a.getZ(i)>-90.21);
@@ -72,7 +74,11 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
   // camera, controller, light or collision changes.
   const base='eea175bc42bafee6f2764de5310a6bff43560dc0';
   const protectedPaths=['assets/','vendor/','js/player/','js/render/','js/world/painted-mural.js','js/world/decor.js','js/events/door.js','js/events/side-fold.js','js/pwa.js','css/','index.html'];
-  assert.equal(cp.execFileSync('git',['diff',base,'--',...protectedPaths],{cwd:root,encoding:'utf8'}),'');
+  assert.equal(cp.execFileSync('git',['diff',base,'--',...protectedPaths,':(exclude)css/style.css'],{cwd:root,encoding:'utf8'}),'');
+  // Explicit later request: only the initial room selector loses its box.
+  const menuCss=s=>{const from=s.indexOf('/* selettore ambienti:'),to=s.indexOf("/* schermata 'come ti chiami",from);assert.ok(from>=0&&to>from);return s.slice(0,from)+'/* room menu */\n'+s.slice(to);};
+  assert.equal(menuCss(fs.readFileSync(path.join(root,'css/style.css'),'utf8')),
+    menuCss(cp.execFileSync('git',['show',base+':css/style.css'],{cwd:root,encoding:'utf8'})));
   for(const file of ['js/events/notes.js','js/story.js','js/narrative-copy.js','index.html'])assert.doesNotMatch(fs.readFileSync(path.join(root,file),'utf8'),/\bcane\b|hound|mural_dog/i);
   assert.doesNotMatch(fs.readFileSync(path.join(root,'index.html'),'utf8'),/class="credits"/);
   console.log(JSON.stringify({result:'PASS',fog:{wisps:192,lowQuality:128,baseLayers:1,drawCalls:1,ceiling:.7,riseSeconds:5,rises,continuousArea:area,sharedTexture:true,reactiveTrail:true,blackout:true,reentry:true,reducedMotion:true},scope:'mural, assets, controls, lights, collisions and sequences unchanged; no dog text or initial credits'}));
