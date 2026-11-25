@@ -17,7 +17,7 @@ export function createCrowdFog({reduced=false,lowQuality=false}={}){
   const wisps=[];
   for(let i=0;i<count;i++){
     const x=-5.9+halton(i+1,2)*11.8,z=-50.7-halton(i+1,3)*39.4;
-    const y=.07+random()*.13,width=3.4+random()*1.2,height=1.05+random()*.30;
+    const y=.24+random()*.16,width=3.4+random()*1.2,height=1.25+random()*.30;
     wisps.push([x,y,z,width,height,(.18+random()*.06)*(lowQuality?1.23:1),random()*Math.PI*2]);
   }
   wisps.sort((a,b)=>a[2]-b[2]);
@@ -35,13 +35,13 @@ export function createCrowdFog({reduced=false,lowQuality=false}={}){
   const paths=Array.from({length:ACTORS},()=>new THREE.Vector4(10000,10000,10000,10000));
   const weights=new Float32Array(ACTORS),seen=new Uint8Array(ACTORS);
   const uniforms=THREE.UniformsUtils.merge([THREE.UniformsLib.fog,{
-    uMap:{value:getMistTexture()},uTime:{value:0},uLevel:{value:0},uMotion:{value:reduced?0:1},uCeiling:{value:.5},
+    uMap:{value:getMistTexture()},uTime:{value:0},uLevel:{value:0},uMotion:{value:reduced?0:1},uCeiling:{value:.7},uRise:{value:0},
     uColour:{value:new THREE.Color(0x718078)},uPaths:{value:paths},uWeights:{value:weights},uCount:{value:0},
   }]);
   uniforms.uMap.value=getMistTexture();uniforms.uPaths.value=paths;uniforms.uWeights.value=weights;
   const material=new THREE.ShaderMaterial({uniforms,transparent:true,depthWrite:false,depthTest:true,fog:true,
     vertexShader:`attribute vec3 aAnchor,aShape;attribute float aPhase,aBase;
-      uniform float uTime,uLevel,uMotion,uWeights[15];uniform vec4 uPaths[15];uniform int uCount;
+      uniform float uTime,uLevel,uMotion,uRise,uWeights[15];uniform vec4 uPaths[15];uniform int uCount;
       varying vec2 vUv,vWorld;varying float vAlpha,vHeight,vPhase,vBase;
       #include <fog_pars_vertex>
       void main(){
@@ -53,19 +53,19 @@ export function createCrowdFog({reduced=false,lowQuality=false}={}){
           float distance=length(p.xz-mix(path.xy,path.zw,f));
           wake=max(wake,(1.0-smoothstep(.25,1.45,distance))*uWeights[i]);
         }
-        if(aBase<.5){p.x+=sin(t*.16+aPhase)*.09*uMotion;p.z+=cos(t*.13+aPhase)*.10*uMotion;}
+        if(aBase<.5){p.x+=sin(t*.16+aPhase)*.09*uMotion;p.z+=cos(t*.13+aPhase)*.10*uMotion;p.y=mix(.025,p.y,uRise);}
         vec4 mvPosition=modelViewMatrix*vec4(p,1.0);
         vHeight=p.y;
         if(aBase<.5){
-          vec2 corner=position.xy*aShape.xy;
+          vec2 corner=position.xy*aShape.xy*vec2(1.0,uRise);
           mvPosition.xy+=corner;
           vHeight+=viewMatrix[1][1]*corner.y+viewMatrix[1][0]*corner.x;
         }
         gl_Position=projectionMatrix*mvPosition;vUv=uv;vWorld=p.xz;vPhase=aPhase;vBase=aBase;
-        vAlpha=uLevel*(1.0-wake*.20)*(aBase>.5?1.0:aShape.z);
+        vAlpha=uLevel*uRise*(1.0-wake*.20)*(aBase>.5?1.0:aShape.z);
         #include <fog_vertex>
       }`,
-    fragmentShader:`uniform sampler2D uMap;uniform vec3 uColour;uniform float uTime,uMotion,uCeiling;
+    fragmentShader:`uniform sampler2D uMap;uniform vec3 uColour;uniform float uTime,uMotion,uCeiling,uRise;
       varying vec2 vUv,vWorld;varying float vAlpha,vHeight,vPhase,vBase;
       #include <fog_pars_fragment>
       void main(){
@@ -75,9 +75,10 @@ export function createCrowdFog({reduced=false,lowQuality=false}={}){
           float edge=smoothstep(0.0,.12,5.9-abs(vWorld.x))*smoothstep(0.0,.30,min(-50.6-vWorld.y,vWorld.y+90.2));
           alpha=(.58+.045*detail)*vAlpha*edge;colour*=.82;
         }else{
-          if(vHeight<0.0||vHeight>=uCeiling)discard;
+          float ceiling=mix(.025,uCeiling,uRise);
+          if(vHeight<0.0||vHeight>=ceiling)discard;
           vec2 uv=vUv;uv.x+=sin(vUv.y*4.1+t*.09+vPhase)*.035;
-          float band=smoothstep(0.0,.035,vHeight)*(1.0-smoothstep(.23,uCeiling,vHeight));
+          float band=smoothstep(0.0,.035,vHeight)*(1.0-smoothstep(ceiling*.60,ceiling,vHeight));
           alpha=texture2D(uMap,uv).a*vAlpha*band;
         }
         gl_FragColor=vec4(colour,alpha);
@@ -87,9 +88,9 @@ export function createCrowdFog({reduced=false,lowQuality=false}={}){
       }`,
   });
   const mesh=new THREE.Mesh(geometry,material);mesh.name='foschia-bassa-della-folla';mesh.frustumCulled=false;mesh.visible=false;
-  let prepared=false;
+  let prepared=false,riseAge=0,riseStarted=false;
   return {mesh,paths,weights,count,baseVertices,metrics:{wisps:count,baseLayers:1,triangles:index.length/3,drawCalls:1},
-    reset(){seen.fill(0);weights.fill(0);uniforms.uCount.value=0;uniforms.uTime.value=0;mesh.visible=false;},
+    reset(){seen.fill(0);weights.fill(0);uniforms.uCount.value=0;uniforms.uTime.value=0;uniforms.uRise.value=0;riseAge=0;riseStarted=false;mesh.visible=false;},
     track(i,x,z){
       if(i>=ACTORS)return;const path=paths[i];
       if(!seen[i]){path.set(x,z,x,z);seen[i]=1;return;}
@@ -97,8 +98,13 @@ export function createCrowdFog({reduced=false,lowQuality=false}={}){
     },
     update(dt,level,actors){
       const step=Math.max(0,dt),decay=Math.exp(-step/1.65);for(let i=0;i<ACTORS;i++)weights[i]*=decay;
+      // Start on the first reveal, then keep the mist in place through the
+      // existing blackouts. Five seconds of game time, including at low FPS.
+      if(level>.001&&actors>0)riseStarted=true;
+      if(riseStarted)riseAge=Math.min(5,riseAge+step);
+      const progress=riseAge/5;uniforms.uRise.value=progress*progress*(3-2*progress);
       uniforms.uCount.value=Math.min(ACTORS,actors);uniforms.uLevel.value=Math.max(0,level);uniforms.uTime.value+=step;
-      mesh.visible=level>.001&&actors>0;
+      mesh.visible=level>.001&&actors>0&&uniforms.uRise.value>0;
     },
     async prepare(renderer,camera,scene){
       if(prepared)return;renderer.initTexture?.(uniforms.uMap.value);

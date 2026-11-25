@@ -26,7 +26,18 @@ fs.mkdirSync(out, { recursive: true });
     });
     const start = await page.evaluate(() => ({ state: __g.drainPresence.state, formed: __g.drainPresence.formed, ready: __g.drainPresence.ready }));
     assert.equal(start.state, 'rising'); assert.ok(start.formed > 0 && start.formed < .1);
-    await page.evaluate(() => __g.sim(3.2));
+    const eyeTiming=await page.evaluate(()=>{
+      const g=__g,d=g.drainPresence,eyes=d.group.getObjectByName('occhi-nel-fumo');g.sim(2.7);
+      const rising={form:d.formed,eye:eyes.material.opacity};
+      for(let i=0;i<20&&d.formed<1;i++)g.sim(.05);
+      const atTop={form:d.formed,eye:eyes.material.opacity};g.sim(.1);const afterTop=eyes.material.opacity;
+      return {rising,atTop,afterTop};
+    });
+    assert.ok(eyeTiming.rising.form<1);assert.equal(eyeTiming.rising.eye,0);
+    assert.equal(eyeTiming.atTop.form,1);assert.equal(eyeTiming.atTop.eye,0);assert.equal(eyeTiming.afterTop,0);
+    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+    await page.screenshot({path:path.join(out,'00-fumo-completo-senza-occhi.png')});
+    await page.evaluate(()=>__g.sim(.75));
     await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
     const formed = await page.evaluate(() => {
       const g = __g, d = g.drainPresence, before = g.renderer.info.render;
@@ -88,7 +99,7 @@ fs.mkdirSync(out, { recursive: true });
     assert.ok(!requests.some(url => /hound|mural_dog/.test(url)), 'no old model, sound or painting is downloaded');
     assert.deepEqual(errors, []); assert.deepEqual(bad, []);
     const debug = await page.evaluate(() => ({ camera: __g.camera.position.toArray(), pos: __g.player.pos.toArray(), door: __g.door.state, fade: document.getElementById('fade').style.opacity, override: __g.lights.override, lamps: __g.lights.lamps.map(l => ({ mode: l.mode, level: l.level })) }));
-    const result = { result: 'PASS', start, formed, anchored, mural, fade, gone, modes, errors, bad, debug, realAndroid: 'FPS and appearance still require a device' };
+    const result = { result: 'PASS', start, eyeTiming, formed, anchored, mural, fade, gone, modes, errors, bad, debug, realAndroid: 'FPS and appearance still require a device' };
     fs.writeFileSync(path.join(out, 'results.json'), JSON.stringify(result, null, 2)); console.log(JSON.stringify(result, null, 2));
   } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exitCode = 1; });

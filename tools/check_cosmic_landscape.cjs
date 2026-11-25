@@ -34,6 +34,7 @@ const root=path.resolve(__dirname,'..');
   assert.equal(draws,8);assert.ok(triangles<9000);
   assert.equal(landscape.lava.fire.count,18,'bounded distant flames');
   const flames=landscape.lava.fire.flames;
+  assert.equal(flames.material.uniforms.uHeightScale.value,.9,'all flame heights, including peaks, reduced by exactly ten percent');
   assert.equal(flames.material.depthWrite,false);assert.equal(flames.material.map,undefined,'no extra flame asset');
   assert.ok(flames.geometry.attributes.aShape.getY(0)!==flames.geometry.attributes.aShape.getY(1),'uneven tongues');
   for(let i=0;i<18;i++){assert.ok(flames.geometry.attributes.aShape.getX(i)>=.459);assert.ok(flames.geometry.attributes.aShape.getY(i)>=.399,'taller tongues remain readable at hill distance');}

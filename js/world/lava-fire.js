@@ -26,14 +26,14 @@ export function createLavaFire({ terrainGeometry, fields, x, z, reduced = false 
   geometry.setAttribute('aPhase', new THREE.InstancedBufferAttribute(new Float32Array(phases), 1));
   geometry.setAttribute('aShape', new THREE.InstancedBufferAttribute(new Float32Array(shapes), 2));
   geometry.instanceCount = phases.length;
-  const uniforms = { uTime: { value: 0 }, uLevel: { value: 1 }, uMotion: { value: reduced ? 0 : 1 } };
+  const uniforms = { uTime: { value: 0 }, uLevel: { value: 1 }, uMotion: { value: reduced ? 0 : 1 }, uHeightScale: { value: .9 } };
   const material = new THREE.ShaderMaterial({ uniforms, transparent: true, depthWrite: false, depthTest: true, fog: false, toneMapped: false, blending: THREE.AdditiveBlending,
     vertexShader: `attribute vec3 aAnchor; attribute vec2 aShape; attribute float aPhase;
-      uniform float uTime, uMotion; varying vec2 vUv; varying float vPhase;
+      uniform float uTime, uMotion, uHeightScale; varying vec2 vUv; varying float vPhase;
       void main(){
         float t=uTime*uMotion, pulse=.72+.18*sin(t*(2.1+mod(aPhase,.6))+aPhase)+.10*sin(t*4.3+aPhase*1.7);
         float tall=pow(max(0.0,sin(t*(.42+mod(aPhase,.17))+aPhase*1.61)),14.0)*uMotion;
-        float h=aShape.y*pulse+tall*.95;
+        float h=(aShape.y*pulse+tall*.95)*uHeightScale;
         vec4 p=modelViewMatrix*vec4(aAnchor,1.0);
         p.x+=position.x*aShape.x+sin(t*2.0+aPhase+uv.y*3.2)*uv.y*uv.y*.10*uMotion;
         p.y+=uv.y*h; gl_Position=projectionMatrix*p; vUv=uv; vPhase=aPhase;

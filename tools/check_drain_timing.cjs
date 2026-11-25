@@ -17,6 +17,18 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
     return {d,player,counts:()=>({sounds,stops})};
   }
   const scenarios=[];
+  const eyeStages=[];
+  for(const reduced of [false,true])for(const fps of [5,10,30,60,120]){
+    const {d}=encounter(reduced),eyes=d.group.getObjectByName('occhi-nel-fumo');
+    for(let i=0;i<Math.ceil(3.1*fps)+2&&d.formed<1;i++){
+      d.update(1/fps);assert.equal(eyes.material.opacity,0,'eyes stay dark through every rising frame');
+    }
+    assert.equal(d.formed,1);assert.equal(eyes.material.opacity,0);
+    d.update(.14);assert.equal(eyes.material.opacity,0,'eyes wait until after the complete cloud');
+    d.update(.16);assert.ok(eyes.material.opacity>0&&eyes.material.opacity<.3,'eyes fade in gently');
+    d.update(.5);assert.ok(eyes.material.opacity>.3);
+    eyeStages.push({fps,reduced});
+  }
   for(const reduced of [false,true])for(const fps of [5,10,30,60,120]){
     const {d,player,counts}=encounter(reduced);d.update(3.2);assert.equal(d.state,'formed');
     let onset=null,previous=0,t=0,minVisibleDistance=100;
@@ -40,5 +52,5 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
   back.player.pos.z=-31;back.d.update(.1);assert.ok(back.d.dissolved>=progress,'walking backwards never reforms it');back.d.update(4);assert.equal(back.d.state,'gone');
   const shortcut=encounter(false,-40);shortcut.d.update(.1);assert.equal(shortcut.d.group.visible,false);assert.equal(shortcut.d.state,'gone');assert.equal(shortcut.counts().sounds,0);
   const jump=encounter();jump.d.update(3.2);jump.player.pos.z=-39.1;jump.d.update(.01);assert.equal(jump.d.state,'gone','a late arrival cannot reveal a nearby entity');
-  console.log(JSON.stringify({result:'PASS',scenarios,stop:true,backwards:true,shortcut:true,eyesStayHigh:true}));
+  console.log(JSON.stringify({result:'PASS',scenarios,eyeStages,eyesOnlyAfterFullRise:true,stop:true,backwards:true,shortcut:true,eyesStayHigh:true}));
 })().catch(e=>{console.error(e);process.exitCode=1;});
