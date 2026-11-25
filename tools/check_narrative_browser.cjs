@@ -43,7 +43,7 @@ fs.mkdirSync(out, { recursive: true });
     for (const room of rooms) { assert.equal(saved[room].room, room); assert.equal(saved[room].turned, true); assert.equal(saved[room].door, 'breath'); assert.equal(saved[room].weapon, room === 'tower' ? 'axe' : null); assert.equal(saved[room].noGun, false); assert.deepEqual(saved[room].notes, [0, 3]); }
     await page.goto(base + '?debug=1&per=mati', { waitUntil: 'networkidle', timeout: 90000 });
     const menu = await page.locator('#cmenu button').evaluateAll(nodes => nodes.map(n => n.dataset.room));
-    assert.deepEqual(menu, ['', ...rooms]);
+    assert.deepEqual(menu, ['', 'hall', ...rooms]);
     await page.locator('#ckpt').click(); await page.locator('#cmenu button[data-room="tower"]').click();
     await page.evaluate(() => __g.hold = true); await page.locator('#enter').click({ timeout: 90000 }); await ready('tower');
     const restored = await page.evaluate(() => ({ current: __g.story.current(), flags: { ...__g.flags }, notes: [...__g.notes.found] }));

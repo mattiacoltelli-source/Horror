@@ -113,7 +113,7 @@ export function createDrainPresence({ scene, player, lights, audio, glass, isAct
       }`,
   });
   const cloud = new THREE.Mesh(geometry, material); cloud.name = 'fumo-istanzato'; cloud.frustumCulled = false; group.add(cloud);
-  const eyeMaterial = new THREE.SpriteMaterial({ map: eyeMap, transparent: true, opacity: 0, depthWrite: false, depthTest: true, fog: false });
+  const eyeMaterial = new THREE.SpriteMaterial({ map: eyeMap, color: new THREE.Color(.85, .85, .85), transparent: true, opacity: 0, depthWrite: false, depthTest: true, fog: false });
   const eyes = new THREE.Sprite(eyeMaterial); eyes.name = 'occhi-nel-fumo'; eyes.position.set(.08, 1.91, 0); eyes.scale.set(.44, .22, 1); group.add(eyes);
   const grate = new THREE.Mesh(new THREE.PlaneGeometry(.78, .78), new THREE.MeshBasicMaterial({ map: grateMap, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
   grate.name = 'grata-del-fumo-qualita-bassa'; grate.rotation.x = -Math.PI / 2; grate.rotation.z = -.7;

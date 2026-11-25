@@ -140,11 +140,16 @@ html,body{overscroll-behavior:none}
 }
 #intro{overflow:hidden;overflow:clip;contain:paint}
 
-/* menu 'riparti da…' (stanze raggiunte): stessa tendina della qualita' */
-#cmenu{display:flex;flex-direction:column;margin:-2px auto 6px;width:170px;border:1px solid #3a403a;background:rgba(0,0,0,.85)}
+/* selettore ambienti: disponibile anche al primo accesso, in tutte le versioni */
+.room-picker{position:relative;width:min(300px,82vw);margin:12px auto 0}
+#intro #ckpt{display:block;width:100%;margin:0;border:1px solid #4a4f49;background:rgba(7,11,8,.85);text-decoration:none;letter-spacing:.1em;min-height:48px}
+#cmenu{position:absolute;z-index:4;bottom:calc(100% + 4px);left:0;right:0;display:flex;flex-direction:column;max-height:min(322px,46vh);overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain;border:1px solid #4a554b;background:#080c09;box-shadow:0 -8px 28px rgba(0,0,0,.75)}
 #cmenu.hidden{display:none}
-#cmenu button{border:0;background:none;color:#9aa19a;letter-spacing:.2em;font-size:13px;padding:12px 10px;min-height:44px;text-transform:lowercase}
+#cmenu button{flex-shrink:0;border:0;background:none;color:#a8b0a7;letter-spacing:.1em;font-size:13px;padding:12px 10px;min-height:44px;text-transform:lowercase}
+#cmenu button[aria-checked="true"]{color:#edf0e9;background:#172018}
+#cmenu button:focus-visible{outline:1px solid #9fb4a2;outline-offset:-3px}
 #cmenu button+button{border-top:1px solid #262b26}
+#intro.asking .room-picker{display:none}
 
 /* schermata 'come ti chiami?' (link con ?chiedi=1) */
 #ask{margin:0 0 8px}
