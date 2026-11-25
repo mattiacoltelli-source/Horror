@@ -4,13 +4,18 @@ const fs = require('node:fs'), path = require('node:path'), cp = require('node:c
 const root = path.resolve(__dirname, '..'), baseline = 'b4e88caa95926ed7f5d2f87ce25f400b7b85ae67';
 const git = (...args) => cp.execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
 const protectedPaths = ['js/world/', 'assets/', 'vendor/', 'css/', 'js/player/', 'js/render/', 'js/pwa.js', 'manifest.webmanifest', 'icons/', 'labs/'];
-const protectedFile = file => protectedPaths.some(prefix => prefix.endsWith('/') ? file.startsWith(prefix) : file === prefix);
+// Subsequent explicit request: replace the old encounter and mural. Every
+// other visual asset/room/controller remains covered by the original guard.
+const drainChanges = new Set(['js/world/painted-mural.js', 'assets/tex/pic_mural_infernal_smoke.webp',
+  'assets/models/hound.glb', 'assets/audio/hound_breath.mp3', 'assets/tex/pic_mural_dog.webp']);
+const protectedFile = file => !drainChanges.has(file) && protectedPaths.some(prefix => prefix.endsWith('/') ? file.startsWith(prefix) : file === prefix);
 const changed = git('diff', '--name-only', baseline, '--').split('\n').filter(Boolean);
 const untracked = git('ls-files', '--others', '--exclude-standard').split('\n').filter(Boolean);
 assert.deepEqual([...new Set([...changed, ...untracked].filter(protectedFile))], [], 'visuals, controls, performance renderer, assets, PWA behavior and disabled laboratories remain byte-identical');
 // Three loader sentences may change; every other HTML byte, including scripts,
 // layout, styles and personalized profile structure, must stay identical.
 const normalizeLoader = source => {
+  source = source.replace('    <p class="credits">cane: Grimhound Rig, DM-913 (CC-BY 4.0)</p>\n', '');
   for (const [profile, index] of [['yana', 2], ['alice', 1], ['laya', 1]]) {
     const array = new RegExp('\\b' + profile + ': \\[[^\\]\\n]*\\]').exec(source);
     assert.ok(array, profile + ' loader entry');
@@ -21,7 +26,7 @@ const normalizeLoader = source => {
   }
   return source;
 };
-assert.equal(normalizeLoader(fs.readFileSync(path.join(root, 'index.html'), 'utf8')), normalizeLoader(git('show', baseline + ':index.html') + '\n'), 'only three loader text literals may change in index.html');
+assert.equal(normalizeLoader(fs.readFileSync(path.join(root, 'index.html'), 'utf8')), normalizeLoader(git('show', baseline + ':index.html') + '\n'), 'only three loader sentences and the obsolete encounter credit may change in index.html');
 const notes = fs.readFileSync(path.join(root, 'js/events/notes.js'), 'utf8');
 const oldNotes = git('show', baseline + ':js/events/notes.js');
 const paper = s => s.slice(s.indexOf('let tex = null;'), s.indexOf('// def:'));
@@ -46,9 +51,10 @@ if (process.argv.includes('--pwa')) {
   const list = kind => new Function('return ' + sw.match(new RegExp('const ' + kind + '_FILES = (\\[.*?\\]);'))[1])();
   assert.equal(version(sw, 'SHELL'), hash(shell), 'run tools/bump.sh after the final runtime edit');
   assert.equal(version(sw, 'ASSET'), hash(assets));
-  assert.equal(version(sw, 'ASSET'), version(oldSw, 'ASSET'), 'narrative changes do not invalidate heavy asset cache');
+  if (!changed.some(file => file.startsWith('assets/') && drainChanges.has(file)))
+    assert.equal(version(sw, 'ASSET'), version(oldSw, 'ASSET'), 'narrative-only changes do not invalidate heavy asset cache');
   assert.deepEqual(list('SHELL'), ['./', ...shell.map(file => './' + file)]);
   assert.deepEqual(list('ASSET'), assets.map(file => './' + file));
-  for (const module of ['js/narration.js', 'js/narrative-copy.js', 'js/narrative-director.js', 'js/audio/motif.js']) assert.ok(list('SHELL').includes('./' + module), module + ' is available offline');
+  for (const module of ['js/narration.js', 'js/narrative-copy.js', 'js/narrative-director.js', 'js/audio/motif.js', 'js/events/drain-presence.js', 'js/world/painted-mural.js']) assert.ok(list('SHELL').includes('./' + module), module + ' is available offline');
 }
 console.log(JSON.stringify({ result: 'PASS', baseline: baseline.slice(0, 8), protectedPaths, pwaChecked: process.argv.includes('--pwa') }, null, 2));

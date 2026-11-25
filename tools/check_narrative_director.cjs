@@ -4,11 +4,11 @@ const fs = require('node:fs'), path = require('node:path'), assert = require('no
 const source = fs.readFileSync(path.join(__dirname, '../js/narrative-director.js'), 'utf8').replace(/\bexport\s+/g, '');
 const { narrativeQuiet, createNarrativeDirector } = new Function(source + ';return {narrativeQuiet,createNarrativeDirector};')();
 let current = 'tunnel';
-const state = { story: { current: () => current, busy: () => false }, hound: { state: 'wait' }, glassEvent: { state: 'idle' }, doorEvent: { state: 'idle' },
+const state = { story: { current: () => current, busy: () => false }, drainPresence: { state: 'wait', group: { visible: false } }, glassEvent: { state: 'idle' }, doorEvent: { state: 'idle' },
   sideFold: { enabled: true, group: { visible: true }, state: 'idle', t: 0 }, flags: {}, ward: { state: 'walk' }, cellar: {}, wh: {}, tower: {} };
 const quiet = () => !!narrativeQuiet(state);
-assert.equal(quiet(), false, 'waiting hound must not suppress the whole starting tunnel');
-state.hound.state = 'flash'; assert.equal(quiet(), true); state.hound.state = 'gone'; assert.equal(quiet(), false);
+assert.equal(quiet(), false, 'an inactive drain must not suppress the starting tunnel');
+state.drainPresence.holdNarration = true; assert.equal(quiet(), true); state.drainPresence.holdNarration = false; assert.equal(quiet(), false);
 for (const phase of ['walk0', 'stare', 'silence', 'slam', 'vanish']) { state.glassEvent.state = phase; assert.equal(quiet(), true, phase); }
 state.glassEvent.state = 'done'; assert.equal(quiet(), false);
 for (const phase of ['explore', 'flicker', 'dark', 'exit']) { state.sideFold.state = phase; assert.equal(quiet(), true, phase); }

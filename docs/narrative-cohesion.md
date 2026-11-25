@@ -3,7 +3,7 @@
 ## Direzione
 
 L'ospedale conserva ciò che il protagonista non riesce a ricostruire: la
-sorella, una porta, il fuoco, il cane e le persone rimaste dentro. Il registro
+sorella, una porta, il fuoco, le grate e le persone rimaste dentro. Il registro
 di Suor Agnese è una testimonianza interessata, non una voce onnisciente.
 Ricorda un salvataggio e ammette una falsificazione; non chiarisce se stia
 proteggendo il protagonista, trattenendolo o condividendo la sua prigione.
@@ -27,8 +27,8 @@ presupporre che siano stati osservati tutti.
 
 | Ambiente | Eventi già presenti | Funzione narrativa |
 | --- | --- | --- |
-| Primo tunnel | Arco laterale aperto, pianeta con galassia, montagne, lava e falò lontano; sfarfallio, buio e ritorno rivolti verso il corridoio. | Prima crepa facoltativa, prima del vetro e del cane. Il fuoco compare anche nel luogo che sembra offrire una fuga. Il ritorno rende incerta l'uscita senza spiegarla. |
-| Tunnel principale | Figura dietro il vetro, avvicinamento e mani; cane nella penombra; murale del cane; topi e rumori del condotto. | Il ricordo prende prima una forma incompleta e poi un corpo lasciato indietro. Il registro dice soltanto che il nuovo ingresso conosce già la strada. |
+| Primo tunnel | Arco laterale aperto, pianeta con galassia, montagne, lava e falò lontano; sfarfallio, buio e ritorno rivolti verso il corridoio. | Prima crepa facoltativa, prima del vetro e della presenza del tombino. Il fuoco compare anche nel luogo che sembra offrire una fuga. Il ritorno rende incerta l'uscita senza spiegarla. |
+| Tunnel principale | Figura dietro il vetro, avvicinamento e mani; presenza di fumo con occhi rossi dal tombino; murale infernale; topi e rumori del condotto. | Il ricordo prende prima una forma incompleta e poi fumo che sembra trattenere una figura. Il registro dice soltanto che il nuovo ingresso conosce già la strada. |
 | Sala oltre il portone | Tre rivelazioni della folla, due avanzamenti nel buio, rintocchi e pressione sonora, respiro alle spalle; scelta di voltarsi. | L'appello incompleto trasforma le sagome in assenze, senza dare una biografia a ciascuna. La prima lettura del titolo rimane una regola di sopravvivenza. |
 | Cantina e specchio | Riflesso di una cantina bruciata, ombre ai margini, sangue, vapore, nome personale o «TI VEDO», figura che attraversa la stanza, busto che si volta e torcia che rotola. | Il luogo è riconosciuto prima del proprio volto. Le variazioni ai margini e gli oggetti che rispondono quando non vengono osservati sostengono il dubbio su memoria e giudizio. |
 | Cripta e annessi | Altare, eventuale foto personale, rosario spezzato, scritta con data e ora del dispositivo, fratture con brace; santuario dei film accessibile con chiave. | Il rito usa il presente del giocatore mentre i muri conservano il fuoco. Il santuario resta un ritrovamento facoltativo e la collezione di Cos: non diventa un nuovo capitolo esplicativo. |
