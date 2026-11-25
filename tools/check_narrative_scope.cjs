@@ -7,7 +7,10 @@ const protectedPaths = ['js/world/', 'assets/', 'vendor/', 'css/', 'js/player/',
 // Subsequent explicit request: replace the old encounter and mural. Every
 // other visual asset/room/controller remains covered by the original guard.
 const drainChanges = new Set(['js/world/painted-mural.js', 'assets/tex/pic_mural_infernal_smoke.webp',
-  'assets/models/hound.glb', 'assets/audio/hound_breath.mp3', 'assets/tex/pic_mural_dog.webp', 'css/style.css']);
+  'assets/models/hound.glb', 'assets/audio/hound_breath.mp3', 'assets/tex/pic_mural_dog.webp', 'css/style.css',
+  // Explicit later request: lava tongues/glow and shared drain/crowd mist.
+  'js/world/cosmic-lava.js', 'js/world/cosmic-landscape.js', 'js/world/lava-fire.js',
+  'js/world/mist-texture.js', 'js/world/crowd-fog.js']);
 const protectedFile = file => !drainChanges.has(file) && protectedPaths.some(prefix => prefix.endsWith('/') ? file.startsWith(prefix) : file === prefix);
 const changed = git('diff', '--name-only', baseline, '--').split('\n').filter(Boolean);
 const untracked = git('ls-files', '--others', '--exclude-standard').split('\n').filter(Boolean);

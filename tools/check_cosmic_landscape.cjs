@@ -27,11 +27,15 @@ const root=path.resolve(__dirname,'..');
   assert.ok(fs.readFileSync(path.join(root,requested[1])).includes(Buffer.from('ALPH')),'galaxy must have real alpha, not a black rectangle');
   let triangles=0,draws=0;
   landscape.group.traverse(o=>{
-    if(o.isMesh){triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;draws++;}
+    if(o.isMesh){triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3*(o.geometry.isInstancedBufferGeometry?o.geometry.instanceCount:1);draws++;}
     else if(o.isPoints)draws++;
     if(o.geometry)for(const v of o.geometry.attributes.position.array)assert.ok(Number.isFinite(v));
   });
-  assert.equal(draws,7);assert.ok(triangles<9000);
+  assert.equal(draws,8);assert.ok(triangles<9000);
+  assert.equal(landscape.lava.fire.count,12,'bounded distant flames');
+  const flames=landscape.lava.fire.flames;
+  assert.equal(flames.material.depthWrite,false);assert.equal(flames.material.map,undefined,'no extra flame asset');
+  assert.ok(flames.geometry.attributes.aShape.getY(0)!==flames.geometry.attributes.aShape.getY(1),'uneven tongues');
   // Real geometric relief with normals for the existing vertex-lighting path;
   // the complete player footprint stays flat and free of rocks.
   assert.ok(landscape.groundMaterial.isMeshLambertMaterial&&landscape.groundMaterial.vertexColors);
@@ -70,6 +74,12 @@ const root=path.resolve(__dirname,'..');
   assert.equal(moon.material.map,landscape.groundTexture,'moon reuses the existing albedo');
   assert.ok(Math.atan2(moon.position.z,moon.position.x)>Math.PI/3,'sky accent stays to the side of the main galaxy');
   const ray=new THREE.Raycaster(),down=new THREE.Vector3(0,-1,0);
+  const fireAnchors=landscape.lava.fire.anchors;
+  for(let i=0;i<fireAnchors.count;i++){
+    const x=fireAnchors.getX(i),z=fireAnchors.getZ(i);assert.ok(x>20,'flames stay beyond the walking area');
+    ray.set(new THREE.Vector3(x,100,z),down);const hit=ray.intersectObject(ground)[0];
+    assert.ok(hit&&Math.abs(fireAnchors.getY(i)-hit.point.y-.013)<1e-5,'each flame rests on its actual terrain triangle');
+  }
   const boulderModule=await moduleAt(path.join(root,'js/world/cosmic-boulders.js'));
   const models=boulderModule.namespace.createCosmicBoulders({terrainGeometry:ground.geometry,x:1.4,z:-4.5,groundTint:()=>1,uvScale:[1.6,1.6]});
   for(const model of models){
@@ -106,6 +116,7 @@ const root=path.resolve(__dirname,'..');
   assert.ok(galaxy.quaternion.angleTo(original)<1e-7,'look must not rotate the celestial plate');
   const matVersion=galaxy.material.version;landscape.setSkyBrightness(.2);assert.equal(galaxy.material.color.r,.2);assert.equal(galaxy.material.version,matVersion);
   landscape.setSkyBrightness(0);assert.equal(lava.material.color.r,0,'existing blackout also extinguishes lava');
+  assert.equal(flames.visible,false,'flames respect the same blackout');
   assert.equal(landscape.group.getObjectByName('cosmo-luna-laterale').material.color.r,0,'side moon follows the same blackout');
   const campfire=landscape.group.getObjectByName('cosmo-falo-lontano');assert.ok(campfire.position.x>20&&campfire.position.z>-4.5+8,'campfire is distant and outside the lane');assert.equal(campfire.material.opacity,0,'fire follows the existing blackout');assert.equal(campfire.material.map,null,'fire adds no texture download');
   let uploads=0,compiles=0;
