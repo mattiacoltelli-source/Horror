@@ -16,7 +16,7 @@ export function createLavaFire({ terrainGeometry, fields, x, z, reduced = false 
       ray.ray.origin.set(wx, 100, wz); const hit = ray.intersectObject(support)[0];
       if (!hit) return;
       anchors.push(wx, hit.point.y + .013, wz); phases.push((field * edgeUV.length + i) * 2.39996);
-      shapes.push(.25 + ((i * 3 + field) % 5) * .04, .23 + ((i + field * 2) % 4) * .05);
+      shapes.push(.46 + ((i * 3 + field) % 5) * .075, .40 + ((i + field * 2) % 4) * .075);
     });
   });
   support.material.dispose();
@@ -33,9 +33,9 @@ export function createLavaFire({ terrainGeometry, fields, x, z, reduced = false 
       void main(){
         float t=uTime*uMotion, pulse=.72+.18*sin(t*(2.1+mod(aPhase,.6))+aPhase)+.10*sin(t*4.3+aPhase*1.7);
         float tall=pow(max(0.0,sin(t*(.42+mod(aPhase,.17))+aPhase*1.61)),14.0)*uMotion;
-        float h=aShape.y*pulse+tall*.66;
+        float h=aShape.y*pulse+tall*.95;
         vec4 p=modelViewMatrix*vec4(aAnchor,1.0);
-        p.x+=position.x*aShape.x+sin(t*2.0+aPhase+uv.y*3.2)*uv.y*uv.y*.045*uMotion;
+        p.x+=position.x*aShape.x+sin(t*2.0+aPhase+uv.y*3.2)*uv.y*uv.y*.10*uMotion;
         p.y+=uv.y*h; gl_Position=projectionMatrix*p; vUv=uv; vPhase=aPhase;
       }`,
     fragmentShader: `uniform float uTime,uLevel,uMotion; varying vec2 vUv; varying float vPhase;

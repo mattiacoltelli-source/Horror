@@ -20,12 +20,12 @@ const base=process.env.ATMOSPHERE_BASE_URL||'http://127.0.0.1:8214/',out=process
     });
     await frame();
     const first=await page.evaluate(()=>({state:__g.door.state,phase:__g.door.getPh(),visible:__g.hall.fog.mesh.visible,count:__g.hall.fog.count,weight:Math.max(...__g.hall.fog.weights)}));
-    assert.equal(first.state,'lit');assert.equal(first.phase,0);assert.ok(first.visible);assert.equal(first.count,120);assert.equal(first.weight,0);
+    assert.equal(first.state,'lit');assert.equal(first.phase,0);assert.ok(first.visible);assert.equal(first.count,192);assert.equal(first.weight,0);
     await page.screenshot({path:path.join(out,'01-folla-lontana.png')});
     const move=await page.evaluate(()=>{
-      const g=__g,f=g.hall.fog,anchors=Array.from(f.mesh.geometry.attributes.aAnchor.array);
+      const g=__g,f=g.hall.fog,anchors=Array.from(f.mesh.geometry.attributes.position.array);
       for(let i=0;i<100&&g.door.getPh()===0;i++)g.sim(.1);
-      return {state:g.door.state,phase:g.door.getPh(),wake:Math.max(...f.weights),paths:f.paths.map(p=>p.toArray()),fixed:anchors.every((n,i)=>n===f.mesh.geometry.attributes.aAnchor.array[i])};
+      return {state:g.door.state,phase:g.door.getPh(),wake:Math.max(...f.weights),paths:f.paths.map(p=>p.toArray()),fixed:anchors.every((n,i)=>n===f.mesh.geometry.attributes.position.array[i])};
     });
     assert.equal(move.phase,1);assert.equal(move.state,'lit');assert.ok(move.wake>.93);assert.ok(move.fixed,'mist field stays in the room while monsters move');
     assert.ok(move.paths.every(p=>p[3]>p[1]+11.9),'all actual monsters advance through the field');
@@ -42,14 +42,23 @@ const base=process.env.ATMOSPHERE_BASE_URL||'http://127.0.0.1:8214/',out=process
       const pixels=()=>{const a=new Uint8Array(w*h*4);gl.readPixels(0,0,w,h,gl.RGBA,gl.UNSIGNED_BYTE,a);return a;};
       g.renderer.render(g.scene,g.camera);const withFog={...g.renderer.info.render},a=pixels();
       f.mesh.visible=false;g.renderer.render(g.scene,g.camera);const without={...g.renderer.info.render},b=pixels();f.mesh.visible=true;
-      let changedPixels=0;for(let i=0;i<a.length;i+=4)if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>2)changedPixels++;
-      return {calls:withFog.calls-without.calls,triangles:withFog.triangles-without.triangles,wake:Math.max(...f.weights),changedPixels};
+      let changedPixels=0,covered=0,samples=0;
+      for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+        const i=(y*w+x)*4,changed=Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>2;
+        if(changed)changedPixels++;
+        if(y<h*.4&&x>w*.1&&x<w*.9){samples++;if(changed)covered++;}
+      }
+      return {calls:withFog.calls-without.calls,triangles:withFog.triangles-without.triangles,wake:Math.max(...f.weights),changedPixels,floorCoverage:covered/samples};
     });
-    assert.equal(render.calls,1);assert.equal(render.triangles,240);
+    assert.equal(render.calls,1);assert.equal(render.triangles,896);
     assert.ok(render.changedPixels>40,'mist is actually visible from the player camera, not occluded behind the door');
+    assert.ok(render.floorCoverage>.85,'a continuous blanket covers the visible foreground floor');
     await page.screenshot({path:path.join(out,'03-con-foschia.png')});
     await page.evaluate(()=>{__g.hall.fog.mesh.visible=false;__g.renderer.render(__g.scene,__g.camera);});
     await page.screenshot({path:path.join(out,'04-senza-foschia.png')});
+    await page.evaluate(()=>{const g=__g;g.player.pitch=-.45;g.sim(.1);});await frame();
+    await page.screenshot({path:path.join(out,'05-manto-sul-pavimento.png')});
+    await page.evaluate(()=>{const g=__g;g.player.pitch=-.07;g.sim(.1);});await frame();
     const close=await page.evaluate(()=>{const g=__g;g.sim(4);const weight=Math.max(...g.hall.fog.weights);g.hall.lightOff();g.sim(.05);return {weight,dark:!g.hall.fog.mesh.visible,level:g.hall.fog.mesh.material.uniforms.uLevel.value};});
     assert.ok(close.weight<.1);assert.equal(close.dark,true);assert.equal(close.level,0);
     await page.evaluate(()=>{__g.hall.lightOn();__g.hall.flick=0;__g.sim(.2);});await frame();

@@ -15,16 +15,25 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
   const m=await load(path.join(root,'js/world/crowd-fog.js'));await m.evaluate();
   const normal=m.namespace.createCrowdFog(),reduced=m.namespace.createCrowdFog({reduced:true,lowQuality:true});
   assert.equal(canvases,1,'one shared procedural stamp, including multiple quality modes');
-  assert.equal(normal.count,120);assert.equal(reduced.count,84);
+  assert.equal(normal.count,192);assert.equal(reduced.count,128);
   assert.equal(normal.mesh.material.uniforms.uMap.value,reduced.mesh.material.uniforms.uMap.value);
   assert.equal(reduced.mesh.material.uniforms.uMotion.value,0);
-  assert.equal(normal.metrics.drawCalls,1);assert.equal(normal.metrics.triangles,240);
+  assert.equal(normal.metrics.drawCalls,1);assert.equal(normal.metrics.triangles,896);
+  assert.equal(reduced.metrics.triangles,544);
   assert.equal(normal.mesh.material.uniforms.uCeiling.value,.5,'world-space fog ceiling remains half a metre even while looking down');
-  const g=normal.mesh.geometry,a=g.attributes.aAnchor,s=g.attributes.aShape;
-  for(let i=0;i<a.count;i++){
-    assert.ok(a.getX(i)>-5.5&&a.getX(i)<5.5&&a.getZ(i)<-55&&a.getZ(i)>-87);
-    assert.ok(a.getY(i)>=.099&&a.getY(i)<.35,'irregular centres fill a shallow volume');
-    assert.ok(s.getY(i)>.6&&s.getX(i)<3&&s.getZ(i)<.141,'soft, faint wisps replace long opaque ribbons');
+  const g=normal.mesh.geometry,a=g.attributes.position;
+  for(let i=0;i<normal.baseVertices;i++){
+    assert.ok(Math.abs(a.getX(i))<5.901&&a.getZ(i)<-50.59&&a.getZ(i)>-90.21);
+    assert.ok(Math.abs(a.getY(i)-.025)<1e-6);
+    assert.equal(g.attributes.aBase.getX(i),1);
+  }
+  let area=0;for(let i=0;i<g.index.count;i+=3){const p=g.index.getX(i),q=g.index.getX(i+1),r=g.index.getX(i+2);if(p>=normal.baseVertices)continue;
+    area+=Math.abs((a.getX(q)-a.getX(p))*(a.getZ(r)-a.getZ(p))-(a.getX(r)-a.getX(p))*(a.getZ(q)-a.getZ(p)))/2;}
+  assert.ok(Math.abs(area-11.8*39.6)<.01,'continuous undercoat fills the whole floor, without gaps between wisps');
+  for(let i=normal.baseVertices;i<a.count;i++){
+    assert.equal(g.attributes.aBase.getX(i),0);
+    assert.ok(g.attributes.aAnchor.getY(i)>.06&&g.attributes.aAnchor.getY(i)<.21);
+    assert.ok(g.attributes.aShape.getX(i)>3.39&&g.attributes.aShape.getY(i)>1,'large soft overlaps remove isolated spots');
   }
   normal.track(0,0,-76);normal.update(1/60,1,1);assert.equal(normal.weights[0],0,'first placement creates no false wake');
   normal.track(0,0,-64);normal.update(1/60,1,1);
@@ -45,5 +54,5 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
   assert.equal(cp.execFileSync('git',['diff',base,'--',...protectedPaths],{cwd:root,encoding:'utf8'}),'');
   for(const file of ['js/events/notes.js','js/story.js','js/narrative-copy.js','index.html'])assert.doesNotMatch(fs.readFileSync(path.join(root,file),'utf8'),/\bcane\b|hound|mural_dog/i);
   assert.doesNotMatch(fs.readFileSync(path.join(root,'index.html'),'utf8'),/class="credits"/);
-  console.log(JSON.stringify({result:'PASS',fog:{normal:120,lowQuality:84,drawCalls:1,ceiling:.5,sharedTexture:true,reactiveTrail:true,blackout:true,reentry:true,reducedMotion:true},scope:'mural, assets, controls, lights, collisions and sequences unchanged; no dog text or initial credits'}));
+  console.log(JSON.stringify({result:'PASS',fog:{wisps:192,lowQuality:128,baseLayers:1,drawCalls:1,ceiling:.5,continuousArea:area,sharedTexture:true,reactiveTrail:true,blackout:true,reentry:true,reducedMotion:true},scope:'mural, assets, controls, lights, collisions and sequences unchanged; no dog text or initial credits'}));
 })().catch(e=>{console.error(e);process.exitCode=1;});
