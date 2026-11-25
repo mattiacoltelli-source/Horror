@@ -28,11 +28,21 @@ state.cellar.clean = true; assert.equal(quiet(), false);
 state.cellar.keypad = { padOn: true }; assert.equal(quiet(), true); state.cellar.keypad.padOn = false;
 state.cellar.shrine = { entered: true, inside: false };
 assert.equal(quiet(), false, 'leaving a previously visited poster shrine releases narration');
+state.player = { pos: { x: 5, y: 1.62, z: -213 }, forward: { x: 0, y: 0, z: -1 } };
+state.cellar.holdNarration = true; state.cellar.dbg.runT = .4;
+assert.equal(quiet(), false, 'frozen mirror/apparition state cannot silence a visited annex');
+state.cellar.keypad.padOn = true; assert.equal(quiet(), true, 'an open keypad remains protected even in an annex');
+state.cellar.keypad.padOn = false; state.cellar.holdNarration = false; state.cellar.dbg.runT = -1; state.player.pos.x = .1;
 
 current = 'warehouse'; state.wh.bridge = null; assert.equal(quiet(), false, 'ponte=0 is supported');
 state.wh.bridge = { holdNarration: true }; assert.equal(quiet(), true); state.wh.bridge.holdNarration = false;
 for (const phase of ['show', 'fade', 'gap', 'dash']) { state.wh.sorella = { state: phase }; assert.equal(quiet(), true, phase); }
 state.wh.sorella.state = 'done'; assert.equal(quiet(), false);
+state.wh.sorella = { state: 'show', t: 2, rv: 0, model: { position: { x: .1, z: -203 } } };
+assert.equal(quiet(), false, 'a distant, unseen sister cannot permanently block room notes');
+state.player.forward.z = 1; assert.equal(quiet(), true, 'looking at the sister protects her revelation');
+state.player.forward.z = -1; state.wh.sorella.rv = .4; assert.equal(quiet(), true, 'her existing light flash remains protected');
+state.wh.sorella = { state: 'done' };
 current = 'tower'; state.flags.bladeEnding = true; assert.equal(quiet(), true); state.flags.bladeEnding = false;
 state.tower.opened = true; assert.equal(quiet(), true); state.tower.opened = false;
 state.dawn = { active: true, t: 4 }; assert.equal(quiet(), true); state.dawn.t = 9; assert.equal(quiet(), false); state.dawn.t = 13; assert.equal(quiet(), true); state.dawn.active = false;

@@ -26,8 +26,12 @@ fs.mkdirSync(out, { recursive: true });
   assert.equal(cosmic.returned.state, 'done'); assert.equal(cosmic.returned.text, 'nota dopo il cielo'); assert.equal(cosmic.returned.opacity, 1); assert.ok(cosmic.returned.remaining > 6000);
   const hall = await page.evaluate(() => { __g.player.pos.set(.1, 1.62, -38); __g.sim(.05); return { state: __g.door.state, opacity: Number(document.getElementById('subtitle').style.opacity) }; });
   assert.equal(hall.state, 'hush'); assert.equal(hall.opacity, 0, 'hall arrival removes the stale tunnel note');
-  await page.evaluate(() => __g.story.goto('warehouse', true));
+  // Match the supported room-shortcut setup before jumping forward: an active
+  // hall scene is intentionally allowed to keep issuing its urgent prompts.
+  await page.evaluate(() => { __g.door.state = 'over'; __g.hall.active = false; __g.story.goto('warehouse', true); });
   await page.waitForFunction(() => __g.story.current() === 'warehouse' && !__g.story.busy(), null, { timeout: 300000 });
+  await page.waitForLoadState('networkidle');
+  await page.evaluate(async () => { __g.sim(.1); await __g.wh.bridge.prepare(); });
   const bridge = await page.evaluate(() => {
     const g = __g, e = document.getElementById('subtitle'), b = g.wh.bridge; g.say.reset(); g.say('nota prima del ponte', 7000, 'note'); g.sim(12.4);
     const initialReleased = { hold: b.holdNarration, text: e.textContent, opacity: Number(e.style.opacity) };
@@ -39,8 +43,21 @@ fs.mkdirSync(out, { recursive: true });
   assert.equal(bridge.initialReleased.hold, false); assert.equal(bridge.initialReleased.text, 'nota prima del ponte'); assert.equal(bridge.initialReleased.opacity, 1);
   assert.equal(bridge.opened.state, 'open'); assert.equal(bridge.opened.hold, true); assert.equal(bridge.opened.opacity, 0);
   assert.equal(bridge.restored.state, 'done'); assert.equal(bridge.restored.hold, false); assert.equal(bridge.restored.text, 'nota dopo il ponte'); assert.equal(bridge.restored.opacity, 1);
+  console.log('PASS normal intro, cosmic observation and bridge reading windows');
+  await page.evaluate(() => { __g.flags.noGun = true; __g.flags.turned = false; __g.flags.bladeEnding = false; __g.story.goto('tower', true); });
+  await page.waitForFunction(() => __g.story.current() === 'tower' && !__g.story.busy(), null, { timeout: 180000 });
+  await page.evaluate(() => { __g.player.pos.set(.1, 1.62, -315.5); __g.player.yaw = 0; __g.sim(.05); __g.tower.open(); });
+  await page.waitForFunction(() => __g.combat.active && __g.combat.M, null, { timeout: 30000 });
+  const standard = await page.evaluate(() => {
+    const g = __g, e = document.getElementById('subtitle');
+    for (let i = 0; i < 1800 && !g.dawn.active; i++) g.sim(1 / 60, 1 / 60);
+    const entered = g.dawn.active; g.sim(Math.max(0, 9 - g.dawn.t), 1 / 60);
+    return { entered, scareActive: g.scare.active, scareDone: g.scare.done, text: e.textContent, opacity: Number(e.style.opacity), t: g.dawn.t };
+  });
+  assert.equal(standard.entered, true); assert.equal(standard.scareActive, true); assert.equal(standard.scareDone, true);
+  assert.equal(standard.text, 'il fumo non si sente più.'); assert.equal(standard.opacity, 1, 'the real combat/scare handover preserves the epilogue reading slot');
   assert.deepEqual(errors, []); assert.deepEqual(bad, []);
-  const result = { result: 'PASS', intro, cosmic, hall, bridge, errors, bad, performance: 'software mobile Chromium; no real Android FPS claim' };
+  const result = { result: 'PASS', intro, cosmic, hall, bridge, standard, errors, bad, performance: 'software mobile Chromium; no real Android FPS claim' };
   fs.writeFileSync(path.join(out, 'results.json'), JSON.stringify(result, null, 2)); console.log(JSON.stringify(result, null, 2));
  } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exitCode = 1; });
