@@ -32,10 +32,11 @@ const root=path.resolve(__dirname,'..');
     if(o.geometry)for(const v of o.geometry.attributes.position.array)assert.ok(Number.isFinite(v));
   });
   assert.equal(draws,8);assert.ok(triangles<9000);
-  assert.equal(landscape.lava.fire.count,12,'bounded distant flames');
+  assert.equal(landscape.lava.fire.count,18,'bounded distant flames');
   const flames=landscape.lava.fire.flames;
   assert.equal(flames.material.depthWrite,false);assert.equal(flames.material.map,undefined,'no extra flame asset');
   assert.ok(flames.geometry.attributes.aShape.getY(0)!==flames.geometry.attributes.aShape.getY(1),'uneven tongues');
+  for(let i=0;i<18;i++){assert.ok(flames.geometry.attributes.aShape.getX(i)>=.249);assert.ok(flames.geometry.attributes.aShape.getY(i)>=.229,'larger tongues remain readable at hill distance');}
   // Real geometric relief with normals for the existing vertex-lighting path;
   // the complete player footprint stays flat and free of rocks.
   assert.ok(landscape.groundMaterial.isMeshLambertMaterial&&landscape.groundMaterial.vertexColors);

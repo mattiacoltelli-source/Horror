@@ -1,7 +1,7 @@
 // DRAIN_BASE_URL=http://127.0.0.1:8212/ node tools/check_drain_presence_browser.cjs
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
 let chromium; try { ({ chromium } = require('playwright')); } catch { ({ chromium } = require('/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright')); }
-const base = process.env.DRAIN_BASE_URL || 'http://127.0.0.1:8212/', out = '/tmp/horror-drain-presence';
+const base = process.env.DRAIN_BASE_URL || 'http://127.0.0.1:8212/', out = process.env.DRAIN_EVIDENCE || '/tmp/horror-drain-presence';
 fs.mkdirSync(out, { recursive: true });
 (async () => {
   const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -49,22 +49,25 @@ fs.mkdirSync(out, { recursive: true });
     });
     assert.ok(mural.loaded && mural.wornEdge); assert.ok(Math.abs(mural.aspect - 1280 / 692) < 1e-6);
     assert.ok(mural.bottom > 0 && mural.top < 2.1, 'the complete artwork fits below the brick vault');
-    await page.evaluate(() => { const g = __g; g.player.yaw = 0; g.player.pitch = .03; g.player.pos.z = -35.9; g.sim(.05); });
+    await page.evaluate(() => { const g = __g; g.player.yaw = 0; g.player.pitch = .03; g.player.pos.z = -33.1; g.sim(.05); });
     const grate = await page.evaluate(()=>({position:__g.drainPresence.grate.position.toArray(),rotation:__g.drainPresence.grate.rotation.toArray()}));
     const fade = [];
+    await page.keyboard.down('KeyW');
     for (let i = 0; i < 5; i++) {
-      await page.evaluate(() => __g.sim(.7));
-      fade.push(await page.evaluate(() => ({ state: __g.drainPresence.state, dissolved: __g.drainPresence.dissolved, visible: __g.drainPresence.group.visible, eye: __g.drainPresence.group.getObjectByName('occhi-nel-fumo').material.opacity,eyeY:__g.drainPresence.group.getObjectByName('occhi-nel-fumo').position.y })));
-      if (i === 1 || i === 4) { await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))); await page.screenshot({ path: path.join(out, `03-rientro-${i}.png`) }); }
+      await page.evaluate(() => __g.sim(.5));
+      fade.push(await page.evaluate(() => ({ state: __g.drainPresence.state, dissolved: __g.drainPresence.dissolved, visible: __g.drainPresence.group.visible, eye: __g.drainPresence.group.getObjectByName('occhi-nel-fumo').material.opacity,eyeY:__g.drainPresence.group.getObjectByName('occhi-nel-fumo').position.y,distance:Math.hypot(__g.player.pos.x-.3,__g.player.pos.z+45) })));
+      if (i === 1 || i === 4) { await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))); await page.screenshot({ path: path.join(out, `03-dissolvenza-${i}.png`) }); }
     }
     assert.ok(fade.every((f, i) => !i || f.dissolved > fade[i - 1].dissolved));
     assert.ok(fade.every((f, i) => !i || f.eye < fade[i - 1].eye));
-    assert.ok(fade.every((f,i)=>f.state==='returning'&&(!i||f.eyeY<fade[i-1].eyeY)),'head and mist return down into the grate');
+    assert.ok(fade.every(f=>f.state==='dissolving'&&f.eyeY>1.88&&f.distance>6),'the entity dissolves in place while the player is still far away');
     assert.ok(fade.every(f => f.visible), 'the cloud stays drawn throughout its fade');
     await page.evaluate(() => __g.sim(.9));
+    await page.keyboard.up('KeyW');
     assert.deepEqual(await page.evaluate(()=>({position:__g.drainPresence.grate.position.toArray(),rotation:__g.drainPresence.grate.rotation.toArray()})),grate,'grate never moves');
-    const gone = await page.evaluate(() => ({ state: __g.drainPresence.state, visible: __g.drainPresence.group.visible, dissolved: __g.drainPresence.dissolved }));
+    const gone = await page.evaluate(() => ({ state: __g.drainPresence.state, visible: __g.drainPresence.group.visible, dissolved: __g.drainPresence.dissolved,distance:Math.hypot(__g.player.pos.x-.3,__g.player.pos.z+45) }));
     assert.equal(gone.state, 'gone'); assert.equal(gone.visible, false); assert.equal(gone.dissolved, 1);
+    assert.ok(gone.distance>6,'already gone around seven metres away, before a close encounter');
     await page.screenshot({ path: path.join(out, '04-grata-libera.png') });
     await page.evaluate(() => { __g.player.pos.z = -30; __g.sim(2); });
     assert.equal(await page.evaluate(() => __g.drainPresence.state), 'gone', 'it does not respawn when walking backwards');

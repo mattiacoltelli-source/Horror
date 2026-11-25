@@ -1,10 +1,10 @@
-// Twelve distant tongues, in one draw. Anchors lie on the molten/crust
+// Eighteen distant tongues, in one draw. Anchors lie on the molten/crust
 // boundary of the existing lava map; actual terrain triangles supply height.
 import * as THREE from 'three';
 
 export function createLavaFire({ terrainGeometry, fields, x, z, reduced = false }) {
   const anchors = [], phases = [], shapes = [];
-  const edgeUV = [[.18514,.82008],[.43155,.60365],[.62581,.37940],[.78879,.16167]];
+  const edgeUV = [[.18514,.82008],[.5528,.70],[.43155,.60365],[.62581,.37940],[.76923,.28],[.78879,.16167]];
   const support = new THREE.Mesh(terrainGeometry), ray = new THREE.Raycaster();
   support.updateMatrixWorld(true); ray.ray.direction.set(0, -1, 0);
   fields.forEach(([ox, oz, width, depth, angle], field) => {
@@ -15,8 +15,8 @@ export function createLavaFire({ terrainGeometry, fields, x, z, reduced = false 
       const wx = x + ox + dx * c - dz * s, wz = z + oz + dx * s + dz * c;
       ray.ray.origin.set(wx, 100, wz); const hit = ray.intersectObject(support)[0];
       if (!hit) return;
-      anchors.push(wx, hit.point.y + .013, wz); phases.push((field * 4 + i) * 2.39996);
-      shapes.push(.16 + ((i * 3 + field) % 5) * .028, .13 + ((i + field * 2) % 4) * .035);
+      anchors.push(wx, hit.point.y + .013, wz); phases.push((field * edgeUV.length + i) * 2.39996);
+      shapes.push(.25 + ((i * 3 + field) % 5) * .04, .23 + ((i + field * 2) % 4) * .05);
     });
   });
   support.material.dispose();
@@ -33,7 +33,7 @@ export function createLavaFire({ terrainGeometry, fields, x, z, reduced = false 
       void main(){
         float t=uTime*uMotion, pulse=.72+.18*sin(t*(2.1+mod(aPhase,.6))+aPhase)+.10*sin(t*4.3+aPhase*1.7);
         float tall=pow(max(0.0,sin(t*(.42+mod(aPhase,.17))+aPhase*1.61)),14.0)*uMotion;
-        float h=aShape.y*pulse+tall*.44;
+        float h=aShape.y*pulse+tall*.66;
         vec4 p=modelViewMatrix*vec4(aAnchor,1.0);
         p.x+=position.x*aShape.x+sin(t*2.0+aPhase+uv.y*3.2)*uv.y*uv.y*.045*uMotion;
         p.y+=uv.y*h; gl_Position=projectionMatrix*p; vUv=uv; vPhase=aPhase;
