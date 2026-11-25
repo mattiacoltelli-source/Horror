@@ -17,7 +17,7 @@ export function narrativeQuiet(s) {
     if (s.sideFold?.enabled && s.sideFold.group?.visible && ['explore', 'flicker', 'dark', 'exit'].includes(s.sideFold.state)) return true;
     if (['hush', 'burst', 'void', 'dark', 'turned', 'ignored'].includes(s.doorEvent?.state)) return true;
     if (s.glassEvent?.state && !['idle', 'done'].includes(s.glassEvent.state)) return true;
-    if (s.hound?.state === 'flash') return true;
+    if (s.drainPresence?.holdNarration) return true;
   }
   if (room === 'ward') return s.ward?.bend?.state === 'run' || s.ward?.state === 'beat';
   if (room === 'cellar') {

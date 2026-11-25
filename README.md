@@ -3,9 +3,9 @@
 Horror psicologico in prima persona, verticale (9:16), per browser mobile. Sito statico: HTML + CSS + JavaScript + Three.js, nessun build.
 
 ## Storia
-Sei il paziente n. 17, entrato la notte del 3 novembre. Tua sorella è morta in un incendio e tu eri in casa. Poi un secondo incendio, appiccato di proposito, parte dal magazzino dell'ospedale. Solo tu sopravvivi (il cane della struttura no). **Suor Agnese** ti ha tirato fuori dal fuoco, ha scritto che è stato un guasto e non ti lascia andare: è la suora della torre e firma il registro che compare a ogni stanza. La sorella è il senso di colpa (nel magazzino).
+Sei il paziente n. 17, entrato la notte del 3 novembre. Tua sorella è morta in un incendio e tu eri in casa. Poi un secondo incendio, appiccato di proposito, parte dal magazzino dell'ospedale. Solo tu sopravvivi. Dalle grate continua a salire fumo. **Suor Agnese** ti ha tirato fuori dal fuoco, ha scritto che è stato un guasto e non ti lascia andare: è la suora della torre e firma il registro che compare a ogni stanza. La sorella è il senso di colpa (nel magazzino).
 
-**Percorso:** tunnel → vetro con la sagoma (poi un cane nella penombra) → portone → sala della folla (+ «non guardare dietro») → cantina (specchio, scritta nel vapore, sagoma) → reparto → obitorio (scelta tra due porte: luce rossa o respiro, cambia il magazzino) → magazzino (la sorella, pistola o ascia, cancello) → torre (combattimento perso + finale).
+**Percorso:** tunnel → vetro con la sagoma (poi una presenza di fumo dal tombino) → portone → sala della folla (+ «non guardare dietro») → cantina (specchio, scritta nel vapore, sagoma) → reparto → obitorio (scelta tra due porte: luce rossa o respiro, cambia il magazzino) → magazzino (la sorella, pistola o ascia, cancello) → torre (combattimento perso + finale).
 
 **Finali (2):** **A** non ti sei girato · **B** ti sei girato. In entrambi la suora arriva da davanti. Tutte e 5 le note trovate = qualche secondo in più nel combattimento. Non esiste più il finale segreto dello specchio.
 
@@ -32,14 +32,14 @@ Verifica delle interazioni e delle collisioni: `node --experimental-vm-modules t
 - **Murales** (`assets/tex/pic_mural_*.webp`, posizioni in `js/main.js`): affreschi scrostati con bordo irregolare, una campata libera ciascuno; in torre gli angeli (sinistra) e il trono (destra) ai lati della porta. Quadri e foto piccole sono `pic_*.webp`.
 - **Texture rovinate** (`patchDecals` in `js/world/blood.js`): chiazze di intonaco, cemento, pietra e muffa; ruggine e bruciature sugli oggetti (`js/world/aged.js`); tracce d'incendio (`burnDecals`), più forti nel magazzino e nel reparto.
 - **Scritte di sangue** con lettere vere (`js/world/bloodfont.js`, `tools/blood_real_glyphs.py`).
-- **Il cane** (`js/events/hound.js`, «Grimhound Rig» di DM-913, CC-BY 4.0): nel tunnel, dopo il vetro, solo due occhi rossi e un respiro; scompare quando la lampada sfarfalla.
+- **La presenza del tombino** (`js/events/drain-presence.js`): dopo il vetro sale una figura incompleta di fumo, con due occhi rosso scuro. Avvicinandosi si sfilaccia, si allarga e perde densità fino a sparire in circa quattro secondi. Nessun cambio della camera, blocco o apparizione improvvisa; movimento ridotto supportato.
 - **La sorella** (`js/events/sorella.js`, `assets/models/sorella.glb`, script Blender in `tools/monster/`): nel magazzino, sempre uguale e prima dell'arma.
 - **Prova altare di Elisa**: solo con `?per=elisa`, nella cripta/cappella della cantina la foto col volto bruciato e' carta scolorita, piegata e bruciata ai bordi (`pic_elisa_altar_burnt.webp`, con trasparenza). Foto e supporto sono ulteriormente ridotti dell'8%, conservando l'appoggio sull'altare. E' fissata con due puntine a una tavoletta di legno scuro, scheggiata, con base e sostegno posteriore appoggiati sull'altare. La luce alta delle candele illumina il fronte dell'altare; la scritta ha righe piu' distanziate, rimane entro la pietra e ha meno luce propria.
 - **Oggetti che reagiscono**: i busti si voltano, la TV del magazzino si accende da sola; **topi** (`js/events/rats.js`).
 - **Ascensore fuori servizio** (`js/world/elevator.js`): nicchia sul lato destro del corridoio del reparto, prima dell'obitorio. Cabina arrugginita e grate aperte, pulsanti e lampada spenti; solo scenografia, senza interazioni. Si guarda dal corridoio, senza cambiare il percorso.
   Cartello «Fuori servizio · Ascensore abbandonato · Non utilizzare» e pulsantiera con tasti tondi, targhette dei piani e serratura ricreati dal riferimento fornito (`assets/tex/elevator_details.webp`, atlante condiviso); i tasti hanno rilievo geometrico.
   Sulla parete interna sinistra, il simbolo rosso con colature fornito dall'autore (`assets/tex/elevator_mural.webp`), con fondo trasparente, appare dipinto sulla lamiera dietro il corrimano.
-- **Audio**: sintesi Web Audio più alcune registrazioni mp3 corte in `assets/audio` (`audio.sfx`): respiro del cane, drone della sala della folla, ringhio, fuoco.
+- **Audio**: sintesi Web Audio più alcune registrazioni mp3 corte in `assets/audio` (`audio.sfx`): drone della sala della folla, ringhio, fuoco. La presenza del tombino riusa il vento procedurale.
 - **Folla, crescendo sonoro** (`js/audio/hall.js`): tre campane modali spezzate sulle riapparizioni, colpi sempre più serrati e due raffiche di passi/trascinamenti nel buio. Le distanze audio seguono quelle delle sagome; le code vengono troncate prima del respiro. Verifiche: `node --experimental-vm-modules tools/check_hall_timing.cjs` e `node tools/check_hall_audio.cjs` (Playwright/Chromium; argomento WAV facoltativo per esportare l’anteprima).
   Accenti ambientali molto bassi (`js/audio/ambience.js`): aria nel tunnel, tubature nel reparto, ventilazione lontana nell'obitorio e scricchiolio nel magazzino. Una sola volta per ambiente, durante brevi finestre di esplorazione, con dissolvenza e posizione 3D; si interrompono cambiando stanza, nei silenzi di tensione e durante il combattimento. Nessun nuovo file audio da scaricare.
 - **Checkpoint**: a ogni stanza si salva uno snapshot con le scelte (`localStorage`, `ng_ckpt` e `ng_rooms`); dal menu iniziale «riparti da… ▾» scegli tra cantina, reparto, obitorio, magazzino e torre gia' raggiunti. Il reparto riparte dall'ingresso del corridoio, prima del montacarichi; conserva scelte e note. Nei vecchi salvataggi, se e' presente lo snapshot dell'obitorio, il reparto viene recuperato da quello (tra i due ingressi non ci sono nuove note o scelte).
@@ -59,7 +59,7 @@ Apri `http://localhost:8123` (su desktop: WASD + trascinamento a destra).
 - `js/world/` — materiali, tunnel procedurale, luci (torcia + pool di 2 luci), decorazioni, sangue, oggetti invecchiati
 - `js/player/` — controlli touch, movimento/collisioni
 - `js/audio/` — audio procedurale e registrato
-- `js/events/` — `glass` vetro · `door` portone e sala della folla · `hall` sala/folla · `cellar` specchio · `ward` reparto · `morgue` obitorio · `warehouse` magazzino · `tower` torre e finali · `hound` cane · `scare` jump scare · `combat` combattimento · `notes` note · `dawn` epilogo
+- `js/events/` — `glass` vetro · `door` portone e sala della folla · `hall` sala/folla · `cellar` specchio · `ward` reparto · `morgue` obitorio · `warehouse` magazzino · `tower` torre e finali · `drain-presence` fumo e occhi · `scare` jump scare · `combat` combattimento · `notes` note · `dawn` epilogo
 - `js/ui/` — instabilità, sfasamento RGB
 - `assets/tex`, `assets/models`, `assets/audio` — texture, modelli GLB, suoni
 - `tex-lib/` — libreria di texture di riserva (colore 512 px), non inclusa nella cache del gioco
@@ -70,7 +70,6 @@ Apri `http://localhost:8123` (su desktop: WASD + trascinamento a destra).
 - Ghiaia cosmica: adattamento della texture `floorB_c.jpg` già nel progetto. Basalto e frattura della cripta: riferimento grafico dell'autore e decal originale generata e ottimizzata per il gioco.
 - Falò lontano del pianeta: geometria da `17-camp_fire.rar` fornito dall'autore; colori dell'atlante incorporati nei vertici, senza caricatore FBX o texture aggiuntive. Fiamma leggera creata nel gioco.
 - Presenza nebulosa sotto il ponte: ritaglio originale generato per il progetto, ottimizzato in WebP 512×512 con trasparenza e incorporato in `js/world/abyss-presence-image.js`.
-- Modello del cane: «Grimhound Rig» di DM-913 (CC-BY 4.0), citato nella schermata iniziale.
 - Suoni registrati: Pixabay (alesiadavina) e Mixkit (licenze gratuite); passi: Kenney «Impact Sounds» (CC0).
 - Modelli dei personaggi e murales forniti dall'autore del progetto (murales generati con strumenti di immagini); licenze originali da confermare prima di una pubblicazione più ampia.
 - Three.js: MIT.

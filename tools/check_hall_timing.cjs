@@ -118,7 +118,7 @@ function checkFrameClock() {
     sideFold: { update: noop, applyCamera: noop },
     scare: update, dust: update, dawn: update, cellar: update, tower: update,
     wh: update, morgue: update, ward: update, ambient: update, notes: update,
-    rats: update, combat: update, hound: update, instab: update,
+    rats: update, combat: update, drainPresence: update, instab: update,
   });
   vm.runInContext(source.slice(tickStart, frameEnd), context);
   context.frame(100); // 10 FPS reali: la fisica resta limitata, la regia no.

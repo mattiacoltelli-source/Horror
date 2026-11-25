@@ -453,7 +453,7 @@ export function createAudio() {
 
   let dripOn = true, steps = [], lastStep = -1, stepSide = 1;
   async function loadSfx() {
-    for (const n of ['hound_breath', 'crowd_drone', 'demon_growl', 'fire_swoosh']) {
+    for (const n of ['crowd_drone', 'demon_growl', 'fire_swoosh']) {
       try { const r = await fetch(`assets/audio/${n}.mp3`); if (!r.ok) throw new Error(r.status); sfxBuf[n] = await ctx.decodeAudioData(await r.arrayBuffer()); } catch (e) { console.warn('suono non caricato', n, e); }
     }
   }

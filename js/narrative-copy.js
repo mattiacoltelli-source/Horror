@@ -26,7 +26,7 @@ export const NOTE_TEXT = [
   'specchio sostituito.\nriconosce la stanza bruciata.\ndice che ' + (P?.detail || 'quella faccia non è la sua') + '.',
   'incendio in casa. prima del ricovero.\nsua sorella non è uscita.\n' + (P?.name || 'il paziente') + ' era lì.\nricorda il fumo. non la porta.',
   'magazzino: benzina sui registri.\ninnesco volontario.\n' + (o === 'o' ? 'un solo sopravvissuto: ' : 'una sola sopravvissuta: ') + N +
-    '.\nil cane è rimasto dentro.\nil cancello era chiuso da dentro.',
+    '.\ndalle grate sale ancora fumo.\nil cancello era chiuso da dentro.',
   'l’ho tirat' + o + ' fuori dal fuoco.\nho scritto: guasto elettrico.\nmi chiede di lasciarl' + o +
     ' andare.\nnon ricorda chi ha chiuso la porta.\n' + NOW + (P?.nurse ? '\n' + P.nurse : '') + '\n' + SIG,
 ];

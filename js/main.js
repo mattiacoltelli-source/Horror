@@ -21,7 +21,8 @@ import { createHall } from './events/hall.js';
 import { createDawn } from './events/dawn.js';
 import { createCellar } from './events/cellar.js';
 import { createTower } from './events/tower.js';
-import { createHound } from './events/hound.js';
+import { createDrainPresence } from './events/drain-presence.js';
+import { addInfernalMural } from './world/painted-mural.js';
 import { createBreath } from './world/breath.js';
 import { createSpaceFall } from './events/space.js';
 import { createStory } from './story.js';
@@ -131,7 +132,9 @@ place('assets/models/cam.glb', 0.3, -W + 0.12, 2.0, -12, Math.PI - 0.55);   // p
 
 // ---------- evento ----------
 const glassEvent = createGlassEvent({ scene, renderer, camera, player, audio, lights, instab });
-const hound = createHound({ scene, player, lights, audio, glass: glassEvent });
+const drainPresence = createDrainPresence({ scene, player, lights, audio, glass: glassEvent,
+  isActive: () => story?.current() === 'tunnel' && !story.busy() && tunnelG.visible && !dawn?.active,
+  reduced: matchMedia('(prefers-reduced-motion: reduce)').matches });
 // porta laterale del tunnel + passaggio che si piega (?porta=0 la spegne; i varchi restano chiusi dai tamponi)
 const sideFold = createSideFold({ scene, tunnel: tunnelG, mats, player, camera, audio, lights, instab, getSpace: () => space, say: (...a) => say(...a) });
 if (new URLSearchParams(location.search).get('porta') === '0') { sideFold.enabled = false; sideFold.group.visible = false; player.constrainMove = null; tunnelG.userData.plugs[0].visible = true; }
@@ -193,7 +196,7 @@ const hint = $('subtitle');
 let narrativeDirector;
 const say = createNarration({ element: hint, blocked: () => narrativeDirector?.quiet() || false });
 narrativeDirector = createNarrativeDirector({
-  read: () => ({ story, sideFold, ward, cellar, tower, wh, space, combat, scare, dawn, doorEvent, glassEvent, hound, player, flags, ended, paused }), audio, say,
+  read: () => ({ story, sideFold, ward, cellar, tower, wh, space, combat, scare, dawn, doorEvent, glassEvent, drainPresence, player, flags, ended, paused }), audio, say,
 });
 function narrativeStep(dt) { narrativeDirector.update(dt); say.update(dt); if (!dawn?.active && !ended) story?.update(dt); }
 
@@ -256,7 +259,7 @@ async function enter() {
     const morguePhotoShift = 4;
     writingDecals(morgue.group, [pic('anatomy', 0.755, 4.22, 1.5, MZ - 5.8 + morguePhotoShift, '-x', 0.6, 0.02), pic('charcoal', 0.756, 4.22, 1.5, MZ - 7.0 + morguePhotoShift, '-x', 0.55, -0.02), pic('family', 1.287, 4.22, 1.5, MZ - 8.4 + morguePhotoShift, '-x', 0.75, 0.02)]);
     // MURALES GIGANTI (affreschi scrostati), uno per ambiente grande, a riempire una campata intera tra due pilastri (sempre uguali in tutte le versioni)
-    writingDecals(scene, [{ ...pic('mural_dog', 3.2200, 1.38, 1.1, -28.5, '-x', 4.8, 0), rot: 0, a: 0.94 }]);                    // tunnel, parete destra
+    addInfernalMural(scene);   // dipinto infernale: stessa campata, intero sotto l'imposta della volta
     writingDecals(wh.group, [{ ...pic('mural_corridor', 1.2959, -5.96, 3.0, WZ - 18.6, '+x', 4.7, 0), rot: 0, a: 0.94 }]);              // magazzino, parete sinistra
     writingDecals(wh.group, [{ img: 'assets/tex/pic_burn_figure.webp', aspect: 0.4879, p: [5.96, 0.93, WZ - 19.4], wall: '-x', w: 0.89, rot: 0, a: 1, plain: true }]);   // magazzino (dove e' partito il fuoco): una sagoma umana bruciata sul muro, una sola in tutto il gioco
     writingDecals(wh.group, [{ ...pic('mural_demon', 1.1765, 5.94, 3.2, WZ - 12.6, '-x', 4.7, 0), rot: 0, a: 0.94 }]);              // magazzino, parete destra (di fronte al gruppo sopra il letto)
@@ -329,6 +332,7 @@ async function enter() {
   try { await screen.orientation?.lock?.('portrait'); } catch (_) {}
   if (q.get('allunga') === '1') { breath = createBreath({ scene, audio, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches }); breath.refresh(); setTimeout(() => breath?.refresh(), 3000); }   // allungamento del tunnel: spento di default, solo con ?allunga=1 (provato e scartato)
   if (sideFold.enabled) await sideFold.prepare(renderer);   // texture GPU e shader del paesaggio pronti prima di lasciare il menu
+  await drainPresence.prepare(renderer, camera);
   if (!restoreCk && (!q.get('start') || q.get('start') === 'porta')) await prepareScene();
   $('intro').classList.add('hidden');
   // I programmi e le texture della stanza vengono preparati durante il
@@ -416,9 +420,9 @@ function tick(dt, hallDt = dt) {
   breath?.update(dt, player.pos.z);
   if (ward?.bend?.active) ward.bend.applyCamera(dt);   // ?piega=1: la camera segue il reparto piegato
   audio.setListener(camera);
+  drainPresence.update(dt);
   lights.update(hall?.active ? hallDt : dt, time, player.pos.z, player.pos.x);
   glassEvent.update(dt, time);
-  hound.update(dt);
   narrativeStep(dt);
   instab.update(dt);
   if (doorEvent?.ended) finish();
@@ -448,7 +452,7 @@ requestAnimationFrame((n) => { last = n; frame(n); });
 
 // debug/test: ?debug=1 espone il gioco e permette di saltare avanti
 if (q.has('debug')) {
-  window.__g = { sideFold, get space() { return space; }, get breath() { return breath; }, rats, say, get notes() { return notes; }, get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get ward() { return ward; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
+  window.__g = { sideFold, drainPresence, get space() { return space; }, get breath() { return breath; }, rats, say, get notes() { return notes; }, get dawn() { return dawn; }, flags, get combat() { return combat; }, get wh() { return wh; }, get morgue() { return morgue; }, get ward() { return ward; }, get story() { return story; }, get cellar() { return cellar; }, get tower() { return tower; }, get hall() { return hall; }, get scare() { return scare; }, get door() { return doorEvent; }, THREE, scene, camera, player, glassEvent, lights, instab, audio, renderer, enter,
     sim(sec, dt = 0.05) { for (let t = 0; t < sec; t += dt) tick(dt); },
     tp(z, yaw = 0) { player.pos.set(0.1, 1.62, z); player.yaw = yaw; player.pitch = 0; } };
 }
