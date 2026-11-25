@@ -28,7 +28,7 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
  const yaw=player.yaw;dawn.update(.05);player.update(.05,.05);
  assert.equal(staleCalls,0);assert.equal(player.pos.x,0);assert.equal(player.pos.z,0);assert.notEqual(player.yaw,yaw,'free look survives while movement is stopped');
  for(let i=1;i<510;i++){dawn.update(.05);player.update(.05,i*.05);}
- assert.ok(messages.includes('è tutto fermo.'));assert.equal(dawn.ended,true);assert.deepEqual(finishes,['finale di prova']);assert.equal(camera.fov,68);
+ assert.ok(messages.includes('il fumo non si sente più.'));assert.equal(dawn.ended,true);assert.deepEqual(finishes,['finale di prova']);assert.equal(camera.fov,68);
  assert.equal(staleCalls,0);assert.equal(player.pos.x,0);assert.equal(player.pos.z,0);
  console.log('Epilogue: hidden passage, camera range, controller release, stationary free look and complete ending verified.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

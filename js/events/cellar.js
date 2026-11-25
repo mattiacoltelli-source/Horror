@@ -348,5 +348,7 @@ export function createCellar({ scene, mats, player, camera, renderer, audio, lig
     mirror.onBeforeRender(renderer, scene, camera);
   };
   C.leave = () => { C.keypad.reset(); C.shrine.leave(); if (player.constrainMove === shrineMove) player.constrainMove = null; C.group.visible = false; mirror.visible = false; };
+  // Read-only cue for the narrative track; the apparitions retain their clocks.
+  Object.defineProperty(C, 'holdNarration', { get: () => player.pos.x <= 4.2 && (ap >= 0 || cornerT >= 0) });
   return C;
 }

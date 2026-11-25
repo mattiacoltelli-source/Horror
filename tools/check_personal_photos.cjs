@@ -13,8 +13,10 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),asse
    assert.ok(mod.namespace.P.joke.includes('Mati'));assert.equal(mod.namespace.CITY,'Bologna');assert.equal(mod.namespace.BDAY,'');
    assert.equal(mod.namespace.PHOTO,file);assert.equal(p.baked,true);assert.equal(p.aspect,.8);
    const three=new vm.SyntheticModule([],function(){},{context}),tunnel=new vm.SyntheticModule(['W'],function(){this.setExport('W',1.4);},{context});
+   const copy=new vm.SourceTextModule(fs.readFileSync(path.join(root,'js/narrative-copy.js'),'utf8'),{context});
+   await copy.link(spec=>{assert.equal(spec,'./personal.js');return mod;});
    const notes=new vm.SourceTextModule(fs.readFileSync(path.join(root,'js/events/notes.js'),'utf8'),{context});
-   await notes.link(spec=>spec==='three'?three:spec==='../personal.js'?mod:tunnel);await notes.evaluate();
+   await notes.link(spec=>spec==='three'?three:spec==='../personal.js'?mod:spec==='../narrative-copy.js'?copy:tunnel);await notes.evaluate();
    const text=notes.namespace.NOTE_TEXT;assert.ok(text[0].includes('Matilde')&&text[0].includes('Mati')&&text[0].includes('Bologna'));
    assert.ok(text[3].includes('una sola sopravvissuta: Matilde'));assert.equal(text.filter(t=>t.includes('Bologna')).length,1);
   }

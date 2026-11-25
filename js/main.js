@@ -1,5 +1,8 @@
 import * as THREE from 'three';
-import { P, PKEY } from './personal.js';
+import { P, PKEY, stopWhispers } from './personal.js';
+import { ENDINGS } from './narrative-copy.js';
+import { createNarration } from './narration.js';
+import { createNarrativeDirector } from './narrative-director.js';
 import { GLTFLoader } from '../vendor/three/loaders/GLTFLoader.js';
 import { makeMaterials, setAnisotropy } from './world/materials.js';
 import { buildTunnel, LAMPS, W, Z_END, H0 } from './world/tunnel.js';
@@ -187,14 +190,12 @@ const flash = new THREE.PointLight(0xffd9a0, 0, 28, 1.6); scene.add(flash);   //
 let state = 'loading', last = 0, time = 0, paused = false, ended = false;
 let started = false, entering = false;
 const hint = $('subtitle');
-// Le note hanno la precedenza: finché una nota è a schermo, gli altri messaggi aspettano (resta in coda solo l'ultimo) e compaiono subito dopo.
-function say(txt, ms = 4000, style = '') {
-  const now = performance.now();
-  if (style !== 'note' && style !== 'urgent' && now < (say.noteUntil || 0)) { clearTimeout(say.q); say.q = setTimeout(() => say(txt, ms, style), say.noteUntil - now + 400); return; }
-  if (style === 'note') { say.noteUntil = now + ms; clearTimeout(say.q); }
-  hint.classList.toggle('note', style === 'note'); hint.classList.toggle('urgent', style === 'urgent'); hint.textContent = txt; hint.style.opacity = 1;
-  clearTimeout(say.t); say.t = setTimeout(() => (hint.style.opacity = 0), ms);
-}
+let narrativeDirector;
+const say = createNarration({ element: hint, blocked: () => narrativeDirector?.quiet() || false });
+narrativeDirector = createNarrativeDirector({
+  read: () => ({ story, sideFold, ward, cellar, tower, wh, space, combat, scare, dawn, doorEvent, glassEvent, hound, player, flags, ended, paused }), audio, say,
+});
+function narrativeStep(dt) { narrativeDirector.update(dt); say.update(dt); if (!dawn?.active && !ended) story?.update(dt); }
 
 // COME SI GIOCA: due anelli con un puntino che si trascina, uno per metà schermo; ognuno sparisce quando tocchi quella metà (o dopo 14 s)
 function showHowto() {
@@ -208,7 +209,7 @@ async function enter() {
   if (entering || started) return; entering = true;
   scare ??= createScare({ scene, camera, player, audio, lights, instab, finish: (m, f) => (dawn ? dawn.start(m) : finish(m, f)) });
   hall ??= createHall({ scene, mats, lights });
-  dawn ??= createDawn({ scene, camera, player, audio, lights, instab, say, finish, onStart: () => combat?.hideAll(), hall });
+  dawn ??= createDawn({ scene, camera, player, audio, lights, instab, say, finish, onStart: () => { combat?.hideAll(); say.reset(); audio.stopMotif?.(); stopWhispers(); }, hall });
   story ??= createStory({ scene, camera, controls, player, audio, hall, getCellar: () => cellar, getTower: () => tower, getWh: () => wh, getMorgue: () => morgue, getWard: () => ward, say, lights, instab, prepare: prepareScene, onRoom: (name) => saveCkpt(name) });
   combat ??= createCombat({ scene, camera, player, audio, lights, instab, say, flash, scare, ui: { aimAll: (b) => { controls.aimAll = b; if (b) { controls.move.x = controls.move.y = 0; $('stick').style.opacity = 0; } }, label: (t) => ($('fire').textContent = t), cool: (b) => $('fire').classList.toggle('cool', b), show: (b) => { $('fire').classList.toggle('hidden', !b); $('dot').classList.toggle('hidden', !b); } } });
   ward ??= createWard({ scene, mats, player, camera, audio, lights, instab, say, renderer, prepare: prepareScene, getCellar: () => cellar, getMorgue: () => morgue, get story() { return story; } });
@@ -340,7 +341,7 @@ async function enter() {
     // Chiave e pannello ripartono da zero a ogni visita; ignora i campi dei vecchi checkpoint.
     flags.filmKey = false; flags.filmDoorOpen = false;
     if (ck) { ck.notes.forEach((i) => notes.found.add(i)); flags.notes = notes.found.size; }
-    if (st === 'epilogo') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; dawn.start(q.get('turned') === '1' ? 'ti sei girato.\ntua sorella non c\'è più.\nl\'incendio l\'hai acceso tu.\nsuor Agnese lo sa. ti tiene qui.' : 'non ti sei girato.\nera già davanti a te.\nsuor Agnese non ti ha salvato:\nti ha tenuto qui.'); }
+    if (st === 'epilogo') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; dawn.start(q.get('turned') === '1' ? ENDINGS.B : ENDINGS.A); }
     if (st === 'reparto') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; story.goto('ward'); }
     if (st === 'cantina' || st === 'torre' || st === 'magazzino' || st === 'obitorio') { glassEvent.state = 'done'; glassEvent.done = true; doorEvent.state = 'over'; if (st === 'torre' && flags.weapon === 'axe') combat.giveAxe(); story.goto(st === 'cantina' ? 'cellar' : st === 'obitorio' ? 'morgue' : st === 'magazzino' ? 'warehouse' : 'tower'); if (st === 'cantina' && q.get('specchio')) setTimeout(() => { player.pos.set(-1.3, 1.62, -210); player.yaw = Math.PI / 2; player.pitch = 0.02; }, 4500); } }   // ?start=cantina&specchio=1: direttamente davanti allo specchio
 
@@ -348,8 +349,10 @@ async function enter() {
   if (!story.busy()) $('fade').style.opacity = 0;
   setTimeout(() => instab.show(), 4000);
   if (!q.get('start')) setTimeout(showHowto, 1800);
-  if (!q.get('start') && !restoreCk) setTimeout(() => story?.tell('tunnel'), 13500);   // il registro dell'infermiera comincia dal tunnel
-  if (!q.get('start')) { setTimeout(() => { if (story?.current() === 'tunnel') say(P ? P.name + '. non fermarti, dicevano.' : 'corridoio di servizio. non fermarti, dicevano.', 5200); }, 9500); setTimeout(() => { if (story?.current() === 'tunnel') say('qualcuno ti segue da prima che entrassi.', 5200); }, 17500); }
+  if (!q.get('start') && !restoreCk) {
+    story.schedule(13.5, () => story.tell('tunnel'));
+    story.schedule(9.5, () => say(P ? P.name + '. non guardare dietro, dicevano.' : 'non guardare dietro, dicevano.', 4200));
+  }
   last = performance.now();
 }
 $('enter').addEventListener('click', enter);
@@ -364,7 +367,7 @@ setTimeout(() => { if (!entering && !started) { $('enter').disabled = false; end
 
 function setPaused(p) {
   if (!started || ended) return;
-  paused = p; $('pause').classList.toggle('hidden', !p);
+  paused = p; $('pause').classList.toggle('hidden', !p); if (p) stopWhispers();
   controls.enabled = !p; adaptiveResolution.reset(); p ? audio.suspend() : (audio.resume(), (last = performance.now()));
 }
 document.addEventListener('visibilitychange', () => document.hidden && setPaused(true));
@@ -383,7 +386,7 @@ canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); setPaus
 canvas.addEventListener('webglcontextrestored', () => { last = performance.now(); });
 
 function finish(msg, fast = false, light = false) {
-  if (ended) return; ended = true; controls.enabled = false; instab.hide();
+  if (ended) return; ended = true; controls.enabled = false; instab.hide(); say.reset(); audio.stopMotif?.(); stopWhispers();
   $('endtext').innerText = msg || 'fine';
   const n = /^non ti sei girat/.test(msg || '') ? 1 : /^ti sei girat/.test(msg || '') ? 2 : 0;
   $('endsub').textContent = (n ? `finale ${n} di 2` : '');
@@ -416,6 +419,7 @@ function tick(dt, hallDt = dt) {
   lights.update(hall?.active ? hallDt : dt, time, player.pos.z, player.pos.x);
   glassEvent.update(dt, time);
   hound.update(dt);
+  narrativeStep(dt);
   instab.update(dt);
   if (doorEvent?.ended) finish();
 }
@@ -426,7 +430,7 @@ function frame(now) {
   if (paused || state === 'loading') { if (state === 'loading') { updateVisibleWorldMatrices(scene); renderer.render(scene, camera); } return; }
   if (story?.preparing?.()) return;   // sotto il nero, GPU dedicata alla preparazione; niente eventi o misure FPS falsate
   // caduta nello spazio (dopo il portale): scena a parte, si guarda intorno ma non ci si muove
-  if (space?.active) { time += dt; player.update(dt, time); space.update(dt); audio.setListener(camera); space.render(); space.perf(elapsed); return; }
+  if (space?.active) { time += dt; player.update(dt, time); space.update(dt); narrativeStep(dt); audio.setListener(camera); space.render(); space.perf(elapsed); return; }
   // La regia della sala usa il tempo reale; movimento e collisioni mantengono il passo limitato.
   if (!(window.__g && window.__g.hold)) tick(dt, elapsed);
   updateVisibleWorldMatrices(scene);

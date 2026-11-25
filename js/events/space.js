@@ -293,12 +293,12 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
     if (seam) {   // CADUTA DAL PORTALE: nessun nero, nessun caricamento; si e' gia' dentro l'immagine del buco
       S.finish(); S.onDone = onDone; S.pr0 = renderer.getPixelRatio(); S.pr = Math.min(S.pr0, 0.9); S.pf = 0; S.pn = 0; renderer.setPixelRatio(S.pr);
       const pose = mapPose(seam.camPos, seam.camQuat, seam.portalC, { pos: new THREE.Vector3(), quat: new THREE.Quaternion() }); S.seam = { off: pose.pos.clone(), q: pose.quat.clone() };
-      S.active = true; S.phase = 'fall'; S.t = 0; clock.t = 0; player.speedMul = 0; player.frozen = false; vig().style.opacity = 1; audio.space?.(DUR); say('Non puoi muoverti.\nGuardati intorno.', 3400); return;
+      S.active = true; S.phase = 'fall'; S.t = 0; clock.t = 0; player.speedMul = 0; player.frozen = false; vig().style.opacity = 1; audio.space?.(DUR); say('Puoi ancora guardare.', 2000, 'urgent'); return;
     } S.phase = 'in'; S.onDone = onDone; S.t = 0; const o = ov(); o.style.background = '#000'; o.style.transition = 'opacity .5s'; o.style.opacity = '1';
     setTimeout(() => {
       S.finish(); S.pr0 = renderer.getPixelRatio(); S.pr = Math.min(S.pr0, 0.9); S.pf = 0; S.pn = 0; renderer.setPixelRatio(S.pr);   // risoluzione un po' piu' bassa: la scena e' morbida e va fluida
       S.active = true; S.phase = 'fall'; S.t = 0; clock.t = 0; player.speedMul = 0; player.yaw = 0; player.pitch = 0;   // da fermo, guardando in avanti
-      o.style.transition = 'opacity .9s'; o.style.opacity = '0'; vig().style.opacity = 1; audio.space?.(DUR); say('Non puoi muoverti.\nGuardati intorno.', 3400);
+      o.style.transition = 'opacity .9s'; o.style.opacity = '0'; vig().style.opacity = 1; audio.space?.(DUR); say('Puoi ancora guardare.', 2000, 'urgent');
     }, 600);
   };
   const v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3(), mx = new THREE.Matrix4(), zAx = new THREE.Vector3(0, 0, 1);
@@ -359,10 +359,6 @@ export function createSpaceFall({ renderer, camera, player, audio, say, isBusy }
       if (s >= 1) { S.seam = null; S.ext = null; }
     }
     core(dt, T);
-    if (T > 2.9 && !S.said0) { S.said0 = true; say('ogni stella è un fuoco\nacceso prima del tempo.', 2600); }
-    if (T > 4.6 && !S.said1) { S.said1 = true; say('Il plasma delle stelle ti attraversa.', 2600); }
-    if (T > 6.0 && !S.said3) { S.said3 = true; say('luce prestata.\nbasta per un solo gesto.', 2400); }
-    if (T > 7.4 && !S.said2) { S.said2 = true; say('Un varco si apre davanti a te.', 2800); }
     if (TR >= DUR - 0.5 && S.phase === 'fall') { S.phase = 'out'; const o = ov(); o.style.background = '#fff'; o.style.transition = 'opacity .45s'; o.style.opacity = '1'; }
     if (TR >= DUR) { S.active = false; S.phase = 'idle'; S.said0 = S.said1 = S.said2 = S.said3 = false; S.seam = null; S.ext = null; player.speedMul = 1; vig().style.opacity = 0; if (S.pr0) renderer.setPixelRatio(S.pr0); S.onDone?.(); setTimeout(() => { const o = ov(); o.style.transition = 'opacity 1.1s'; o.style.opacity = '0'; }, 1800); }
   };

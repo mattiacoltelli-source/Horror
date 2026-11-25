@@ -3,24 +3,32 @@
 import * as THREE from 'three';
 import { createAmbientCue } from './ambience.js';
 import { createHallPressure } from './hall.js';
+import { createMemoryMotif } from './motif.js';
 
 const vib = (p) => { try { navigator.vibrate?.(p); } catch (_) {} };   // solo Android; altrove non fa nulla
 
 export function createAudio() {
   let ctx = null, master, amb, hum, accents, verb, verbSend, drips = null, noiseBuf, ok = false, duckLevel = 1;
+  let motifScore = null, silenced = false, paused = false;
   const sfxBuf = {};   // suoni registrati (mp3 corti, mono): { nome: AudioBuffer }, caricati dopo il primo tocco
   const A = {
     get ready() { return ok; },
     get ambienceAllowed() { return ok && duckLevel > 0.5; },
     ambientCue(kind, position) { return A.ambienceAllowed ? createAmbientCue(ctx, noiseBuf, accents, kind, position) : null; },
     hallPressure() { return ok ? createHallPressure(ctx, noiseBuf, master, verbSend, () => steps) : null; },
+    // Cellula narrativa a tre note: portal/fracture/bridge/sister/agnese.
+    // key evita ripetizioni nella partita; level puo' solo attenuare (0..1).
+    motif(cue, options) { return motifScore?.play(cue, options) ?? null; },
+    stopMotif() { motifScore?.stop(); },
+    resetMotifs() { motifScore?.reset(); },
     async start() {
-      if (ctx) { await ctx.resume?.(); return; }
+      if (ctx) { await ctx.resume?.(); paused = false; return; }
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       try {
         ctx = new AC({ latencyHint: 'interactive' });
         await ctx.resume();
+        paused = false;
         build();
         ok = true;
         loadSteps(); loadSfx();
@@ -33,8 +41,8 @@ export function createAudio() {
       let dead = false; src.onended = () => { dead = true; try { g.disconnect(); } catch (_) {} };
       return { setLevel(l, tc = 0.5) { if (!dead) g.gain.setTargetAtTime(l, ctx.currentTime, tc / 3); }, stop(tc = 0.4) { if (dead) return; const n = ctx.currentTime; g.gain.cancelScheduledValues(n); g.gain.setTargetAtTime(0, n, tc / 3); try { src.stop(n + tc * 1.5 + 0.1); } catch (_) {} } };
     },
-    suspend() { ctx?.suspend?.(); },
-    resume() { ctx?.resume?.(); },
+    suspend() { paused = true; motifScore?.stop(0); ctx?.suspend?.(); },
+    resume() { paused = false; ctx?.resume?.(); },
     setListener(cam) {
       if (!ok) return;
       const L = ctx.listener, p = cam.position;
@@ -50,6 +58,7 @@ export function createAudio() {
     duck(level, time = 1) {
       if (!ok) return; const t = ctx.currentTime;
       duckLevel = level;
+      if (level <= .5) motifScore?.stop();
       amb.gain.cancelScheduledValues(t); amb.gain.setTargetAtTime(0.5 * level, t, time / 3);
       hum.gain.cancelScheduledValues(t); hum.gain.setTargetAtTime(0.035 * level, t, time / 3);
       accents.gain.cancelScheduledValues(t); accents.gain.setTargetAtTime(level, t, time / 3);
@@ -100,6 +109,7 @@ export function createAudio() {
     // swell sub-basso che precede un evento
     swell(dur = 3, level = 0.5) {
       if (!ok) return; const t = ctx.currentTime;
+      motifScore?.block(dur + .7);
       const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain();
       o.type = 'sine'; o.frequency.value = 38; o2.type = 'sine'; o2.frequency.value = 40.6;
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.22 * level, t + dur); g.gain.linearRampToValueAtTime(0, t + dur + 0.6);
@@ -109,6 +119,7 @@ export function createAudio() {
     glassHit(pos, power = 1) {
       vib([50, 20, 70 * Math.min(1.5, power)]);
       if (!ok) return; const t = ctx.currentTime;
+      motifScore?.block(2.5);
       const pan = ctx.createPanner(); pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 2.5; pan.rolloffFactor = 0.8;
       pan.positionX.value = pos.x; pan.positionY.value = pos.y; pan.positionZ.value = pos.z;
       const out = ctx.createGain(); out.gain.value = 1; out.connect(pan); pan.connect(master); pan.connect(verbSend);
@@ -129,6 +140,7 @@ export function createAudio() {
     doorBang(pos, power = 1) {
       vib([Math.round(70 * power), 40, Math.round(110 * power)]);
       if (!ok) return; const t = ctx.currentTime;
+      motifScore?.block(3);
       const pan = ctx.createPanner(); pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 3; pan.rolloffFactor = 0.7;
       pan.positionX.value = pos.x; pan.positionY.value = pos.y; pan.positionZ.value = pos.z;
       const out = ctx.createGain(); out.connect(pan); pan.connect(master);
@@ -181,6 +193,7 @@ export function createAudio() {
     // JUMP SCARE (organico, niente toni elettrici): colpo del corpo + ruggito di rumore formantico + respiro a scatto
     scare() {
       if (!ok) return; const t = ctx.currentTime;
+      silenced = false; motifScore?.block(3.5);
       master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(0.95, t);
       // colpo sub
       const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine';
@@ -225,11 +238,12 @@ export function createAudio() {
       }
     },
     // taglio netto: tutto muto
-    cut(time = 0.04) { if (!ok) return; master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0, ctx.currentTime, time); },
-    unmute() { if (!ok) return; master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0.9, ctx.currentTime, 0.2); },
+    cut(time = 0.04) { if (!ok) return; silenced = true; motifScore?.stop(0); master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0, ctx.currentTime, time); },
+    unmute() { if (!ok) return; silenced = false; master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0.9, ctx.currentTime, 0.2); },
     // passaggio fulmineo di una presenza da sinistra a destra: spostamento d'aria + tonfo sordo
     dash(dur = 0.5) {
       if (!ok) return; const t = ctx.currentTime;
+      motifScore?.block(dur + .9);
       const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
       const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.4; bp.frequency.setValueAtTime(380, t); bp.frequency.exponentialRampToValueAtTime(1500, t + dur * 0.45); bp.frequency.exponentialRampToValueAtTime(450, t + dur);
       const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.9, t + dur * 0.4); g.gain.linearRampToValueAtTime(0, t + dur + 0.1);
@@ -252,6 +266,7 @@ export function createAudio() {
     // COLPO DI PISTOLA: schiocco + corpo + tonfo + coda di riverbero lunga; poi fischio nelle orecchie
     shot(power = 1) {
       if (!ok) return; const t = ctx.currentTime;
+      motifScore?.block(3.4);
       const nz = (dur, ftype, f, q, peak, dec, st = Math.random()) => { const s = ctx.createBufferSource(); s.buffer = noiseBuf; const fl = ctx.createBiquadFilter(); fl.type = ftype; fl.frequency.value = f; fl.Q.value = q; const g = ctx.createGain();
         g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak * power, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0008, t + dec); s.connect(fl); fl.connect(g); g.connect(master); g.connect(verbSend); s.start(t, st, dur); };
       nz(0.12, 'highpass', 1800, 0.5, 1.0, 0.07);       // schiocco
@@ -312,6 +327,7 @@ export function createAudio() {
     tvStatic(dur = 3, pos = null, level = 1) {
       vib([20, 40, 20]);
       if (!ok) return; const t = ctx.currentTime, out = ctx.createGain(); out.gain.value = 1;
+      motifScore?.block(dur + .2);
       if (pos) { const pn = ctx.createPanner(); pn.panningModel = 'HRTF'; pn.refDistance = 1.5; pn.positionX.value = pos.x; pn.positionY.value = pos.y ?? 0.5; pn.positionZ.value = pos.z; out.connect(pn); pn.connect(master); pn.connect(verbSend); } else out.connect(master);
       const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3200; bp.Q.value = 0.6; const g = ctx.createGain();
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.11 * level, t + 0.05); g.gain.setValueAtTime(0.11 * level, t + dur - 0.1); g.gain.linearRampToValueAtTime(0, t + dur); s.connect(bp); bp.connect(g); g.connect(out); s.start(t); s.stop(t + dur + 0.05);
@@ -332,6 +348,7 @@ export function createAudio() {
     // CADUTA NELLO SPAZIO (durata dur): fruscio sordo che si apre, due toni bassi che salgono piano e, alla fine, un risucchio che cresce
     space(dur = 10) {
       if (!ok) return; const t = ctx.currentTime;
+      motifScore?.block(dur + .6);
       const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(140, t); lp.frequency.linearRampToValueAtTime(520, t + dur * 0.85); lp.frequency.linearRampToValueAtTime(2400, t + dur);
       const ng = ctx.createGain(); ng.gain.setValueAtTime(0, t); ng.gain.linearRampToValueAtTime(0.18, t + 2.5); ng.gain.linearRampToValueAtTime(0.3, t + dur * 0.9); ng.gain.linearRampToValueAtTime(0, t + dur + 0.5);
       s.connect(lp); lp.connect(ng); ng.connect(master); s.start(t); s.stop(t + dur + 0.6);
@@ -387,6 +404,7 @@ export function createAudio() {
     // ogni parziale doppio e appena scordato (il "battito" tipico del bronzo), colpo iniziale smorzato. Filtrata e con molto riverbero: sembra fuori, lontano, non nella stanza.
     bell(level = 0.5, base = 196) {
       if (!ok) return; const t = ctx.currentTime + 0.02, out = ctx.createGain(); out.gain.value = 0.17 * level;
+      motifScore?.block(12);
       const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1050; lp.Q.value = 0.3; const lp2 = ctx.createBiquadFilter(); lp2.type = 'lowpass'; lp2.frequency.value = 2200; const pn = ctx.createStereoPanner(); pn.pan.value = (Math.random() - 0.5) * 1.2;
       out.connect(lp); lp.connect(lp2); lp2.connect(pn); pn.connect(master); const vs = ctx.createGain(); vs.gain.value = 2.2; lp2.connect(vs); vs.connect(verbSend);
       // rapporti di una campana vera (non armonici), attacco leggermente morbido, ogni parziale con un suo piccolo vibrato/battimento e una sua durata
@@ -456,6 +474,7 @@ export function createAudio() {
 
     const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 5;
     master = ctx.createGain(); master.gain.value = 0.9; master.connect(comp); comp.connect(ctx.destination);
+    motifScore = createMemoryMotif(ctx, master, () => ok && !paused && !silenced && duckLevel > .5);
 
     // riverbero sintetico: impulso di rumore con decadimento (≈2.6 s), filtrato
     const len = Math.floor(sr * 2.6), ir = ctx.createBuffer(2, len, sr);

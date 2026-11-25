@@ -1,5 +1,6 @@
 // STANZA 3 — LA TORRE: calma apparente (stufa, mobili, sedia a rotelle) e la porta d'uscita. Qui si decide il finale:
-//   specchio completato → C (esci)   ·   ti sei girato nella sala → B   ·   altrimenti → A.
+//   ti sei girato nella sala → B; altrimenti A. Il portale della cripta
+//   conserva il percorso alternativo della lama, con lo stesso epilogo.
 import * as THREE from 'three';
 import { addRoundLamps } from '../world/round-lamps.js';
 import { aged } from '../world/aged.js';
@@ -13,16 +14,12 @@ import { addAtmosphere } from '../world/atmos.js';
 import { createBedroom } from '../world/bedroom.js';
 import { createLightBlade } from './lightblade.js';
 import { P } from '../personal.js';
+import { ENDINGS } from '../narrative-copy.js';
 import { addObjectContactShadow } from '../world/contact-shadows.js';
 
 export const TOWER = { z0: -300, w: 14, l: 18, h: 8.5 };
-const _o = P ? (P.f === false ? 'o' : 'a') : 'o', _n = P ? ', ' + P.name : '';
-const TEXT = {   // finale: la suora e' suor Agnese, l'infermiera che ti ha tirato fuori dal fuoco e non ti lascia andare
-  A: 'non ti sei girat' + _o + _n + '.\nera già davanti a te.\nsuor Agnese non ti ha salvat' + _o + ':\nti ha tenut' + _o + ' qui.',
-  B: 'ti sei girat' + _o + _n + '.\ntua sorella non c\'è più.\nl\'incendio l\'hai acceso tu.\n' + 'suor Agnese lo sa. ti tiene qui.',
-};
-
-const BLADE_TEXT = 'la luce delle stelle è più antica del fuoco.\nsuor Agnese è tornata al buio da cui veniva.\ntu torni al giorno.';
+const TEXT = ENDINGS;
+const BLADE_TEXT = ENDINGS.BLADE;
 export function createTower({ scene, mats, player, camera, audio, lights, instab, say, flags, scare, finish, warm, actBtn, combat }) {
   const T = { group: new THREE.Group(), opened: false, near: false };
   T.group.visible = false; scene.add(T.group);

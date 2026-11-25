@@ -116,7 +116,11 @@ const root=path.resolve(__dirname,'..');
   // exploration look is controlled only by the player.
   const side=fs.readFileSync(path.join(root,'js/events/side-fold.js'),'utf8');
   const digest=s=>crypto.createHash('sha256').update(s).digest('hex');
-  assert.equal(digest(side.slice(side.indexOf('  // movimento: dal tunnel'),side.indexOf('  F.applyCamera'))),'3c9f7c254d95ddc5304156a952b1ec3bf5e0746b39821f07fe98eeb9d73febe5');
+  // The only allowed change in this block is removal of the old observation
+  // caption. Its complete movement, lighting, timing and state machine remain
+  // covered by the normalized byte hash.
+  const movement=side.slice(side.indexOf('  // movimento: dal tunnel'),side.indexOf('  F.applyCamera')).replace(" say?.('Un altro mondo.', 2600);",'');
+  assert.equal(digest(movement),'b79eb19e02d8e87acbcfae28ce97fb69b70d5927bb190d589427035c3f9f2f34');
   assert.equal(digest(side.slice(side.indexOf('  F.reset ='),side.indexOf('  // animazioni leggere'))),'8c354af9c943e4dfdca5a8079db57db18f7a4aee1211ecdf28a3121144729815');
   console.log(JSON.stringify({result:'PASS',triangles,draws,boulders:models.length,assets:requested,walkingLane:'flat and clear',rocks:'closed volumes, embedded bases, face-projected texture',lava:'fitted to terrain, outside walking strip, follows blackout',galaxy:'rectilinear, fixed aspect, camera translation only',preparation:'three uploads, one compilation',stateMachine:'unchanged'}));
 })().catch(e=>{console.error(e);process.exitCode=1;});

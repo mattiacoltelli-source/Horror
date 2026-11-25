@@ -1,50 +1,48 @@
 // Regia del gioco: stanze, scelte (flags) e passaggi tra una stanza e l'altra (dissolvenza nel buio).
-import { P, onRoom as personalRoom } from './personal.js';
+import { onRoom as personalRoom, stopWhispers } from './personal.js';
+import { ROOM_LINES } from './narrative-copy.js';
 export function createStory({ scene, camera, controls, player, audio, hall, getCellar, getTower, getWh, getMorgue, getWard, say, lights, instab, prepare, onRoom }) {
   let busy = false, preparing = false, current = 'tunnel';
   const fade = document.getElementById('fade');
   const hideLegacy = (keep) => scene.children.forEach((o) => { if (!o.isLight && o !== camera && !o.userData.keep && !keep.includes(o)) o.visible = false; });
-  // LA TRAMA: il registro notturno dell'infermiera. All'ingresso di ogni stanza compaiono 3 righe (come le note, in corsivo, ~7 s), senza fermarti ne' coprire i pulsanti.
-  // Racconta in ordine: l'ingresso la notte del 3 novembre, la folla, lo specchio, la sorella, l'incendio partito dal magazzino, e alla fine la voce dell'infermiera che ti ha tirato fuori dal fuoco.
-  // Versione personalizzata: nome e genere dal profilo; la standard dice "paziente n. 17" e usa il maschile (come le note).
-  const N = P ? P.name : '', m = !P || P.f === false, o = m ? 'o' : 'a', lui = m ? 'lo' : 'la';
-  const SIG = '— suor Agnese';   // il registro e' suo: la suora della torre e' l'infermiera che ti ha tirato fuori dal fuoco e non ti lascia andare
-  const LINES = {   // righe corte (max ~34 caratteri): ognuna sta su una riga dello schermo del telefono
-    tunnel: ['registro di suor Agnese, 3 novembre.', 'nuovo ingresso: ' + (N || 'paziente n. 17') + '.', lui + ' fanno passare dal tunnel.'],
-    hall: ['erano qui tutti, quella notte.', 'nessuno di loro è uscito.', 'non guardarli in faccia.', SIG],
-    cellar: ['lo specchio l\'hanno rimesso.', 'dice che non è la sua faccia.', 'non sa più chi è.', SIG],
-    ward: ['la sedia si muove da sola.', 'chiede ogni giorno di sua sorella.', 'nessuno osa dirglielo.', SIG],
-    morgue: ['qui ti hanno curat' + o + (N ? ', ' + N : '') + '.', 'sua sorella è qui sotto, dal fuoco.', 'giura di non averla vista.', SIG],
-    warehouse: ['il fuoco è partito da qui.', 'benzina sui registri.', 'il cane è rimasto dentro, nel fuoco.', 'cancello chiuso da dentro.', SIG],
-    tower: ['l\'ultima stanza era la sua.', 'l\'ho tirat' + o + ' fuori io, dal fuoco.', 'nessuno saprà cosa hai fatto' + (N ? ', ' + N : '') + '.', 'non ti lascio andare. ' + SIG],
-  };
-  const EXTRA = { warehouse: 'qualcuno ha lasciato qualcosa per te, vicino al carrello.', tower: 'non si arrabbia. aspetta.' };   // seconda riga, piu' tardi
+  let pending = [];
+  const resetNarration = () => { pending = []; say.reset?.(); audio.stopMotif?.(); stopWhispers(); };
+  const schedule = (delay, action) => pending.push({ left: delay, room: current, action });
+  const personal = (name) => personalRoom(name, (delay, action) => schedule(delay, () => { audio.stopMotif?.(); action(); }));
+  // Only narrative timers use the game clock. All room transitions below retain
+  // their original timing, coordinates, checkpoints and preparation.
   const tell = (name) => {
-    const l = LINES[name]; if (!l) return;
-    const focused=()=>name==='warehouse'&&getWh()?.bridge?.holdNarration;
-    // se un'altra nota e' ancora a schermo (es. quella del reparto mentre entri nell'obitorio) aspetta che finisca, invece di cancellarla a meta'
-    const show = () => { if (current !== name || busy) return; if(focused()){setTimeout(show,400);return;} const wait = (say.noteUntil || 0) - performance.now(); if (wait > 0) { setTimeout(show, wait + 350); return; } say?.(l.join('\n'), 7000, 'note'); };
-    setTimeout(show, 3000);
-    if (EXTRA[name]) { const extra=()=>{if(current!==name||busy)return;if(focused()){setTimeout(extra,400);return;}say?.(EXTRA[name],5200);};setTimeout(extra,13500); }
+    const lines = ROOM_LINES[name]; if (!lines) return;
+    schedule(3, () => say?.(lines.join('\n'), 7000, 'note'));
   };
   const S = {
-    tell,
+    tell, schedule, silence: resetNarration,
+    update(dt) {
+      if (busy) return;
+      for (const task of pending) task.left -= dt;
+      pending = pending.filter((task) => task.room === current);
+      if (say.canRead && !say.canRead()) return;
+      const i = pending.findIndex((task) => task.left <= 0);
+      if (i >= 0) { const [task] = pending.splice(i, 1); task.action(); }
+    },
+    quiet: () => !!say.blocked?.(),
     // PASSAGGIO SENZA STACCO tra due stanze contigue. preview: la stanza successiva si vede oltre il varco (spostata di d); cross: appena attraversi la soglia il giocatore
     // viene riportato nelle coordinate della nuova stanza (invisibile: stessa posizione relativa) e la vecchia resta visibile alle spalle, spostata di -d, finche' non sei lontano.
     preview(to, d, gap = 0.25) { const t = ({ ward: getWard(), tower: getTower() })[to]; t.warm?.(); t.group.position.z = d - gap; t.group.visible = true; t.preview = true; t.pdz = d - gap; t.onPreview?.(); },   // gap: la stanza dopo e' spostata di 25 cm oltre il muro, cosi' le sue pareti non spuntano coplanari ai lati del varco
     // precompila in anticipo la stanza successiva (shader nelle condizioni d'ingresso), cosi' il passaggio non si blocca
     warm(to) { return ({ ward: getWard(), tower: getTower() })[to]?.warm?.(); },
     cross(from, to, d) {
+      resetNarration();
       const f = ({ cellar: getCellar(), warehouse: getWh() })[from], t = ({ ward: getWard(), tower: getTower() })[to];
       d = t.pdz ?? d; player.pos.z -= d; f.group.position.z = -d; t.group.position.z = 0; t.preview = false; f.gone = true;
-      t.enter(true); current = to; camera.far = { ward: 40, tower: 46 }[to] ?? 40; camera.updateProjectionMatrix(); tell(to); onRoom?.(to); personalRoom(to);
+      t.enter(true); current = to; camera.far = { ward: 40, tower: 46 }[to] ?? 40; camera.updateProjectionMatrix(); tell(to); onRoom?.(to); personal(to);
       setTimeout(() => { f.leave(); f.group.position.z = 0; }, 7000);
     },
     // passaggio senza dissolvenza (soglia aperta tra due stanze): cambia solo la stanza corrente e i suoi testi
-    seamless(name) { current = name; tell(name); onRoom?.(name); personalRoom(name); },
+    seamless(name) { resetNarration(); current = name; tell(name); onRoom?.(name); personal(name); },
     current: () => current, busy: () => busy, preparing: () => preparing,
     goto(name, quick = false) {
-      if (busy) return; busy = true; controls.enabled = false;
+      if (busy) return; resetNarration(); busy = true; controls.enabled = false;
       fade.style.transition = quick ? 'opacity 0.25s' : 'opacity 1.3s'; fade.style.opacity = 1; audio.duck(0, quick ? 0.2 : 0.6);
       setTimeout(async () => {
         preparing = true;
@@ -61,7 +59,7 @@ export function createStory({ scene, camera, controls, player, audio, hall, getC
         if (name === 'warehouse') await wh.prepare?.();
         await prepare?.();
         preparing = false;
-        tell(name); personalRoom(name);
+        tell(name); personal(name);
         setTimeout(() => { fade.style.transition = quick ? 'opacity 0.9s' : 'opacity 2s'; fade.style.opacity = 0; controls.enabled = true; busy = false; audio.duck(1, 2); }, 350);
       }, quick ? 320 : 1500);
     },
