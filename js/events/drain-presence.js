@@ -112,7 +112,7 @@ export function createDrainPresence({ scene, player, lights, audio, glass, isAct
   const grate = new THREE.Mesh(new THREE.PlaneGeometry(.78, .78), new THREE.MeshBasicMaterial({ map: grateMap, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
   grate.name = 'grata-del-fumo-qualita-bassa'; grate.rotation.x = -Math.PI / 2; grate.rotation.z = -.7;
   grate.position.set(X, .018, Z); grate.visible = false; scene.add(grate); D.grate = grate;
-  let elapsed = 0, wind = null;
+  let elapsed = 0, eyeAge = 0, wind = null;
   const stop = () => { wind?.stop(.25); wind = null; };
   D.prepare = async (renderer, camera) => {
     if (D.ready) return;
@@ -139,7 +139,8 @@ export function createDrainPresence({ scene, player, lights, audio, glass, isAct
     }
     elapsed += dt; D.t += dt; group.visible = true;
     lights.lamp(3, 'off');
-    if (D.state === 'rising') {
+    const wasRising = D.state === 'rising';
+    if (wasRising) {
       D.formed = Math.min(1, D.t / FORM_TIME);
       if (D.formed === 1) { D.state = 'formed'; D.t = 0; }
     } else if (D.state === 'formed' && distance < FADE_START) { D.state = 'dissolving'; D.t = 0; }
@@ -150,7 +151,10 @@ export function createDrainPresence({ scene, player, lights, audio, glass, isAct
     }
     uniforms.uTime.value = reduced ? 1.8 : elapsed;
     uniforms.uForm.value = D.formed; uniforms.uDissolve.value = D.dissolved;
-    const face = THREE.MathUtils.smoothstep(D.formed, .50, .85), breathe = reduced ? .7 : .56 + .16 * Math.sin(elapsed * .83);
+    // The eyes belong to the completed cloud: never reveal them on a rising
+    // frame, including one that overshoots FORM_TIME at low FPS.
+    if(D.formed===1&&!wasRising)eyeAge+=dt;
+    const face = THREE.MathUtils.smoothstep(eyeAge, .15, .75), breathe = reduced ? .7 : .56 + .16 * Math.sin(elapsed * .83);
     eyeMaterial.opacity = face * breathe * Math.pow(1 - D.dissolved, 2.7);
     eyes.position.set(.08 + (reduced ? 0 : Math.sin(elapsed * .67) * .09) * D.formed,
       1.91 + (reduced ? 0 : Math.sin(elapsed * .83) * .025), 0);

@@ -19,9 +19,14 @@ const base=process.env.ATMOSPHERE_BASE_URL||'http://127.0.0.1:8214/',out=process
       g.player.pos.z=-52.1;g.sim(.1);
     });
     await frame();
-    const first=await page.evaluate(()=>({state:__g.door.state,phase:__g.door.getPh(),visible:__g.hall.fog.mesh.visible,count:__g.hall.fog.count,weight:Math.max(...__g.hall.fog.weights)}));
+    const first=await page.evaluate(()=>({state:__g.door.state,phase:__g.door.getPh(),visible:__g.hall.fog.mesh.visible,count:__g.hall.fog.count,weight:Math.max(...__g.hall.fog.weights),rise:__g.hall.fog.mesh.material.uniforms.uRise.value,ceiling:__g.hall.fog.mesh.material.uniforms.uCeiling.value}));
     assert.equal(first.state,'lit');assert.equal(first.phase,0);assert.ok(first.visible);assert.equal(first.count,192);assert.equal(first.weight,0);
+    assert.ok(first.rise>0&&first.rise<.2,'first appearance is still near the floor');assert.equal(first.ceiling,.7);
     await page.screenshot({path:path.join(out,'01-folla-lontana.png')});
+    const middle=await page.evaluate(()=>{for(let i=0;i<60&&__g.hall.fog.mesh.material.uniforms.uRise.value<.5;i++)__g.sim(.05);return __g.hall.fog.mesh.material.uniforms.uRise.value;});
+    assert.ok(middle>=.5&&middle<.53);await frame();await page.screenshot({path:path.join(out,'01b-nebbia-a-meta-salita.png')});
+    const full=await page.evaluate(()=>{for(let i=0;i<60&&__g.hall.fog.mesh.material.uniforms.uRise.value<1;i++)__g.sim(.05);return {rise:__g.hall.fog.mesh.material.uniforms.uRise.value,phase:__g.door.getPh()};});
+    assert.equal(full.rise,1);assert.equal(full.phase,0);await frame();await page.screenshot({path:path.join(out,'01c-nebbia-fino-al-ginocchio.png')});
     const move=await page.evaluate(()=>{
       const g=__g,f=g.hall.fog,anchors=Array.from(f.mesh.geometry.attributes.position.array);
       for(let i=0;i<100&&g.door.getPh()===0;i++)g.sim(.1);
@@ -64,7 +69,7 @@ const base=process.env.ATMOSPHERE_BASE_URL||'http://127.0.0.1:8214/',out=process
     await page.evaluate(()=>{__g.hall.lightOn();__g.hall.flick=0;__g.sim(.2);});await frame();
     const shared=await page.evaluate(()=>__g.hall.fog.mesh.material.uniforms.uMap.value===__g.drainPresence.group.getObjectByName('fumo-istanzato').material.uniforms.uMap.value);
     assert.equal(shared,true);assert.deepEqual(errors,[]);assert.deepEqual(bad,[]);
-    const result={result:'PASS',first,move,render,close,sharedTexture:shared,errors,bad,device:'software Chromium portrait; Android FPS requires physical device'};
+    const result={result:'PASS',first,middle,full,move,render,close,sharedTexture:shared,errors,bad,device:'software Chromium portrait; Android FPS requires physical device'};
     fs.writeFileSync(path.join(out,'results.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
   }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
