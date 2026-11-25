@@ -164,7 +164,7 @@ associazioni e scelta dei momenti in cui tacere.
 - Nuovi test: `tools/check_narration.cjs`, `check_story_narration.cjs`,
   `check_narrative_director.cjs`, `check_narrative_state.cjs`,
   `check_narrative_scope.cjs`, `check_memory_audio.cjs`,
-  `check_narrative_browser.cjs`.
+  `check_narrative_browser.cjs`, `check_narrative_windows_browser.cjs`.
 - Harness aggiornati: `tools/check_story_preparation.cjs`,
   `check_personal_photos.cjs`, `check_hall_timing.cjs`,
   `check_cosmic_landscape.cjs`, `check_epilogue.cjs`. Gli assert su tempi,
@@ -185,3 +185,27 @@ tra 0,0075 e 0,009, tre oscillatori e sette nodi interamente rilasciati per
 motivo. Pausa, taglio, crescendo e cancellazione non lasciano note future o
 code sonore. Il controllo del renderer non equivale a una misura dei FPS su
 telefono.
+
+Sono passate anche due suite Chromium mobile: i due epiloghi standard e una
+prova integrata con note interrotte dalla piega, pausa tramite visibilità,
+cinque snapshot stanza e menu di ripresa, ripristino della versione Mati con
+scelte/arma/note, caduta cosmica dalla cripta, lama, azione ONDA ed epilogo
+alternativo. Nessun errore JavaScript, console o HTTP. La nota interrotta
+torna con oltre sei secondi di lettura; la pausa non ne consuma il tempo.
+
+Una terza suite mobile verifica l'inizio normale, il silenzio durante
+esplorazione/sfarfallio cosmico e la ripresa della nota, la cancellazione del
+registro del tunnel all'arrivo nella sala, apertura/ripristino del ponte e
+lettura successiva, e il vero percorso porta finale → combattimento senza
+arma → spavento → epilogo. La frase dell'epilogo è visibile anche con lo stato
+persistente dello spavento. Anche qui nessun errore JavaScript, console o HTTP.
+
+La pubblicazione della revisione applicativa è stata verificata confrontando
+i 19 file runtime modificati con quelli effettivamente serviti da GitHub
+Pages: tutti HTTP 200 e identici byte per byte. Shell PWA `8a1a42eed2`;
+cache degli asset pesanti invariata.
+
+Le regressioni mirate coprono anche tre stati persistenti: lo spavento finale
+lascia la regia all'epilogo; le ombre congelate della cantina non bloccano la
+lettura negli annessi; la sorella fuori inquadratura non impedisce di leggere
+la nota del magazzino.
