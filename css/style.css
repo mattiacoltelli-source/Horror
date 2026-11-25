@@ -141,8 +141,8 @@ html,body{overscroll-behavior:none}
 #intro{overflow:hidden;overflow:clip;contain:paint}
 
 /* selettore ambienti: disponibile anche al primo accesso, in tutte le versioni */
-.room-picker{position:relative;width:min(300px,82vw);margin:12px auto 0}
-#intro #ckpt{display:block;width:100%;margin:0;border:1px solid #4a4f49;background:rgba(7,11,8,.85);text-decoration:none;letter-spacing:.1em;min-height:48px}
+.room-picker{position:relative;width:min(300px,82vw);margin:6px auto 0}
+#intro #ckpt{display:block;width:auto;max-width:100%;margin:0 auto;border:0;background:transparent;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px;letter-spacing:.1em;font-size:12px;padding:8px 6px;min-height:44px}
 #cmenu{position:absolute;z-index:4;bottom:calc(100% + 4px);left:0;right:0;display:flex;flex-direction:column;max-height:min(322px,46vh);overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain;border:1px solid #4a554b;background:#080c09;box-shadow:0 -8px 28px rgba(0,0,0,.75)}
 #cmenu.hidden{display:none}
 #cmenu button{flex-shrink:0;border:0;background:none;color:#a8b0a7;letter-spacing:.1em;font-size:13px;padding:12px 10px;min-height:44px;text-transform:lowercase}

@@ -22,6 +22,8 @@ const expected = ['', 'hall', 'cellar', 'ward', 'morgue', 'warehouse', 'tower'];
       assert.equal(await page.locator('#ckpt').isVisible(), true);
       const keys = await page.locator('#cmenu button').evaluateAll(nodes => nodes.map(n => n.dataset.room));
       assert.deepEqual(keys, expected); assert.equal(await page.evaluate(() => localStorage.getItem('ng_ckpt')), null);
+      const style=await page.locator('#ckpt').evaluate(el=>{const s=getComputedStyle(el);return {border:s.borderTopWidth,background:s.backgroundColor,decoration:s.textDecorationLine};});
+      assert.equal(style.border,'0px');assert.equal(style.background,'rgba(0, 0, 0, 0)');assert.ok(style.decoration.includes('underline'));
       await page.locator('#ckpt').click();
       assert.equal(await page.locator('#ckpt').getAttribute('aria-expanded'), 'true');
       await page.locator('#cmenu button[data-room="cellar"]').click();

@@ -35,7 +35,7 @@ export function createCrowdFog({reduced=false,lowQuality=false}={}){
   const paths=Array.from({length:ACTORS},()=>new THREE.Vector4(10000,10000,10000,10000));
   const weights=new Float32Array(ACTORS),seen=new Uint8Array(ACTORS);
   const uniforms=THREE.UniformsUtils.merge([THREE.UniformsLib.fog,{
-    uMap:{value:getMistTexture()},uTime:{value:0},uLevel:{value:0},uMotion:{value:reduced?0:1},uCeiling:{value:.7},uRise:{value:0},
+    uMap:{value:getMistTexture()},uTime:{value:0},uLevel:{value:0},uMotion:{value:reduced?0:1},uCeiling:{value:.7},uRise:{value:0},uFloorOpacity:{value:.08},
     uColour:{value:new THREE.Color(0x718078)},uPaths:{value:paths},uWeights:{value:weights},uCount:{value:0},
   }]);
   uniforms.uMap.value=getMistTexture();uniforms.uPaths.value=paths;uniforms.uWeights.value=weights;
@@ -65,7 +65,7 @@ export function createCrowdFog({reduced=false,lowQuality=false}={}){
         vAlpha=uLevel*uRise*(1.0-wake*.20)*(aBase>.5?1.0:aShape.z);
         #include <fog_vertex>
       }`,
-    fragmentShader:`uniform sampler2D uMap;uniform vec3 uColour;uniform float uTime,uMotion,uCeiling,uRise;
+    fragmentShader:`uniform sampler2D uMap;uniform vec3 uColour;uniform float uTime,uMotion,uCeiling,uRise,uFloorOpacity;
       varying vec2 vUv,vWorld;varying float vAlpha,vHeight,vPhase,vBase;
       #include <fog_pars_fragment>
       void main(){
@@ -73,7 +73,7 @@ export function createCrowdFog({reduced=false,lowQuality=false}={}){
         if(vBase>.5){
           float detail=texture2D(uMap,fract(vWorld*.09+vec2(t*.005,-t*.003))).a;
           float edge=smoothstep(0.0,.12,5.9-abs(vWorld.x))*smoothstep(0.0,.30,min(-50.6-vWorld.y,vWorld.y+90.2));
-          alpha=(.58+.045*detail)*vAlpha*edge;colour*=.82;
+          alpha=(uFloorOpacity+.012*detail)*vAlpha*edge;colour*=.82;
         }else{
           float ceiling=mix(.025,uCeiling,uRise);
           if(vHeight<0.0||vHeight>=ceiling)discard;

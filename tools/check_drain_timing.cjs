@@ -10,9 +10,9 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
   const three=new vm.SyntheticModule(Object.keys(T),function(){for(const[k,v]of Object.entries(T))this.setExport(k,v);},{context}),cache=new Map();
   async function load(file){if(cache.has(file))return cache.get(file);const m=new vm.SourceTextModule(fs.readFileSync(file,'utf8'),{context,identifier:file});cache.set(file,m);await m.link(s=>s==='three'?three:load(path.resolve(path.dirname(file),s)));return m;}
   const module=await load(path.join(root,'js/events/drain-presence.js'));await module.evaluate();
-  function encounter(reduced=false,z=-30){
+  function encounter(reduced=false,z=-30,glass={done:true}){
     const player={pos:new T.Vector3(.1,1.62,z),forward:new T.Vector3(0,0,-1)};let sounds=0,stops=0;
-    const d=module.namespace.createDrainPresence({scene:new T.Scene(),player,reduced,glass:{done:true},lights:{lamps:[{},{},{},{}],lamp(){}},
+    const d=module.namespace.createDrainPresence({scene:new T.Scene(),player,reduced,glass,lights:{lamps:[{},{},{},{}],lamp(){}},
       audio:{wind(){sounds++;return {stop(){stops++;}};}}});
     return {d,player,counts:()=>({sounds,stops})};
   }
@@ -52,5 +52,19 @@ const {pathToFileURL}=require('node:url'),root=path.resolve(__dirname,'..');
   back.player.pos.z=-31;back.d.update(.1);assert.ok(back.d.dissolved>=progress,'walking backwards never reforms it');back.d.update(4);assert.equal(back.d.state,'gone');
   const shortcut=encounter(false,-40);shortcut.d.update(.1);assert.equal(shortcut.d.group.visible,false);assert.equal(shortcut.d.state,'gone');assert.equal(shortcut.counts().sounds,0);
   const jump=encounter();jump.d.update(3.2);jump.player.pos.z=-39.1;jump.d.update(.01);assert.equal(jump.d.state,'gone','a late arrival cannot reveal a nearby entity');
-  console.log(JSON.stringify({result:'PASS',scenarios,eyeStages,eyesOnlyAfterFullRise:true,stop:true,backwards:true,shortcut:true,eyesStayHigh:true}));
+  const continuous=[];
+  for(const reduced of [false,true])for(const fps of [5,10,30,60,120]){
+    const glass={state:'contact',t:0,done:false}, {d,player}=encounter(reduced,-24,glass);
+    const eyes=d.group.getObjectByName('occhi-nel-fumo');let readable=0,started=null;
+    for(let i=0;i<15*fps&&d.state!=='gone';i++){
+      player.pos.z-=1.55/fps;d.update(1/fps);
+      if(started===null&&d.state==='rising')started=Math.hypot(player.pos.x-.3,player.pos.z+45);
+      if(d.state==='formed'&&eyes.material.opacity>.2)readable+=1/fps;
+      if(d.formed<1)assert.equal(eyes.material.opacity,0);
+    }
+    assert.ok(readable>=.75,'a continuous approach must show readable eyes before dissolution, even while the glass event is delayed');
+    assert.equal(d.state,'gone');assert.equal(glass.state,'contact','the encounter never forces the preceding event to end');
+    continuous.push({fps,reduced,startDistance:started,readableSeconds:readable});
+  }
+  console.log(JSON.stringify({result:'PASS',scenarios,eyeStages,continuous,eyesOnlyAfterFullRise:true,stop:true,backwards:true,shortcut:true,eyesStayHigh:true}));
 })().catch(e=>{console.error(e);process.exitCode=1;});

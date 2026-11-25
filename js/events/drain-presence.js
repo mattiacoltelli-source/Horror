@@ -6,7 +6,7 @@ import { getMistTexture } from '../world/mist-texture.js';
 const COUNT = 128, X = .3, Z = -45, FORM_TIME = 3.1, FADE_TIME = 3.2;
 // A normal approach finishes the fade around seven metres away. Distance
 // also bounds it, so low FPS or a direct room entry never leave a close entity.
-const FADE_START = 12, CLEAR_DISTANCE = 6;
+const FADE_START = 12, CLEAR_DISTANCE = 6, APPROACH_LEAD = 20;
 const REGIONS = [
   [368, 104, 31, 35, -.31, 18], [349, 147, 62, 37, .43, 27],
   [373, 187, 55, 49, -.52, 26], [311, 186, 49, 14, -.61, 12],
@@ -133,7 +133,12 @@ export function createDrainPresence({ scene, player, lights, audio, glass, isAct
     if (!lights.lamps[3]) return;
     if (D.state === 'wait') {
       group.visible = false;
-      if (z < -8 && (glass?.done || (glass?.state === 'vanish' && glass.t > .9))) {
+      // A nonstop walk can pass the glass before its timed scene finishes.
+      // Start the distant cloud after passing it, with enough travel time for
+      // the unchanged rise, eye reveal and distant dissolution.
+      const glassDone=glass?.done || (glass?.state === 'vanish' && glass.t > .9);
+      const passedGlass=z>Z && distance<=APPROACH_LEAD;
+      if (z < -8 && (glassDone || passedGlass)) {
         D.state = 'rising'; D.t = 0; group.visible = true; wind = audio.wind?.(.09);
       } else return;
     }
