@@ -5,6 +5,7 @@ import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { Z_END, DOOR } from '../world/tunnel.js';
 import { buildRoom } from '../world/rooms.js';
 import { decorHall } from '../world/decor.js';
+import { createCrowdFog } from '../world/crowd-fog.js';
 
 const TYPES = [
   ['whisperer', 2.5], ['pirate', 1.95], ['nurse', 1.72], ['occ', 1.98], ['diver', 1.85], ['bell', 2.6], ['varka', 1.92], ['root', 3.6],
@@ -19,6 +20,9 @@ const LAYOUT = [
 export function createHall({ scene, mats, lights }) {
   const H = { ready: false, glow: 0, target: 0, flick: 0, dist: 26, active: false };
   const grp = new THREE.Group(); grp.visible = false; scene.add(grp);
+  const floorMist = createCrowdFog({ reduced: globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false, lowQuality: !!globalThis.__lowQ });
+  grp.add(floorMist.mesh); H.fog = floorMist;
+  H.prepare = (renderer,camera) => floorMist.prepare(renderer,camera,scene);
 
   // la sala: pavimento, soffitto, muri di mattoni, pilastri; il vano della porta combacia con quello del tunnel
   const room = buildRoom(mats, { z0: Z_END - 0.35, w: 12, l: 40, h: 6, wall: 'brick', floor: 'floorB', ceil: 'stone', pillarEvery: 6, door: { w: DOOR.w, h: DOOR.h }, dark: 0.9, seed: 11 });
@@ -130,7 +134,7 @@ export function createHall({ scene, mats, lights }) {
     sp.scale.setScalar(2.6); sp.position.set(x, y + 0.06, z); grp.add(sp); lampGlows[i] = sp;
   }));
   H.setDist = (d) => { H.dist = d; crowd.position.z = Z_END - d; };
-  H.enable = () => { H.active = true; grp.visible = true; H.setDist(H.dist); lights?.setLamps(lampAnchors.map(([x, y, z]) => [x, y - 0.1, z]), 3.4, 0xffc27a); [0, 1, 2].forEach((i) => lights?.lamp(i, 'off')); };
+  H.enable = () => { H.active = true; grp.visible = true; H.setDist(H.dist); floorMist.reset(); lights?.setLamps(lampAnchors.map(([x, y, z]) => [x, y - 0.1, z]), 3.4, 0xffc27a); [0, 1, 2].forEach((i) => lights?.lamp(i, 'off')); };
   H.lightOn = () => { H.target = 1; H.dark = false; H.flick = 1.1; [0, 1, 2].forEach((i) => lights?.lamp(i, 'flicker', 0.8 + i * 0.3)); setTimeout(() => { if (H.target === 1 && !H.dark) [0, 1, 2].forEach((i) => lights?.lamp(i, 'pulse')); }, 1500); };
   // fase del teletrasporto: i lampioni si spengono per ~1 secondo, buio totale; la folla si sposta dentro quel buio
   H.lightDim = () => { H.target = 0.66; H.flick = 0; H.dark = false; [0, 1, 2].forEach((i) => lights?.lamp(i, 'dim')); };   // fase finale (mostri vicini, «non guardare dietro»): lampioni a due terzi
@@ -148,11 +152,14 @@ export function createHall({ scene, mats, lights }) {
     const v = H.glow; time2 += dt;
     glowMat.opacity = Math.min(1, v) * 0.38;
     rimU.value = Math.min(1, v) * (0.5 + 0.5 * lampPulse());
+    let mistActors = 0;
     crowd.children.forEach((m) => { if (!m.userData.crowd) return; const d = Math.hypot(m.getWorldPosition(wp).x - camPos.x, wp.z - camPos.z), near = Math.min(1, Math.max(0, (15 - d) / 8));
+      floorMist.track(mistActors++,wp.x,wp.z);
       m.material.color.setScalar(0.06 * (1 - 0.9 * near));   // da vicino: sagoma quasi nera, niente dettaglio
       if (m.material.userData.sh) m.material.userData.sh.uniforms.uNear.value = near;
       if (m.userData.eyes) { const eo = (0.2 + 0.3 * Math.min(1, v)) * (0.8 + 0.2 * Math.sin(time2 * (1.3 + (m.id % 5) * 0.2) + m.id)) * (Math.sin(time2 * 0.37 + m.id * 2.1) > 0.985 ? 0.2 : 1);  m.userData.eyes.forEach((s) => { s.material.opacity = eo; }); } });
     crowd.visible = true;                                     // la visibilità la decide la luce, non un interruttore
+    floorMist.update(dt,v,mistActors);
     lights?.lamps?.forEach((L, i) => { const lv = L.level ?? 0; if (lampGlows[i]) { lampGlows[i].material.opacity = Math.min(1, lv) * 0.85; lampBulbs[i].material.color.setRGB(1, 0.78 + 0.1 * lv, 0.45 + 0.3 * lv).multiplyScalar(0.25 + 0.9 * lv); } });
     scene.fog.density += (0.026 - scene.fog.density) * Math.min(1, dt * 2);   // nebbia più rada: si deve vedere in fondo alla sala
   };

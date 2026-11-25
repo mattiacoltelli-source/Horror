@@ -14,6 +14,7 @@ fs.mkdirSync(out, { recursive: true });
     page.on('response', r => { if (r.status() >= 400) bad.push([r.status(), r.url()]); });
     page.on('request', r => requests.push(r.url()));
     await page.goto(base + '?base=1&debug=1', { waitUntil: 'networkidle', timeout: 90000 });
+    assert.equal(await page.locator('#intro .credits').count(),0,'no credits on initial page');
     await page.evaluate(() => __g.hold = true);
     await page.locator('#enter').click({ timeout: 90000 });
     await page.waitForFunction(() => __g.story && __g.drainPresence.ready && document.getElementById('intro').classList.contains('hidden'), null, { timeout: 120000 });
@@ -49,16 +50,19 @@ fs.mkdirSync(out, { recursive: true });
     assert.ok(mural.loaded && mural.wornEdge); assert.ok(Math.abs(mural.aspect - 1280 / 692) < 1e-6);
     assert.ok(mural.bottom > 0 && mural.top < 2.1, 'the complete artwork fits below the brick vault');
     await page.evaluate(() => { const g = __g; g.player.yaw = 0; g.player.pitch = .03; g.player.pos.z = -35.9; g.sim(.05); });
+    const grate = await page.evaluate(()=>({position:__g.drainPresence.grate.position.toArray(),rotation:__g.drainPresence.grate.rotation.toArray()}));
     const fade = [];
     for (let i = 0; i < 5; i++) {
       await page.evaluate(() => __g.sim(.7));
-      fade.push(await page.evaluate(() => ({ state: __g.drainPresence.state, dissolved: __g.drainPresence.dissolved, visible: __g.drainPresence.group.visible, eye: __g.drainPresence.group.getObjectByName('occhi-nel-fumo').material.opacity })));
-      if (i === 1) { await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))); await page.screenshot({ path: path.join(out, '03-dispersione.png') }); }
+      fade.push(await page.evaluate(() => ({ state: __g.drainPresence.state, dissolved: __g.drainPresence.dissolved, visible: __g.drainPresence.group.visible, eye: __g.drainPresence.group.getObjectByName('occhi-nel-fumo').material.opacity,eyeY:__g.drainPresence.group.getObjectByName('occhi-nel-fumo').position.y })));
+      if (i === 1 || i === 4) { await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))); await page.screenshot({ path: path.join(out, `03-rientro-${i}.png`) }); }
     }
     assert.ok(fade.every((f, i) => !i || f.dissolved > fade[i - 1].dissolved));
     assert.ok(fade.every((f, i) => !i || f.eye < fade[i - 1].eye));
+    assert.ok(fade.every((f,i)=>f.state==='returning'&&(!i||f.eyeY<fade[i-1].eyeY)),'head and mist return down into the grate');
     assert.ok(fade.every(f => f.visible), 'the cloud stays drawn throughout its fade');
-    await page.evaluate(() => __g.sim(.6));
+    await page.evaluate(() => __g.sim(.9));
+    assert.deepEqual(await page.evaluate(()=>({position:__g.drainPresence.grate.position.toArray(),rotation:__g.drainPresence.grate.rotation.toArray()})),grate,'grate never moves');
     const gone = await page.evaluate(() => ({ state: __g.drainPresence.state, visible: __g.drainPresence.group.visible, dissolved: __g.drainPresence.dissolved }));
     assert.equal(gone.state, 'gone'); assert.equal(gone.visible, false); assert.equal(gone.dissolved, 1);
     await page.screenshot({ path: path.join(out, '04-grata-libera.png') });

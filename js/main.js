@@ -350,6 +350,7 @@ async function enter() {
   if (q.get('allunga') === '1') { breath = createBreath({ scene, audio, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches }); breath.refresh(); setTimeout(() => breath?.refresh(), 3000); }   // allungamento del tunnel: spento di default, solo con ?allunga=1 (provato e scartato)
   if (sideFold.enabled) await sideFold.prepare(renderer);   // texture GPU e shader del paesaggio pronti prima di lasciare il menu
   await drainPresence.prepare(renderer, camera);
+  await hall.prepare(renderer, camera);
   if (!restoreCk && (!requestedStart || requestedStart === 'porta')) await prepareScene();
   $('intro').classList.add('hidden');
   // I programmi e le texture della stanza vengono preparati durante il

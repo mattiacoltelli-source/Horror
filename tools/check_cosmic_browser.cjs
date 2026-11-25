@@ -67,6 +67,16 @@ const evidence=process.env.COSMIC_EVIDENCE||'/tmp/horror-cosmic-evidence';fs.mkd
     assert.equal(await page.evaluate(()=>window.__g.player.pitch),entered.pitch,'no automatic pitch drift while exploring');
     await page.waitForTimeout(250);
     await page.screenshot({path:path.join(evidence,'02-paesaggio.png'),timeout:90000});
+    const tongues=await page.evaluate(()=>{
+      const g=__g,fire=g.sideFold.landscape.lava.fire,gl=g.renderer.getContext(),w=g.renderer.domElement.width,h=g.renderer.domElement.height;
+      const pixels=()=>{const a=new Uint8Array(w*h*4);gl.readPixels(0,0,w,h,gl.RGBA,gl.UNSIGNED_BYTE,a);return a;};
+      fire.update(8);g.renderer.render(g.scene,g.camera);const withFire={...g.renderer.info.render},a=pixels();
+      fire.flames.visible=false;g.renderer.render(g.scene,g.camera);const without={...g.renderer.info.render},b=pixels();fire.flames.visible=true;
+      let changed=0;for(let i=0;i<a.length;i+=4)if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>2)changed++;
+      return {count:fire.count,calls:withFire.calls-without.calls,triangles:withFire.triangles-without.triangles,changed};
+    });
+    assert.equal(tongues.count,12);assert.equal(tongues.calls,1);assert.equal(tongues.triangles,24);
+    assert.ok(tongues.changed>0,'distant tongues are visible from the player camera');
     // Free look leaves the galaxy fixed in the sky; it is not a screen overlay.
     const original=await page.evaluate(()=>__g.sideFold.landscape.group.getObjectByName('cosmo-galassia').quaternion.toArray());
     await page.evaluate(()=>{const g=__g;g.player.yaw-=.9;g.sim(.05);});

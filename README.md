@@ -91,3 +91,13 @@ Prova diretta: `?start=magazzino`; disattivazione completa: `?ponte=0`. Si ripri
 Il gioco è una PWA: icona sulla home, schermo intero, funziona offline dopo il primo avvio. Quando esce una nuova versione compare il banner **«Aggiornamento disponibile · AGGIORNA»** (controllo a ogni apertura e ogni 30 minuti).
 
 Prima di ogni commit che cambia il gioco si lancia `tools/bump.sh`: calcola l'hash dei file e lo scrive in `sw.js` (se nulla cambia, nessun banner). Gli asset pesanti hanno una cache separata, quindi un aggiornamento del solo codice non li riscarica.
+
+### Lava, scolo e foschia della folla
+
+Sul pianeta le colate lontane hanno 12 fiammelle instanziate, ancorate ai triangoli reali del terreno sul confine lava/roccia. Altezza e ritmo differiscono, con lingue occasionalmente più alte. L'alone morbido usa quattro campioni locali della stessa mappa, sulla mesh già presente: nessun post-processing, luce aggiuntiva o nuova immagine. La rifrazione dello sfondo è omessa per evitare un passaggio di rendering completo. Il pianeta resta sotto 9.000 triangoli e aggiunge una sola draw call; il blackout originale spegne anche le fiamme.
+
+Nel tunnel la presenza informe esce dalle fessure dello scolo, poi i 128 filamenti rientrano nelle rispettive origini in 4,2 secondi (4,8 con movimento ridotto). Gli occhi rosso cupo scendono e si spengono con il fumo, mantenendo la precedente riduzione di luminosità del 15%. La grata rimane fissa, anche in qualità bassa. Nessun cane, relativo credito iniziale o riferimento narrativo; il murale esistente è lasciato invariato in questa modifica.
+
+La sala della folla usa 54 chiazze basse instanziate (36 in qualità bassa), in una draw call e con la stessa texture procedurale 128×128 del tunnel. Le chiazze restano nello spazio della stanza: le traiettorie degli al massimo 15 mostri aprono la foschia, che si richiude quando la scia decade. Gli avvicinamenti originali avvengono nei blackout e sono mantenuti; non viene introdotto un nuovo movimento dei mostri né un lampo radente. La foschia segue il buio e non aggiunge luci. Le texture e i programmi sono preparati prima di uscire dal menu. Movimento ridotto ferma le oscillazioni, mantenendo un rientro graduale e l'apertura della foschia.
+
+Verifiche: `node --experimental-vm-modules tools/check_atmosphere.cjs`, `tools/check_cosmic_landscape.cjs` (stesso comando Node) e i test browser `tools/check_cosmic_browser.cjs`, `tools/check_drain_presence_browser.cjs`, `tools/check_crowd_fog_browser.cjs` con un server HTTP e Playwright/Chromium. Le prove browser controllano le scene dalla camera del giocatore in verticale; la misura degli FPS e la resa finale richiedono uno smartphone Android reale.

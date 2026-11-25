@@ -79,7 +79,7 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
   geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
   geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.setIndex(indices);geo.computeVertexNormals();geo.computeBoundingSphere();
   const terrain=new THREE.Mesh(geo,terrainMaterial);terrain.name='cosmo-terreno';group.add(terrain);
-  const lava=createCosmicLava({terrainGeometry:geo,map:lavaTexture,x,z});group.add(lava.mesh);
+  const lava=createCosmicLava({terrainGeometry:geo,map:lavaTexture,x,z});group.add(lava.mesh,lava.fire.flames);
 
   let seed=613;
   const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
@@ -135,8 +135,8 @@ export function createCosmicLandscape({x,z,xStart=x+.4,uvScale=[1.6,1.6]}) {
     status.error=error;galaxy.visible=false;console.warn(error);return false;
   });
   return {
-    group,groundTexture,groundMaterial:terrainMaterial,ready,status,height,
-    followCamera(camera) {if(group.visible){skyGroup.position.copy(camera.position);campfire.update((globalThis.performance?.now?.()??0)/1000);}},
+    group,groundTexture,groundMaterial:terrainMaterial,ready,status,height,lava,
+    followCamera(camera) {if(group.visible){skyGroup.position.copy(camera.position);const t=(globalThis.performance?.now?.()??0)/1000;campfire.update(t);lava.update(t);}},
     setSkyBrightness(v) {galaxyMaterial.color.setScalar(v);starMaterial.color.setScalar(v);moon.material.color.setScalar(v);lava.setBrightness(v);campfire.setBrightness(v);},
     prepare(renderer,scene,camera) {
       return prepared??=(async()=>{

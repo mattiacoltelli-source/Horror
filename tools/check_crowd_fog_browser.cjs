@@ -1,0 +1,61 @@
+// ATMOSPHERE_BASE_URL=http://127.0.0.1:8214/ node tools/check_crowd_fog_browser.cjs
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+let chromium;try{({chromium}=require('playwright'));}catch{({chromium}=require('/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright'));}
+const base=process.env.ATMOSPHERE_BASE_URL||'http://127.0.0.1:8214/',out='/tmp/horror-atmosphere-hall';fs.mkdirSync(out,{recursive:true});
+(async()=>{
+  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+  try{
+    const context=await browser.newContext({viewport:{width:412,height:915},hasTouch:true,isMobile:true,serviceWorkers:'block'});
+    await context.addInitScript(()=>localStorage.setItem('ng_quality','mid'));
+    const page=await context.newPage(),errors=[],bad=[];
+    page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+    page.on('response',r=>{if(r.status()>=400)bad.push([r.status(),r.url()]);});
+    await page.goto(base+'?base=1&debug=1&start=porta',{waitUntil:'networkidle',timeout:90000});
+    await page.evaluate(()=>__g.hold=true);await page.locator('#enter').click();
+    await page.waitForFunction(()=>__g.hall?.ready&&document.getElementById('intro').classList.contains('hidden'),null,{timeout:120000});
+    const frame=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+    await page.evaluate(()=>{const g=__g;g.player.pos.set(.1,1.62,-46);g.player.yaw=0;g.player.pitch=-.07;g.say.reset();g.sim(4.9);
+      // Cross the doorway before capturing: the door must be behind the player.
+      g.player.pos.z=-52.1;g.sim(.1);
+    });
+    await frame();
+    const first=await page.evaluate(()=>({state:__g.door.state,phase:__g.door.getPh(),visible:__g.hall.fog.mesh.visible,count:__g.hall.fog.count,weight:Math.max(...__g.hall.fog.weights)}));
+    assert.equal(first.state,'lit');assert.equal(first.phase,0);assert.ok(first.visible);assert.equal(first.count,54);assert.equal(first.weight,0);
+    await page.screenshot({path:path.join(out,'01-folla-lontana.png')});
+    const move=await page.evaluate(()=>{
+      const g=__g,f=g.hall.fog,anchors=Array.from(f.mesh.geometry.attributes.aAnchor.array);
+      for(let i=0;i<100&&g.door.getPh()===0;i++)g.sim(.1);
+      return {state:g.door.state,phase:g.door.getPh(),wake:Math.max(...f.weights),paths:f.paths.map(p=>p.toArray()),fixed:anchors.every((n,i)=>n===f.mesh.geometry.attributes.aAnchor.array[i])};
+    });
+    assert.equal(move.phase,1);assert.equal(move.state,'lit');assert.ok(move.wake>.93);assert.ok(move.fixed,'mist field stays in the room while monsters move');
+    assert.ok(move.paths.every(p=>p[3]>p[1]+11.9),'all actual monsters advance through the field');
+    await page.evaluate(()=>__g.sim(1.15));await frame();
+    await page.screenshot({path:path.join(out,'02-nebbia-dietro-la-folla.png')});
+    await page.evaluate(()=>{const g=__g;for(let i=0;i<40&&g.door.getPh()<2;i++)g.sim(.1);g.sim(.7);});await frame();
+    assert.equal(await page.evaluate(()=>__g.door.getPh()),2);
+    await page.screenshot({path:path.join(out,'02b-folla-vicina.png')});
+    // Hold this existing stage only for comparison shots from the same player
+    // camera. The unmodified event above has already performed a real approach.
+    const render=await page.evaluate(()=>{
+      const g=__g,f=g.hall.fog;g.door.state='over';g.hall.flick=0;g.hall.target=1;g.hall.update(.1,g.camera);
+      const gl=g.renderer.getContext(),w=g.renderer.domElement.width,h=g.renderer.domElement.height;
+      const pixels=()=>{const a=new Uint8Array(w*h*4);gl.readPixels(0,0,w,h,gl.RGBA,gl.UNSIGNED_BYTE,a);return a;};
+      g.renderer.render(g.scene,g.camera);const withFog={...g.renderer.info.render},a=pixels();
+      f.mesh.visible=false;g.renderer.render(g.scene,g.camera);const without={...g.renderer.info.render},b=pixels();f.mesh.visible=true;
+      let changedPixels=0;for(let i=0;i<a.length;i+=4)if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>2)changedPixels++;
+      return {calls:withFog.calls-without.calls,triangles:withFog.triangles-without.triangles,wake:Math.max(...f.weights),changedPixels};
+    });
+    assert.equal(render.calls,1);assert.equal(render.triangles,108);
+    assert.ok(render.changedPixels>40,'mist is actually visible from the player camera, not occluded behind the door');
+    await page.screenshot({path:path.join(out,'03-con-foschia.png')});
+    await page.evaluate(()=>{__g.hall.fog.mesh.visible=false;__g.renderer.render(__g.scene,__g.camera);});
+    await page.screenshot({path:path.join(out,'04-senza-foschia.png')});
+    const close=await page.evaluate(()=>{const g=__g;g.sim(4);const weight=Math.max(...g.hall.fog.weights);g.hall.lightOff();g.sim(.05);return {weight,dark:!g.hall.fog.mesh.visible,level:g.hall.fog.mesh.material.uniforms.uLevel.value};});
+    assert.ok(close.weight<.1);assert.equal(close.dark,true);assert.equal(close.level,0);
+    await page.evaluate(()=>{__g.hall.lightOn();__g.hall.flick=0;__g.sim(.2);});await frame();
+    const shared=await page.evaluate(()=>__g.hall.fog.mesh.material.uniforms.uMap.value===__g.drainPresence.group.getObjectByName('fumo-istanzato').material.uniforms.uMap.value);
+    assert.equal(shared,true);assert.deepEqual(errors,[]);assert.deepEqual(bad,[]);
+    const result={result:'PASS',first,move,render,close,sharedTexture:shared,errors,bad,device:'software Chromium portrait; Android FPS requires physical device'};
+    fs.writeFileSync(path.join(out,'results.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
+  }finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});
