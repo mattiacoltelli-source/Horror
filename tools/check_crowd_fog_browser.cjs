@@ -1,7 +1,7 @@
 // ATMOSPHERE_BASE_URL=http://127.0.0.1:8214/ node tools/check_crowd_fog_browser.cjs
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 let chromium;try{({chromium}=require('playwright'));}catch{({chromium}=require('/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright'));}
-const base=process.env.ATMOSPHERE_BASE_URL||'http://127.0.0.1:8214/',out='/tmp/horror-atmosphere-hall';fs.mkdirSync(out,{recursive:true});
+const base=process.env.ATMOSPHERE_BASE_URL||'http://127.0.0.1:8214/',out=process.env.CROWD_FOG_EVIDENCE||'/tmp/horror-atmosphere-hall';fs.mkdirSync(out,{recursive:true});
 (async()=>{
   const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   try{
@@ -20,7 +20,7 @@ const base=process.env.ATMOSPHERE_BASE_URL||'http://127.0.0.1:8214/',out='/tmp/h
     });
     await frame();
     const first=await page.evaluate(()=>({state:__g.door.state,phase:__g.door.getPh(),visible:__g.hall.fog.mesh.visible,count:__g.hall.fog.count,weight:Math.max(...__g.hall.fog.weights)}));
-    assert.equal(first.state,'lit');assert.equal(first.phase,0);assert.ok(first.visible);assert.equal(first.count,54);assert.equal(first.weight,0);
+    assert.equal(first.state,'lit');assert.equal(first.phase,0);assert.ok(first.visible);assert.equal(first.count,120);assert.equal(first.weight,0);
     await page.screenshot({path:path.join(out,'01-folla-lontana.png')});
     const move=await page.evaluate(()=>{
       const g=__g,f=g.hall.fog,anchors=Array.from(f.mesh.geometry.attributes.aAnchor.array);
@@ -45,7 +45,7 @@ const base=process.env.ATMOSPHERE_BASE_URL||'http://127.0.0.1:8214/',out='/tmp/h
       let changedPixels=0;for(let i=0;i<a.length;i+=4)if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>2)changedPixels++;
       return {calls:withFog.calls-without.calls,triangles:withFog.triangles-without.triangles,wake:Math.max(...f.weights),changedPixels};
     });
-    assert.equal(render.calls,1);assert.equal(render.triangles,108);
+    assert.equal(render.calls,1);assert.equal(render.triangles,240);
     assert.ok(render.changedPixels>40,'mist is actually visible from the player camera, not occluded behind the door');
     await page.screenshot({path:path.join(out,'03-con-foschia.png')});
     await page.evaluate(()=>{__g.hall.fog.mesh.visible=false;__g.renderer.render(__g.scene,__g.camera);});

@@ -3,7 +3,10 @@
 import * as THREE from 'three';
 import { getMistTexture } from '../world/mist-texture.js';
 
-const COUNT = 128, X = .3, Z = -45, FORM_TIME = 3.1, RETURN_TIME = 4.2;
+const COUNT = 128, X = .3, Z = -45, FORM_TIME = 3.1, FADE_TIME = 3.2;
+// A normal approach finishes the fade around seven metres away. Distance
+// also bounds it, so low FPS or a direct room entry never leave a close entity.
+const FADE_START = 12, CLEAR_DISTANCE = 6;
 const REGIONS = [
   [368, 104, 31, 35, -.31, 18], [349, 147, 62, 37, .43, 27],
   [373, 187, 55, 49, -.52, 26], [311, 186, 49, 14, -.61, 12],
@@ -64,28 +67,29 @@ export function createDrainPresence({ scene, player, lights, audio, glass, isAct
     geometry.setAttribute(name, new THREE.InstancedBufferAttribute(new Float32Array(values), size));
   geometry.instanceCount = COUNT;
   const uniforms = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
-    uMap: { value: map }, uTime: { value: 0 }, uForm: { value: 0 }, uReturn: { value: 0 },
+    uMap: { value: map }, uTime: { value: 0 }, uForm: { value: 0 }, uDissolve: { value: 0 },
     uMotion: { value: reduced ? 0 : 1 }, uColor: { value: new THREE.Color(0x7d8e96) },
   }]);
   uniforms.uMap.value = map;   // initTexture prepara proprio la texture usata dal materiale
   const material = new THREE.ShaderMaterial({ uniforms, transparent: true, depthWrite: false, depthTest: true, fog: true,
     vertexShader: `attribute vec3 aTarget, aOrigin; attribute float aRadius, aAlpha, aPhase;
-      uniform float uTime, uForm, uReturn, uMotion; varying vec2 vUv; varying float vAlpha;
+      uniform float uTime, uForm, uDissolve, uMotion; varying vec2 vUv; varying float vAlpha;
       #include <fog_pars_vertex>
       void main() {
         float rise = smoothstep(0.0, 1.0, uForm);
-        float retreat = smoothstep(0.0, 1.0, clamp((uReturn - aPhase * .028) / .824, 0.0, 1.0));
+        float spread = smoothstep(0.0, 1.0, clamp((uDissolve - aPhase * .02) / .874, 0.0, 1.0));
         vec3 p = mix(aOrigin, aTarget, rise);
         float sway = sin(uTime * .67) * .10, drift = sin(uTime * .71 + aPhase + aTarget.y * 3.5);
         p.x += (sway * aTarget.y * .45 + drift * .07) * rise * uMotion;
         p.y += cos(uTime * .53 + aPhase) * .045 * rise * uMotion;
-        // Each wisp retraces to its own slot, thinning into a narrow strand.
-        // The geometry of the drain is never part of this animation.
-        p = mix(p, aOrigin, retreat);
-        p.x += sin(aPhase + uTime * .8) * retreat * (1.0-retreat) * .12 * uMotion;
-        float scale = mix(mix(.035, aRadius, rise), .025, retreat);
+        // Break up in place: wisps broaden and thin into the surrounding air.
+        // No attraction to the floor; the eyes keep their original height.
+        p.x += sin(aPhase + uTime * .22) * spread * (.32 + aTarget.y * .10) * uMotion;
+        p.y += spread * (.10 + aTarget.y * .10) * uMotion;
+        p.z += cos(aPhase * 1.3) * spread * .16 * uMotion;
+        float scale = mix(.035, aRadius, rise) * (1.0 + spread * .95);
         float glimpse = .60 + .20 * pow(.5 + .5 * sin(uTime * .83), 2.0);
-        vAlpha = aAlpha * smoothstep(0.0, .18, uForm) * glimpse * (1.0-smoothstep(.62,1.0,retreat));
+        vAlpha = aAlpha * smoothstep(0.0, .18, uForm) * glimpse * pow(1.0-spread,1.65);
         vUv = uv;
         vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
         mvPosition.xy += position.xy * scale;
@@ -121,8 +125,11 @@ export function createDrainPresence({ scene, player, lights, audio, glass, isAct
   D.update = (dt) => {
     const active = isActive(); grate.visible = !!active && !!globalThis.__lowQ;
     if (!active || D.state === 'gone') { group.visible = false; stop(); return; }
-    const z = player.pos.z;
-    if (z < -48.5) { D.state = 'gone'; group.visible = false; stop(); return; }
+    const z = player.pos.z, distance = Math.hypot(player.pos.x-X,z-Z);
+    if (distance <= CLEAR_DISTANCE || z < -48.5) {
+      if (D.state !== 'wait' && lights.lamps[3]) lights.lamp(3,'on');
+      D.state = 'gone'; D.dissolved = 1; group.visible = false; stop(); return;
+    }
     if (!lights.lamps[3]) return;
     if (D.state === 'wait') {
       group.visible = false;
@@ -135,18 +142,18 @@ export function createDrainPresence({ scene, player, lights, audio, glass, isAct
     if (D.state === 'rising') {
       D.formed = Math.min(1, D.t / FORM_TIME);
       if (D.formed === 1) { D.state = 'formed'; D.t = 0; }
-    } else if (D.state === 'formed' && z < -35.8) { D.state = 'returning'; D.t = 0; }
-    else if (D.state === 'returning') {
-      D.dissolved = Math.min(1, D.t / (reduced ? 4.8 : RETURN_TIME));
+    } else if (D.state === 'formed' && distance < FADE_START) { D.state = 'dissolving'; D.t = 0; }
+    if (D.state === 'dissolving') {
+      D.dissolved = Math.max(D.dissolved, Math.min(1, D.t / (reduced ? 3.8 : FADE_TIME)),
+        THREE.MathUtils.clamp((FADE_START-distance)/(FADE_START-CLEAR_DISTANCE),0,1));
       if (D.dissolved >= 1) { D.state = 'gone'; group.visible = false; stop(); lights.lamp(3, 'on'); }
     }
     uniforms.uTime.value = reduced ? 1.8 : elapsed;
-    uniforms.uForm.value = D.formed; uniforms.uReturn.value = D.dissolved;
+    uniforms.uForm.value = D.formed; uniforms.uDissolve.value = D.dissolved;
     const face = THREE.MathUtils.smoothstep(D.formed, .50, .85), breathe = reduced ? .7 : .56 + .16 * Math.sin(elapsed * .83);
     eyeMaterial.opacity = face * breathe * Math.pow(1 - D.dissolved, 2.7);
-    const retreat = THREE.MathUtils.smoothstep(D.dissolved, 0, 1);
-    eyes.position.set((.08 + (reduced ? 0 : Math.sin(elapsed * .67) * .09) * D.formed) * (1-retreat),
-      THREE.MathUtils.lerp(1.91 + (reduced ? 0 : Math.sin(elapsed * .83) * .025), .026, retreat), 0);
+    eyes.position.set(.08 + (reduced ? 0 : Math.sin(elapsed * .67) * .09) * D.formed,
+      1.91 + (reduced ? 0 : Math.sin(elapsed * .83) * .025), 0);
   };
   Object.defineProperty(D, 'holdNarration', { get: () => {
     if (!group.visible) return false;

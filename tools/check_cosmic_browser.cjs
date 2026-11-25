@@ -75,7 +75,7 @@ const evidence=process.env.COSMIC_EVIDENCE||'/tmp/horror-cosmic-evidence';fs.mkd
       let changed=0;for(let i=0;i<a.length;i+=4)if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>2)changed++;
       return {count:fire.count,calls:withFire.calls-without.calls,triangles:withFire.triangles-without.triangles,changed};
     });
-    assert.equal(tongues.count,12);assert.equal(tongues.calls,1);assert.equal(tongues.triangles,24);
+    assert.equal(tongues.count,18);assert.equal(tongues.calls,1);assert.equal(tongues.triangles,36);
     assert.ok(tongues.changed>0,'distant tongues are visible from the player camera');
     // Free look leaves the galaxy fixed in the sky; it is not a screen overlay.
     const original=await page.evaluate(()=>__g.sideFold.landscape.group.getObjectByName('cosmo-galassia').quaternion.toArray());
@@ -129,7 +129,7 @@ const evidence=process.env.COSMIC_EVIDENCE||'/tmp/horror-cosmic-evidence';fs.mkd
     assert.ok(Math.abs(wall[0]-1.08)<1e-8&&Math.abs(wall[1]+2.5)<1e-8,'solid wall beside the opening remains solid');
     assert.equal(cosmicRequests().length,preparedRequests,'no cosmic asset loading during traversal/effects');
     assert.deepEqual(errors,[]);assert.deepEqual(bad,[]);
-    const result={result:'PASS',base,loaded,view,before,entered,back,eventStart,dark,hidden,returned,clearance,errors,bad,
+    const result={result:'PASS',base,loaded,view,before,entered,tongues,back,eventStart,dark,hidden,returned,clearance,errors,bad,
       checks:['visible before entry','assets preloaded','same touch controls','two simultaneous pointers','two-three steps','stop','look','back out','original flicker/blackout/return','no runtime asset fetches','no JS errors'],
       performance:'software Chromium; real Android FPS not measured'};
     fs.writeFileSync(path.join(evidence,'results.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
