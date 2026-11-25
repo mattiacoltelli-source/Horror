@@ -9,6 +9,7 @@ export function createAmbient({ player, audio, story, combat }) {
   let still = 0, n = 0, cool = 8, pending = false, ans = 0, lastYaw = 0, room = '';
   const behind = (d, side = 0) => { back.set(player.forward.x, 0, player.forward.z).normalize(); return v.set(player.pos.x - back.x * d - back.z * side, 0, player.pos.z - back.z * d + back.x * side); };
   A.update = (dt) => {
+    if (story.quiet?.()) return;
     moments(dt);
     const cur = story.current(); if (cur !== room) { room = cur; still = 0; n = 0; cool = 7; pending = false; }
     if (!['cellar', 'morgue', 'warehouse'].includes(cur) || story.busy() || combat?.active) return;

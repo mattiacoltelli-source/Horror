@@ -124,7 +124,7 @@ export function createLightBlade({ group, camera, player, audio, say, warm, fini
     if (B.failed) { B.state = 'end'; B.t = 2.5; return; }
     nun.position.set(0, 0, player.pos.z - 9.5); nun.rotation.y = 0; nun.visible = true; for (const m of mats) { m.opacity = 1; m.color.setScalar(1); } DIS.uDis.value = 0;
     nun.scale.set(1, 1, 1); clips.Idle?.stop(); clips.Apparition?.reset().setLoop(THREE.LoopOnce, 1).play(); if (clips.Apparition) clips.Apparition.clampWhenFinished = true;
-    audio.swell?.(3, 0.5); say('Porti con te un frammento di stella.\nLuce più antica del fuoco.', 3600); B.state = 'come'; B.t = 0;
+    audio.swell?.(3, 0.5); B.state = 'come'; B.t = 0;
   };
   B.lightUp = (k) => { const v = new THREE.Vector3(0.1, -0.1, -0.5); camera.localToWorld(v); warm.position.copy(v); warm.intensity = 14 * k * (1 + Math.sin(performance.now() * 0.02) * 0.05); };
   let tAll = 0;
@@ -193,7 +193,7 @@ export function createLightBlade({ group, camera, player, audio, say, warm, fini
       if (dis === -2) { B.state = 'end'; B.t = 0; } }
     if (st === 'end') {
       const k = Math.min(1, B.t / 1.6); hand.visible = false; charge = Math.max(0, charge - dt); halo.material.opacity = 0.4 * (1 - k); B.lightUp(1 - k);
-      if (B.t > 0.5 && !B.said) { B.said = true; say('L’ombra torna al buio.\nLa luce era prima.', 2800); }
+      if (B.t > 0.5 && !B.said) { B.said = true; }
       if (B.t >= 3.2) B.finish();
     }
   };

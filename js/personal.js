@@ -54,10 +54,11 @@ export function whisperName() {
 }
 // "girati" sussurrato nella sua lingua (solo se il telefono ha la voce)
 export function whisperTurn() { if (P && P.turn) speak(P.turn, P.lang, null); }
-// momenti in cui il gioco la chiama per nome (una volta per stanza al massimo)
+export function stopWhispers() { try { window.speechSynthesis?.cancel(); } catch (_) {} }
+// Scheduled by the story's game clock, after the room's protected moments.
 const done = new Set();
-export function onRoom(name) {
-  if (!P || done.has(name)) return; done.add(name);
-  if (name === 'morgue') setTimeout(whisperName, 9000);
-  if (name === 'warehouse') setTimeout(whisperName, 21000);
+export function onRoom(name, schedule) {
+  const delay = { morgue: 9, warehouse: 21 }[name];
+  if (!P || done.has(name) || !delay || !schedule) return;
+  schedule(delay, () => { if (done.has(name)) return; done.add(name); whisperName(); });
 }

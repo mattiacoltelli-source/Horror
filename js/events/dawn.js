@@ -55,7 +55,7 @@ export function createDawn({ scene, camera, player, audio, lights, instab, say, 
     player.pos.y = THREE.MathUtils.lerp(0.28, 1.62, e);
     if (t > 4 && t < 8) player.pitch += (0.12 - player.pitch) * Math.min(1, dt * 0.5);       // lo sguardo scende verso l'orizzonte mentre ti alzi
     if (t > 2 && D.said === 0) { D.said = 1; say('', 1); }
-    if (t > 8.5 && D.said === 1) { D.said = 2; say('è tutto fermo.', 4000); }
+    if (t > 8.5 && D.said === 1) { D.said = 2; say('il fumo non si sente più.', 2400); }
     // FINALE: sei solo. Il vento si ferma di colpo, silenzio; un respiro lontano alle tue spalle si avvicina piano, passo dopo passo.
     // Non c'è nessuno da vedere. Quando è a un soffio da te, tutto si spegne di colpo: buio e silenzio.
     if (t > 11.5 && D.said === 2) { D.said = 3; wind?.stop(0.12); wind = null; }

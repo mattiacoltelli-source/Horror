@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { rgbPulse } from '../ui/rgbshift.js';
 import { P } from '../personal.js';
+import { ROOM_LINES } from '../narrative-copy.js';
 import { GLTFLoader } from '../../vendor/three/loaders/GLTFLoader.js';
 import { Z_END, DOOR } from '../world/tunnel.js';
 
@@ -63,7 +64,7 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
       }
       case 'void':
         // buio e silenzio: ti aspetti qualcosa
-        if (E.t > TIMING.reveal) { ph = 0; go('lit', TIMING.reveal); pressure ??= audio.hallPressure?.(); reveal(); say('erano qui tutti, quella notte.\nnessuno di loro è uscito.\nnon guardarli in faccia.', 7000, 'note'); rgbPulse(1); drone ??= audio.crowdDrone(0.28, { gaps: false }); drone?.setLevel(0.28, 0.6); }
+        if (E.t > TIMING.reveal) { ph = 0; go('lit', TIMING.reveal); pressure ??= audio.hallPressure?.(); reveal(); say(ROOM_LINES.hall.join('\n'), 6000, 'note'); rgbPulse(1); drone ??= audio.crowdDrone(0.28, { gaps: false }); drone?.setLevel(0.28, 0.6); }
         break;
       case 'lit': {
         // la sala è illuminata: in fondo, file di sagome ferme che ti fissano
@@ -96,7 +97,7 @@ export function createDoorEvent({ scene, player, audio, lights, instab, say, cam
           const back = tmp.copy(player.forward).multiplyScalar(-1.4).add(camera.position); back.y = 1.35;
           breath.setPos(THREE.MathUtils.lerp(0, back.x, e), 1.3, THREE.MathUtils.lerp(Z_END - 3, back.z, e)); breath.setLevel(0.5 + 0.9 * e, 0.8);
         }
-        if (E.t > TIMING.warning && !E.said) { E.said = true; say(P ? 'non guardare dietro, ' + P.name + '.' : 'non guardare dietro.', 5500); instab.push(1, 10); }
+        if (E.t > TIMING.warning && !E.said) { E.said = true; say(P ? 'non guardare dietro, ' + P.name + '.' : 'non guardare dietro.', 5500, 'urgent'); instab.push(1, 10); }
         if (E.t > 5 && !E.torch) { E.torch = true; lights.torchKill(1.2, 0.08); }
         if (E.t > TIMING.turn && E.said && player.forward.z > 0.1) { E.turnT = (E.turnT || 0) + dt; if (E.turnT > 0.12) { go('turned'); drone?.stop(0.5); drone = null; breath?.stop(); breath = null; audio.duck(0, 0.05); showShade(); } } else E.turnT = 0;
         if (E.t > TIMING.choice) { go('ignored', TIMING.choice); drone?.stop(0.5); drone = null; }

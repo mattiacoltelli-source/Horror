@@ -229,7 +229,7 @@ export function createSideFold({ scene, tunnel, mats, player, camera, audio, lig
     const st = F.state;
     if ((st === 'idle' || st === 'done') && lights.lamps) for (const L of lights.lamps) if (L.mode === 'off' || L.mode === 'dim') L.mode = 'on';   // salvaguardia: fuori dall'evento le lampade del tunnel non restano mai spente
     if (st === 'idle') { sky(0.85 + 0.12 * Math.sin(tt * 0.7));
-      if (P.x > FRONT && Math.abs(P.z - ZR) < 0.8 && !player.frozen) { F.state = 'explore'; F.t = 0; audio.swell?.(2.0, 0.35); audio.whisper?.(1.6, 0.18); say?.('Un altro mondo.', 2600); } return; }
+      if (P.x > FRONT && Math.abs(P.z - ZR) < 0.8 && !player.frozen) { F.state = 'explore'; F.t = 0; audio.swell?.(2.0, 0.35); audio.whisper?.(1.6, 0.18); } return; }
     if (st === 'explore') { sky(0.85 + 0.12 * Math.sin(tt * 0.7));
       if (P.x < XD - 0.05) { F.state = 'idle'; return; }
       if (P.x > XD + 3.2 || F.t > 9) { F.state = 'flicker'; F.t = 0; audio.swell?.(2.2, 0.4); instab?.push?.(0.6, 6); } return; }

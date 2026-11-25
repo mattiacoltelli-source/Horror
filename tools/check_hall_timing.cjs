@@ -6,6 +6,8 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { pathToFileURL } = require('node:url');
 const root = path.resolve(__dirname, '..');
+const copy = fs.readFileSync(path.join(root, 'js/narrative-copy.js'), 'utf8').replace(/^import .*;$/gm, '').replace(/\bexport\s+/g, '');
+const ROOM_LINES = new Function('P', 'PKEY', 'CITY', copy + ';return ROOM_LINES;')(null, '', '');
 
 async function scenario(THREE, fps, turn) {
   let now = 0, nextTimer = 0;
@@ -44,6 +46,7 @@ async function scenario(THREE, fps, turn) {
   }
   const exports = {
     three: THREE, '../ui/rgbshift.js': { rgbPulse() {} }, '../personal.js': { P: null },
+    '../narrative-copy.js': { ROOM_LINES },
     '../../vendor/three/loaders/GLTFLoader.js': { GLTFLoader: Loader },
     '../world/tunnel.js': { Z_END: -50, DOOR: {} },
   };
@@ -84,7 +87,8 @@ async function scenario(THREE, fps, turn) {
   assert.deepEqual(arrivals.map(a => a.z), [-76, -64, -57.5]);
   assert.ok(arrivals.every(a => a.state === 'lit'));
   assert.equal(pressureStops, 1); assert.ok(pressureStoppedAt < breathStartedAt, 'Il crescendo lascia spazio al respiro');
-  assert.equal(note.ms, 7000); assert.ok(darks[0] - note.at >= 6.75, 'Tempo per leggere la nota');
+  assert.equal(note.ms, 6000); assert.ok(darks[0] - note.at >= 6.75, 'Tempo per leggere la nota');
+  assert.equal(warning.style, 'urgent', 'the survival prompt cannot be deferred behind incidental text');
   assert.equal(outcomes.length, 1); assert.equal(outcomes[0].turned, turn);
   if (turn) assert.equal(whispers, 1, 'Il colpo di scena parte una sola volta anche a FPS bassi');
   else { assert.ok(outcomes[0].at >= 25 && outcomes[0].at <= 28); assert.ok(nearBreath >= 1.39); }
@@ -99,7 +103,7 @@ function checkFrameClock() {
   assert.ok(tickStart >= 0 && frameStart > tickStart && frameEnd > frameStart);
   const calls = [], noop = () => {}, update = { update: noop };
   const context = vm.createContext({
-    paused: false, state: 'play', last: 0, time: 0, ended: false,
+    paused: false, state: 'play', last: 0, time: 0, ended: false, space: null, breath: null,
     requestAnimationFrame: noop, window: {}, camera: {}, renderer: {}, scene: {},
     doorEvent: { update: dt => calls.push(['event', dt]) },
     hall: { active: true, update: dt => calls.push(['hall', dt]) },
@@ -107,9 +111,11 @@ function checkFrameClock() {
     player: { pos: { x: 0, z: 0 }, update: dt => calls.push(['motion', dt]) },
     audio: { setListener: noop }, glassEvent: { update: noop, preRender: noop },
     rgbShift: { update: noop, render: noop },
+    narrativeStep: noop,
     updateVisibleWorldMatrices: noop,
     story: { busy: () => false },
     adaptiveResolution: { reset: noop, sample: dt => { calls.push(['quality', dt]); return null; } },
+    sideFold: { update: noop, applyCamera: noop },
     scare: update, dust: update, dawn: update, cellar: update, tower: update,
     wh: update, morgue: update, ward: update, ambient: update, notes: update,
     rats: update, combat: update, hound: update, instab: update,
