@@ -34,15 +34,15 @@ const rooms = ['cellar', 'ward', 'morgue', 'warehouse', 'tower'];
   assert.deepEqual(broken.loadRooms(), {}); assert.equal(broken.loadCkpt(), null);
 }
 
-const dispatch = main.slice(main.indexOf("  if (q.get('start') === 'piega')"), main.indexOf('  controls.enabled = !story.busy(); started'));
+const dispatch = main.slice(main.indexOf("  if (requestedStart === 'piega')"), main.indexOf('  controls.enabled = !story.busy(); started'));
 assert.ok(dispatch.includes('restoreCk ? loadCkpt'), 'actual main-menu route dispatcher is exercised');
-const runDispatch = new Function('restoreCk', 'restoreRoom', 'loadCkpt', 'q', 'CK_ST', 'flags', 'notes', 'glassEvent', 'doorEvent', 'dawn', 'story', 'combat', 'setTimeout', 'player', 'ENDINGS', 'Z_END', dispatch);
-function route(query, saved = null) {
+const runDispatch = new Function('restoreCk', 'restoreRoom', 'loadCkpt', 'q', 'CK_ST', 'flags', 'notes', 'glassEvent', 'doorEvent', 'dawn', 'story', 'combat', 'setTimeout', 'player', 'ENDINGS', 'Z_END', 'requestedStart', dispatch);
+function route(query, saved = null, override = undefined) {
   const calls = [], flags = { filmKey: true, filmDoorOpen: true }, notes = { found: new Set() }, glass = {}, door = {}, tasks = [];
   const player = { pos: { set: (...p) => calls.push(['position', ...p]) } };
   runDispatch(!!saved, saved?.room, () => saved, new URLSearchParams(query), checkpoint().CK_ST, flags, notes, glass, door,
     { start: t => calls.push(['dawn', t]) }, { goto: name => calls.push(['goto', name]) }, { giveAxe: () => calls.push(['axe']) },
-    (fn, ms) => tasks.push({ fn, ms }), player, { A: 'ending-A', B: 'ending-B', BLADE: 'ending-blade' }, -50);
+    (fn, ms) => tasks.push({ fn, ms }), player, { A: 'ending-A', B: 'ending-B', BLADE: 'ending-blade' }, -50, override === undefined ? new URLSearchParams(query).get('start') : override);
   return { calls, flags, notes, glass, door, tasks, player };
 }
 for (const [start, target] of [['cantina', 'cellar'], ['reparto', 'ward'], ['obitorio', 'morgue'], ['magazzino', 'warehouse'], ['torre', 'tower']]) {
@@ -63,6 +63,9 @@ assert.deepEqual(route('start=porta').calls.find(c => c[0] === 'position'), ['po
 assert.deepEqual(route('start=piega').calls.find(c => c[0] === 'position'), ['position', .1, 1.62, .5]);
 assert.deepEqual(route('start=epilogo').calls.find(c => c[0] === 'dawn'), ['dawn', 'ending-A']);
 assert.deepEqual(route('start=epilogo&turned=1').calls.find(c => c[0] === 'dawn'), ['dawn', 'ending-B']);
+assert.deepEqual(route('start=torre', null, 'cantina').calls.find(c => c[0] === 'goto'), ['goto', 'cellar'], 'an explicit room choice overrides a shortcut URL');
+assert.equal(route('start=torre', null, null).calls.some(c => c[0] === 'goto'), false, 'choosing the beginning clears a shortcut URL');
+for (const start of ['cantina', 'reparto', 'obitorio', 'magazzino', 'torre']) assert.ok(route('', null, start).calls.some(c => c[0] === 'goto'), 'fresh menu entry without any snapshot: ' + start);
 assert.ok(route('start=torre&weapon=axe').calls.some(c => c[0] === 'axe'));
 const mirror = route('start=cantina&specchio=1'); assert.equal(mirror.tasks.length, 1); mirror.tasks[0].fn();
 assert.deepEqual(mirror.calls.at(-1), ['position', -1.3, 1.62, -210]);

@@ -163,27 +163,42 @@ const loadRooms = () => { try {
 } catch (_) { return {}; } };
 const loadCkpt = (room) => { try { if (room) { const c = loadRooms()[room]; return c && CK_ST[c.room] ? c : null; } const c = JSON.parse(localStorage.getItem(CK) || 'null'); return c && CK_ST[c.room] ? c : null; } catch (_) { return null; } };
 function saveCkpt(room) { if (!CK_ST[room]) return; try { const snap = { room, turned: !!flags.turned, door: flags.door || null, weapon: flags.weapon || null, noGun: !!flags.noGun, notes: [...(notes?.found || [])] }; localStorage.setItem(CK, JSON.stringify(snap)); const r = loadRooms(); r[room] = snap; localStorage.setItem(RK, JSON.stringify(r)); } catch (_) {} }
-let restoreCk = false, restoreRoom = null;
+let restoreCk = false, restoreRoom = null, startOverride;
 { const last = loadCkpt(), b = document.getElementById('ckpt'), menu = document.getElementById('cmenu');
-  if (last && b && menu) {
-    const rooms = loadRooms(); if (last.room && !rooms[last.room]) rooms[last.room] = last;
-    const reached = CK_ORDER.filter((r) => rooms[r]);
-    const setOpen = (v) => { menu.classList.toggle('hidden', !v); b.setAttribute('aria-expanded', v ? 'true' : 'false'); };
-    const select = (room) => {
-      restoreCk = room !== null; restoreRoom = room;
-      b.textContent = room ? 'riparti da: ' + CK_ST[room] + ' ▾' : 'riparti da: inizio ▾';
-      for (const item of menu.children) item.setAttribute('aria-checked', String(item.dataset.room === (room || '')));
+  if (b && menu) {
+    const rooms = loadRooms(); if (last?.room && !rooms[last.room]) rooms[last.room] = last;
+    const options = [{ room: null, label: 'tunnel (inizio)', start: null }, { room: 'hall', label: 'sala della folla', start: 'porta' },
+      ...CK_ORDER.map(room => ({ room, label: room === 'cellar' ? 'cantina e cripta' : CK_ST[room], start: CK_ST[room] }))];
+    const initial = options.find(option => option.start === q.get('start')) || options[0];
+    const setOpen = (v) => {
+      menu.classList.toggle('hidden', !v); b.setAttribute('aria-expanded', String(v));
+      if (v) { document.getElementById('qmenu')?.classList.add('hidden'); document.getElementById('quality')?.setAttribute('aria-expanded', 'false');
+        const selected = menu.querySelector('[aria-checked="true"]') || menu.firstElementChild;
+        selected?.focus({ preventScroll: true }); selected?.scrollIntoView({ block: 'nearest' }); }
+    };
+    const select = (option) => {
+      restoreCk = CK_ORDER.includes(option.room); restoreRoom = restoreCk ? option.room : null; startOverride = option.start;
+      b.textContent = 'ambiente: ' + option.label + ' ▾';
+      for (const item of menu.children) item.setAttribute('aria-checked', String(item.dataset.room === (option.room || '')));
       setOpen(false); b.focus();
     };
-    b.textContent = 'riparti da: inizio ▾'; b.classList.remove('hidden');
+    b.textContent = 'ambiente: ' + initial.label + ' ▾'; b.disabled = false; b.classList.remove('hidden');
     b.setAttribute('aria-haspopup', 'menu'); b.setAttribute('aria-expanded', 'false');
-    for (const room of [null, ...reached]) {
+    for (const option of options) {
       const item = document.createElement('button'); item.type = 'button';
-      item.dataset.room = room || ''; item.setAttribute('role', 'menuitemradio'); item.setAttribute('aria-checked', String(room === null));
-      item.textContent = room ? CK_ST[room] : 'inizio';
-      item.addEventListener('click', (e) => { e.stopPropagation(); select(room); }); menu.appendChild(item);
+      item.dataset.room = option.room || ''; item.setAttribute('role', 'menuitemradio'); item.setAttribute('aria-checked', String(option === initial));
+      item.textContent = option.label + (rooms[option.room] ? ' · salvato' : '');
+      item.addEventListener('click', (e) => { e.stopPropagation(); select(option); }); menu.appendChild(item);
     }
+    menu.addEventListener('keydown', (e) => {
+      const items = [...menu.children], i = items.indexOf(document.activeElement); let next;
+      if (e.key === 'ArrowDown') next = (i + 1) % items.length;
+      if (e.key === 'ArrowUp') next = (i - 1 + items.length) % items.length;
+      if (e.key === 'Home') next = 0; if (e.key === 'End') next = items.length - 1;
+      if (next !== undefined) { e.preventDefault(); items[next].focus(); }
+    });
     b.addEventListener('click', (e) => { e.stopPropagation(); setOpen(menu.classList.contains('hidden')); });
+    document.getElementById('quality')?.addEventListener('click', () => setOpen(false));
     document.addEventListener('click', () => setOpen(false));
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
   } }
@@ -210,6 +225,8 @@ function showHowto() {
 
 async function enter() {
   if (entering || started) return; entering = true;
+  const requestedStart = startOverride === undefined ? q.get('start') : startOverride;
+  $('ckpt').disabled = true;
   scare ??= createScare({ scene, camera, player, audio, lights, instab, finish: (m, f) => (dawn ? dawn.start(m) : finish(m, f)) });
   hall ??= createHall({ scene, mats, lights });
   dawn ??= createDawn({ scene, camera, player, audio, lights, instab, say, finish, onStart: () => { combat?.hideAll(); say.reset(); audio.stopMotif?.(); stopWhispers(); }, hall });
@@ -333,15 +350,15 @@ async function enter() {
   if (q.get('allunga') === '1') { breath = createBreath({ scene, audio, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches }); breath.refresh(); setTimeout(() => breath?.refresh(), 3000); }   // allungamento del tunnel: spento di default, solo con ?allunga=1 (provato e scartato)
   if (sideFold.enabled) await sideFold.prepare(renderer);   // texture GPU e shader del paesaggio pronti prima di lasciare il menu
   await drainPresence.prepare(renderer, camera);
-  if (!restoreCk && (!q.get('start') || q.get('start') === 'porta')) await prepareScene();
+  if (!restoreCk && (!requestedStart || requestedStart === 'porta')) await prepareScene();
   $('intro').classList.add('hidden');
   // I programmi e le texture della stanza vengono preparati durante il
   // caricamento o la dissolvenza, senza accendere tutte le stanze durante il gioco.
   // ?start=porta → salta il tunnel e parte a ~8 m dal portone (per provare solo la parte finale)
-  if (q.get('start') === 'piega') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, 0.5); }
-  if (q.get('start') === 'porta') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, Z_END + 10); }
+  if (requestedStart === 'piega') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, 0.5); }
+  if (requestedStart === 'porta') { glassEvent.state = 'done'; glassEvent.done = true; player.pos.set(0.1, 1.62, Z_END + 10); }
   // scorciatoie di prova: ?start=cantina | torre  (&turned=1 / &mirror=1 per simulare le scelte)
-  { const ck = restoreCk ? loadCkpt(restoreRoom) : null, st = ck ? CK_ST[ck.room] : q.get('start'); flags.turned = ck ? ck.turned : q.get('turned') === '1'; flags.mirror = q.get('mirror') === '1'; flags.noGun = ck ? ck.noGun : q.get('nogun') === '1'; flags.weapon = ck ? ck.weapon : (q.get('weapon') === 'axe' ? 'axe' : null); flags.door = ck ? ck.door : (q.get('door') === 'red' ? 'red' : q.get('door') === 'breath' ? 'breath' : null);
+  { const ck = restoreCk ? loadCkpt(restoreRoom) : null, st = ck ? CK_ST[ck.room] : requestedStart; flags.turned = ck ? ck.turned : q.get('turned') === '1'; flags.mirror = q.get('mirror') === '1'; flags.noGun = ck ? ck.noGun : q.get('nogun') === '1'; flags.weapon = ck ? ck.weapon : (q.get('weapon') === 'axe' ? 'axe' : null); flags.door = ck ? ck.door : (q.get('door') === 'red' ? 'red' : q.get('door') === 'breath' ? 'breath' : null);
     // Chiave e pannello ripartono da zero a ogni visita; ignora i campi dei vecchi checkpoint.
     flags.filmKey = false; flags.filmDoorOpen = false;
     if (ck) { ck.notes.forEach((i) => notes.found.add(i)); flags.notes = notes.found.size; }
@@ -352,8 +369,8 @@ async function enter() {
   controls.enabled = !story.busy(); started = true; state = 'play';
   if (!story.busy()) $('fade').style.opacity = 0;
   setTimeout(() => instab.show(), 4000);
-  if (!q.get('start')) setTimeout(showHowto, 1800);
-  if (!q.get('start') && !restoreCk) {
+  if (!requestedStart && !restoreCk) setTimeout(showHowto, 1800);
+  if (!requestedStart && !restoreCk) {
     story.schedule(13.5, () => story.tell('tunnel'));
     story.schedule(9.5, () => say(P ? P.name + '. non guardare dietro, dicevano.' : 'non guardare dietro, dicevano.', 4200));
   }

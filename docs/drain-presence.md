@@ -16,6 +16,10 @@ mentre la densità si riduce per circa 3,8 secondi. Gli occhi sfumano insieme
 al fumo. La mesh viene nascosta soltanto quando l'opacità è già zero; nessun
 flash o cambio della camera sostituisce la dispersione.
 
+Gli occhi hanno luminosità ridotta del 15% rispetto alla prima pubblicazione:
+il colore del materiale è moltiplicato per 0,85. Quantità di fumo e tempi di
+dissoluzione restano invariati, in tutte le versioni personali e standard.
+
 Il movimento ridotto ferma ondeggiamento e pulsazione, mantiene un'emersione
 graduale e allunga la dispersione a 4,4 secondi. Tornando indietro la presenza
 non ricompare. Gli altri ambienti e l'epilogo la tengono disattivata. In qualità

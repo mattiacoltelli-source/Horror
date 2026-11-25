@@ -64,8 +64,10 @@
       <p id="askerr" class="small"></p>
     </div>
     <button id="enter" type="button">ENTRA NEL GIOCO</button>
-    <button id="ckpt" class="hidden linkbtn" type="button"></button>
-    <div id="cmenu" class="hidden" role="menu"></div>
+    <div id="room-picker" class="room-picker">
+      <button id="ckpt" class="linkbtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="cmenu" disabled>ambiente: tunnel (inizio) ▾</button>
+      <div id="cmenu" class="hidden" role="menu" aria-label="Scegli un ambiente"></div>
+    </div>
     <p id="loadmsg" class="small">caricamento…</p>
     <button id="notme" class="hidden linkbtn" type="button"></button>
     <button id="quality" class="linkbtn" type="button" aria-haspopup="true" aria-expanded="false"></button>

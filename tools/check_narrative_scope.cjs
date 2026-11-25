@@ -7,7 +7,7 @@ const protectedPaths = ['js/world/', 'assets/', 'vendor/', 'css/', 'js/player/',
 // Subsequent explicit request: replace the old encounter and mural. Every
 // other visual asset/room/controller remains covered by the original guard.
 const drainChanges = new Set(['js/world/painted-mural.js', 'assets/tex/pic_mural_infernal_smoke.webp',
-  'assets/models/hound.glb', 'assets/audio/hound_breath.mp3', 'assets/tex/pic_mural_dog.webp']);
+  'assets/models/hound.glb', 'assets/audio/hound_breath.mp3', 'assets/tex/pic_mural_dog.webp', 'css/style.css']);
 const protectedFile = file => !drainChanges.has(file) && protectedPaths.some(prefix => prefix.endsWith('/') ? file.startsWith(prefix) : file === prefix);
 const changed = git('diff', '--name-only', baseline, '--').split('\n').filter(Boolean);
 const untracked = git('ls-files', '--others', '--exclude-standard').split('\n').filter(Boolean);
@@ -16,6 +16,8 @@ assert.deepEqual([...new Set([...changed, ...untracked].filter(protectedFile))],
 // layout, styles and personalized profile structure, must stay identical.
 const normalizeLoader = source => {
   source = source.replace('    <p class="credits">cane: Grimhound Rig, DM-913 (CC-BY 4.0)</p>\n', '');
+  source = source.replace(/    <div id="room-picker"[\s\S]*?\n    <\/div>\n/, '    <!-- shared room picker -->\n');
+  source = source.replace(/    <button id="ckpt"[^\n]*\n    <div id="cmenu"[^\n]*\n/, '    <!-- shared room picker -->\n');
   for (const [profile, index] of [['yana', 2], ['alice', 1], ['laya', 1]]) {
     const array = new RegExp('\\b' + profile + ': \\[[^\\]\\n]*\\]').exec(source);
     assert.ok(array, profile + ' loader entry');
@@ -26,7 +28,14 @@ const normalizeLoader = source => {
   }
   return source;
 };
-assert.equal(normalizeLoader(fs.readFileSync(path.join(root, 'index.html'), 'utf8')), normalizeLoader(git('show', baseline + ':index.html') + '\n'), 'only three loader sentences and the obsolete encounter credit may change in index.html');
+assert.equal(normalizeLoader(fs.readFileSync(path.join(root, 'index.html'), 'utf8')), normalizeLoader(git('show', baseline + ':index.html') + '\n'), 'only approved loader/credit copy and the shared room picker change in index.html');
+const normalizeMenuCss = source => {
+  const from = source.includes('/* selettore ambienti:') ? source.indexOf('/* selettore ambienti:') : source.indexOf("/* menu 'riparti da");
+  const to = source.indexOf("/* schermata 'come ti chiami", from);
+  assert.ok(from >= 0 && to > from, 'bounded room-menu stylesheet section');
+  return source.slice(0, from) + '/* room menu */\n' + source.slice(to);
+};
+assert.equal(normalizeMenuCss(fs.readFileSync(path.join(root, 'css/style.css'), 'utf8')), normalizeMenuCss(git('show', baseline + ':css/style.css') + '\n'), 'all in-game controls and styles outside the initial room picker remain unchanged');
 const notes = fs.readFileSync(path.join(root, 'js/events/notes.js'), 'utf8');
 const oldNotes = git('show', baseline + ':js/events/notes.js');
 const paper = s => s.slice(s.indexOf('let tex = null;'), s.indexOf('// def:'));

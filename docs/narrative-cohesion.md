@@ -119,7 +119,7 @@ ottiene soltanto con `?allunga=1`. Il laboratorio SPACE FOLD non è il reparto
 attivo e non deve essere riattivato o riscritto da questa revisione.
 
 L'esperienza deve funzionare dall'inizio, dai checkpoint `ng_ckpt`/`ng_rooms`,
-dal menu delle stanze raggiunte e dagli accessi `?start=piega|porta|cantina|reparto|obitorio|magazzino|torre|epilogo`.
+dal selettore iniziale di tutti gli ambienti (con ripresa dei salvataggi dove presenti) e dagli accessi `?start=piega|porta|cantina|reparto|obitorio|magazzino|torre|epilogo`.
 Le note già raccolte e le scelte salvate rimangono valide. Una partenza diretta
 non aggiunge retroattivamente ricordi o oggetti che il giocatore non ha visto.
 
